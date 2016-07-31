@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>three.js PathTracing Renderer</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1">
+		<style>
+			
+			body {
+				color: #ffffff;
+				font-family:Monospace;
+				font-size:13px;
+				text-align:center;
+				font-weight: bold;
+
+				background-color: #000000;
+				margin: 0px;
+				overflow: hidden;
+			}
+			
+			#instructions {
+			
+				font-family: arial;
+				font-weight: bold;
+				width: 100%;
+				height: 100%;
+				position: fixed;
+				top: 35%;
+				color: #ffffff;
+				text-align: center;
+				cursor: pointer;
+			
+			}
+
+			#info {
+				position: absolute;
+				top: 0px; width: 100%;
+				padding: 5px;
+			}
+
+			a {
+
+				color: #ffffff;
+			}
+
+			#oldie a { color:#da0 }
+		</style>
+	</head>
+	<body>
+
+		<div id="container"></div>
+		<div id="info"> three.js PathTracing Renderer</div>
+		
+		<div id="instructions">
+		<span style="font-size:40px"></span>
+		</div>
+		
+		
+		<div id="debug" style="position:fixed; left:3%; bottom:1%; font-family:arial; font-type:bold; color:rgb(255,255,255);">
+		samples: 0
+		</div>
+
+		<script src="js/three-r79.min.js"> </script>
+		<script src="js/threex.keyboardstate.js"> </script>
+		<script src="js/FirstPersonCameraControls.js"> </script>
+		<script src="js/virtualButtonJoystick.js"> </script>
+
+		<script src="js/Detector.js"> </script>
+		<script src="js/stats.min.js"> </script>
+		
+		
+		<script id="screenTextureVertexShader" type="x-shader/x-vertex">
+
+varying vec2 vUv;
+
+void main() {
+
+	vUv = uv;
+	gl_Position = vec4(position, 1.0);
+
+}
+
+		</script>
+		
+		<script id="screenTextureFragmentShader" type="x-shader/x-fragment">
+		
+varying vec2 vUv;
+uniform sampler2D tTexture0;
+
+
+void main() {
+	
+	gl_FragColor = texture2D(tTexture0, vUv);
+	
+}
+		
+		</script>
+		
+		<script id="screenOutputVertexShader" type="x-shader/x-vertex">
+
+varying vec2 vUv;
+
+void main() {
+
+	vUv = uv;
+	gl_Position = vec4( position, 1.0 );
+
+}
+
+		</script>
+		
+		<script id="screenOutputFragmentShader" type="x-shader/x-fragment">
+		
+varying vec2 vUv;
+uniform sampler2D tTexture0;
+
+void main() {
+
+	vec4 pixelColor = texture2D(tTexture0, vUv);
+	
+	// apply gamma correction
+	pixelColor = pow(pixelColor, vec4(0.4545));
+	
+	gl_FragColor = pixelColor;
+	
+}
+		
+		</script>
+		
+
+
+		<script id="pathTracingVertexShader" type="x-shader/x-vertex">
+	
+varying vec2 vUv;
+
+void main()
+{
+	vUv = uv;
+	gl_Position = vec4(position, 1.0);
+}
+
+		</script>
+		
+		
+		
+		<script id="pathTracingFragmentShader" type="x-shader/x-fragment">
+				
+precision highp float;
+
+uniform vec2 uResolution;
+uniform float uTime;
+uniform float uSampleCounter;
+uniform float uULen;
+uniform float uVLen;
+
+uniform mat3 uCheckeredMaterialMatrix;
+uniform mat3 uMirrorMaterialMatrix;
+uniform mat3 uBlueMaterialMatrix;
+uniform mat3 uWhiteMaterialMatrix;
+uniform mat3 uGlassMaterialMatrix;
+
+uniform mat4 uBoxMeshMatrix;
+uniform mat4 uCameraMatrix;
+uniform mat4 uLightsMatrix[3];
+uniform mat4 uSphereMeshesMatrix[4];
+
+uniform vec3 uRandomVector;
+
+uniform sampler2D tPreviousTexture;
+
+varying vec2 vUv;
+
+
+#define PI 3.14159265359
+#define SAMPLES 2
+#define N_SPHERES 8
+#define DIFF 0
+#define REFR 1
+#define SPEC 2
+#define CHECK 3
+
+
+
+// globals
+vec3 lightPos[3];
+vec3 light00Color = vec3(0.0);
+vec3 light01Color = vec3(0.0);
+vec3 light02Color = vec3(0.0);
+
+float seed = 0.0;
+float rand()
+{ 
+	seed += uRandomVector.x * 100.0;
+	return fract(sin(seed)*43758.5453123);
+}
+
+
+//-----------------------------------------------------------------------
+
+vec2 camAng;
+
+struct Ray { vec3 origin; vec3 direction; };
+struct Sphere { float radius; vec3 position; vec3 emission; vec3 colour; int type;};
+
+Sphere spheres[N_SPHERES];
+
+//-----------------------------------------------------------------------
+void SetupScene(void)
+//-----------------------------------------------------------------------
+{
+	vec3 z = vec3(0.0);
+	vec3 L1 = vec3(0.1,0.5,1.0) * 4.0;
+	vec3 L2 = vec3(1.0,0.8,0.4) * 2.0;
+		
+        spheres[0] = Sphere( 5000.0, vec3(0.0, 5000.0, 0.0),z,vec3(0.5,0.5,0.5) *.999,  CHECK); // floor
+	
+        spheres[1] = Sphere(   200.0, vec3(750.0, 450.0, 20.0), L1, vec3(1.0,1.0,1.0),      DIFF);//Light1
+	spheres[7] = Sphere(   600.0, vec3(-40.0, 800.0, 100.0), L2, vec3(1.0,1.0,1.0),     DIFF);//Light2
+	
+        spheres[2] = Sphere(    16.5, vec3(-16.0,16.5,5.0),      z, vec3(1.0,1.0,1.0)*.999, SPEC);//Mirr
+        spheres[3] = Sphere(    16.5, vec3(32.0,16.5,40.0),      z, vec3(1.0,1.0,1.0)*.999, REFR);//Glas
+        spheres[4] = Sphere(    10.0, vec3(-30.0,10.0,50.0),     z, vec3(0.7,0.7,0.2)*.999, DIFF);//Yellow
+        spheres[5] = Sphere(     8.0, vec3(10.0,28.0,30.0),      z, vec3(0.6,0.1,0.8)*.999, DIFF);//Purple
+        spheres[6] = Sphere(     5.0, vec3(5.0,5.0,35.0),        z, vec3(0.2,0.8,0.2)*.999, DIFF);//Green
+}
+
+
+
+//-----------------------------------------------------------------------
+float SphereIntersect( float rad , vec3 pos , Ray r)
+//-----------------------------------------------------------------------
+	{
+		vec3 op = pos - r.origin;
+		float eps = 0.001;
+		float b = dot(op , r.direction);
+		float det = b * b - dot(op,op) + rad * rad;
+       		 if (det < 0.0)
+			return 0.0;
+        
+		det = sqrt(det);
+		
+		float t1 = b - det;
+		if( t1 > eps )
+			return t1;
+		
+		float t2 = b + det;
+		if( t2 > eps )
+			return t2;
+
+		return 0.0;	
+	}
+
+//-----------------------------------------------------------------------
+bool Intersect(Ray r , inout float t , inout int id , inout Sphere s)
+//-----------------------------------------------------------------------
+{
+		float d;
+		float inf = 1000000.0;
+		t   = inf;
+        for (int i = 0; i < N_SPHERES; i++)
+        {
+			d = SphereIntersect( spheres[i].radius , spheres[i].position , r );
+            if (d != 0.0 && d < t)
+            {
+				t = d;
+                s = spheres[i];
+            }
+        }
+		return t < inf;
+	}
+
+//-----------------------------------------------------------------------
+vec3 CalculateRadiance( Ray r )
+//-----------------------------------------------------------------------
+{
+	vec3 finalCol = vec3(0.0,0.0,0.0);
+        vec3 fCum = vec3(1.0,1.0,1.0);
+
+        for (int depth = 0; depth < 8; depth++)
+        {
+		
+                float t = 0.0;                            // distance to intersection
+                int id = 0;                               // id of intersected object
+                Sphere obj;
+		if (!Intersect(r, t, id, obj))
+                    break;
+		    
+                vec3 x = r.origin + r.direction * t;
+                vec3 n = normalize(x - obj.position);
+                vec3 nl = dot(n,r.direction) < 0.0 ? n : n * -1.0;
+                vec3 f = obj.colour;
+		
+                float p = max(max(f.x,f.y),f.z);
+		
+                if ( rand() < p)
+                    f = f / p;
+                else
+                    break; //R.R.
+		
+		fCum *= f;
+	
+		// we reached something bright, don't spawn any more rays
+                if (length( obj.emission ) > 0.0)
+		{
+			finalCol = finalCol + fCum * obj.emission;
+			break;
+		}
+
+                if (obj.type == DIFF || obj.type == CHECK) // Ideal DIFFUSE reflection
+                {
+			
+			if( obj.type == CHECK )
+			{
+				if( (mod(x.x,80.0) < 40.0 && mod(x.z,80.0) < 40.0) || 
+					(mod(x.x,80.0) > 40.0 && mod(x.z,80.0) > 40.0) )
+				fCum *= 0.3;					
+			}
+		
+		
+                	float r1 = 2.0 * 3.1415926536 * rand();
+                	float r2 = rand();
+                	float r2s = sqrt(r2);
+                	vec3 w = nl;
+			vec3 u = normalize(cross( (abs(w.x) > .1 ? vec3(0.0, 1.0, 0.0) : vec3(1.0,1.0,1.0)) , w));
+			vec3 v = cross(w,u);
+                	vec3 d = normalize(u * cos(r1) * r2s + v * sin(r1) * r2s + w * sqrt(1.0 - r2));
+			finalCol += fCum * obj.emission;
+			
+                	r = Ray(x, d);
+			r.origin += r.direction; // Android bug fix
+                	continue;
+                }
+                else 
+	        if (obj.type == SPEC)            // Ideal SPECULAR reflection
+                {
+                        r = Ray(x, r.direction - n * 2.0 * dot(n,r.direction));
+			
+			r.origin += r.direction; // Android bug fix
+                        continue;
+                }
+
+                // Ideal dielectric REFRACTION
+                Ray reflRay = Ray(x, r.direction - n * 2.0 * dot(n,r.direction)); 
+		
+		bool into = dot(n,nl) > 0.0;                // Ray from outside going in?
+
+                float nc = 1.0;   // IOR of air
+                float nt = 1.5; // IOR of solid
+                float nnt = into ? nc / nt : nt / nc;
+                float ddn = dot(r.direction , nl);
+                float cos2t = 1.0 - nnt * nnt * (1.0 - ddn * ddn);
+
+                if (cos2t < 0.0)    // Total internal reflection
+                {
+                    r = reflRay;
+		    r.origin += r.direction; // Android bug fix
+                    continue;
+                }
+
+                vec3 tdir = normalize(r.direction * nnt - n * ((into ? 1.0 : -1.0) * (ddn * nnt + sqrt(cos2t))));
+
+                float a = nt - nc;
+                float b = nt + nc;
+                float R0 = a * a / (b * b);
+                float c = 1.0 - (into ? -ddn : dot(tdir,n));
+                float Re = R0 + (1.0 - R0) * c * c * c * c * c;
+                float Tr = 1.0 - Re;
+                float P = .25 + .5 * Re;
+                float RP = Re / P;
+                float TP = Tr / (1.0 - P);
+		
+                if( rand() < P )
+                {
+                    r = reflRay;
+		    r.origin += r.direction; // Android bug fix
+                    fCum = fCum * RP;
+                }
+                else
+                {
+                    r = Ray(x, tdir);
+		    r.origin += r.direction; // Android bug fix
+                    fCum = fCum * TP;
+                }
+				
+		
+
+            }
+
+            return finalCol;
+}
+
+
+
+void main( void )
+{
+
+	vec3 camPos = vec3(uCameraMatrix[3][0], uCameraMatrix[3][1], uCameraMatrix[3][2]);
+	
+    	vec3 camRight   = ( vec3( uCameraMatrix[0][0],  uCameraMatrix[0][1],  uCameraMatrix[0][2]) );
+    	vec3 camUp      = ( vec3( uCameraMatrix[1][0],  uCameraMatrix[1][1],  uCameraMatrix[1][2]) );
+	vec3 camForward = ( vec3(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]) );
+	
+	//rng seeds
+	seed = 100.0 * uRandomVector.x + uResolution.y * gl_FragCoord.x / uResolution.x + gl_FragCoord.y / uResolution.y;
+	float r1 = 2.0 * rand();
+	float r2 = 2.0 * rand();
+			
+	float dx = r1 < 1.0 ? sqrt(r1) - 1.0 : 1.0 - sqrt(2.0 - r1);
+        float dy = r2 < 1.0 ? sqrt(r2) - 1.0 : 1.0 - sqrt(2.0 - r2);
+	
+	dx = (dx + gl_FragCoord.x) / uResolution.x - 0.5;
+	dy = (dy + gl_FragCoord.y) / uResolution.y - 0.5;
+	
+	vec3 rayDir = normalize( dx * camRight * uULen + dy * camUp * uVLen + camForward );
+	
+	Ray ray = Ray( camPos , rayDir );
+	
+	SetupScene();
+	
+	lightPos[0] = vec3(uLightsMatrix[0][0][0], uLightsMatrix[0][0][1], uLightsMatrix[0][0][2]);
+	lightPos[1] = vec3(uLightsMatrix[1][0][0], uLightsMatrix[1][0][1], uLightsMatrix[1][0][2]);
+	lightPos[2] = vec3(uLightsMatrix[2][0][0], uLightsMatrix[2][0][1], uLightsMatrix[2][0][2]);
+	
+	light00Color = uLightsMatrix[0][0][3] * vec3( uLightsMatrix[0][1][0], uLightsMatrix[0][1][1], uLightsMatrix[0][1][2] );
+    	light01Color = uLightsMatrix[1][0][3] * vec3( uLightsMatrix[1][1][0], uLightsMatrix[1][1][1], uLightsMatrix[1][1][2] );
+	light02Color = uLightsMatrix[2][0][3] * vec3( uLightsMatrix[2][1][0], uLightsMatrix[2][1][1], uLightsMatrix[2][1][2] );
+	
+	     		
+	// perform path tracing and get resulting pixel color
+	vec4 pixelColor = vec4( CalculateRadiance(ray), 1.0);
+	vec4 previousColor = texture2D(tPreviousTexture, vUv);
+	
+	pixelColor = (previousColor * uSampleCounter + pixelColor) / (uSampleCounter + 1.0);
+	gl_FragColor = pixelColor;
+	
+}
+
+		</script>
+		
+		
+		<script>
+
+			if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+
+			var SCREEN_WIDTH = window.innerWidth;
+			var SCREEN_HEIGHT = window.innerHeight;
+			var container, stats;
+			var controls;
+			var pathTracingGeometry, pathTracingMaterial, pathTracingMesh; // rtt = render to texture
+			var screenOutputGeometry, screenOutputMaterial, screenOutputMesh;
+			var screenTextureGeometry, screenTextureMaterial, screenTextureMesh;
+			var groundGeometry, checkeredMaterial, groundMesh;
+			var boxGeometry, blueMaterial, boxMesh;
+			var sphereGeometry, mirrorMaterial, whiteMaterial, glassMaterial;
+			var sphereMesh = [];
+			var pointLight00, pointLight01, pointLight02;
+			var quadCamera, worldCamera;
+			var renderer, clock;
+			var pathTracingRenderTarget, screenOutputRenderTarget;
+			var screenOutputScene, screenTextureScene, pathTracingScene; // RTT = Render To Texture
+			var fovScale;
+			var frameTime, elapsedTime;
+			var pathTracingUniforms, screenOutputUniforms, screenTextureUniforms;
+			var pixelRatio = 0.5;
+			var TWO_PI = Math.PI * 2;
+			var randomVector = new THREE.Vector3();
+			var sampleCounter = 0.0;
+			var stopTime = 10.0;
+			var keyboard = new THREEx.KeyboardState();
+			var isPaused = true;
+			var oldYawRotation, oldPitchRotation;
+			var fontAspect;
+
+			// are we in portrait mobile view? if so, move the buttons over to the left a little..
+			// if not and we are in landscape mode, they can safely be moved farther right without running into each other
+			var b2PercentLeft = SCREEN_WIDTH < SCREEN_HEIGHT ? 50 : 65;
+			var b1PercentLeft = SCREEN_WIDTH < SCREEN_HEIGHT ? 77 : 81;
+			var b3PercentLeft = Math.floor( (b1PercentLeft + b2PercentLeft) / 2 );
+			var joystick = new VirtualJoystick({
+				add3Buttons: true,
+				hideJoystick: true,
+				hideButtons: false,
+				button1PercentLeft: b1PercentLeft,
+				button2PercentLeft: b2PercentLeft,
+				button3PercentLeft: b3PercentLeft
+			});
+
+			var PI_2 = Math.PI / 2;//used by controls below
+			
+			var infoElement = document.getElementById( 'info' );
+			infoElement.style.cursor = "default";
+			infoElement.style.webkitUserSelect = "none";
+			infoElement.style.MozUserSelect = "none";
+			
+			var instructionsElement = document.getElementById( 'instructions' );
+			instructionsElement.style.cursor = "default";
+			instructionsElement.style.webkitUserSelect = "none";
+			instructionsElement.style.MozUserSelect = "none";
+			
+			var debugElement = document.getElementById( 'debug' );
+			debugElement.style.cursor = "default";
+			debugElement.style.webkitUserSelect = "none";
+			debugElement.style.MozUserSelect = "none";
+			
+			var mouseControl = false;
+			// if not on a mobile device, enable mouse control 
+			if ( !('createTouch' in document) ) {
+				mouseControl = true;
+				pixelRatio = 1.0;
+			}
+			
+			// if on mobile device, unpause the app because there is no ESC key and no mouse capture to do
+			if ( !mouseControl )
+				isPaused = false;
+			
+			if (mouseControl) {
+	
+				instructionsElement.innerHTML = 'Paused <br> Click to start';
+
+				document.body.addEventListener("click", function() {
+					this.requestPointerLock = this.requestPointerLock || this.mozRequestPointerLock;
+					this.requestPointerLock();
+				}, false);
+
+
+				window.addEventListener("mousedown", function(event) {
+					if ( !isPaused ) {
+						if(event.button === 0) {
+							
+						}	
+						else if(event.button === 2) {
+							
+						}
+					}	
+				}, false);
+
+				window.addEventListener("click", function(event) {
+					event.preventDefault();	
+				}, false);
+				window.addEventListener("dblclick", function(event) {
+					event.preventDefault();	
+				}, false);
+
+
+				var pointerlockChange = function ( event ) {
+
+					if ( document.pointerLockElement === instructionsElement || document.mozPointerLockElement === instructionsElement || document.webkitPointerLockElement === instructionsElement ||
+						document.pointerLockElement === document.body || document.mozPointerLockElement === document.body || document.webkitPointerLockElement === document.body ) {
+
+						instructionsElement.style.display = 'none';
+						isPaused = false;
+
+					} else {
+
+						instructionsElement.style.display = '';
+						isPaused = true;
+
+					}
+
+				};
+
+				// Hook pointer lock state change events
+				document.addEventListener( 'pointerlockchange', pointerlockChange, false );
+				document.addEventListener( 'mozpointerlockchange', pointerlockChange, false );
+				document.addEventListener( 'webkitpointerlockchange', pointerlockChange, false );
+
+			}
+
+			// the following variables will be used to calculate rotations and directions from the camera
+			var cameraDirectionVector = new THREE.Vector3();//for moving where the camera is looking
+			var cameraRightVector = new THREE.Vector3();//for strafing the camera right and left
+			var cameraUpVector = new THREE.Vector3();//for moving camera up and down
+			var cameraWorldQuaternion = new THREE.Quaternion();//for rotating scene objects to match camera's current rotation
+			var cameraControlsObject;//for positioning and moving the camera itself
+			var cameraControlsYawObject;//allows access to control camera's left/right movements through mobile input
+			var cameraControlsPitchObject;//allows access to control camera's up/down movements through mobile input
+
+			
+			
+			init();
+			animate();
+
+			function init() {
+
+				container = document.getElementById( 'container' );
+				renderer = new THREE.WebGLRenderer();
+				// 1 is full resolution, 0.5 is half, 0.25 is quarter, etc. (must be > than 0.0)
+				renderer.setPixelRatio(pixelRatio);
+				
+				container.appendChild( renderer.domElement );
+
+				stats = new Stats();
+				stats.domElement.style.position = 'absolute';
+				stats.domElement.style.top = '0px';
+				container.appendChild( stats.domElement );
+				
+				window.addEventListener( 'resize', onWindowResize, false );
+				
+				clock = new THREE.Clock();
+				
+				pathTracingScene = new THREE.Scene();
+				screenOutputScene = new THREE.Scene();
+				screenTextureScene = new THREE.Scene();
+				
+				// quadCamera is simply the camera to help render the full screen quad (2 triangles),
+				// hence the name.  It is an Orthographic camera that sits facing the view plane, which serves as
+				// the window into our 3d world. This camera will not move or rotate for the duration of the app.
+				quadCamera = new THREE.OrthographicCamera( -1, 1, 1, -1, 0, 1 );
+				screenOutputScene.add(quadCamera);
+				screenTextureScene.add(quadCamera);
+				
+				// worldCamera is the dynamic camera 3d object that will be positioned, oriented and 
+				// constantly updated inside the 3d scene.  Its view will ultimately get passed back to the 
+				// stationary quadCamera, which renders the scene to a fullscreen quad (made up of 2 large triangles).
+				worldCamera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 1, 1000);
+				pathTracingScene.add(worldCamera);
+				
+				controls = new FirstPersonCameraControls( worldCamera );
+							
+				cameraControlsObject = controls.getObject();
+				cameraControlsYawObject = controls.getYawObject();
+				cameraControlsPitchObject = controls.getPitchObject();
+				
+				pathTracingScene.add( cameraControlsObject );
+
+				// for flyCam
+				cameraControlsObject.position.set(0,35,95);
+				cameraControlsYawObject.rotation.y = 0.0;
+				// look slightly downward
+				cameraControlsPitchObject.rotation.x = -0.4;
+				joystick.previousRotationX = -0.4;
+				
+				
+				pathTracingRenderTarget = new THREE.WebGLRenderTarget( window.innerWidth * pixelRatio, window.innerHeight * pixelRatio, {
+					minFilter: THREE.NearestFilter, // default THREE.LinearMipMapLinearFilter
+					magFilter: THREE.NearestFilter, // default THREE.LinearFilter
+					format: THREE.RGBAFormat,
+					depthBuffer: false,
+					stencilBuffer: false
+				} );
+				pathTracingRenderTarget.texture.generateMipmaps = false;
+				//pathTracingRenderTarget.texture.needsUpdate = true;
+				
+				screenOutputRenderTarget = new THREE.WebGLRenderTarget( window.innerWidth * pixelRatio, window.innerHeight * pixelRatio, {
+					minFilter: THREE.NearestFilter, 
+					magFilter: THREE.NearestFilter, 
+					format: THREE.RGBAFormat,
+					depthBuffer: false,
+					stencilBuffer: false
+				} );
+				screenOutputRenderTarget.texture.generateMipmaps = false;
+				//screenOutputRenderTarget.texture.needsUpdate = true;
+				
+	
+				
+				pathTracingGeometry = new THREE.PlaneBufferGeometry( 2, 2 );
+
+				pathTracingUniforms = {
+					tPreviousTexture: { type: "t", value: screenOutputRenderTarget.texture },
+					
+					uTime: { type: "f", value: 0.0 },
+					uSampleCounter: { type: "f", value: 0.0 },
+					uULen: { type: "f", value: 1.0 },
+					uVLen: { type: "f", value: 1.0 },
+					
+					uResolution: { type: "v2", value: new THREE.Vector2() },
+					
+					uRandomVector: { type: "v3", value: new THREE.Vector3() },
+					
+					uCheckeredMaterialMatrix: { type: "m3", value: new THREE.Matrix3() },
+					uMirrorMaterialMatrix: { type: "m3", value: new THREE.Matrix3() },
+					uBlueMaterialMatrix: { type: "m3", value: new THREE.Matrix3() },
+					uWhiteMaterialMatrix: { type: "m3", value: new THREE.Matrix3() },
+					uGlassMaterialMatrix: { type: "m3", value: new THREE.Matrix3() },
+					
+					uBoxMeshMatrix: { type: "m4", value: new THREE.Matrix4() },
+					uCameraMatrix: { type: "m4", value: new THREE.Matrix4() },
+					
+					uSphereMeshesMatrix: { type: "m4v", value: [] },
+					uLightsMatrix: { type: "m4v", value: [] }
+				};
+			
+				pathTracingMaterial = new THREE.ShaderMaterial( {
+					uniforms: pathTracingUniforms,
+					vertexShader: document.getElementById( 'pathTracingVertexShader' ).textContent,
+					fragmentShader: document.getElementById( 'pathTracingFragmentShader' ).textContent,
+				        depthTest: false,
+                                        depthWrite: false
+                                } );
+
+				pathTracingMesh = new THREE.Mesh( pathTracingGeometry, pathTracingMaterial );
+				pathTracingScene.add( pathTracingMesh );
+				
+				// the following keeps the large scene ShaderMaterial quad right in front 
+				//   of the camera at all times. This is necessary because without it, the scene 
+				//   quad will fall out of view and get clipped when the camera rotates past 180 degrees.
+				worldCamera.add( pathTracingMesh );
+				
+				
+				
+				screenTextureGeometry = new THREE.PlaneBufferGeometry( 2, 2 );
+				
+				screenTextureUniforms = {
+					tTexture0: { type: "t", value: pathTracingRenderTarget.texture }
+				}
+				
+				screenTextureMaterial = new THREE.ShaderMaterial( {
+					uniforms: screenTextureUniforms,
+					vertexShader: document.getElementById( 'screenTextureVertexShader' ).textContent,
+					fragmentShader: document.getElementById( 'screenTextureFragmentShader' ).textContent,
+					depthWrite: false,
+					depthTest: false
+				} );
+				
+				screenTextureMesh = new THREE.Mesh(screenTextureGeometry, screenTextureMaterial);
+				screenTextureScene.add(screenTextureMesh);
+				
+				
+				
+			
+				screenOutputGeometry = new THREE.PlaneBufferGeometry( 2, 2 );
+				
+				screenOutputUniforms = {
+					tTexture0: { type: "t", value: screenOutputRenderTarget.texture }
+				}
+				
+				screenOutputMaterial = new THREE.ShaderMaterial( {
+					uniforms: screenOutputUniforms,
+					vertexShader: document.getElementById( 'screenOutputVertexShader' ).textContent,
+					fragmentShader: document.getElementById( 'screenOutputFragmentShader' ).textContent,
+					depthWrite: false,
+					depthTest: false
+				} );
+				
+				screenOutputMesh = new THREE.Mesh(screenOutputGeometry, screenOutputMaterial);
+				screenOutputScene.add(screenOutputMesh);
+
+				
+				// Ground
+				groundGeometry = new THREE.PlaneBufferGeometry(1000, 1000, 1, 1);
+				checkeredMaterial = new THREE.MeshStandardMaterial( {
+					color: new THREE.Color(0.8, 0.8, 0.8), //RGB, ranging from 0.0 - 1.0
+					roughness: 0.4,//0.04
+					metalness: 0.0,
+					opacity: 1.0,
+					refractionRatio: 0.98
+				} );
+				
+				groundMesh = new THREE.Mesh(groundGeometry, checkeredMaterial);
+				// the ground plane is initially in the X-Y plane facing the camera,
+				// therefore, we rotate the ground plane to lie flat in the X-Z plane
+				groundMesh.rotation.x = Math.PI / -2;
+				pathTracingScene.add(groundMesh);
+				groundMesh.visible = false;
+				
+				pathTracingUniforms.uCheckeredMaterialMatrix.value.elements[0] = groundMesh.material.color.r;
+				pathTracingUniforms.uCheckeredMaterialMatrix.value.elements[1] = groundMesh.material.color.g;
+				pathTracingUniforms.uCheckeredMaterialMatrix.value.elements[2] = groundMesh.material.color.b;
+				pathTracingUniforms.uCheckeredMaterialMatrix.value.elements[3] = groundMesh.material.metalness;
+				pathTracingUniforms.uCheckeredMaterialMatrix.value.elements[4] = groundMesh.material.roughness;
+				pathTracingUniforms.uCheckeredMaterialMatrix.value.elements[5] = groundMesh.material.opacity;
+				pathTracingUniforms.uCheckeredMaterialMatrix.value.elements[6] = groundMesh.material.refractionRatio;
+				
+				
+				// Boxes
+				boxGeometry = new THREE.BoxGeometry(1,1,1);
+				blueMaterial = new THREE.MeshStandardMaterial( {
+					color: new THREE.Color(0.0, 0.0, 0.99), //RGB, ranging from 0.0 - 1.0
+					roughness: 0.1,
+					metalness: 0.5,
+					opacity: 1.0,
+					refractionRatio: 0.98
+				} );
+				
+				boxMesh = new THREE.Mesh(boxGeometry, blueMaterial);
+				pathTracingScene.add(boxMesh);
+				boxMesh.visible = false;
+				
+				pathTracingUniforms.uBlueMaterialMatrix.value.elements[0] = boxMesh.material.color.r;
+				pathTracingUniforms.uBlueMaterialMatrix.value.elements[1] = boxMesh.material.color.g;
+				pathTracingUniforms.uBlueMaterialMatrix.value.elements[2] = boxMesh.material.color.b;
+				pathTracingUniforms.uBlueMaterialMatrix.value.elements[3] = boxMesh.material.metalness;
+				pathTracingUniforms.uBlueMaterialMatrix.value.elements[4] = boxMesh.material.roughness;
+				pathTracingUniforms.uBlueMaterialMatrix.value.elements[5] = boxMesh.material.opacity;
+				pathTracingUniforms.uBlueMaterialMatrix.value.elements[6] = boxMesh.material.refractionRatio;
+				
+				
+				// Spheres
+				mirrorMaterial = new THREE.MeshStandardMaterial( {
+					color: new THREE.Color(0.0, 0.0, 0.0), //RGB, ranging from 0.0 - 1.0
+					roughness: 0.04,
+					metalness: 1.0,
+					opacity: 1.0,
+					refractionRatio: 0.98
+				} );
+				whiteMaterial = new THREE.MeshStandardMaterial( {
+					color: new THREE.Color(0.99, 0.99, 0.99), //RGB, from 0.0 - 1.0
+					roughness: 0.04,
+					metalness: 0.1,
+					opacity: 1.0,
+					refractionRatio: 0.98
+				} );
+				glassMaterial = new THREE.MeshStandardMaterial( {
+					color: new THREE.Color(0.0, 0.9, 0.9), //RGB, from 0.0 - 1.0
+					roughness: 0.04,
+					metalness: 0.0,
+					opacity: 0.01, // almost fully transparent
+					refractionRatio: 0.6666 // Air has IndexOfRefraction very near 1.0
+							      // Glass has IndexOfRefraction around 1.5
+				        		// thus, the refractionRatio is: 1.0 / 1.5 = 0.6666
+				} );
+				
+				
+					
+				sphereGeometry = new THREE.SphereGeometry(1);
+					
+				sphereMesh[0] = new THREE.Mesh(sphereGeometry, mirrorMaterial);
+				pathTracingScene.add(sphereMesh[0]);  sphereMesh[0].visible = false;
+				pathTracingUniforms.uSphereMeshesMatrix.value[0] = new THREE.Matrix4();
+				
+				sphereMesh[1] = new THREE.Mesh(sphereGeometry, mirrorMaterial);
+				pathTracingScene.add(sphereMesh[1]);  sphereMesh[1].visible = false;
+				pathTracingUniforms.uSphereMeshesMatrix.value[1] = new THREE.Matrix4();
+				
+				sphereMesh[2] = new THREE.Mesh(sphereGeometry, whiteMaterial);
+				pathTracingScene.add(sphereMesh[2]);  sphereMesh[2].visible = false;
+				pathTracingUniforms.uSphereMeshesMatrix.value[2] = new THREE.Matrix4();
+				
+				sphereMesh[3] = new THREE.Mesh(sphereGeometry, glassMaterial);
+				pathTracingScene.add(sphereMesh[3]);  sphereMesh[3].visible = false;
+				pathTracingUniforms.uSphereMeshesMatrix.value[3] = new THREE.Matrix4();
+			
+				
+				pathTracingUniforms.uMirrorMaterialMatrix.value.elements[0] = sphereMesh[0].material.color.r;
+				pathTracingUniforms.uMirrorMaterialMatrix.value.elements[1] = sphereMesh[0].material.color.g;
+				pathTracingUniforms.uMirrorMaterialMatrix.value.elements[2] = sphereMesh[0].material.color.b;
+				pathTracingUniforms.uMirrorMaterialMatrix.value.elements[3] = sphereMesh[0].material.metalness;
+				pathTracingUniforms.uMirrorMaterialMatrix.value.elements[4] = sphereMesh[0].material.roughness;
+				pathTracingUniforms.uMirrorMaterialMatrix.value.elements[5] = sphereMesh[0].material.opacity;
+				pathTracingUniforms.uMirrorMaterialMatrix.value.elements[6] = sphereMesh[0].material.refractionRatio;
+				
+				pathTracingUniforms.uWhiteMaterialMatrix.value.elements[0] = sphereMesh[2].material.color.r;
+				pathTracingUniforms.uWhiteMaterialMatrix.value.elements[1] = sphereMesh[2].material.color.g;
+				pathTracingUniforms.uWhiteMaterialMatrix.value.elements[2] = sphereMesh[2].material.color.b;
+				pathTracingUniforms.uWhiteMaterialMatrix.value.elements[3] = sphereMesh[2].material.metalness;
+				pathTracingUniforms.uWhiteMaterialMatrix.value.elements[4] = sphereMesh[2].material.roughness;
+				pathTracingUniforms.uWhiteMaterialMatrix.value.elements[5] = sphereMesh[2].material.opacity;
+				pathTracingUniforms.uWhiteMaterialMatrix.value.elements[6] = sphereMesh[2].material.refractionRatio;
+				
+				pathTracingUniforms.uGlassMaterialMatrix.value.elements[0] = sphereMesh[3].material.color.r;
+				pathTracingUniforms.uGlassMaterialMatrix.value.elements[1] = sphereMesh[3].material.color.g;
+				pathTracingUniforms.uGlassMaterialMatrix.value.elements[2] = sphereMesh[3].material.color.b;
+				pathTracingUniforms.uGlassMaterialMatrix.value.elements[3] = sphereMesh[3].material.metalness;
+				pathTracingUniforms.uGlassMaterialMatrix.value.elements[4] = sphereMesh[3].material.roughness;
+				pathTracingUniforms.uGlassMaterialMatrix.value.elements[5] = sphereMesh[3].material.opacity;
+				pathTracingUniforms.uGlassMaterialMatrix.value.elements[6] = sphereMesh[3].material.refractionRatio;
+				
+				
+				// TODO make lights.visible = false?
+				// Lights
+				// Blue light
+				pointLight00 = new THREE.PointLight('rgb(0,0,255)', 1, 100, 2);
+				pointLight00.power = 40;//40
+				pathTracingScene.add(pointLight00);
+				// White light
+				pointLight01 = new THREE.PointLight('rgb(255,255,255)', 1, 100, 2);
+				pointLight01.power = 40;
+				pathTracingScene.add(pointLight01);
+				// Red light
+				pointLight02 = new THREE.PointLight('rgb(255,0,0)', 1, 100, 2);
+				pointLight02.power = 40;
+				pathTracingScene.add(pointLight02);
+				
+				
+				pathTracingUniforms.uLightsMatrix.value[0] = new THREE.Matrix4();
+				pathTracingUniforms.uLightsMatrix.value[1] = new THREE.Matrix4();
+				pathTracingUniforms.uLightsMatrix.value[2] = new THREE.Matrix4();
+				
+				
+				pathTracingUniforms.uLightsMatrix.value[0].elements[3] = pointLight00.power;
+				pathTracingUniforms.uLightsMatrix.value[0].elements[4] = pointLight00.color.r;
+				pathTracingUniforms.uLightsMatrix.value[0].elements[5] = pointLight00.color.g;
+				pathTracingUniforms.uLightsMatrix.value[0].elements[6] = pointLight00.color.b;
+				pathTracingUniforms.uLightsMatrix.value[0].elements[7] = pointLight00.intensity;
+				pathTracingUniforms.uLightsMatrix.value[0].elements[8] = pointLight00.distance;
+				
+				pathTracingUniforms.uLightsMatrix.value[1].elements[3] = pointLight01.power;
+				pathTracingUniforms.uLightsMatrix.value[1].elements[4] = pointLight01.color.r;
+				pathTracingUniforms.uLightsMatrix.value[1].elements[5] = pointLight01.color.g;
+				pathTracingUniforms.uLightsMatrix.value[1].elements[6] = pointLight01.color.b;
+				pathTracingUniforms.uLightsMatrix.value[1].elements[7] = pointLight01.intensity;
+				pathTracingUniforms.uLightsMatrix.value[1].elements[8] = pointLight01.distance;
+				
+				pathTracingUniforms.uLightsMatrix.value[2].elements[3] = pointLight02.power;
+				pathTracingUniforms.uLightsMatrix.value[2].elements[4] = pointLight02.color.r;
+				pathTracingUniforms.uLightsMatrix.value[2].elements[5] = pointLight02.color.g;
+				pathTracingUniforms.uLightsMatrix.value[2].elements[6] = pointLight02.color.b;
+				pathTracingUniforms.uLightsMatrix.value[2].elements[7] = pointLight02.intensity;
+				pathTracingUniforms.uLightsMatrix.value[2].elements[8] = pointLight02.distance;
+				
+				
+				
+				
+				
+				// this must be at the end of the init() function
+				onWindowResize();
+				
+
+			}
+			
+			
+
+			function onWindowResize( event ) {
+				
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				
+				SCREEN_WIDTH = window.innerWidth;
+				SCREEN_HEIGHT = window.innerHeight;
+				
+				fontAspect = (SCREEN_WIDTH / 175) * (SCREEN_HEIGHT / 200);
+				if (fontAspect > 25) fontAspect = 25;
+				if (fontAspect < 4) fontAspect = 4;
+				fontAspect *= 2;
+				instructionsElement.style.fontSize = fontAspect + "px";
+	
+
+				pathTracingUniforms.uResolution.value.x = window.innerWidth * pixelRatio;
+				pathTracingUniforms.uResolution.value.y = window.innerHeight * pixelRatio;
+				
+				pathTracingRenderTarget.setSize( window.innerWidth * pixelRatio, window.innerHeight * pixelRatio );
+				screenOutputRenderTarget.setSize( window.innerWidth * pixelRatio, window.innerHeight * pixelRatio );
+				
+				worldCamera.aspect = window.innerWidth / window.innerHeight;
+				worldCamera.updateProjectionMatrix();
+				
+				// the following scales all scene objects by the worldCamera's field of view,
+				// taking into account the screen aspect ratio and multiplying the uniform uULen,
+				// the x-coordinate, by this ratio
+				fovScale = worldCamera.fov * 0.5 * (Math.PI / 180.0);
+				pathTracingUniforms.uVLen.value = Math.tan(fovScale);
+				pathTracingUniforms.uULen.value = pathTracingUniforms.uVLen.value * worldCamera.aspect;
+				
+				// check if mobile device is in portrait or landscape mode and position buttons accordingly
+				b2PercentLeft = SCREEN_WIDTH < SCREEN_HEIGHT ? 50 : 65;
+				joystick._button2El.style.left = b2PercentLeft + "%";
+				b1PercentLeft = SCREEN_WIDTH < SCREEN_HEIGHT ? 77 : 81;
+				joystick._button1El.style.left = b1PercentLeft + "%";
+				joystick._button3El.style.left = Math.floor( (b1PercentLeft + b2PercentLeft) / 2 ) + "%";
+				if (SCREEN_WIDTH < SCREEN_HEIGHT ) {
+					joystick._button3El.style.bottom = 11 + "%";
+				}
+				else if (SCREEN_WIDTH > SCREEN_HEIGHT ) {
+					joystick._button3El.style.bottom = 21 + "%";
+				}
+				
+				
+			}
+			
+
+
+			function animate() {
+
+				requestAnimationFrame( animate );
+
+				frameTime = clock.getDelta();
+				
+				elapsedTime = clock.getElapsedTime() % 1000;
+				pathTracingUniforms.uTime.value = elapsedTime;
+				
+				pathTracingUniforms.uRandomVector.value = randomVector.set( Math.random(), Math.random(), Math.random() );
+				
+				pathTracingUniforms.uSampleCounter.value = sampleCounter;
+				debugElement.innerHTML = "samples: " + sampleCounter;
+				
+				
+				// check user controls
+				
+				if (oldYawRotation != cameraControlsYawObject.rotation.y){
+					sampleCounter = 0.0;
+				}
+				if (oldPitchRotation != cameraControlsPitchObject.rotation.x) {
+					sampleCounter = 0.0;
+				}
+				// save state for next frame
+				oldYawRotation = cameraControlsYawObject.rotation.y;
+				oldPitchRotation = cameraControlsPitchObject.rotation.x;
+			
+				// if not playing on desktop, get the rotation from the mobile-touch virtual Joystick
+				if (!mouseControl) {
+
+					cameraControlsYawObject.rotation.y = joystick.previousRotationY - joystick.deltaX() * 0.005;
+					cameraControlsPitchObject.rotation.x = joystick.previousRotationX - joystick.deltaY() * 0.005;
+					// clamp the camera's vertical movement (around the x-axis) to the 'ceiling' and 'floor',
+					// so you can't accidentally flip the camera upside down
+					cameraControlsPitchObject.rotation.x = Math.max( - PI_2, Math.min( PI_2, cameraControlsPitchObject.rotation.x ) );
+
+					if (joystick.deltaX() || joystick.deltaY()) {
+						sampleCounter = 0.0;
+					}
+				}
+				
+				// this gives us a vector in the direction that the camera is pointing,
+				// which will be useful for moving the camera 'forward' and shooting projectiles in that direction
+				controls.getDirection(cameraDirectionVector);
+				//cameraDirectionVector.normalize();
+				controls.getUpVector(cameraUpVector);
+				controls.getRightVector(cameraRightVector);
+
+				// the following gives us a rotation quaternion (4D vector), which will be useful for 
+				// rotating scene objects to match the camera's rotation
+				worldCamera.getWorldQuaternion(cameraWorldQuaternion);
+				
+				// allow flying camera
+				if ( joystick.button3Pressed || keyboard.pressed('W') ) {
+
+					cameraControlsObject.position.add(cameraDirectionVector.multiplyScalar(20 * frameTime));
+					sampleCounter = 0.0;
+				}
+				if ( keyboard.pressed('S') ) {
+
+					cameraControlsObject.position.sub(cameraDirectionVector.multiplyScalar(20 * frameTime));
+					sampleCounter = 0.0;
+				}
+				if ( joystick.button1Pressed || keyboard.pressed('D') ) {
+
+					cameraControlsObject.position.add(cameraRightVector.multiplyScalar(20 * frameTime));
+					sampleCounter = 0.0;
+				}
+				if ( keyboard.pressed('A') ) {
+
+					cameraControlsObject.position.sub(cameraRightVector.multiplyScalar(20 * frameTime));
+					sampleCounter = 0.0;
+				}
+				if ( joystick.button2Pressed || keyboard.pressed('Q') ) {
+
+					cameraControlsObject.position.add(cameraUpVector.multiplyScalar(20 * frameTime));
+					sampleCounter = 0.0;
+				}
+				if ( keyboard.pressed('Z') ) {
+
+					cameraControlsObject.position.sub(cameraUpVector.multiplyScalar(20 * frameTime));
+					sampleCounter = 0.0;
+				}
+				
+				
+			
+				// LIGHTS
+				pointLight00.position.set( Math.sin(elapsedTime * 0.2)*10.0, 4.0, -5.0);
+				pathTracingUniforms.uLightsMatrix.value[0].elements[0] = pointLight00.position.x;
+				pathTracingUniforms.uLightsMatrix.value[0].elements[1] = pointLight00.position.y;
+				pathTracingUniforms.uLightsMatrix.value[0].elements[2] = pointLight00.position.z;
+				
+				pointLight01.position.set( Math.sin(elapsedTime * 0.4)*-10.0, 4.0, 5.0);
+				pathTracingUniforms.uLightsMatrix.value[1].elements[0] = pointLight01.position.x;
+				pathTracingUniforms.uLightsMatrix.value[1].elements[1] = pointLight01.position.y;
+				pathTracingUniforms.uLightsMatrix.value[1].elements[2] = pointLight01.position.z;
+				
+				pointLight02.position.set( 3.0, 4.0, Math.sin(elapsedTime * 0.3)*-10.0);
+				pathTracingUniforms.uLightsMatrix.value[2].elements[0] = pointLight02.position.x;
+				pathTracingUniforms.uLightsMatrix.value[2].elements[1] = pointLight02.position.y;
+				pathTracingUniforms.uLightsMatrix.value[2].elements[2] = pointLight02.position.z;
+				
+				
+				
+				// BOXES
+				boxMesh.position.set(-1.0, 1.0, Math.sin(elapsedTime*0.4)*5.0);
+				boxMesh.rotation.set(0, elapsedTime * 0.5, 0);
+				///boxMesh.updateMatrixWorld(true);
+				// The following matrix will be used inside the raymarcher's distance estimator.
+				// It moves the intersection Ray (of the raymarcher) into this object's own space. 
+				pathTracingUniforms.uBoxMeshMatrix.value.getInverse(boxMesh.matrixWorld);
+
+				
+				// SPHERES
+				sphereMesh[0].position.set(0, 0.9 + Math.abs(Math.sin(elapsedTime)) * 3.0, 0);
+				sphereMesh[1].position.set( (Math.cos(elapsedTime)) * 4.0, 0.5, 0 );
+				sphereMesh[2].position.set( Math.sin(elapsedTime) * 3.0, 1.5, Math.cos(elapsedTime) * 3.0 );
+				sphereMesh[3].position.set( Math.cos(elapsedTime) * 2.0, 1.0, Math.sin(elapsedTime) * 2.0 );
+				///sphereMesh[0].updateMatrixWorld(true);
+				///sphereMesh[1].updateMatrixWorld(true);
+				///sphereMesh[2].updateMatrixWorld(true);
+				///sphereMesh[3].updateMatrixWorld(true);
+				pathTracingUniforms.uSphereMeshesMatrix.value[0].getInverse(sphereMesh[0].matrixWorld);
+				pathTracingUniforms.uSphereMeshesMatrix.value[1].getInverse(sphereMesh[1].matrixWorld);
+				pathTracingUniforms.uSphereMeshesMatrix.value[2].getInverse(sphereMesh[2].matrixWorld);
+				pathTracingUniforms.uSphereMeshesMatrix.value[3].getInverse(sphereMesh[3].matrixWorld);
+				
+
+				// CAMERA
+				///cameraControlsObject.position.set( (Math.sin(elapsedTime * 0.25)) * 8, 3 + (2.5 * Math.sin(elapsedTime * 0.2)), 1 );
+				
+				pathTracingUniforms.uCameraMatrix.value.copy( worldCamera.matrixWorld );
+				
+				
+				
+				// RENDERING in 3 steps
+				
+				// STEP 1
+				// Perform PathTracing and Render into pathTracingRenderTarget
+				// Read previous screenOutputRenderTarget to use as a new starting point to blend with
+				renderer.render( pathTracingScene, worldCamera, pathTracingRenderTarget );
+				
+				
+				// STEP 2
+				// render(save) the final scene output into screenOutputRenderTarget
+				// This will be used as a new starting point for Step 1 above
+				renderer.render( screenTextureScene, quadCamera, screenOutputRenderTarget );
+				
+				// STEP 3
+				// Render full screen quad with generated screenOutputRenderTarget above.
+				// After this image is gamma corrected, it will be shown on the screen as the final output
+				renderer.render( screenOutputScene, quadCamera );
+				
+				sampleCounter += 1.0;
+				if (sampleCounter > 4000.0) {
+					sampleCounter = 4000.0;
+				}
+				
+				stats.update();
+				
+				
+			}
+
+		</script>
+
+	</body>
+</html>
