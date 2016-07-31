@@ -1,5 +1,5 @@
 # THREE.js-PathTracing-Renderer
-Real-time PathTracing with global illumination and progressive rendering, all on top of the Three.js WebGL framework.
+Real-time PathTracing with global illumination and progressive rendering, all on top of the Three.js WebGL framework. <br>
 Click for demo -> https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer.html
 <h2>TODO</h2>
 * Soon I will be porting Kevin Beason's smallPT ("small PathTracer") raytracing/pathtracing engine over to the Three.js WebGL framework. Users will be able to use easy, familiar commands from the Three.js library but under-the-hood the Three.js Renderer will use the smallPT path tracing engine to present the final output to the screen.
