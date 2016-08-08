@@ -197,7 +197,7 @@ vec3 light02Color = vec3(0.0);
 float seed = 0.0;
 float rand()
 { 
-	seed += (uRandomNumbers[0]);
+	seed += (uRandomNumbers[0] + uRandomNumbers[1]) + sin(uSampleCounter);
 	return fract(sin(seed)*43758.5453123);
 }
 
@@ -364,7 +364,7 @@ vec3 CalculateRadiance( Ray r )
 				fCum *= 0.5;					
 			}
 		
-			seed -= (uRandomNumbers[depth] - uRandomNumbers[depth+1]);
+			seed -= (uRandomNumbers[depth] - uRandomNumbers[depth+2]);
                 	float r1 = 2.0 * 3.1415926536 * rand();
                 	float r2 = rand();
                 	float r2s = sqrt(r2);
@@ -448,8 +448,8 @@ void main( void )
     	vec3 camUp      = ( vec3( uCameraMatrix[1][0],  uCameraMatrix[1][1],  uCameraMatrix[1][2]) );
 	vec3 camForward = ( vec3(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]) );
 	
-	//rng seeds
-	seed = uSampleCounter - uRandomNumbers[0] * uRandomNumbers[1] + uResolution.y * gl_FragCoord.x / uResolution.x + gl_FragCoord.y / uResolution.y;
+	//rng seed
+	seed = uTime + uSampleCounter - uRandomNumbers[0] * uRandomNumbers[1] + uResolution.y * gl_FragCoord.x / uResolution.x + gl_FragCoord.y / uResolution.y;
 	float r1 = 2.0 * rand();
 	float r2 = 2.0 * rand();
 			
@@ -509,7 +509,7 @@ void main( void )
 			var fovScale;
 			var frameTime, elapsedTime;
 			var pathTracingUniforms, screenOutputUniforms, screenTextureUniforms;
-			var pixelRatio = 0.6;
+			var pixelRatio = 0.5;
 			var TWO_PI = Math.PI * 2;
 			var randomVector = new THREE.Vector3();
 			var randomNumbers = [];
@@ -556,7 +556,7 @@ void main( void )
 			// if not on a mobile device, enable mouse control 
 			if ( !('createTouch' in document) ) {
 				mouseControl = true;
-				pixelRatio = 1.0;
+				pixelRatio = 0.9;
 			}
 			
 			// if on mobile device, unpause the app because there is no ESC key and no mouse capture to do
@@ -1170,8 +1170,8 @@ void main( void )
 				
 				pathTracingUniforms.uSampleCounter.value = sampleCounter;
 				sampleCounter += 1.0;
-				if (sampleCounter > 4000.0) {
-					sampleCounter = 4000.0;
+				if (sampleCounter > 10000.0) {
+					sampleCounter = 10000.0;
 				}
 				
 				stats.update();
