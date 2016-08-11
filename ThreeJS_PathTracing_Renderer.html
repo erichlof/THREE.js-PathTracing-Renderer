@@ -154,16 +154,8 @@ uniform float uULen;
 uniform float uVLen;
 uniform float uRandomNumbers[16];
 
-uniform mat3 uCheckeredMaterialMatrix;
-uniform mat3 uMirrorMaterialMatrix;
-uniform mat3 uBlueMaterialMatrix;
-uniform mat3 uWhiteMaterialMatrix;
-uniform mat3 uGlassMaterialMatrix;
-
-uniform mat4 uBoxMeshMatrix;
 uniform mat4 uCameraMatrix;
-uniform mat4 uLightsMatrix[3];
-uniform mat4 uSphereMeshesMatrix[4];
+//uniform mat4 uSphereMeshesMatrix[4];
 
 uniform vec3 uRandomVector;
 
@@ -173,13 +165,14 @@ varying vec2 vUv;
 
 
 #define PI 3.14159265359
-#define SAMPLES 2
 
 #define SPHERE_ID 0
 #define PLANE_ID 1
+#define DISK_ID 2
 
 #define N_SPHERES 9
-#define N_PLANES 5
+#define N_PLANES 3
+#define N_DISKS 2
 
 #define DIFF 0
 #define REFR 1
@@ -187,17 +180,10 @@ varying vec2 vUv;
 #define CHECK 3
 
 
-
-// globals
-vec3 lightPos[3];
-vec3 light00Color = vec3(0.0);
-vec3 light01Color = vec3(0.0);
-vec3 light02Color = vec3(0.0);
-
 float seed = 0.0;
 float rand()
 { 
-	seed += (uRandomNumbers[0] + uRandomNumbers[1]) + sin(uSampleCounter);
+	seed += uTime * (uRandomNumbers[0] + uRandomNumbers[1] + uRandomNumbers[2]);
 	return fract(sin(seed)*43758.5453123);
 }
 
@@ -205,12 +191,14 @@ float rand()
 //-----------------------------------------------------------------------
 
 struct Ray { vec3 origin; vec3 direction; };
-struct Sphere { float radius; vec3 position; vec3 emission; vec3 colour; int type; };
-struct Plane  { vec4 pla; vec3 emission; vec3 colour; int type; };
-struct Intersection { vec3 hitPoint; vec3 normal; vec3 emission; vec3 colour; int type; int id; };
+struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; int type; };
+struct Plane { vec4 pla; vec3 emission; vec3 color; int type; };
+struct Disk { float radiusSq; vec3 pos; vec3 normal; vec3 emission; vec3 color; int type; };
+struct Intersection { vec3 hitPoint; vec3 normal; vec3 emission; vec3 color; int type; int id; };
 
 Sphere spheres[N_SPHERES];
 Plane planes[N_PLANES];
+Disk disks[N_DISKS];
 
 
 //-----------------------------------------------------------------------
@@ -218,26 +206,29 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z = vec3(0.0);
-	vec3 L1 = vec3(0.1,0.5,1.0) * 4.0;
-	vec3 L2 = vec3(1.0,1.0,1.0) * 5.0;
-	vec3 L3 = vec3(1.0,1.0,1.0) * 3.0;
+	vec3 L1 = vec3(1.0, 1.0, 1.0) * 1.0;// White light
+	vec3 L2 = vec3(1.0, 0.8, 0.2) * 2.0;// Yellowish light
+	vec3 L3 = vec3(0.1, 0.5, 1.0) * 3.0;// Bluish light
 		
-        spheres[0] = Sphere(  10000.0, vec3(0.0, -10000.0, 0.0),  z, vec3(0.6,0.6,0.6),      CHECK);//Floor
-        spheres[1] = Sphere(   90.0, vec3(50.0, 155.0, -40.0),   L1, vec3(1.0,1.0,1.0),       DIFF);//Light1
-	spheres[2] = Sphere(   90.0, vec3(-70.0, 155.0, 40.0),   L2, vec3(1.0,1.0,1.0),       DIFF);//Light2
-	spheres[3] = Sphere(   90.0, vec3(60.0, 155.0, 90.0),    L3, vec3(1.0,1.0,1.0),       DIFF);//Light3
+        spheres[0] = Sphere( 10000.0, vec3(0.0, -10000.0, 0.0), z, vec3(0.6,0.6,0.6), CHECK);//Checkered Floor
 	
-        spheres[4] = Sphere(    16.5, vec3(-16.0,16.5,5.0),       z, vec3(0.8,0.8,0.8),       SPEC);//Mirror
-        spheres[5] = Sphere(    16.5, vec3(32.0,16.5,40.0),       z, vec3(1.0,1.0,1.0),       REFR);//Glass
-        spheres[6] = Sphere(    10.0, vec3(-30.0,10.0,50.0),      z, vec3(0.99),       DIFF);//Yellow 0.7,0.7,0.2
-        spheres[7] = Sphere(     8.0, vec3(10.0,28.0,30.0),       z, vec3(0.99),       DIFF);//Purple 0.6,0.1,0.8
-        spheres[8] = Sphere(     5.0, vec3(5.0,5.0,35.0),         z, vec3(0.99),       DIFF);//Green 0.2,0.8,0.2
+        spheres[1] = Sphere( 800.0, vec3(-400.0, 1100.0, 40.0), L1, vec3(1.0,1.0,1.0), DIFF);//Light1 sphere
+	spheres[2] = Sphere( 100.0, vec3(300.0, 300.0, -300.0), L2, vec3(1.0,1.0,1.0), DIFF);//Light2 sphere
+	spheres[3] = Sphere( 80.0, vec3(400.0, 150.0, 0.0),    L3, vec3(1.0,1.0,1.0), DIFF);//Light3 sphere
+	
+        spheres[4] = Sphere( 16.5, vec3(-16.0,16.5,5.0), z, vec3(0.8,0.8,0.8), SPEC);//Mirror sphere
+        spheres[5] = Sphere( 16.5, vec3(32.0,16.5,40.0), z, vec3(1.0,1.0,1.0), REFR);//Glass sphere
+        spheres[6] = Sphere( 10.0, vec3(-30.0,10.0,50.0), z, vec3(1.0,1.0,1.0), DIFF);//White diffuse sphere
+        spheres[7] = Sphere( .0001, vec3(32.0,16.5,40.0), z, vec3(1.0,1.0,0.0), DIFF);//Yellow diffuse sphere
+        spheres[8] = Sphere( 5.0, vec3(5.0,5.0,35.0), z, vec3(1.0,1.0,1.0), DIFF);//White diffuse sphere
 
-	planes[0]  = Plane(   vec4( 1.0,0.0,0.0,50.0),            z, vec3(1.0,0.0,0.0),       DIFF);//RedPlane Left Wall
-	planes[1]  = Plane(   vec4(-1.0,0.0,0.0,50.0),            z, vec3(0.0,0.0,1.0),       DIFF);//BluePlane Right Wall
-	planes[2]  = Plane(   vec4( 0.0,0.0,1.0,50.0),           z, vec3(1.0,1.0,1.0),       DIFF);//WhitePlane Back Wall
-	planes[3]  = Plane(   vec4( 0.0,0.0,-1.0,100.0),           z, vec3(1.0,1.0,1.0),       DIFF);//WhitePlane Front Wall
-	planes[4]  = Plane(   vec4( 0.0,-1.0,0.0,70.0),           z, vec3(1.0,1.0,1.0),       DIFF);//WhitePlane Ceiling
+	planes[0]  = Plane( vec4( 0.0,0.0,1.0,50.0), z, vec3(1.0,1.0,1.0), DIFF);//WhitePlane Back Wall
+	planes[1]  = Plane( vec4( 0.0,0.0,-1.0,100.0), z, vec3(1.0,1.0,1.0), DIFF);//WhitePlane Front Wall
+	planes[2]  = Plane( vec4( 0.0,-1.0,0.0,70.0), z, vec3(1.0,1.0,1.0), DIFF);//WhitePlane Ceiling
+	
+	disks[0]   = Disk( 16.5 * 16.5, vec3(-60.0,13.0,-10.0), vec3( 1.0,-1.0,0.0 ), z, vec3(1.0,0.0,0.0), DIFF);//RedDisk Left 
+	disks[1]   = Disk( 16.5 * 16.5, vec3( 30.0,-2.0,-200.0), vec3( -1.0,0.0,0.1 ), L3, vec3(1.0,1.0,1.0), DIFF);//DiskLight Right	
+	
 }
 
 //-----------------------------------------------------------------------
@@ -267,8 +258,42 @@ float SphereIntersect( float rad, vec3 pos, Ray r )
 float PlaneIntersect( vec4 pla, Ray r )
 //-----------------------------------------------------------------------
 {
-	return (-pla.w - dot(pla.xyz,r.origin)) / dot( pla.xyz, r.direction );
+	vec3 n = normalize(-pla.xyz);
+	float denom = dot(n, r.direction);
+	float t = -1.0;
+	
+    	if (denom > 0.0)
+	{ 
+        	vec3 pOrO = (pla.w * n) - r.origin; 
+        	t = dot(pOrO, n) / denom; 
+        	//return (t >= 0);
+    	}
+	return t;
 }
+
+//-----------------------------------------------------------------------
+float DiskIntersect( float radiusSq, vec3 diskPos, vec3 normal, Ray r )
+//-----------------------------------------------------------------------
+{
+	vec3 n = normalize(-normal);
+	float denom = dot(n, r.direction);
+	float t = -1.0;
+	
+    	if (denom > 0.0)
+	{ 
+		vec3 pOrO = diskPos - r.origin;
+        	t = dot(pOrO, n) / denom; 
+        	vec3 intersectPos = r.origin + r.direction * t;
+		vec3 v = intersectPos - diskPos;
+		float d2 = dot(v,v);
+		if (d2 > radiusSq)
+		{
+			t = -1.0;
+		} 
+    	}
+	return t;
+}
+
 
 //-----------------------------------------------------------------------
 bool SceneIntersect( Ray r, inout float t, inout Intersection intersec )
@@ -278,21 +303,6 @@ bool SceneIntersect( Ray r, inout float t, inout Intersection intersec )
 	float inf = 100000.0;
 	t   = inf;
 	
-	for (int j = 0; j < N_PLANES; j++)
-        {
-		d = PlaneIntersect( planes[j].pla , r );
-		if (d > 0.0 && d < t)
-		{
-			t = d;
-			intersec.hitPoint = r.origin + r.direction * t;
-			intersec.normal = normalize(planes[j].pla.xyz);
-			intersec.emission = planes[j].emission;
-			intersec.colour = planes[j].colour;
-			intersec.type = planes[j].type;
-			intersec.id = PLANE_ID;
-		}
-        }
-
         for (int i = 0; i < N_SPHERES; i++)
         {
 		d = SphereIntersect( spheres[i].radius , spheres[i].position , r );
@@ -302,12 +312,41 @@ bool SceneIntersect( Ray r, inout float t, inout Intersection intersec )
 			intersec.hitPoint = r.origin + r.direction * t;
 			intersec.normal = normalize(intersec.hitPoint - spheres[i].position);
 			intersec.emission = spheres[i].emission;
-			intersec.colour = spheres[i].colour;
+			intersec.color = spheres[i].color;
 			intersec.type = spheres[i].type;
 			intersec.id = SPHERE_ID;
 		}
         }
-	
+	/*
+	for (int j = 0; j < N_PLANES; j++)
+        {
+		d = PlaneIntersect( planes[j].pla , r );
+		if (d >= 0.0 && d < t)
+		{
+			t = d;
+			intersec.hitPoint = r.origin + r.direction * t;
+			intersec.normal = (planes[j].pla.xyz);
+			intersec.emission = planes[j].emission;
+			intersec.color = planes[j].color;
+			intersec.type = planes[j].type;
+			intersec.id = PLANE_ID;
+		}
+        }
+	*/
+	for (int k = 0; k < N_DISKS; k++)
+        {
+		d = DiskIntersect( disks[k].radiusSq, disks[k].pos, disks[k].normal, r );
+		if (d >= 0.0 && d < t)
+		{
+			t = d;
+			intersec.hitPoint = r.origin + r.direction * t;
+			intersec.normal = normalize(disks[k].normal);
+			intersec.emission = disks[k].emission;
+			intersec.color = disks[k].color;
+			intersec.type = disks[k].type;
+			intersec.id = DISK_ID;
+		}
+        }
 	
 	return t < inf;
 }
@@ -324,7 +363,7 @@ vec3 CalculateRadiance( Ray r )
         for (int depth = 0; depth < 5; depth++)
         {
 
-                float t = 0.0;                            // distance to intersection
+                float t = 0.0;    // distance to intersection
                 intersec.emission = vec3(0.0);
 		if (!SceneIntersect(r, t, intersec))
                     break;
@@ -333,7 +372,7 @@ vec3 CalculateRadiance( Ray r )
 		vec3 n = normalize(intersec.normal);
                 vec3 nl = dot(n,r.direction) < 0.0 ? n : n * -1.0;
 		nl = normalize(nl);
-                vec3 f = intersec.colour;
+                vec3 f = intersec.color;
 		
 		/*
 		// Russian Roulette
@@ -350,7 +389,6 @@ vec3 CalculateRadiance( Ray r )
 		if (intersec.emission.r > 0.1 || intersec.emission.g > 0.1 || intersec.emission.b > 0.1 )
 		{
 			finalCol = fCum * intersec.emission;
-			//finalCol = intersec.emission;
 			break;
 		}
 
@@ -364,7 +402,8 @@ vec3 CalculateRadiance( Ray r )
 				fCum *= 0.5;					
 			}
 		
-			seed -= (uRandomNumbers[depth] - uRandomNumbers[depth+2]);
+			seed -= (uRandomNumbers[depth] + uRandomNumbers[depth+2]);
+
                 	float r1 = 2.0 * 3.1415926536 * rand();
                 	float r2 = rand();
                 	float r2s = sqrt(r2);
@@ -373,25 +412,23 @@ vec3 CalculateRadiance( Ray r )
 			vec3 v = cross(w,u);
                 	vec3 d = normalize(u * cos(r1) * r2s + v * sin(r1) * r2s + w * sqrt(1.0 - r2));
 			
-			///finalCol += fCum * intersec.emission;
-			
                 	r = Ray(x, d);
-			r.origin += r.direction; // Android bug fix
+			r.origin += r.direction; // avoid self-intersection
                 	continue;
                 }
                 else 
-	        if (intersec.type == SPEC)            // Ideal SPECULAR reflection
+	        if (intersec.type == SPEC)  // Ideal SPECULAR reflection
                 {
                         r = Ray(x, r.direction - n * 2.0 * dot(n,r.direction));
 			
-			r.origin += r.direction; // Android bug fix
+			r.origin += r.direction; // avoid self-intersection
                         continue;
                 }
 
                 // Ideal dielectric REFRACTION
                 Ray reflRay = Ray(x, r.direction - n * 2.0 * dot(n,r.direction)); 
 		
-		bool into = dot(n,nl) > 0.0;                // Ray from outside going in?
+		bool into = dot(n,nl) > 0.0;  // Ray from outside going in?
 
                 float nc = 1.0;   // IOR of air
                 float nt = 1.5; // IOR of solid
@@ -402,7 +439,7 @@ vec3 CalculateRadiance( Ray r )
                 if (cos2t < 0.0)    // Total internal reflection
                 {
                     r = reflRay;
-		    r.origin += r.direction; // Android bug fix
+		    r.origin += r.direction; // avoid self-intersection
                     continue;
                 }
 
@@ -421,13 +458,13 @@ vec3 CalculateRadiance( Ray r )
                 if( rand() < P )
                 {
                     r = reflRay;
-		    r.origin += r.direction; // Android bug fix
+		    r.origin += r.direction; // avoid self-intersection
                     fCum = fCum * RP;
                 }
                 else
                 {
                     r = Ray(x, tdir);
-		    r.origin += r.direction; // Android bug fix
+		    r.origin += r.direction; // avoid self-intersection
                     fCum = fCum * TP;
                 }
 						
@@ -449,7 +486,7 @@ void main( void )
 	vec3 camForward = ( vec3(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]) );
 	
 	//rng seed
-	seed = uTime + uSampleCounter - uRandomNumbers[0] * uRandomNumbers[1] + uResolution.y * gl_FragCoord.x / uResolution.x + gl_FragCoord.y / uResolution.y;
+	seed = uSampleCounter * uRandomNumbers[0] + uResolution.y * gl_FragCoord.x / uResolution.x + gl_FragCoord.y / uResolution.y;
 	float r1 = 2.0 * rand();
 	float r2 = 2.0 * rand();
 			
@@ -464,15 +501,6 @@ void main( void )
 	Ray ray = Ray( camPos , rayDir );
 	
 	SetupScene();
-	
-	lightPos[0] = vec3(uLightsMatrix[0][0][0], uLightsMatrix[0][0][1], uLightsMatrix[0][0][2]);
-	lightPos[1] = vec3(uLightsMatrix[1][0][0], uLightsMatrix[1][0][1], uLightsMatrix[1][0][2]);
-	lightPos[2] = vec3(uLightsMatrix[2][0][0], uLightsMatrix[2][0][1], uLightsMatrix[2][0][2]);
-	
-	light00Color = uLightsMatrix[0][0][3] * vec3( uLightsMatrix[0][1][0], uLightsMatrix[0][1][1], uLightsMatrix[0][1][2] );
-    	light01Color = uLightsMatrix[1][0][3] * vec3( uLightsMatrix[1][1][0], uLightsMatrix[1][1][1], uLightsMatrix[1][1][2] );
-	light02Color = uLightsMatrix[2][0][3] * vec3( uLightsMatrix[2][1][0], uLightsMatrix[2][1][1], uLightsMatrix[2][1][2] );
-	
 	     		
 	// perform path tracing and get resulting pixel color
 	vec4 pixelColor = vec4( CalculateRadiance(ray), 1.0);
@@ -509,7 +537,7 @@ void main( void )
 			var fovScale;
 			var frameTime, elapsedTime;
 			var pathTracingUniforms, screenOutputUniforms, screenTextureUniforms;
-			var pixelRatio = 0.5;
+			var pixelRatio = 1.0;
 			var TWO_PI = Math.PI * 2;
 			var randomVector = new THREE.Vector3();
 			var randomNumbers = [];
@@ -552,11 +580,11 @@ void main( void )
 			debugElement.style.webkitUserSelect = "none";
 			debugElement.style.MozUserSelect = "none";
 			
-			var mouseControl = false;
+			var mouseControl = true;
 			// if not on a mobile device, enable mouse control 
-			if ( !('createTouch' in document) ) {
-				mouseControl = true;
-				pixelRatio = 0.9;
+			if ( 'createTouch' in document ) {
+				mouseControl = false;
+				pixelRatio = 0.7;
 			}
 			
 			// if on mobile device, unpause the app because there is no ESC key and no mouse capture to do
@@ -681,7 +709,7 @@ void main( void )
 				joystick.previousRotationX = -0.4;
 				
 				
-				pathTracingRenderTarget = new THREE.WebGLRenderTarget( window.innerWidth * pixelRatio, window.innerHeight * pixelRatio, {
+				pathTracingRenderTarget = new THREE.WebGLRenderTarget( Math.floor(window.innerWidth * pixelRatio), Math.floor(window.innerHeight * pixelRatio), {
 					minFilter: THREE.NearestFilter, // default THREE.LinearMipMapLinearFilter
 					magFilter: THREE.NearestFilter, // default THREE.LinearFilter
 					format: THREE.RGBAFormat,
@@ -691,7 +719,7 @@ void main( void )
 				pathTracingRenderTarget.texture.generateMipmaps = false;
 				//pathTracingRenderTarget.texture.needsUpdate = true;
 				
-				screenOutputRenderTarget = new THREE.WebGLRenderTarget( window.innerWidth * pixelRatio, window.innerHeight * pixelRatio, {
+				screenOutputRenderTarget = new THREE.WebGLRenderTarget( Math.floor(window.innerWidth * pixelRatio), Math.floor(window.innerHeight * pixelRatio), {
 					minFilter: THREE.NearestFilter, 
 					magFilter: THREE.NearestFilter, 
 					format: THREE.RGBAFormat,
@@ -706,29 +734,22 @@ void main( void )
 				pathTracingGeometry = new THREE.PlaneBufferGeometry( 2, 2 );
 
 				pathTracingUniforms = {
+					
 					tPreviousTexture: { type: "t", value: screenOutputRenderTarget.texture },
 					
 					uTime: { type: "f", value: 0.0 },
 					uSampleCounter: { type: "f", value: 0.0 },
 					uULen: { type: "f", value: 1.0 },
 					uVLen: { type: "f", value: 1.0 },
+					
 					uRandomNumbers: { type: "fv", value: [] },
 					
 					uResolution: { type: "v2", value: new THREE.Vector2() },
 					
 					uRandomVector: { type: "v3", value: new THREE.Vector3() },
-					
-					uCheckeredMaterialMatrix: { type: "m3", value: new THREE.Matrix3() },
-					uMirrorMaterialMatrix: { type: "m3", value: new THREE.Matrix3() },
-					uBlueMaterialMatrix: { type: "m3", value: new THREE.Matrix3() },
-					uWhiteMaterialMatrix: { type: "m3", value: new THREE.Matrix3() },
-					uGlassMaterialMatrix: { type: "m3", value: new THREE.Matrix3() },
-					
-					uBoxMeshMatrix: { type: "m4", value: new THREE.Matrix4() },
+				
 					uCameraMatrix: { type: "m4", value: new THREE.Matrix4() },
-					
-					uSphereMeshesMatrix: { type: "m4v", value: [] },
-					uLightsMatrix: { type: "m4v", value: [] }
+	
 				};
 			
 				pathTracingMaterial = new THREE.ShaderMaterial( {
@@ -787,177 +808,11 @@ void main( void )
 				screenOutputScene.add(screenOutputMesh);
 
 				
-				// Ground
-				groundGeometry = new THREE.PlaneBufferGeometry(1000, 1000, 1, 1);
-				checkeredMaterial = new THREE.MeshStandardMaterial( {
-					color: new THREE.Color(0.8, 0.8, 0.8), //RGB, ranging from 0.0 - 1.0
-					roughness: 0.4,//0.04
-					metalness: 0.0,
-					opacity: 1.0,
-					refractionRatio: 0.98
-				} );
-				
-				groundMesh = new THREE.Mesh(groundGeometry, checkeredMaterial);
-				// the ground plane is initially in the X-Y plane facing the camera,
-				// therefore, we rotate the ground plane to lie flat in the X-Z plane
-				groundMesh.rotation.x = Math.PI / -2;
-				pathTracingScene.add(groundMesh);
-				groundMesh.visible = false;
-				
-				pathTracingUniforms.uCheckeredMaterialMatrix.value.elements[0] = groundMesh.material.color.r;
-				pathTracingUniforms.uCheckeredMaterialMatrix.value.elements[1] = groundMesh.material.color.g;
-				pathTracingUniforms.uCheckeredMaterialMatrix.value.elements[2] = groundMesh.material.color.b;
-				pathTracingUniforms.uCheckeredMaterialMatrix.value.elements[3] = groundMesh.material.metalness;
-				pathTracingUniforms.uCheckeredMaterialMatrix.value.elements[4] = groundMesh.material.roughness;
-				pathTracingUniforms.uCheckeredMaterialMatrix.value.elements[5] = groundMesh.material.opacity;
-				pathTracingUniforms.uCheckeredMaterialMatrix.value.elements[6] = groundMesh.material.refractionRatio;
-				
-				
-				// Boxes
-				boxGeometry = new THREE.BoxGeometry(1,1,1);
-				blueMaterial = new THREE.MeshStandardMaterial( {
-					color: new THREE.Color(0.0, 0.0, 0.99), //RGB, ranging from 0.0 - 1.0
-					roughness: 0.1,
-					metalness: 0.5,
-					opacity: 1.0,
-					refractionRatio: 0.98
-				} );
-				
-				boxMesh = new THREE.Mesh(boxGeometry, blueMaterial);
-				pathTracingScene.add(boxMesh);
-				boxMesh.visible = false;
-				
-				pathTracingUniforms.uBlueMaterialMatrix.value.elements[0] = boxMesh.material.color.r;
-				pathTracingUniforms.uBlueMaterialMatrix.value.elements[1] = boxMesh.material.color.g;
-				pathTracingUniforms.uBlueMaterialMatrix.value.elements[2] = boxMesh.material.color.b;
-				pathTracingUniforms.uBlueMaterialMatrix.value.elements[3] = boxMesh.material.metalness;
-				pathTracingUniforms.uBlueMaterialMatrix.value.elements[4] = boxMesh.material.roughness;
-				pathTracingUniforms.uBlueMaterialMatrix.value.elements[5] = boxMesh.material.opacity;
-				pathTracingUniforms.uBlueMaterialMatrix.value.elements[6] = boxMesh.material.refractionRatio;
-				
-				
-				// Spheres
-				mirrorMaterial = new THREE.MeshStandardMaterial( {
-					color: new THREE.Color(0.0, 0.0, 0.0), //RGB, ranging from 0.0 - 1.0
-					roughness: 0.04,
-					metalness: 1.0,
-					opacity: 1.0,
-					refractionRatio: 0.98
-				} );
-				whiteMaterial = new THREE.MeshStandardMaterial( {
-					color: new THREE.Color(0.99, 0.99, 0.99), //RGB, from 0.0 - 1.0
-					roughness: 0.04,
-					metalness: 0.1,
-					opacity: 1.0,
-					refractionRatio: 0.98
-				} );
-				glassMaterial = new THREE.MeshStandardMaterial( {
-					color: new THREE.Color(0.0, 0.9, 0.9), //RGB, from 0.0 - 1.0
-					roughness: 0.04,
-					metalness: 0.0,
-					opacity: 0.01, // almost fully transparent
-					refractionRatio: 0.6666 // Air has IndexOfRefraction very near 1.0
-							      // Glass has IndexOfRefraction around 1.5
-				        		// thus, the refractionRatio is: 1.0 / 1.5 = 0.6666
-				} );
-				
-				
 					
-				sphereGeometry = new THREE.SphereGeometry(1);
-					
-				sphereMesh[0] = new THREE.Mesh(sphereGeometry, mirrorMaterial);
-				pathTracingScene.add(sphereMesh[0]);  sphereMesh[0].visible = false;
-				pathTracingUniforms.uSphereMeshesMatrix.value[0] = new THREE.Matrix4();
-				
-				sphereMesh[1] = new THREE.Mesh(sphereGeometry, mirrorMaterial);
-				pathTracingScene.add(sphereMesh[1]);  sphereMesh[1].visible = false;
-				pathTracingUniforms.uSphereMeshesMatrix.value[1] = new THREE.Matrix4();
-				
-				sphereMesh[2] = new THREE.Mesh(sphereGeometry, whiteMaterial);
-				pathTracingScene.add(sphereMesh[2]);  sphereMesh[2].visible = false;
-				pathTracingUniforms.uSphereMeshesMatrix.value[2] = new THREE.Matrix4();
-				
-				sphereMesh[3] = new THREE.Mesh(sphereGeometry, glassMaterial);
-				pathTracingScene.add(sphereMesh[3]);  sphereMesh[3].visible = false;
-				pathTracingUniforms.uSphereMeshesMatrix.value[3] = new THREE.Matrix4();
-			
-				
-				pathTracingUniforms.uMirrorMaterialMatrix.value.elements[0] = sphereMesh[0].material.color.r;
-				pathTracingUniforms.uMirrorMaterialMatrix.value.elements[1] = sphereMesh[0].material.color.g;
-				pathTracingUniforms.uMirrorMaterialMatrix.value.elements[2] = sphereMesh[0].material.color.b;
-				pathTracingUniforms.uMirrorMaterialMatrix.value.elements[3] = sphereMesh[0].material.metalness;
-				pathTracingUniforms.uMirrorMaterialMatrix.value.elements[4] = sphereMesh[0].material.roughness;
-				pathTracingUniforms.uMirrorMaterialMatrix.value.elements[5] = sphereMesh[0].material.opacity;
-				pathTracingUniforms.uMirrorMaterialMatrix.value.elements[6] = sphereMesh[0].material.refractionRatio;
-				
-				pathTracingUniforms.uWhiteMaterialMatrix.value.elements[0] = sphereMesh[2].material.color.r;
-				pathTracingUniforms.uWhiteMaterialMatrix.value.elements[1] = sphereMesh[2].material.color.g;
-				pathTracingUniforms.uWhiteMaterialMatrix.value.elements[2] = sphereMesh[2].material.color.b;
-				pathTracingUniforms.uWhiteMaterialMatrix.value.elements[3] = sphereMesh[2].material.metalness;
-				pathTracingUniforms.uWhiteMaterialMatrix.value.elements[4] = sphereMesh[2].material.roughness;
-				pathTracingUniforms.uWhiteMaterialMatrix.value.elements[5] = sphereMesh[2].material.opacity;
-				pathTracingUniforms.uWhiteMaterialMatrix.value.elements[6] = sphereMesh[2].material.refractionRatio;
-				
-				pathTracingUniforms.uGlassMaterialMatrix.value.elements[0] = sphereMesh[3].material.color.r;
-				pathTracingUniforms.uGlassMaterialMatrix.value.elements[1] = sphereMesh[3].material.color.g;
-				pathTracingUniforms.uGlassMaterialMatrix.value.elements[2] = sphereMesh[3].material.color.b;
-				pathTracingUniforms.uGlassMaterialMatrix.value.elements[3] = sphereMesh[3].material.metalness;
-				pathTracingUniforms.uGlassMaterialMatrix.value.elements[4] = sphereMesh[3].material.roughness;
-				pathTracingUniforms.uGlassMaterialMatrix.value.elements[5] = sphereMesh[3].material.opacity;
-				pathTracingUniforms.uGlassMaterialMatrix.value.elements[6] = sphereMesh[3].material.refractionRatio;
-				
-				
-				// TODO make lights.visible = false?
-				// Lights
-				// Blue light
-				pointLight00 = new THREE.PointLight('rgb(0,0,255)', 1, 100, 2);
-				pointLight00.power = 40;//40
-				pathTracingScene.add(pointLight00);
-				// White light
-				pointLight01 = new THREE.PointLight('rgb(255,255,255)', 1, 100, 2);
-				pointLight01.power = 40;
-				pathTracingScene.add(pointLight01);
-				// Red light
-				pointLight02 = new THREE.PointLight('rgb(255,0,0)', 1, 100, 2);
-				pointLight02.power = 40;
-				pathTracingScene.add(pointLight02);
-				
-				
-				pathTracingUniforms.uLightsMatrix.value[0] = new THREE.Matrix4();
-				pathTracingUniforms.uLightsMatrix.value[1] = new THREE.Matrix4();
-				pathTracingUniforms.uLightsMatrix.value[2] = new THREE.Matrix4();
-				
-				
-				pathTracingUniforms.uLightsMatrix.value[0].elements[3] = pointLight00.power;
-				pathTracingUniforms.uLightsMatrix.value[0].elements[4] = pointLight00.color.r;
-				pathTracingUniforms.uLightsMatrix.value[0].elements[5] = pointLight00.color.g;
-				pathTracingUniforms.uLightsMatrix.value[0].elements[6] = pointLight00.color.b;
-				pathTracingUniforms.uLightsMatrix.value[0].elements[7] = pointLight00.intensity;
-				pathTracingUniforms.uLightsMatrix.value[0].elements[8] = pointLight00.distance;
-				
-				pathTracingUniforms.uLightsMatrix.value[1].elements[3] = pointLight01.power;
-				pathTracingUniforms.uLightsMatrix.value[1].elements[4] = pointLight01.color.r;
-				pathTracingUniforms.uLightsMatrix.value[1].elements[5] = pointLight01.color.g;
-				pathTracingUniforms.uLightsMatrix.value[1].elements[6] = pointLight01.color.b;
-				pathTracingUniforms.uLightsMatrix.value[1].elements[7] = pointLight01.intensity;
-				pathTracingUniforms.uLightsMatrix.value[1].elements[8] = pointLight01.distance;
-				
-				pathTracingUniforms.uLightsMatrix.value[2].elements[3] = pointLight02.power;
-				pathTracingUniforms.uLightsMatrix.value[2].elements[4] = pointLight02.color.r;
-				pathTracingUniforms.uLightsMatrix.value[2].elements[5] = pointLight02.color.g;
-				pathTracingUniforms.uLightsMatrix.value[2].elements[6] = pointLight02.color.b;
-				pathTracingUniforms.uLightsMatrix.value[2].elements[7] = pointLight02.intensity;
-				pathTracingUniforms.uLightsMatrix.value[2].elements[8] = pointLight02.distance;
-				
-				
-				
-				
-				
 				// this must be at the end of the init() function
 				onWindowResize();
-				
 
-			}
+			} // end function init()
 			
 			
 
@@ -975,8 +830,8 @@ void main( void )
 				instructionsElement.style.fontSize = fontAspect + "px";
 	
 
-				pathTracingUniforms.uResolution.value.x = window.innerWidth * pixelRatio;
-				pathTracingUniforms.uResolution.value.y = window.innerHeight * pixelRatio;
+				pathTracingUniforms.uResolution.value.x = Math.floor(window.innerWidth * pixelRatio);
+				pathTracingUniforms.uResolution.value.y = Math.floor(window.innerHeight * pixelRatio);
 				
 				pathTracingRenderTarget.setSize( window.innerWidth * pixelRatio, window.innerHeight * pixelRatio );
 				screenOutputRenderTarget.setSize( window.innerWidth * pixelRatio, window.innerHeight * pixelRatio );
@@ -1099,56 +954,11 @@ void main( void )
 					sampleCounter = 0.0;
 				}
 				
-				
-			
-				// LIGHTS
-				pointLight00.position.set( Math.sin(elapsedTime * 0.2)*10.0, 4.0, -5.0);
-				pathTracingUniforms.uLightsMatrix.value[0].elements[0] = pointLight00.position.x;
-				pathTracingUniforms.uLightsMatrix.value[0].elements[1] = pointLight00.position.y;
-				pathTracingUniforms.uLightsMatrix.value[0].elements[2] = pointLight00.position.z;
-				
-				pointLight01.position.set( Math.sin(elapsedTime * 0.4)*-10.0, 4.0, 5.0);
-				pathTracingUniforms.uLightsMatrix.value[1].elements[0] = pointLight01.position.x;
-				pathTracingUniforms.uLightsMatrix.value[1].elements[1] = pointLight01.position.y;
-				pathTracingUniforms.uLightsMatrix.value[1].elements[2] = pointLight01.position.z;
-				
-				pointLight02.position.set( 3.0, 4.0, Math.sin(elapsedTime * 0.3)*-10.0);
-				pathTracingUniforms.uLightsMatrix.value[2].elements[0] = pointLight02.position.x;
-				pathTracingUniforms.uLightsMatrix.value[2].elements[1] = pointLight02.position.y;
-				pathTracingUniforms.uLightsMatrix.value[2].elements[2] = pointLight02.position.z;
-				
-				
-				
-				// BOXES
-				boxMesh.position.set(-1.0, 1.0, Math.sin(elapsedTime*0.4)*5.0);
-				boxMesh.rotation.set(0, elapsedTime * 0.5, 0);
-				///boxMesh.updateMatrixWorld(true);
-				// The following matrix will be used inside the raymarcher's distance estimator.
-				// It moves the intersection Ray (of the raymarcher) into this object's own space. 
-				pathTracingUniforms.uBoxMeshMatrix.value.getInverse(boxMesh.matrixWorld);
-
-				
-				// SPHERES
-				sphereMesh[0].position.set(0, 0.9 + Math.abs(Math.sin(elapsedTime)) * 3.0, 0);
-				sphereMesh[1].position.set( (Math.cos(elapsedTime)) * 4.0, 0.5, 0 );
-				sphereMesh[2].position.set( Math.sin(elapsedTime) * 3.0, 1.5, Math.cos(elapsedTime) * 3.0 );
-				sphereMesh[3].position.set( Math.cos(elapsedTime) * 2.0, 1.0, Math.sin(elapsedTime) * 2.0 );
-				///sphereMesh[0].updateMatrixWorld(true);
-				///sphereMesh[1].updateMatrixWorld(true);
-				///sphereMesh[2].updateMatrixWorld(true);
-				///sphereMesh[3].updateMatrixWorld(true);
-				pathTracingUniforms.uSphereMeshesMatrix.value[0].getInverse(sphereMesh[0].matrixWorld);
-				pathTracingUniforms.uSphereMeshesMatrix.value[1].getInverse(sphereMesh[1].matrixWorld);
-				pathTracingUniforms.uSphereMeshesMatrix.value[2].getInverse(sphereMesh[2].matrixWorld);
-				pathTracingUniforms.uSphereMeshesMatrix.value[3].getInverse(sphereMesh[3].matrixWorld);
-				
-
+					
 				// CAMERA
-				///cameraControlsObject.position.set( (Math.sin(elapsedTime * 0.25)) * 8, 3 + (2.5 * Math.sin(elapsedTime * 0.2)), 1 );
-				
+				///cameraControlsObject.position.set( (Math.sin(elapsedTime * 0.25)) * 8, 3 + (2.5 * Math.sin(elapsedTime * 0.2)), 1 );			
 				pathTracingUniforms.uCameraMatrix.value.copy( worldCamera.matrixWorld );
-				
-				
+					
 				
 				// RENDERING in 3 steps
 				
@@ -1175,9 +985,8 @@ void main( void )
 				}
 				
 				stats.update();
-				
-				
-			}
+					
+			} // end function animate()
 
 		</script>
 
