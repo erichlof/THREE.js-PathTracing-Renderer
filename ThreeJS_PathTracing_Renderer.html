@@ -170,11 +170,13 @@ varying vec2 vUv;
 #define PLANE_ID 1
 #define DISK_ID 2
 #define TRIANGLE_ID 3
+#define QUAD_ID 4
 
 #define N_SPHERES 9
 #define N_PLANES 3
 #define N_DISKS 2
 #define N_TRIANGLES 1
+#define N_QUADS 1
 
 #define DIFF 0
 #define REFR 1
@@ -197,18 +199,20 @@ struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; int type
 struct Plane { vec4 pla; vec3 emission; vec3 color; int type; };
 struct Disk { float radiusSq; vec3 pos; vec3 normal; vec3 emission; vec3 color; int type; };
 struct Triangle { vec3 normal; vec3 v0; vec3 v1; vec3 v2; vec3 emission; vec3 color; int type; };
+struct Quad { vec3 normal; vec3 v0; vec3 v1; vec3 v2; vec3 v3; vec3 emission; vec3 color; int type; };
 struct Intersection { vec3 hitPoint; vec3 normal; vec3 emission; vec3 color; int type; int id; };
 
 Sphere spheres[N_SPHERES];
 Plane planes[N_PLANES];
 Disk disks[N_DISKS];
 Triangle triangles[N_TRIANGLES];
+Quad quads[N_QUADS];
 
 //-----------------------------------------------------------------------
 void SetupScene(void)
 //-----------------------------------------------------------------------
 {
-	vec3 z = vec3(0.0);
+	vec3 z  = vec3(0.0);
 	vec3 L1 = vec3(1.0, 1.0, 1.0) * 1.0;// White light
 	vec3 L2 = vec3(1.0, 0.8, 0.2) * 2.0;// Yellowish light
 	vec3 L3 = vec3(0.1, 0.5, 1.0) * 3.0;// Bluish light
@@ -233,6 +237,8 @@ void SetupScene(void)
 	disks[1]   = Disk( 16.5 * 16.5, vec3( 30.0,-2.0,-200.0), vec3( -1.0,0.0,0.1 ), L3, vec3(1.0,1.0,1.0), DIFF);//DiskLight Right
 	
 	triangles[0] = Triangle( vec3(0.0,0.0,1.0), vec3( 0.0,20.0,-50.0), vec3( 30.0,70.0,-50.0), vec3( -30.0,70.0,-50.0 ), z, vec3(0.0,1.0,0.0), DIFF);//Green Triangle
+	
+	quads[0] = Quad( vec3(0.0,0.0,1.0), vec3( -100.0,20.0,-50.0), vec3( -50.0,20.0,-50.0), vec3( -50.0,70.0,-50.0 ), vec3( -100.0,70.0,-50.0 ), z, vec3(0.0,0.0,1.0), DIFF);//Blue Quad
 		
 }
 
@@ -315,7 +321,7 @@ float TriangleIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 normal, Ray r )
 	//w0 = v0 - r.origin;
 	a = -dot(n,w0);
 	b = dot(n, r.direction);
-	if (b < 0.0001)   // ray is  parallel to triangle plane
+	if (b < 0.0001)   // ray is parallel to triangle plane
 		return -1.0;
 
 	// get intersect point of ray with triangle plane
@@ -345,6 +351,82 @@ float TriangleIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 normal, Ray r )
 		return -1.0;
 
 	return rt;                    // x is in T
+}
+
+//----------------------------------------------------------------------------
+float QuadIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 v3, vec3 normal, Ray r )
+//----------------------------------------------------------------------------
+{
+	vec3 u, v, n;    // triangle vectors
+	vec3 w0, w, x;   // ray and intersection vectors
+	float rt, a, b;  // params to calc ray-plane intersect
+	
+	// get first triangle edge vectors and plane normal
+	v = v2 - v0;
+	u = v1 - v0; // switched u and v names to save calculation later below
+	//n = cross(v, u); // switched u and v names to save calculation later below
+	n = -normal; // can avoid cross product if normal is already known
+	    
+	w0 = r.origin - v0;
+	a = -dot(n,w0);
+	b = dot(n, r.direction);
+	if (b < 0.0001)   // ray is parallel to quad plane
+		return -1.0;
+
+	// get intersect point of ray with quad plane
+	rt = a / b;
+	if (rt < 0.0)          // ray goes away from quad
+		return -1.0;   // => no intersect
+	    
+	x = r.origin + rt * r.direction; // intersect point of ray and plane
+
+	// is x inside first Triangle?
+	float uu, uv, vv, wu, wv, D;
+	uu = dot(u,u);
+	uv = dot(u,v);
+	vv = dot(v,v);
+	w = x - v0;
+	wu = dot(w,u);
+	wv = dot(w,v);
+	D = uv * uv - uu * vv;
+
+	// get and test parametric coords
+	float s, t;
+	s = (uv * wv - vv * wu) / D;
+	if (s >= 0.0 && s <= 1.0)
+	{
+		t = (uv * wu - uu * wv) / D;
+		if (t >= 0.0 && (s + t) <= 1.0)
+		{
+			return rt;
+		}
+	}
+	
+	// is x inside second Triangle?
+	u = v3 - v0;
+	///v = v2 - v0;  //optimization - already calculated above
+
+	uu = dot(u,u);
+	uv = dot(u,v);
+	///vv = dot(v,v);//optimization - already calculated above
+	///w = x - v0;   //optimization - already calculated above
+	wu = dot(w,u);
+	///wv = dot(w,v);//optimization - already calculated above
+	D = uv * uv - uu * vv;
+
+	// get and test parametric coords
+	s = (uv * wv - vv * wu) / D;
+	if (s >= 0.0 && s <= 1.0)
+	{
+		t = (uv * wu - uu * wv) / D;
+		if (t >= 0.0 && (s + t) <= 1.0)
+		{
+			return rt;
+		}
+	}
+
+
+	return -1.0;
 }
 
 //-----------------------------------------------------------------------
@@ -412,6 +494,21 @@ bool SceneIntersect( Ray r, inout float t, inout Intersection intersec )
 			intersec.color = triangles[i].color;
 			intersec.type = triangles[i].type;
 			intersec.id = TRIANGLE_ID;
+		}
+        }
+	
+	for (int i = 0; i < N_QUADS; i++)
+        {
+		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, quads[i].normal, r );
+		if (d > 0.0 && d < t)
+		{
+			t = d;
+			intersec.hitPoint = r.origin + r.direction * t;
+			intersec.normal = normalize(quads[i].normal);
+			intersec.emission = quads[i].emission;
+			intersec.color = quads[i].color;
+			intersec.type = quads[i].type;
+			intersec.id = QUAD_ID;
 		}
         }
 	
