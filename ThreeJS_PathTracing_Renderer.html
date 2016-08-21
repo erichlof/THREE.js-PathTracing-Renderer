@@ -83,14 +83,18 @@ void main() {
 		</script>
 		
 		<script id="screenTextureFragmentShader" type="x-shader/x-fragment">
-		
+
+precision highp float;
+
 varying vec2 vUv;
 uniform sampler2D tTexture0;
 
 
 void main() {
 	
-	gl_FragColor = texture2D(tTexture0, vUv);
+	///vec3 pixelColor = texture2D(tTexture0, vUv).rgb;
+	
+	gl_FragColor = vec4( texture2D(tTexture0, vUv).rgb, 1.0 );
 	
 }
 		
@@ -110,18 +114,21 @@ void main() {
 		</script>
 		
 		<script id="screenOutputFragmentShader" type="x-shader/x-fragment">
-		
+
+precision highp float;
+
 varying vec2 vUv;
 uniform sampler2D tTexture0;
 
 void main() {
 
-	vec4 pixelColor = texture2D(tTexture0, vUv);
+	vec3 pixelColor = texture2D(tTexture0, vUv).rgb;
 	
+	pixelColor = clamp(pixelColor, 0.0, 1.0);
 	// apply gamma correction
-	pixelColor = pow(pixelColor, vec4(0.4545));
+	pixelColor = pow(pixelColor,vec3(0.4545));
 	
-	gl_FragColor = pixelColor;
+	gl_FragColor = vec4(pixelColor,1.0);
 	
 }
 		
@@ -152,7 +159,6 @@ uniform float uTime;
 uniform float uSampleCounter;
 uniform float uULen;
 uniform float uVLen;
-uniform float uRandomNumbers[16];
 
 uniform mat4 uCameraMatrix;
 //uniform mat4 uSphereMeshesMatrix[4];
@@ -187,8 +193,7 @@ varying vec2 vUv;
 float seed = 0.0;
 float rand()
 { 
-	seed += uTime * (uRandomNumbers[0] + uRandomNumbers[1] + uRandomNumbers[2]);
-	return fract(sin(seed)*43758.5453123);
+	return fract( sin(seed++) * 43758.5453123 );
 }
 
 
@@ -208,39 +213,7 @@ Disk disks[N_DISKS];
 Triangle triangles[N_TRIANGLES];
 Quad quads[N_QUADS];
 
-//-----------------------------------------------------------------------
-void SetupScene(void)
-//-----------------------------------------------------------------------
-{
-	vec3 z  = vec3(0.0);
-	vec3 L1 = vec3(1.0, 1.0, 1.0) * 1.0;// White light
-	vec3 L2 = vec3(1.0, 0.8, 0.2) * 2.0;// Yellowish light
-	vec3 L3 = vec3(0.1, 0.5, 1.0) * 3.0;// Bluish light
-		
-        spheres[0] = Sphere( 10000.0, vec3(0.0, -10000.0, 0.0), z, vec3(0.6,0.6,0.6), CHECK);//Checkered Floor
-	
-        spheres[1] = Sphere( 800.0, vec3(-400.0, 1100.0, 40.0), L1, vec3(1.0,1.0,1.0), DIFF);//Light1 sphere
-	spheres[2] = Sphere( 100.0, vec3(300.0, 300.0, -300.0), L2, vec3(1.0,1.0,1.0), DIFF);//Light2 sphere
-	spheres[3] = Sphere( 80.0, vec3(400.0, 150.0, 0.0),    L3, vec3(1.0,1.0,1.0), DIFF);//Light3 sphere
-	
-        spheres[4] = Sphere( 16.5, vec3(-16.0,16.5,5.0), z, vec3(0.8,0.8,0.8), SPEC);//Mirror sphere
-        spheres[5] = Sphere( 16.5, vec3(32.0,16.5,40.0), z, vec3(1.0,1.0,1.0), REFR);//Glass sphere
-        spheres[6] = Sphere( 10.0, vec3(-30.0,10.0,50.0), z, vec3(1.0,1.0,1.0), DIFF);//White diffuse sphere
-        spheres[7] = Sphere( .0001, vec3(32.0,16.5,40.0), z, vec3(1.0,1.0,0.0), DIFF);//Yellow diffuse sphere
-        spheres[8] = Sphere( 5.0, vec3(5.0,5.0,35.0), z, vec3(1.0,1.0,1.0), DIFF);//White diffuse sphere
 
-	planes[0]  = Plane( vec4( 0.0,-1.0,1.0,1000.0), z, vec3(0.0,1.0,1.0), DIFF);//CyanPlane Back Wall
-	planes[1]  = Plane( vec4( 0.0,-1.0,-0.5,500.0), z, vec3(1.0,0.0,1.0), DIFF);//MagentaPlane Front Wall
-	planes[2]  = Plane( vec4( 1.0,-1.0,1.0,1000.0), z, vec3(1.0,1.0,1.0), DIFF);//WhitePlane Ceiling
-	
-	disks[0]   = Disk( 16.5 * 16.5, vec3(-60.0,13.0,-10.0), vec3( 1.0,-1.0,0.0 ), z, vec3(1.0,0.0,0.0), DIFF);//RedDisk Left 
-	disks[1]   = Disk( 16.5 * 16.5, vec3( 30.0,-2.0,-200.0), vec3( -1.0,0.0,0.1 ), L3, vec3(1.0,1.0,1.0), DIFF);//DiskLight Right
-	
-	triangles[0] = Triangle( vec3(0.0,0.0,1.0), vec3( 0.0,20.0,-50.0), vec3( 30.0,70.0,-50.0), vec3( -30.0,70.0,-50.0 ), z, vec3(0.0,1.0,0.0), DIFF);//Green Triangle
-	
-	quads[0] = Quad( vec3(0.0,0.0,1.0), vec3( -100.0,20.0,-50.0), vec3( -50.0,20.0,-50.0), vec3( -50.0,70.0,-50.0 ), vec3( -100.0,70.0,-50.0 ), z, vec3(0.0,0.0,1.0), DIFF);//Blue Quad
-		
-}
 
 //-----------------------------------------------------------------------
 float SphereIntersect( float rad, vec3 pos, Ray r )
@@ -523,14 +496,24 @@ vec3 CalculateRadiance( Ray r )
         vec3 fCum = vec3(1.0,1.0,1.0);
         Intersection intersec;
 	
-	         // don't go above 14 for uRandomNumbers[] array bounds
+	
         for (int depth = 0; depth < 5; depth++)
         {
 
                 float t = 0.0;    // distance to intersection
-                intersec.emission = vec3(0.0);
+                ///intersec.emission = vec3(0.0);
+		
 		if (!SceneIntersect(r, t, intersec))
                     break;
+		    
+		
+		// if we reached something bright, don't spawn any more rays
+		if (intersec.emission.r > 0.1 || intersec.emission.b > 0.1 || intersec.emission.g > 0.1 )
+		{
+			finalCol = fCum * intersec.emission;
+			break;
+		}
+		
 		
 		vec3 x = intersec.hitPoint;
 		vec3 n = normalize(intersec.normal);
@@ -540,21 +523,16 @@ vec3 CalculateRadiance( Ray r )
 		
 		/*
 		// Russian Roulette
+		// in original smallPT, only used if trace path nodes length is greater than 5)
                 float p = max(max(f.x,f.y),f.z);
                 if ( rand() < p)
                     f = f / p;
                 else
-                    break;
-		*/
+		    break;
+		*/ 
 		
-		fCum *= f;
-	
-		// we reached something bright, don't spawn any more rays
-		if (intersec.emission.r > 0.1 || intersec.emission.g > 0.1 || intersec.emission.b > 0.1 )
-		{
-			finalCol = fCum * intersec.emission;
-			break;
-		}
+		
+		fCum = f * fCum;
 
                 if (intersec.type == DIFF || intersec.type == CHECK) // Ideal DIFFUSE reflection
                 {
@@ -563,11 +541,9 @@ vec3 CalculateRadiance( Ray r )
 			{
 				if( (mod(x.x,60.0) < 30.0 && mod(x.z,60.0) < 30.0) || 
 					(mod(x.x,60.0) > 30.0 && mod(x.z,60.0) > 30.0) )
-				fCum *= 0.5;					
+				fCum *= 0.3;					
 			}
 		
-			seed -= (uRandomNumbers[depth] + uRandomNumbers[depth+2]);
-
                 	float r1 = 2.0 * 3.1415926536 * rand();
                 	float r2 = rand();
                 	float r2s = sqrt(r2);
@@ -576,12 +552,12 @@ vec3 CalculateRadiance( Ray r )
 			vec3 v = cross(w,u);
                 	vec3 d = normalize(u * cos(r1) * r2s + v * sin(r1) * r2s + w * sqrt(1.0 - r2));
 			
+			finalCol = finalCol + fCum * intersec.emission;
                 	r = Ray(x, d);
 			r.origin += r.direction; // avoid self-intersection
                 	continue;
                 }
-                else 
-	        if (intersec.type == SPEC)  // Ideal SPECULAR reflection
+                else if (intersec.type == SPEC)  // Ideal SPECULAR reflection
                 {
                         r = Ray(x, r.direction - n * 2.0 * dot(n,r.direction));
 			
@@ -621,21 +597,56 @@ vec3 CalculateRadiance( Ray r )
 		
                 if( rand() < P )
                 {
+		    fCum = fCum * RP;
                     r = reflRay;
 		    r.origin += r.direction; // avoid self-intersection
-                    fCum = fCum * RP;
+                    
                 }
                 else
                 {
+		    fCum = fCum * TP;
                     r = Ray(x, tdir);
 		    r.origin += r.direction; // avoid self-intersection
-                    fCum = fCum * TP;
+                   
                 }
-						
-
-            }
-
+       
+	}
+	
             return finalCol;
+}
+
+//-----------------------------------------------------------------------
+void SetupScene(void)
+//-----------------------------------------------------------------------
+{
+	vec3 z  = vec3(0.0);
+	vec3 L1 = vec3(1.0, 0.7, 0.2) * 3.0;// Whiteish light
+	vec3 L2 = vec3(1.0, 0.8, 0.5) * 0.0;// Yellowish light
+	vec3 L3 = vec3(0.2, 0.7, 1.0) * 5.0;// Blueish light
+		
+        spheres[0] = Sphere( 2000.0, vec3(0.0, 2000.0, 0.0), z, vec3(0.5,0.5,0.5), CHECK);//Checkered Floor
+	
+        spheres[1] = Sphere( 400.0, vec3(0.0, 700.0, 0.0), L1, vec3(1.0,1.0,1.0), DIFF);//Light1 sphere
+	spheres[2] = Sphere( 0.0, vec3(300.0, 400.0, -300.0), L2, vec3(1.0,1.0,1.0), DIFF);//Light2 sphere
+	spheres[3] = Sphere( 150.0, vec3(700.0, 450.0, 60.0),   L3, vec3(1.0,1.0,1.0), DIFF);//Light3 sphere
+	
+        spheres[4] = Sphere( 16.5, vec3(-16.0,16.5,5.0),  z, vec3(0.9,0.9,0.9), SPEC);//Mirror sphere
+        spheres[5] = Sphere( 16.5, vec3(32.0,16.5,40.0),  z, vec3(0.6,0.9,0.7), REFR);//Glass sphere
+        spheres[6] = Sphere( 10.0, vec3(-30.0,10.0,50.0), z, vec3(0.9,0.9,0.9), DIFF);//White diffuse sphere
+        spheres[7] = Sphere( .0001, vec3(32.0,16.5,40.0), z, vec3(0.9,0.9,0.0), DIFF);//Yellow diffuse sphere
+        spheres[8] = Sphere(  5.0, vec3(5.0,5.0,35.0),    z, vec3(0.9,0.9,0.9), DIFF);//White diffuse sphere
+
+	planes[0]  = Plane( vec4( 0.0,-1.0,1.0,1000.0), z, vec3(0.0,0.9,0.9), DIFF);//CyanPlane Back Wall
+	planes[1]  = Plane( vec4( 0.0,-1.0,-0.5,500.0), z, vec3(0.9,0.0,0.9), DIFF);//MagentaPlane Front Wall
+	planes[2]  = Plane( vec4( 1.0,-1.0,1.0,1000.0), z, vec3(0.9,0.9,0.9), DIFF);//WhitePlane Ceiling
+	
+	disks[0]   = Disk( 16.5 * 16.5, vec3(-60.0,13.0,-10.0), vec3( 1.0,-1.0,0.0 ), z, vec3(0.9,0.0,0.0), DIFF);//RedDisk Left 
+	disks[1]   = Disk( 16.5 * 16.5, vec3( 30.0,-2.0,-200.0), vec3( -1.0,0.0,0.1 ), L3, z, DIFF);//DiskLight Right
+	
+	triangles[0] = Triangle( vec3(0.0,0.0,1.0), vec3( 0.0,20.0,-50.0), vec3( 30.0,70.0,-50.0), vec3( -30.0,70.0,-50.0 ), z, vec3(0.0,0.9,0.0), DIFF);//Green Triangle
+	
+	quads[0] = Quad( vec3(0.0,0.0,1.0), vec3( -150.0,20.0,-50.0), vec3( -100.0,20.0,-50.0), vec3( -100.0,70.0,-50.0 ), vec3( -150.0,70.0,-50.0 ), z, vec3(0.0,0.0,0.9), DIFF);//Blue Quad
+		
 }
 
 
@@ -650,28 +661,39 @@ void main( void )
 	vec3 camForward = ( vec3(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]) );
 	
 	//rng seed
-	seed = uSampleCounter * uRandomNumbers[0] + uResolution.y * gl_FragCoord.x / uResolution.x + gl_FragCoord.y / uResolution.y;
+	seed = mod(uSampleCounter,100.0) + uRandomVector.x + uRandomVector.y + uRandomVector.z + uResolution.y * gl_FragCoord.x / uResolution.x + gl_FragCoord.y / uResolution.y;
 	float r1 = 2.0 * rand();
 	float r2 = 2.0 * rand();
-			
-	float dx = r1 < 1.0 ? sqrt(r1) - 1.0 : 1.0 - sqrt(2.0 - r1);
-        float dy = r2 < 1.0 ? sqrt(r2) - 1.0 : 1.0 - sqrt(2.0 - r2);
 	
-	dx = (dx + gl_FragCoord.x) / uResolution.x - 0.5;
-	dy = (dy + gl_FragCoord.y) / uResolution.y - 0.5;
+	vec2 d;
+	d.x = r1 < 1.0 ? sqrt(r1) - 1.0 : 1.0 - sqrt(2.0 - r1);
+        d.y = r2 < 1.0 ? sqrt(r2) - 1.0 : 1.0 - sqrt(2.0 - r2);
 	
-	vec3 rayDir = normalize( dx * camRight * uULen + dy * camUp * uVLen + camForward );
+	d *= (1.0 / uResolution);
+	d += vUv - 0.5;
+	
+	//dx *= 2.0 - 1.0;
+	//dy *= 2.0 - 1.0;
+	//dx += (vUv.x * 2.0 - 1.0);
+	//dy += (vUv.y * 2.0 - 1.0);
+	
+	///dx = ((dx + gl_FragCoord.x) / uResolution.x) - 0.5;
+	///dy = ((dy + gl_FragCoord.y) / uResolution.y) - 0.5;
+	
+	vec3 rayDir = normalize( d.x * camRight * uULen + d.y * camUp * uVLen + camForward );
 	
 	Ray ray = Ray( camPos , rayDir );
 	
 	SetupScene();
 	     		
 	// perform path tracing and get resulting pixel color
-	vec4 pixelColor = vec4( CalculateRadiance(ray), 1.0);
-	vec4 previousColor = texture2D(tPreviousTexture, vUv);
+	vec3 pixelColor = CalculateRadiance(ray);
+	
+	vec3 previousColor = texture2D(tPreviousTexture, vUv).rgb;
 	
 	pixelColor = (previousColor * uSampleCounter + pixelColor) / (uSampleCounter + 1.0);
-	gl_FragColor = clamp(pixelColor,0.0,1.0);
+	
+	gl_FragColor = vec4(pixelColor,1.0);
 	
 }
 
@@ -686,32 +708,27 @@ void main( void )
 			var SCREEN_HEIGHT = window.innerHeight;
 			var container, stats;
 			var controls;
-			var pathTracingGeometry, pathTracingMaterial, pathTracingMesh; // rtt = render to texture
-			var screenOutputGeometry, screenOutputMaterial, screenOutputMesh;
+			var pathTracingScene, screenTextureScene, screenOutputScene;
+			var pathTracingUniforms, screenTextureUniforms, screenOutputUniforms;
+			var pathTracingGeometry, pathTracingMaterial, pathTracingMesh;
 			var screenTextureGeometry, screenTextureMaterial, screenTextureMesh;
-			var groundGeometry, checkeredMaterial, groundMesh;
-			var boxGeometry, blueMaterial, boxMesh;
-			var sphereGeometry, mirrorMaterial, whiteMaterial, glassMaterial;
-			var sphereMesh = [];
-			var pointLight00, pointLight01, pointLight02;
+			var screenOutputGeometry, screenOutputMaterial, screenOutputMesh;
+			var pathTracingRenderTarget, screenOutputRenderTarget;
 			var quadCamera, worldCamera;
 			var renderer, clock;
-			var pathTracingRenderTarget, screenOutputRenderTarget;
-			var screenOutputScene, screenTextureScene, pathTracingScene; // RTT = Render To Texture
-			var fovScale;
 			var frameTime, elapsedTime;
-			var pathTracingUniforms, screenOutputUniforms, screenTextureUniforms;
-			var pixelRatio = 1.0;
+			var fovScale;
+			var pixelRatio = window.devicePixelRatio;
+			var decreaseResolution = false;
 			var TWO_PI = Math.PI * 2;
 			var randomVector = new THREE.Vector3();
-			var randomNumbers = [];
 			var sampleCounter = 0.0;
-			var stopTime = 10.0;
 			var keyboard = new THREEx.KeyboardState();
 			var isPaused = true;
 			var oldYawRotation, oldPitchRotation;
 			var camFlightSpeed = 40;
 			var fontAspect;
+			var availableTextureType = THREE.FloatType;
 
 			// are we in portrait mobile view? if so, move the buttons over to the left a little..
 			// if not and we are in landscape mode, they can safely be moved farther right without running into each other
@@ -745,10 +762,11 @@ void main( void )
 			debugElement.style.MozUserSelect = "none";
 			
 			var mouseControl = true;
-			// if not on a mobile device, enable mouse control 
+
 			if ( 'createTouch' in document ) {
 				mouseControl = false;
-				pixelRatio = 0.7;
+				pixelRatio = window.devicePixelRatio * 0.3;
+				availableTextureType = THREE.UnsignedByteType;
 			}
 			
 			// if on mobile device, unpause the app because there is no ESC key and no mouse capture to do
@@ -762,18 +780,6 @@ void main( void )
 				document.body.addEventListener("click", function() {
 					this.requestPointerLock = this.requestPointerLock || this.mozRequestPointerLock;
 					this.requestPointerLock();
-				}, false);
-
-
-				window.addEventListener("mousedown", function(event) {
-					if ( !isPaused ) {
-						if(event.button === 0) {
-							
-						}	
-						else if(event.button === 2) {
-							
-						}
-					}	
 				}, false);
 
 				window.addEventListener("click", function(event) {
@@ -817,11 +823,12 @@ void main( void )
 			var cameraControlsYawObject;//allows access to control camera's left/right movements through mobile input
 			var cameraControlsPitchObject;//allows access to control camera's up/down movements through mobile input
 
-			
-			
+
 			init();
+			
 			animate();
 
+			
 			function init() {
 
 				container = document.getElementById( 'container' );
@@ -841,15 +848,15 @@ void main( void )
 				clock = new THREE.Clock();
 				
 				pathTracingScene = new THREE.Scene();
-				screenOutputScene = new THREE.Scene();
 				screenTextureScene = new THREE.Scene();
+				screenOutputScene = new THREE.Scene();
 				
 				// quadCamera is simply the camera to help render the full screen quad (2 triangles),
 				// hence the name.  It is an Orthographic camera that sits facing the view plane, which serves as
 				// the window into our 3d world. This camera will not move or rotate for the duration of the app.
 				quadCamera = new THREE.OrthographicCamera( -1, 1, 1, -1, 0, 1 );
-				screenOutputScene.add(quadCamera);
 				screenTextureScene.add(quadCamera);
+				screenOutputScene.add(quadCamera);
 				
 				// worldCamera is the dynamic camera 3d object that will be positioned, oriented and 
 				// constantly updated inside the 3d scene.  Its view will ultimately get passed back to the 
@@ -873,40 +880,37 @@ void main( void )
 				joystick.previousRotationX = -0.4;
 				
 				
-				pathTracingRenderTarget = new THREE.WebGLRenderTarget( Math.floor(window.innerWidth * pixelRatio), Math.floor(window.innerHeight * pixelRatio), {
-					minFilter: THREE.NearestFilter, // default THREE.LinearMipMapLinearFilter
-					magFilter: THREE.NearestFilter, // default THREE.LinearFilter
-					format: THREE.RGBAFormat,
+				pathTracingRenderTarget = new THREE.WebGLRenderTarget( (window.innerWidth * pixelRatio), (window.innerHeight * pixelRatio), {
+					minFilter: THREE.NearestFilter,
+					magFilter: THREE.NearestFilter,
+					format: THREE.RGBFormat,
+					type: availableTextureType,
 					depthBuffer: false,
 					stencilBuffer: false
 				} );
 				pathTracingRenderTarget.texture.generateMipmaps = false;
-				//pathTracingRenderTarget.texture.needsUpdate = true;
 				
-				screenOutputRenderTarget = new THREE.WebGLRenderTarget( Math.floor(window.innerWidth * pixelRatio), Math.floor(window.innerHeight * pixelRatio), {
+				screenTextureRenderTarget = new THREE.WebGLRenderTarget( (window.innerWidth * pixelRatio), (window.innerHeight * pixelRatio), {
 					minFilter: THREE.NearestFilter, 
-					magFilter: THREE.NearestFilter, 
-					format: THREE.RGBAFormat,
+					magFilter: THREE.NearestFilter,
+					format: THREE.RGBFormat,
+					type: availableTextureType,
 					depthBuffer: false,
 					stencilBuffer: false
 				} );
-				screenOutputRenderTarget.texture.generateMipmaps = false;
-				//screenOutputRenderTarget.texture.needsUpdate = true;
+				screenTextureRenderTarget.texture.generateMipmaps = false;
 				
-	
 				
 				pathTracingGeometry = new THREE.PlaneBufferGeometry( 2, 2 );
 
 				pathTracingUniforms = {
 					
-					tPreviousTexture: { type: "t", value: screenOutputRenderTarget.texture },
+					tPreviousTexture: { type: "t", value: screenTextureRenderTarget.texture },
 					
 					uTime: { type: "f", value: 0.0 },
 					uSampleCounter: { type: "f", value: 0.0 },
 					uULen: { type: "f", value: 1.0 },
 					uVLen: { type: "f", value: 1.0 },
-					
-					uRandomNumbers: { type: "fv", value: [] },
 					
 					uResolution: { type: "v2", value: new THREE.Vector2() },
 					
@@ -957,7 +961,7 @@ void main( void )
 				screenOutputGeometry = new THREE.PlaneBufferGeometry( 2, 2 );
 				
 				screenOutputUniforms = {
-					tTexture0: { type: "t", value: screenOutputRenderTarget.texture }
+					tTexture0: { type: "t", value: pathTracingRenderTarget.texture }
 				}
 				
 				screenOutputMaterial = new THREE.ShaderMaterial( {
@@ -971,8 +975,7 @@ void main( void )
 				screenOutputMesh = new THREE.Mesh(screenOutputGeometry, screenOutputMaterial);
 				screenOutputScene.add(screenOutputMesh);
 
-				
-					
+						
 				// this must be at the end of the init() function
 				onWindowResize();
 
@@ -982,10 +985,9 @@ void main( void )
 
 			function onWindowResize( event ) {
 				
-				renderer.setSize( window.innerWidth, window.innerHeight );
-				
 				SCREEN_WIDTH = window.innerWidth;
 				SCREEN_HEIGHT = window.innerHeight;
+				renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT );
 				
 				fontAspect = (SCREEN_WIDTH / 175) * (SCREEN_HEIGHT / 200);
 				if (fontAspect > 25) fontAspect = 25;
@@ -994,13 +996,13 @@ void main( void )
 				instructionsElement.style.fontSize = fontAspect + "px";
 	
 
-				pathTracingUniforms.uResolution.value.x = Math.floor(window.innerWidth * pixelRatio);
-				pathTracingUniforms.uResolution.value.y = Math.floor(window.innerHeight * pixelRatio);
+				pathTracingUniforms.uResolution.value.x = SCREEN_WIDTH * pixelRatio;
+				pathTracingUniforms.uResolution.value.y = SCREEN_HEIGHT * pixelRatio;
 				
-				pathTracingRenderTarget.setSize( window.innerWidth * pixelRatio, window.innerHeight * pixelRatio );
-				screenOutputRenderTarget.setSize( window.innerWidth * pixelRatio, window.innerHeight * pixelRatio );
+				pathTracingRenderTarget.setSize( SCREEN_WIDTH * pixelRatio, SCREEN_HEIGHT * pixelRatio );
+				screenTextureRenderTarget.setSize( SCREEN_WIDTH * pixelRatio, SCREEN_HEIGHT * pixelRatio );
 				
-				worldCamera.aspect = window.innerWidth / window.innerHeight;
+				worldCamera.aspect = SCREEN_WIDTH / SCREEN_HEIGHT;
 				worldCamera.updateProjectionMatrix();
 				
 				// the following scales all scene objects by the worldCamera's field of view,
@@ -1031,20 +1033,15 @@ void main( void )
 			function animate() {
 				
 				requestAnimationFrame( animate );
-
+				
+				decreaseResolution = false;
+				
 				frameTime = clock.getDelta();
 				
 				elapsedTime = clock.getElapsedTime() % 1000;
 				pathTracingUniforms.uTime.value = elapsedTime;
 				
 				pathTracingUniforms.uRandomVector.value = randomVector.set( Math.random(), Math.random(), Math.random() );
-				
-				for ( var i = 0; i < 16; i ++ ) {
-					randomNumbers[i] = Math.random();
-				}
-				
-				pathTracingUniforms.uRandomNumbers.value = randomNumbers;
-				
 				
 				debugElement.innerHTML = "samples: " + sampleCounter;
 				
@@ -1053,9 +1050,11 @@ void main( void )
 				
 				if (oldYawRotation != cameraControlsYawObject.rotation.y){
 					sampleCounter = 0.0;
+					decreaseResolution = true;
 				}
 				if (oldPitchRotation != cameraControlsPitchObject.rotation.x) {
 					sampleCounter = 0.0;
+					decreaseResolution = true;
 				}
 				// save state for next frame
 				oldYawRotation = cameraControlsYawObject.rotation.y;
@@ -1072,6 +1071,7 @@ void main( void )
 
 					if (joystick.deltaX() || joystick.deltaY()) {
 						sampleCounter = 0.0;
+						decreaseResolution = true;
 					}
 				}
 				
@@ -1091,64 +1091,127 @@ void main( void )
 
 					cameraControlsObject.position.add(cameraDirectionVector.multiplyScalar(camFlightSpeed * frameTime));
 					sampleCounter = 0.0;
+					decreaseResolution = true;
 				}
 				if ( keyboard.pressed('S') ) {
 
 					cameraControlsObject.position.sub(cameraDirectionVector.multiplyScalar(camFlightSpeed * frameTime));
 					sampleCounter = 0.0;
+					decreaseResolution = true;
 				}
 				if ( joystick.button1Pressed || keyboard.pressed('D') ) {
 
 					cameraControlsObject.position.add(cameraRightVector.multiplyScalar(camFlightSpeed * frameTime));
 					sampleCounter = 0.0;
+					decreaseResolution = true;
 				}
 				if ( keyboard.pressed('A') ) {
 
 					cameraControlsObject.position.sub(cameraRightVector.multiplyScalar(camFlightSpeed * frameTime));
 					sampleCounter = 0.0;
+					decreaseResolution = true;
 				}
 				if ( joystick.button2Pressed || keyboard.pressed('Q') ) {
 
 					cameraControlsObject.position.add(cameraUpVector.multiplyScalar(camFlightSpeed * frameTime));
 					sampleCounter = 0.0;
+					decreaseResolution = true;
 				}
 				if ( keyboard.pressed('Z') ) {
 
 					cameraControlsObject.position.sub(cameraUpVector.multiplyScalar(camFlightSpeed * frameTime));
 					sampleCounter = 0.0;
+					decreaseResolution = true;
 				}
 				
-					
-				// CAMERA
-				///cameraControlsObject.position.set( (Math.sin(elapsedTime * 0.25)) * 8, 3 + (2.5 * Math.sin(elapsedTime * 0.2)), 1 );			
+	
+				// CAMERA			
 				pathTracingUniforms.uCameraMatrix.value.copy( worldCamera.matrixWorld );
 					
+				if ( mouseControl ) {
+					
+					if ( !decreaseResolution && pixelRatio != (window.devicePixelRatio) ) {
+
+						pixelRatio = window.devicePixelRatio;
+						renderer.setPixelRatio(pixelRatio);
+						pathTracingUniforms.uResolution.value.x = SCREEN_WIDTH * pixelRatio;
+						pathTracingUniforms.uResolution.value.y = SCREEN_HEIGHT * pixelRatio;
+
+						pathTracingRenderTarget.setSize( SCREEN_WIDTH * pixelRatio, SCREEN_HEIGHT * pixelRatio );
+						screenTextureRenderTarget.setSize( SCREEN_WIDTH * pixelRatio, SCREEN_HEIGHT * pixelRatio );
+
+					}
+
+					if ( decreaseResolution && pixelRatio != (window.devicePixelRatio * 0.4) ) {
+
+						pixelRatio = window.devicePixelRatio * 0.4;
+						renderer.setPixelRatio(pixelRatio);
+						pathTracingUniforms.uResolution.value.x = SCREEN_WIDTH * pixelRatio;
+						pathTracingUniforms.uResolution.value.y = SCREEN_HEIGHT * pixelRatio;
+
+						pathTracingRenderTarget.setSize( SCREEN_WIDTH * pixelRatio, SCREEN_HEIGHT * pixelRatio );
+						screenTextureRenderTarget.setSize( SCREEN_WIDTH * pixelRatio, SCREEN_HEIGHT * pixelRatio );
+
+					}
+					
+				}
+				
+				if ( !mouseControl ) {
+					
+					if ( !decreaseResolution && pixelRatio != (window.devicePixelRatio * 0.3) ) {
+
+						pixelRatio = window.devicePixelRatio * 0.3;
+						renderer.setPixelRatio(pixelRatio);
+						pathTracingUniforms.uResolution.value.x = SCREEN_WIDTH * pixelRatio;
+						pathTracingUniforms.uResolution.value.y = SCREEN_HEIGHT * pixelRatio;
+
+						pathTracingRenderTarget.setSize( SCREEN_WIDTH * pixelRatio, SCREEN_HEIGHT * pixelRatio );
+						screenTextureRenderTarget.setSize( SCREEN_WIDTH * pixelRatio, SCREEN_HEIGHT * pixelRatio );
+
+					}
+
+					if ( decreaseResolution && pixelRatio != (window.devicePixelRatio * 0.05) ) {
+
+						pixelRatio = window.devicePixelRatio * 0.05;
+						renderer.setPixelRatio(pixelRatio);
+						pathTracingUniforms.uResolution.value.x = SCREEN_WIDTH * pixelRatio;
+						pathTracingUniforms.uResolution.value.y = SCREEN_HEIGHT * pixelRatio;
+
+						pathTracingRenderTarget.setSize( SCREEN_WIDTH * pixelRatio, SCREEN_HEIGHT * pixelRatio );
+						screenTextureRenderTarget.setSize( SCREEN_WIDTH * pixelRatio, SCREEN_HEIGHT * pixelRatio );
+
+					}
+					
+				}
 				
 				// RENDERING in 3 steps
 				
 				// STEP 1
-				// Perform PathTracing and Render into pathTracingRenderTarget
-				// Read previous screenOutputRenderTarget to use as a new starting point to blend with
+				// Perform PathTracing and Render(save) into pathTracingRenderTarget
+				// Read previous screenTextureRenderTarget to use as a new starting point to blend with
 				renderer.render( pathTracingScene, worldCamera, pathTracingRenderTarget );
 				
 				
 				// STEP 2
-				// render(save) the final scene output into screenOutputRenderTarget
+				// Render(copy) the final pathTracingScene output(above) into screenTextureRenderTarget
 				// This will be used as a new starting point for Step 1 above
-				renderer.render( screenTextureScene, quadCamera, screenOutputRenderTarget );
+				renderer.render( screenTextureScene, quadCamera, screenTextureRenderTarget );
 				
 				// STEP 3
-				// Render full screen quad with generated screenOutputRenderTarget above.
-				// After this image is gamma corrected, it will be shown on the screen as the final output
+				// Render full screen quad with generated pathTracingRenderTarget above.
+				// After the image is gamma corrected, it will be shown on the screen as the final accumulated output
 				renderer.render( screenOutputScene, quadCamera );
 				
+				
 				pathTracingUniforms.uSampleCounter.value = sampleCounter;
+				
 				sampleCounter += 1.0;
-				if (sampleCounter > 1000.0) {
-					sampleCounter = 1000.0;
+				if (sampleCounter > 20000.0) {
+					sampleCounter = 20000.0;
 				}
 				
 				stats.update();
+				
 					
 			} // end function animate()
 
