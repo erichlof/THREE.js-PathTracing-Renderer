@@ -669,16 +669,8 @@ void main( void )
 	d.x = r1 < 1.0 ? sqrt(r1) - 1.0 : 1.0 - sqrt(2.0 - r1);
         d.y = r2 < 1.0 ? sqrt(r2) - 1.0 : 1.0 - sqrt(2.0 - r2);
 	
-	d *= (1.0 / uResolution);
+	d *= (1.0 / uResolution); // TODO save this as a uniform to avoid division
 	d += vUv - 0.5;
-	
-	//dx *= 2.0 - 1.0;
-	//dy *= 2.0 - 1.0;
-	//dx += (vUv.x * 2.0 - 1.0);
-	//dy += (vUv.y * 2.0 - 1.0);
-	
-	///dx = ((dx + gl_FragCoord.x) / uResolution.x) - 0.5;
-	///dy = ((dy + gl_FragCoord.y) / uResolution.y) - 0.5;
 	
 	vec3 rayDir = normalize( d.x * camRight * uULen + d.y * camUp * uVLen + camForward );
 	
