@@ -1,9 +1,9 @@
 # THREE.js-PathTracing-Renderer
 Real-time PathTracing with global illumination and progressive rendering, all on top of the Three.js WebGL framework. <br>
 
-Click for demo -> https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer.html
+Click here for [Live Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer.html)
 
-https://github.com/erichlof/THREE.js-PathTracing-Renderer/blob/gh-pages/threejsPathTracing.png
+![]https://github.com/erichlof/THREE.js-PathTracing-Renderer/blob/gh-pages/threejsPathTracing.png
 
 <h2>FEATURES</h2>
 * Real-time realistic Path Tracing in your Chrome browser - even on your smartphone! ( What?! )
