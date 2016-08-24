@@ -4,10 +4,10 @@ Real-time PathTracing with global illumination and progressive rendering, all on
 Click for demo -> https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer.html
 
 <h2>FEATURES</h2>
-* Real-time realistic Path tracing in your browser - even on your smartphone!
+* Real-time realistic Path Tracing in your Chrome browser - even on your smartphone! ( What?! )
 * First-Person camera navigation through the 3D scene
 * When camera is still, switches to HQ progressive rendering mode
-* If your device (most desktops / laptops) supports FLOAT texture buffers, the render accumulation will converge at around 15,000 samples.  If your device does not support FLOAT textures (most 2016 smartphones / tablets unfortunately still), it will default to a U-Byte texture and will still produce a nice image, but won't be as physically accurate as the HQ desktop/laptop rendering.
+* The accumulated render image will converge at around 10,000 samples.
 * Supports most primitives: Spheres, Planes, Discs, Quads, and Triangles (Other quadrics such as Cylinder, Cone, Ellipse, possibly even surfaces and NURBS, coming soon)
 * Any supported shape can be an Area Light!
 * Both Reflections (mirror) and Refractions (glass, water) are supported.
@@ -26,6 +26,6 @@ Click for demo -> https://erichlof.github.io/THREE.js-PathTracing-Renderer/Three
 
 
 <h2>ABOUT</h2>
-* This is a port of Kevin Beason's smallPT ("small PathTracer") raytracing/pathtracing engine over to the Three.js WebGL framework.  I have added features such as real-time progressive rendering, camera Depth of Field, and more Ray-Primitive object support. Kevin's original smallPT only supports spheres of various sizes and is meant to render offline (not real-time).
+* This is a port of Kevin Beason's brilliant 'smallPT' ("small PathTracer") over to the Three.js WebGL framework.  http://www.kevinbeason.com/smallpt/  Kevin's original 'smallPT' only supports spheres of various sizes and is meant to render offline, saving the image to a PPM text file (not real-time). I have so far added features such as real-time progressive rendering on any device with a Chrome browser, FirstPerson Camera controls with Depth of Field, and more Ray-Primitive object intersection support (such as planes and triangles). 
 
-This experiment is in the early pre-alpha stage.  More examples, features, and content to come...
+This project is in the pre-alpha stage.  More examples, features, and content to come...
