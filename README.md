@@ -26,6 +26,6 @@ Click for demo -> https://erichlof.github.io/THREE.js-PathTracing-Renderer/Three
 
 
 <h2>ABOUT</h2>
-* This is a port of Kevin Beason's brilliant 'smallPT' ("small PathTracer") over to the Three.js WebGL framework.  http://www.kevinbeason.com/smallpt/  Kevin's original 'smallPT' only supports spheres of various sizes and is meant to render offline, saving the image to a PPM text file (not real-time). I have so far added features such as real-time progressive rendering on any device with a Chrome browser, FirstPerson Camera controls with Depth of Field, and more Ray-Primitive object intersection support (such as planes and triangles). 
+* This began as a port of Kevin Beason's brilliant 'smallPT' ("small PathTracer") over to the Three.js WebGL framework.  http://www.kevinbeason.com/smallpt/  Kevin's original 'smallPT' only supports spheres of various sizes and is meant to render offline, saving the image to a PPM text file (not real-time). I have so far added features such as real-time progressive rendering on any device with a Chrome browser, FirstPerson Camera controls with Depth of Field, and more Ray-Primitive object intersection support (such as planes and triangles). 
 
 This project is in the pre-alpha stage.  More examples, features, and content to come...
