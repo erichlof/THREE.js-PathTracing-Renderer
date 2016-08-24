@@ -60,7 +60,7 @@
 		samples: 0
 		</div>
 
-		<script src="js/three-r80.min.js"> </script>
+		<script src="js/three-r80.js"> </script>
 		<script src="js/threex.keyboardstate.js"> </script>
 		<script src="js/FirstPersonCameraControls.js"> </script>
 		<script src="js/virtualButtonJoystick.js"> </script>
@@ -738,7 +738,6 @@ void main( void )
 			var oldYawRotation, oldPitchRotation;
 			var camFlightSpeed = 40;
 			var fontAspect;
-			var availableTextureType = THREE.FloatType;
 
 			// are we in portrait mobile view? if so, move the buttons over to the left a little..
 			// if not and we are in landscape mode, they can safely be moved farther right without running into each other
@@ -775,8 +774,7 @@ void main( void )
 
 			if ( 'createTouch' in document ) {
 				mouseControl = false;
-				pixelRatio = window.devicePixelRatio * 0.3;
-				availableTextureType = THREE.UnsignedByteType;
+				pixelRatio = window.devicePixelRatio * 0.2;
 			}
 			
 			// if on mobile device, unpause the app because there is no ESC key and no mouse capture to do
@@ -848,6 +846,8 @@ void main( void )
 				
 				container.appendChild( renderer.domElement );
 
+				renderer.context.getExtension('OES_texture_float');
+							      
 				stats = new Stats();
 				stats.domElement.style.position = 'absolute';
 				stats.domElement.style.top = '0px';
@@ -893,8 +893,8 @@ void main( void )
 				pathTracingRenderTarget = new THREE.WebGLRenderTarget( (window.innerWidth * pixelRatio), (window.innerHeight * pixelRatio), {
 					minFilter: THREE.NearestFilter,
 					magFilter: THREE.NearestFilter,
-					format: THREE.RGBFormat,
-					type: availableTextureType,
+					format: THREE.RGBAFormat,
+					type: THREE.FloatType,
 					depthBuffer: false,
 					stencilBuffer: false
 				} );
@@ -903,8 +903,8 @@ void main( void )
 				screenTextureRenderTarget = new THREE.WebGLRenderTarget( (window.innerWidth * pixelRatio), (window.innerHeight * pixelRatio), {
 					minFilter: THREE.NearestFilter, 
 					magFilter: THREE.NearestFilter,
-					format: THREE.RGBFormat,
-					type: availableTextureType,
+					format: THREE.RGBAFormat,
+					type: THREE.FloatType,
 					depthBuffer: false,
 					stencilBuffer: false
 				} );
@@ -985,7 +985,9 @@ void main( void )
 				screenOutputMesh = new THREE.Mesh(screenOutputGeometry, screenOutputMaterial);
 				screenOutputScene.add(screenOutputMesh);
 
-						
+				///console.log(renderer.context.getSupportedExtensions());	
+				///console.log(renderer.context.getExtension('OES_texture_float'));
+				
 				// this must be at the end of the init() function
 				onWindowResize();
 
@@ -1168,9 +1170,9 @@ void main( void )
 				
 				if ( !mouseControl ) {
 					
-					if ( !decreaseResolution && pixelRatio != (window.devicePixelRatio * 0.3) ) {
+					if ( !decreaseResolution && pixelRatio != (window.devicePixelRatio * 0.2) ) {
 
-						pixelRatio = window.devicePixelRatio * 0.3;
+						pixelRatio = window.devicePixelRatio * 0.2;
 						renderer.setPixelRatio(pixelRatio);
 						pathTracingUniforms.uResolution.value.x = SCREEN_WIDTH * pixelRatio;
 						pathTracingUniforms.uResolution.value.y = SCREEN_HEIGHT * pixelRatio;
@@ -1180,9 +1182,9 @@ void main( void )
 
 					}
 
-					if ( decreaseResolution && pixelRatio != (window.devicePixelRatio * 0.05) ) {
+					if ( decreaseResolution && pixelRatio != (window.devicePixelRatio * 0.1) ) {
 
-						pixelRatio = window.devicePixelRatio * 0.05;
+						pixelRatio = window.devicePixelRatio * 0.1;
 						renderer.setPixelRatio(pixelRatio);
 						pathTracingUniforms.uResolution.value.x = SCREEN_WIDTH * pixelRatio;
 						pathTracingUniforms.uResolution.value.y = SCREEN_HEIGHT * pixelRatio;
