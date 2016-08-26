@@ -174,9 +174,13 @@ uniform sampler2D tPreviousTexture;
 
 varying vec2 vUv;
 
+#define PI               3.14159265358979323
+#define ONE_OVER_PI      0.31830988618379067
+#define TWO_PI           6.28318530717958648
+#define FOUR_PI          12.5663706143591729
+#define ONE_OVER_FOUR_PI 0.07957747154594767
+#define PI_OVER_TWO      1.57079632679489662
 
-#define PI  3.14159265359
-#define TAU 6.28318530718
 
 #define SPHERE_ID 0
 #define PLANE_ID 1
@@ -319,14 +323,14 @@ float TriangleIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 normal, Ray r )
 	w = x - v0;
 	wu = dot(w,u);
 	wv = dot(w,v);
-	D = uv * uv - uu * vv;
+	D = 1.0 / (uv * uv - uu * vv);
 
 	// get and test parametric coords
 	float s, t;
-	s = (uv * wv - vv * wu) / D;
+	s = (uv * wv - vv * wu) * D;
 	if (s < 0.0 || s > 1.0)       // x is outside T
 		return -1.0;
-	t = (uv * wu - uu * wv) / D;
+	t = (uv * wu - uu * wv) * D;
 	if (t < 0.0 || (s + t) > 1.0) // x is outside T
 		return -1.0;
 
@@ -368,14 +372,14 @@ float QuadIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 v3, vec3 normal, Ray r )
 	w = x - v0;
 	wu = dot(w,u);
 	wv = dot(w,v);
-	D = uv * uv - uu * vv;
+	D = 1.0 / (uv * uv - uu * vv);
 
 	// get and test parametric coords
 	float s, t;
-	s = (uv * wv - vv * wu) / D;
+	s = (uv * wv - vv * wu) * D;
 	if (s >= 0.0 && s <= 1.0)
 	{
-		t = (uv * wu - uu * wv) / D;
+		t = (uv * wu - uu * wv) * D;
 		if (t >= 0.0 && (s + t) <= 1.0)
 		{
 			return rt;
@@ -392,13 +396,13 @@ float QuadIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 v3, vec3 normal, Ray r )
 	///w = x - v0;   //optimization - already calculated above
 	wu = dot(w,u);
 	///wv = dot(w,v);//optimization - already calculated above
-	D = uv * uv - uu * vv;
+	D = 1.0 / (uv * uv - uu * vv);
 
 	// get and test parametric coords
-	s = (uv * wv - vv * wu) / D;
+	s = (uv * wv - vv * wu) * D;
 	if (s >= 0.0 && s <= 1.0)
 	{
-		t = (uv * wu - uu * wv) / D;
+		t = (uv * wu - uu * wv) * D;
 		if (t >= 0.0 && (s + t) <= 1.0)
 		{
 			return rt;
@@ -547,30 +551,38 @@ vec3 CalculateRadiance( Ray r )
 					(mod(x.x,60.0) > 30.0 && mod(x.z,60.0) > 30.0) )
 				fCum *= 0.3;					
 			}
-		
+		/*
                 	float r1 = 2.0 * 3.1415926536 * rand();
                 	float r2 = rand();
                 	float r2s = sqrt(r2);
                 	vec3 w = nl;
 			vec3 u = normalize(cross( (abs(w.x) > 0.1 ? vec3(0.0, 1.0, 0.0) : vec3(1.0,1.0,1.0)) , w));
-			vec3 v = cross(w,u);
+			vec3 v = normalize(cross(w,u));//added normalize
                 	vec3 d = normalize(u * cos(r1) * r2s + v * sin(r1) * r2s + w * sqrt(1.0 - r2));
-			
+		*/
+		
+			float up = sqrt(rand()); // cos(theta)
+    			float over = sqrt(1.0 - up * up); // sin(theta)
+    			float around = rand() * TWO_PI;
+			vec3 perpendicular1 = normalize( cross(nl, vec3(0.5773502691896257645)) );
+			vec3 perpendicular2 = cross(nl, perpendicular1); // Normalized by default
+    			vec3 d = ( up * nl ) + ( cos(around) * over * perpendicular1 ) + ( sin(around) * over * perpendicular2 );
+		
 			finalCol = finalCol + fCum * intersec.emission;
-                	r = Ray(x, d);
+                	r = Ray( x, normalize(d) );
 			r.origin += r.direction; // avoid self-intersection
                 	continue;
                 }
                 else if (intersec.type == SPEC)  // Ideal SPECULAR reflection
                 {
-                        r = Ray(x, r.direction - n * 2.0 * dot(n,r.direction));
+			r = Ray( x, reflect(r.direction, n) );
 			
 			r.origin += r.direction; // avoid self-intersection
                         continue;
                 }
 
                 // Ideal dielectric REFRACTION
-                Ray reflRay = Ray(x, r.direction - n * 2.0 * dot(n,r.direction)); 
+                Ray reflRay = Ray( x, reflect(r.direction, n) ); 
 		
 		bool into = dot(n,nl) > 0.0;  // Ray from outside going in?
 
@@ -578,20 +590,25 @@ vec3 CalculateRadiance( Ray r )
                 float nt = 1.5; // IOR of solid glass
                 float nnt = into ? nc / nt : nt / nc;
                 float ddn = dot(r.direction , nl);
-                float cos2t = 1.0 - nnt * nnt * (1.0 - ddn * ddn);
+		
+		/*
+			float cos2t = 1.0 - nnt * nnt * (1.0 - ddn * ddn);
 
-                if (cos2t < 0.0)    // Total internal reflection
-                {
-                    r = reflRay;
-		    r.origin += r.direction; // avoid self-intersection
-                    continue;
-                }
+			if (cos2t < 0.0)    // Total internal reflection
+			{
+			    r = reflRay;
+			    r.origin += r.direction; // avoid self-intersection
+			    continue;
+			}
 
-                vec3 tdir = normalize(r.direction * nnt - n * ((into ? 1.0 : -1.0) * (ddn * nnt + sqrt(cos2t))));
-
+			vec3 tdir = nnt * r.direction - (nnt * ddn + sqrt(cos2t)) * nl;
+		*/
+		
+		vec3 tdir = refract(r.direction, nl, nnt);
+		
                 float a = nt - nc;
                 float b = nt + nc;
-                float R0 = a * a / (b * b);
+                float R0 = (a * a) / (b * b);
                 float c = 1.0 - (into ? -ddn : dot(tdir,n));
                 float Re = R0 + (1.0 - R0) * c * c * c * c * c;
                 float Tr = 1.0 - Re;
@@ -603,15 +620,13 @@ vec3 CalculateRadiance( Ray r )
                 {
 		    fCum = fCum * RP;
                     r = reflRay;
-		    r.origin += r.direction; // avoid self-intersection
-                    
+		    r.origin += r.direction; // avoid self-intersection                 
                 }
                 else
                 {
 		    fCum = fCum * TP;
                     r = Ray(x, tdir);
-		    r.origin += r.direction; // avoid self-intersection
-                   
+		    r.origin += r.direction; // avoid self-intersection                 
                 }
        
 	}
@@ -666,7 +681,7 @@ void main( void )
 	vec3 camForward = ( vec3(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]) );
 	
 	//rng seed
-	seed = mod(uSampleCounter,100.0) + uRandomVector.x + uRandomVector.y + uRandomVector.z + uResolution.y * gl_FragCoord.x / uResolution.x + gl_FragCoord.y / uResolution.y;
+	seed = uSampleCounter * uRandomVector.x + uRandomVector.y + uRandomVector.z + uResolution.y * gl_FragCoord.x / uResolution.x + gl_FragCoord.y / uResolution.y;
 	float r1 = 2.0 * rand();
 	float r2 = 2.0 * rand();
 	
@@ -687,7 +702,7 @@ void main( void )
 	
     
     	//pick random point on aperture
-    	float randomAngle       = rand() * TAU;
+    	float randomAngle       = rand() * TWO_PI;
     	float randomRadius      = rand() * aperture;
     	vec3  randomAperturePos = ( cos(randomAngle) * camRight + sin(randomAngle) * camUp ) * randomRadius;
     
@@ -708,6 +723,8 @@ void main( void )
 	vec3 previousColor = texture2D(tPreviousTexture, vUv).rgb;
 	
 	pixelColor = (previousColor * uSampleCounter + pixelColor) / (uSampleCounter + 1.0);
+	
+	pixelColor = clamp(pixelColor, 0.0, 1.0);
 	
 	gl_FragColor = vec4(pixelColor,1.0);
 	
