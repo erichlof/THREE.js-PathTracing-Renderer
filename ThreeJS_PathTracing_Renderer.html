@@ -589,42 +589,34 @@ vec3 CalculateRadiance( Ray r )
                 float nc = 1.0; // IOR of air
                 float nt = 1.5; // IOR of solid glass
                 float nnt = into ? nc / nt : nt / nc;
-                float ddn = dot(r.direction , nl);
-		
-		/*
-			float cos2t = 1.0 - nnt * nnt * (1.0 - ddn * ddn);
 
-			if (cos2t < 0.0)    // Total internal reflection
-			{
-			    r = reflRay;
-			    r.origin += r.direction; // avoid self-intersection
-			    continue;
-			}
-
-			vec3 tdir = nnt * r.direction - (nnt * ddn + sqrt(cos2t)) * nl;
-		*/
-		
 		vec3 tdir = refract(r.direction, nl, nnt);
 		
-                float a = nt - nc;
+		// Original Fresnel equations
+		float cosThetaInc = dot(nl, r.direction);
+		float cosThetaTra = dot(nl, tdir);
+		float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
+    		float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
+		float Re = ((coefS * coefS) + (coefP * coefP)) * 0.5; // Unpolarized
+		float Tr = 1.0 - Re;
+		
+		/*
+		// Schlick's approx. Fresnel equations
+		float a = nt - nc;
                 float b = nt + nc;
                 float R0 = (a * a) / (b * b);
                 float c = 1.0 - (into ? -ddn : dot(tdir,n));
                 float Re = R0 + (1.0 - R0) * c * c * c * c * c;
                 float Tr = 1.0 - Re;
-                float P = .25 + .5 * Re;
-                float RP = Re / P;
-                float TP = Tr / (1.0 - P);
+		*/
 		
-                if( rand() < P )
+                if( rand() < Re )
                 {
-		    fCum = fCum * RP;
                     r = reflRay;
 		    r.origin += r.direction; // avoid self-intersection                 
                 }
                 else
                 {
-		    fCum = fCum * TP;
                     r = Ray(x, tdir);
 		    r.origin += r.direction; // avoid self-intersection                 
                 }
@@ -722,9 +714,10 @@ void main( void )
 	
 	vec3 previousColor = texture2D(tPreviousTexture, vUv).rgb;
 	
+	//TODO make (1.0 / (uSampleCounter + 1.0)) a uniform and multiply instead of doing this division 
 	pixelColor = (previousColor * uSampleCounter + pixelColor) / (uSampleCounter + 1.0);
 	
-	pixelColor = clamp(pixelColor, 0.0, 1.0);
+	///pixelColor = clamp(pixelColor, 0.0, 1.0);
 	
 	gl_FragColor = vec4(pixelColor,1.0);
 	
