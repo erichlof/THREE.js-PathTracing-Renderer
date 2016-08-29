@@ -120,13 +120,15 @@ void main() {
 precision highp float;
 
 varying vec2 vUv;
+uniform float uSampleCounter;
+uniform float uOneOverSampleCounter;
 uniform sampler2D tTexture0;
 
 void main() {
 
-	vec3 pixelColor = texture2D(tTexture0, vUv).rgb;
+	vec3 pixelColor = texture2D(tTexture0, vUv).rgb * uOneOverSampleCounter;
 	
-	///pixelColor = clamp(pixelColor, 0.0, 1.0);
+	pixelColor = clamp(pixelColor, 0.0, 1.0);
 	
 	// apply gamma correction
 	pixelColor = pow(pixelColor,vec3(0.4545));
@@ -198,6 +200,7 @@ varying vec2 vUv;
 #define REFR 1
 #define SPEC 2
 #define CHECK 3
+#define COAT 4
 
 vec3 focalPoint;
 
@@ -427,8 +430,8 @@ bool SceneIntersect( Ray r, inout float t, inout Intersection intersec )
 		if (d > 0.0 && d < t)
 		{
 			t = d;
-			intersec.hitPoint = r.origin + r.direction * t;
-			intersec.normal = normalize(intersec.hitPoint - spheres[i].position);
+			///intersec.hitPoint = r.origin + r.direction * t;
+			intersec.normal = (r.origin + r.direction * t) - spheres[i].position;
 			intersec.emission = spheres[i].emission;
 			intersec.color = spheres[i].color;
 			intersec.type = spheres[i].type;
@@ -442,7 +445,7 @@ bool SceneIntersect( Ray r, inout float t, inout Intersection intersec )
 		if (d > 0.0 && d < t)
 		{
 			t = d;
-			intersec.hitPoint = r.origin + r.direction * t;
+			///intersec.hitPoint = r.origin + r.direction * t;
 			intersec.normal = (planes[i].pla.xyz);
 			intersec.emission = planes[i].emission;
 			intersec.color = planes[i].color;
@@ -457,8 +460,8 @@ bool SceneIntersect( Ray r, inout float t, inout Intersection intersec )
 		if (d > 0.0 && d < t)
 		{
 			t = d;
-			intersec.hitPoint = r.origin + r.direction * t;
-			intersec.normal = normalize(disks[i].normal);
+			///intersec.hitPoint = r.origin + r.direction * t;
+			intersec.normal = (disks[i].normal);
 			intersec.emission = disks[i].emission;
 			intersec.color = disks[i].color;
 			intersec.type = disks[i].type;
@@ -472,8 +475,8 @@ bool SceneIntersect( Ray r, inout float t, inout Intersection intersec )
 		if (d > 0.0 && d < t)
 		{
 			t = d;
-			intersec.hitPoint = r.origin + r.direction * t;
-			intersec.normal = normalize(triangles[i].normal);
+			///intersec.hitPoint = r.origin + r.direction * t;
+			intersec.normal = (triangles[i].normal);
 			intersec.emission = triangles[i].emission;
 			intersec.color = triangles[i].color;
 			intersec.type = triangles[i].type;
@@ -487,8 +490,8 @@ bool SceneIntersect( Ray r, inout float t, inout Intersection intersec )
 		if (d > 0.0 && d < t)
 		{
 			t = d;
-			intersec.hitPoint = r.origin + r.direction * t;
-			intersec.normal = normalize(quads[i].normal);
+			///intersec.hitPoint = r.origin + r.direction * t;
+			intersec.normal = (quads[i].normal);
 			intersec.emission = quads[i].emission;
 			intersec.color = quads[i].color;
 			intersec.type = quads[i].type;
@@ -499,12 +502,13 @@ bool SceneIntersect( Ray r, inout float t, inout Intersection intersec )
 	return t < inf;
 }
 
+
 //-----------------------------------------------------------------------
 vec3 CalculateRadiance( Ray r )
 //-----------------------------------------------------------------------
 {
-	vec3 finalCol = vec3(0.0,0.0,0.0);
-        vec3 fCum = vec3(1.0,1.0,1.0);
+	vec3 accumCol = vec3(0.0,0.0,0.0);
+        vec3 mask = vec3(1.0,1.0,1.0);
         Intersection intersec;
 	
 	
@@ -513,20 +517,21 @@ vec3 CalculateRadiance( Ray r )
 
                 float t = 0.0;    // distance to intersection
 		
-		if (!SceneIntersect(r, t, intersec))
+		if ( !SceneIntersect(r, t, intersec) )
                     break;
 		    
 		// if we reached something bright, don't spawn any more rays
 		if (intersec.emission.r > 0.1 || intersec.emission.b > 0.1 || intersec.emission.g > 0.1 )
 		{
-			finalCol += fCum * intersec.emission;
+			accumCol = mask * intersec.emission;
 			break;
 		}
 		
-		vec3 x = intersec.hitPoint;
+		
+		vec3 x = r.origin + r.direction * (t-2.0);
 		vec3 n = normalize(intersec.normal);
-                vec3 nl = dot(n,r.direction) < 0.0 ? n : n * -1.0;
-		nl = normalize(nl);
+                vec3 nl = dot(n,r.direction) < 0.0 ? n : normalize(n * -1.0);
+
                 vec3 f = intersec.color;
 		
 		/*
@@ -539,8 +544,6 @@ vec3 CalculateRadiance( Ray r )
 		    break;
 		*/ 
 		
-		
-		fCum = f * fCum;
 
                 if (intersec.type == DIFF || intersec.type == CHECK) // Ideal DIFFUSE reflection
                 {
@@ -549,81 +552,107 @@ vec3 CalculateRadiance( Ray r )
 			{
 				if( (mod(x.x,60.0) < 30.0 && mod(x.z,60.0) < 30.0) || 
 					(mod(x.x,60.0) > 30.0 && mod(x.z,60.0) > 30.0) )
-				fCum *= 0.3;					
+				f *= 0.3;					
 			}
-		/*
-                	float r1 = 2.0 * 3.1415926536 * rand();
-                	float r2 = rand();
-                	float r2s = sqrt(r2);
-                	vec3 w = nl;
-			vec3 u = normalize(cross( (abs(w.x) > 0.1 ? vec3(0.0, 1.0, 0.0) : vec3(1.0,1.0,1.0)) , w));
-			vec3 v = normalize(cross(w,u));//added normalize
-                	vec3 d = normalize(u * cos(r1) * r2s + v * sin(r1) * r2s + w * sqrt(1.0 - r2));
-		*/
 		
+		
+			// choose random Diffuse sample vector
 			float up = sqrt(rand()); // cos(theta)
     			float over = sqrt(1.0 - up * up); // sin(theta)
     			float around = rand() * TWO_PI;
-			vec3 perpendicular1 = normalize( cross(nl, vec3(0.5773502691896257645)) );
-			vec3 perpendicular2 = cross(nl, perpendicular1); // Normalized by default
-    			vec3 d = ( up * nl ) + ( cos(around) * over * perpendicular1 ) + ( sin(around) * over * perpendicular2 );
+			vec3 u = normalize( cross( abs(nl.x) > .1 ? vec3(0, 1, 0) : vec3(1, 0, 0), nl ) );
+			vec3 v = normalize( cross(nl, u) );
+    			vec3 d = ( cos(around) * over * u ) + ( sin(around) * over * v ) + (up * nl);
 		
-			finalCol = finalCol + fCum * intersec.emission;
                 	r = Ray( x, normalize(d) );
-			r.origin += r.direction; // avoid self-intersection
+			
+			mask *= f;
+
                 	continue;
                 }
                 else if (intersec.type == SPEC)  // Ideal SPECULAR reflection
                 {
-			r = Ray( x, reflect(r.direction, n) );
-			
-			r.origin += r.direction; // avoid self-intersection
+			r = Ray( x, reflect(r.direction, nl) );
+			mask *= f;
                         continue;
                 }
 
-                // Ideal dielectric REFRACTION
-                Ray reflRay = Ray( x, reflect(r.direction, n) ); 
-		
-		bool into = dot(n,nl) > 0.0;  // Ray from outside going in?
+                else if (intersec.type == REFR)  // Ideal dielectric REFRACTION
+		{
+                
+			bool into = dot(n,nl) > 0.0;  // Ray from outside going in?
+			float nc = 1.0; // IOR of air
+			float nt = 1.5; // IOR of solid glass
+			float nnt = into ? nc / nt : nt / nc;
 
-                float nc = 1.0; // IOR of air
-                float nt = 1.5; // IOR of solid glass
-                float nnt = into ? nc / nt : nt / nc;
+			vec3 tdir = refract(r.direction, nl, nnt);
 
-		vec3 tdir = refract(r.direction, nl, nnt);
+			// Original Fresnel equations
+			float cosThetaInc = dot(nl, r.direction);
+			float cosThetaTra = dot(nl, tdir);
+			float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
+			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
+			float Re = ((coefS * coefS) + (coefP * coefP)) * 0.5; // Unpolarized
+			float Tr = 1.0 - Re;
+
+			if( rand() < Re )
+			{
+			    r = Ray( x, reflect(r.direction, nl) );
+			    mask *= f;
+			    continue;
+			}
+			else
+			{
+			    x = r.origin + r.direction * (t+0.05); // avoid self-intersection (transmitted intersection nudged in the positive dir)
+			    r = Ray(x, normalize(tdir));
+			    mask *= f;
+			    continue;
+			}
 		
-		// Original Fresnel equations
-		float cosThetaInc = dot(nl, r.direction);
-		float cosThetaTra = dot(nl, tdir);
-		float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
-    		float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
-		float Re = ((coefS * coefS) + (coefP * coefP)) * 0.5; // Unpolarized
-		float Tr = 1.0 - Re;
+		}
 		
-		/*
-		// Schlick's approx. Fresnel equations
-		float a = nt - nc;
-                float b = nt + nc;
-                float R0 = (a * a) / (b * b);
-                float c = 1.0 - (into ? -ddn : dot(tdir,n));
-                float Re = R0 + (1.0 - R0) * c * c * c * c * c;
-                float Tr = 1.0 - Re;
-		*/
+		else if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top (like shiny billiard ball)
+		{
+                
+			float nc = 1.0; // IOR of air
+			float nt = 1.4; // IOR of typical ClearCoat
+			float nnt = nc / nt;
+
+			vec3 tdir = refract(r.direction, nl, nnt);
+
+			// Original Fresnel equations
+			float cosThetaInc = dot(nl, r.direction);
+			float cosThetaTra = dot(nl, tdir);
+			float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
+			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
+			float Re = ((coefS * coefS) + (coefP * coefP)) * 0.5; // Unpolarized
+			float Tr = 1.0 - Re;
+
+			if( rand() < Re )
+			{
+			    	r = Ray( x, reflect(r.direction, nl) );
+			    	continue;
+			}
+			else
+			{
+			    	// choose random Diffuse sample vector
+				float up = sqrt(rand()); // cos(theta)
+				float over = sqrt(1.0 - up * up); // sin(theta)
+				float around = rand() * TWO_PI;
+				vec3 u = normalize( cross( abs(nl.x) > .1 ? vec3(0, 1, 0) : vec3(1, 0, 0), nl ) );
+				vec3 v = normalize( cross(nl, u) );
+				vec3 d = ( cos(around) * over * u ) + ( sin(around) * over * v ) + (up * nl);
+
+				r = Ray( x, normalize(d) );
+				mask *= f;
+				continue;
+			}
 		
-                if( rand() < Re )
-                {
-                    r = reflRay;
-		    r.origin += r.direction; // avoid self-intersection                 
-                }
-                else
-                {
-                    r = Ray(x, tdir);
-		    r.origin += r.direction; // avoid self-intersection                 
-                }
+		}
        
 	}
 	
-            return finalCol;
+        return accumCol;
 }
 
 //-----------------------------------------------------------------------
@@ -631,21 +660,21 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0.0);
-	vec3 L1 = vec3(1.0, 0.8, 0.6) * 2.0;// Whiteish-Yellowish light 1.0,0.7,0.2
+	vec3 L1 = vec3(1.0, 0.8, 0.6) * 1.0;// Whiteish-Yellowish light
 	vec3 L2 = vec3(1.0, 0.8, 0.5) * 0.0;// Yellowish light
-	vec3 L3 = vec3(0.1, 0.7, 1.0) * 5.0;// Blueish light
+	vec3 L3 = vec3(0.1, 0.7, 1.0) * 5.0;// Blueish light * 5.0
 		
-        spheres[0] = Sphere( 2000.0, vec3(0.0, 2000.0, 0.0), z, vec3(0.5,0.5,0.5), CHECK);//Checkered Floor
+        spheres[0] = Sphere( 2001.0, vec3(0.0, 2000.0, 0.0), z, vec3(0.5,0.5,0.5), CHECK);//Checkered Floor
 	
-        spheres[1] = Sphere( 400.0, vec3(0.0, 700.0, 0.0), L1, vec3(1.0,1.0,1.0), DIFF);//Light1 sphere
+        spheres[1] = Sphere( 400.0, vec3(0.0, 600.0, 0.0), L1, vec3(1.0,1.0,1.0), DIFF);//Light1 sphere
 	spheres[2] = Sphere( 0.0, vec3(300.0, 400.0, -300.0), L2, vec3(1.0,1.0,1.0), DIFF);//Light2 sphere
 	spheres[3] = Sphere( 90.0, vec3(800.0, 300.0, -200.0),   L3, vec3(1.0,1.0,1.0), DIFF);//Light3 sphere
 	
         spheres[4] = Sphere( 16.5, vec3(-16.0,16.5,5.0),  z, vec3(0.9,0.9,0.9), SPEC);//Mirror sphere
-        spheres[5] = Sphere( 16.5, vec3(32.0,16.5,30.0),  z, vec3(1.0,1.0,1.0), REFR);//Glass sphere //0.6,0.9,0.7
-        spheres[6] = Sphere( 10.0, vec3(-30.0,10.0,50.0), z, vec3(0.9,0.9,0.9), DIFF);//White diffuse sphere
-        spheres[7] = Sphere( 15.4, focalPoint,            z, vec3(1.0,0.0,0.0), DIFF);//Red diffuse sphere
-        spheres[8] = Sphere(  5.0, vec3(5.0,5.0,35.0),    z, vec3(0.9,0.9,0.9), DIFF);//White diffuse sphere
+        spheres[5] = Sphere( 16.5, vec3(32.0,17.0,30.0),  z, vec3(1.0,1.0,1.0), REFR);//Glass sphere //0.6,0.9,0.7
+        spheres[6] = Sphere( 10.0, vec3(-30.0,10.6,50.0), z, vec3(0.9,0.9,0.9), DIFF);//White diffuse sphere
+        spheres[7] = Sphere( 15.4, focalPoint,            z, vec3(0.9,0.0,0.0), COAT);//Red diffuse with ClearCoat sphere
+        spheres[8] = Sphere(  5.0, vec3(5.0,5.2,35.0),    z, vec3(0.9,0.9,0.9), DIFF);//White diffuse sphere
 
 	planes[0]  = Plane( vec4( -1.0,-0.1,0.0,800.0), z, vec3(0.9,0.9,0.9), DIFF);//WhitePlane Right Wall
 	planes[1]  = Plane( vec4(  1.0,-0.1,0.0,800.0), z, vec3(0.9,0.0,0.9), DIFF);//MagentaPlane Left Wall
@@ -673,7 +702,7 @@ void main( void )
 	vec3 camForward = ( vec3(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]) );
 	
 	//rng seed
-	seed = uSampleCounter * uRandomVector.x + uRandomVector.y + uRandomVector.z + uResolution.y * gl_FragCoord.x / uResolution.x + gl_FragCoord.y / uResolution.y;
+	seed = uSampleCounter * uRandomVector.x + uRandomVector.y + uResolution.y * gl_FragCoord.x / uResolution.x + uResolution.x * gl_FragCoord.y / uResolution.y;
 	float r1 = 2.0 * rand();
 	float r2 = 2.0 * rand();
 	
@@ -704,22 +733,19 @@ void main( void )
 	Ray ray = Ray( camPos + randomAperturePos , finalRayDir );
 	
 	// debug DOF - uncomment 2nd line below to make red sphere match your focal point
-	focalPoint = vec3(10000);//move red sphere out of scene
-	//focalPoint = camPos + focalLength * camForward;
+	//focalPoint = vec3(10000);//move red sphere out of scene
+	focalPoint = camPos + focalLength * camForward;
 	
 	SetupScene();
 	     		
 	// perform path tracing and get resulting pixel color
 	vec3 pixelColor = CalculateRadiance(ray);
 	
-	vec3 previousColor = texture2D(tPreviousTexture, vUv).rgb;
+	vec3 previousColor = vec3(0);
+	if (uSampleCounter > 1.0)
+		previousColor = texture2D(tPreviousTexture, vUv).rgb;
 	
-	//TODO make (1.0 / (uSampleCounter + 1.0)) a uniform and multiply instead of doing this division 
-	pixelColor = (previousColor * uSampleCounter + pixelColor) / (uSampleCounter + 1.0);
-	
-	///pixelColor = clamp(pixelColor, 0.0, 1.0);
-	
-	gl_FragColor = vec4(pixelColor,1.0);
+	gl_FragColor = vec4(pixelColor + previousColor, 1.0);
 	
 }
 
@@ -748,7 +774,7 @@ void main( void )
 			var decreaseResolution = false;
 			var TWO_PI = Math.PI * 2;
 			var randomVector = new THREE.Vector3();
-			var sampleCounter = 0.0;
+			var sampleCounter = 1.0;
 			var keyboard = new THREEx.KeyboardState();
 			var isPaused = true;
 			var oldYawRotation, oldPitchRotation;
@@ -790,7 +816,7 @@ void main( void )
 
 			if ( 'createTouch' in document ) {
 				mouseControl = false;
-				pixelRatio = window.devicePixelRatio * 0.2;
+				pixelRatio = window.devicePixelRatio * 0.3;
 			}
 			
 			// if on mobile device, unpause the app because there is no ESC key and no mouse capture to do
@@ -987,6 +1013,8 @@ void main( void )
 				screenOutputGeometry = new THREE.PlaneBufferGeometry( 2, 2 );
 				
 				screenOutputUniforms = {
+					uSampleCounter: { type: "f", value: 0.0 },
+					uOneOverSampleCounter: { type: "f", value: 0.0 },
 					tTexture0: { type: "t", value: pathTracingRenderTarget.texture }
 				}
 				
@@ -1077,11 +1105,11 @@ void main( void )
 				// check user controls
 				
 				if (oldYawRotation != cameraControlsYawObject.rotation.y){
-					sampleCounter = 0.0;
+					sampleCounter = 1.0;
 					decreaseResolution = true;
 				}
 				if (oldPitchRotation != cameraControlsPitchObject.rotation.x) {
-					sampleCounter = 0.0;
+					sampleCounter = 1.0;
 					decreaseResolution = true;
 				}
 				// save state for next frame
@@ -1098,7 +1126,7 @@ void main( void )
 					cameraControlsPitchObject.rotation.x = Math.max( - PI_2, Math.min( PI_2, cameraControlsPitchObject.rotation.x ) );
 
 					if (joystick.deltaX() || joystick.deltaY()) {
-						sampleCounter = 0.0;
+						sampleCounter = 1.0;
 						decreaseResolution = true;
 					}
 				}
@@ -1118,38 +1146,48 @@ void main( void )
 				if ( joystick.button3Pressed || keyboard.pressed('W') ) {
 
 					cameraControlsObject.position.add(cameraDirectionVector.multiplyScalar(camFlightSpeed * frameTime));
-					sampleCounter = 0.0;
+					sampleCounter = 1.0;
 					decreaseResolution = true;
 				}
 				if ( keyboard.pressed('S') ) {
 
 					cameraControlsObject.position.sub(cameraDirectionVector.multiplyScalar(camFlightSpeed * frameTime));
-					sampleCounter = 0.0;
+					sampleCounter = 1.0;
 					decreaseResolution = true;
 				}
 				if ( joystick.button1Pressed || keyboard.pressed('D') ) {
 
 					cameraControlsObject.position.add(cameraRightVector.multiplyScalar(camFlightSpeed * frameTime));
-					sampleCounter = 0.0;
+					sampleCounter = 1.0;
 					decreaseResolution = true;
 				}
 				if ( keyboard.pressed('A') ) {
 
 					cameraControlsObject.position.sub(cameraRightVector.multiplyScalar(camFlightSpeed * frameTime));
-					sampleCounter = 0.0;
+					sampleCounter = 1.0;
 					decreaseResolution = true;
 				}
 				if ( joystick.button2Pressed || keyboard.pressed('Q') ) {
 
 					cameraControlsObject.position.add(cameraUpVector.multiplyScalar(camFlightSpeed * frameTime));
-					sampleCounter = 0.0;
+					sampleCounter = 1.0;
 					decreaseResolution = true;
 				}
 				if ( keyboard.pressed('Z') ) {
 
 					cameraControlsObject.position.sub(cameraUpVector.multiplyScalar(camFlightSpeed * frameTime));
-					sampleCounter = 0.0;
+					sampleCounter = 1.0;
 					decreaseResolution = true;
+				}
+				
+				
+				pathTracingUniforms.uSampleCounter.value = sampleCounter;
+				screenOutputUniforms.uSampleCounter.value = sampleCounter;
+				screenOutputUniforms.uOneOverSampleCounter.value = 1.0 / sampleCounter;
+				
+				sampleCounter += 1.0;
+				if (sampleCounter > 20000.0) {
+					sampleCounter = 20000.0;
 				}
 				
 	
@@ -1187,9 +1225,9 @@ void main( void )
 				
 				if ( !mouseControl ) {
 					
-					if ( !decreaseResolution && pixelRatio != (window.devicePixelRatio * 0.2) ) {
+					if ( !decreaseResolution && pixelRatio != (window.devicePixelRatio * 0.3) ) {
 
-						pixelRatio = window.devicePixelRatio * 0.2;
+						pixelRatio = window.devicePixelRatio * 0.3;
 						renderer.setPixelRatio(pixelRatio);
 						pathTracingUniforms.uResolution.value.x = SCREEN_WIDTH * pixelRatio;
 						pathTracingUniforms.uResolution.value.y = SCREEN_HEIGHT * pixelRatio;
@@ -1213,6 +1251,7 @@ void main( void )
 					
 				}
 				
+				
 				// RENDERING in 3 steps
 				
 				// STEP 1
@@ -1232,12 +1271,6 @@ void main( void )
 				renderer.render( screenOutputScene, quadCamera );
 				
 				
-				pathTracingUniforms.uSampleCounter.value = sampleCounter;
-				
-				sampleCounter += 1.0;
-				if (sampleCounter > 20000.0) {
-					sampleCounter = 20000.0;
-				}
 				
 				stats.update();
 				
