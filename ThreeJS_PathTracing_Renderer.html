@@ -128,7 +128,7 @@ void main() {
 
 	vec3 pixelColor = texture2D(tTexture0, vUv).rgb * uOneOverSampleCounter;
 	
-	pixelColor = clamp(pixelColor, 0.0, 1.0);
+	///pixelColor = clamp(pixelColor, 0.0, 1.0);
 	
 	// apply gamma correction
 	pixelColor = pow(pixelColor,vec3(0.4545));
@@ -438,7 +438,7 @@ bool SceneIntersect( Ray r, inout float t, inout Intersection intersec )
 			intersec.id = SPHERE_ID;
 		}
         }
-	
+	/*
 	for (int i = 0; i < N_PLANES; i++)
         {
 		d = PlaneIntersect( planes[i].pla , r );
@@ -453,7 +453,7 @@ bool SceneIntersect( Ray r, inout float t, inout Intersection intersec )
 			intersec.id = PLANE_ID;
 		}
         }
-	
+	*/
 	for (int i = 0; i < N_DISKS; i++)
         {
 		d = DiskIntersect( disks[i].radiusSq, disks[i].pos, disks[i].normal, r );
@@ -507,42 +507,44 @@ bool SceneIntersect( Ray r, inout float t, inout Intersection intersec )
 vec3 CalculateRadiance( Ray r )
 //-----------------------------------------------------------------------
 {
-	vec3 accumCol = vec3(0.0,0.0,0.0);
-        vec3 mask = vec3(1.0,1.0,1.0);
+	vec3 accumCol = vec3(0.0);
+        vec3 mask = vec3(1.0);
         Intersection intersec;
 	
 	
         for (int depth = 0; depth < 5; depth++)
-        {
+	{
 
                 float t = 0.0;    // distance to intersection
 		
 		if ( !SceneIntersect(r, t, intersec) )
+		{
                     break;
-		    
+		}
 		// if we reached something bright, don't spawn any more rays
 		if (intersec.emission.r > 0.1 || intersec.emission.b > 0.1 || intersec.emission.g > 0.1 )
 		{
+			
 			accumCol = mask * intersec.emission;
 			break;
 		}
 		
 		
-		vec3 x = r.origin + r.direction * (t-2.0);
-		vec3 n = normalize(intersec.normal);
-                vec3 nl = dot(n,r.direction) < 0.0 ? n : normalize(n * -1.0);
+		vec3 x = r.origin + r.direction * (t-1.0);
+		vec3 n = intersec.normal;
+                vec3 nl = dot(n,r.direction) <= 0.0 ? normalize(n) : normalize(n * -1.0);
 
                 vec3 f = intersec.color;
 		
-		/*
-		// Russian Roulette
-		// in original smallPT, only used if trace path nodes length is greater than 5)
-                float p = max(max(f.x,f.y),f.z);
-                if ( rand() < p)
-                    f = f / p;
-                else
-		    break;
-		*/ 
+		    /*
+			// Russian Roulette
+			// in original smallPT, only used if trace path nodes length is greater than 5)
+			float p = max(max(f.x,f.y),f.z);
+			if ( rand() < p)
+			    f = f / p;
+			else
+			    break;
+		    */ 
 		
 
                 if (intersec.type == DIFF || intersec.type == CHECK) // Ideal DIFFUSE reflection
@@ -552,7 +554,7 @@ vec3 CalculateRadiance( Ray r )
 			{
 				if( (mod(x.x,60.0) < 30.0 && mod(x.z,60.0) < 30.0) || 
 					(mod(x.x,60.0) > 30.0 && mod(x.z,60.0) > 30.0) )
-				f *= 0.3;					
+				mask *= 0.3;					
 			}
 		
 		
@@ -565,19 +567,17 @@ vec3 CalculateRadiance( Ray r )
     			vec3 d = ( cos(around) * over * u ) + ( sin(around) * over * v ) + (up * nl);
 		
                 	r = Ray( x, normalize(d) );
-			
 			mask *= f;
-
                 	continue;
                 }
-                else if (intersec.type == SPEC)  // Ideal SPECULAR reflection
+                if (intersec.type == SPEC)  // Ideal SPECULAR reflection
                 {
 			r = Ray( x, reflect(r.direction, nl) );
 			mask *= f;
                         continue;
                 }
 
-                else if (intersec.type == REFR)  // Ideal dielectric REFRACTION
+                if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
                 
 			bool into = dot(n,nl) > 0.0;  // Ray from outside going in?
@@ -611,48 +611,63 @@ vec3 CalculateRadiance( Ray r )
 		
 		}
 		
-		else if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top (like shiny billiard ball)
+		if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top (like car, or shiny pool ball)
 		{
-                
+                    /*
+			
+			// Original Fresnel equations
+			
 			float nc = 1.0; // IOR of air
 			float nt = 1.4; // IOR of typical ClearCoat
 			float nnt = nc / nt;
-
-			vec3 tdir = refract(r.direction, nl, nnt);
-
-			// Original Fresnel equations
+			vec3 tdir = refract(r.direction, nl, nnt);	
 			float cosThetaInc = dot(nl, r.direction);
 			float cosThetaTra = dot(nl, tdir);
 			float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
 			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
 			float Re = ((coefS * coefS) + (coefP * coefP)) * 0.5; // Unpolarized
 			float Tr = 1.0 - Re;
-
-			if( rand() < Re )
-			{
-			    	r = Ray( x, reflect(r.direction, nl) );
-			    	continue;
-			}
-			else
-			{
-			    	// choose random Diffuse sample vector
+			
+		    */
+			
+			// Schlick Fresnel approx.
+			float ddn = dot(-r.direction, nl);
+			float nc = 1.0; // IOR of air
+			float nt = 1.4; // IOR of ClearCoat 
+			float R0 = (nc - nt) / (nc + nt);
+			R0 *= R0;
+			float c = 1.0 - ddn;
+			float Re = R0 + (1.0 - R0) * c * c * c * c * c;
+			///Re *= 0.5; // fudge factor for more inner diffuse color
+			///float Tr = 1.0 - Re;
+			float shininess = 1.0;
+			
+			// choose random Diffuse sample vector for material underneath ClearCoat
 				float up = sqrt(rand()); // cos(theta)
 				float over = sqrt(1.0 - up * up); // sin(theta)
 				float around = rand() * TWO_PI;
 				vec3 u = normalize( cross( abs(nl.x) > .1 ? vec3(0, 1, 0) : vec3(1, 0, 0), nl ) );
 				vec3 v = normalize( cross(nl, u) );
 				vec3 d = ( cos(around) * over * u ) + ( sin(around) * over * v ) + (up * nl);
-
+			
+			// choose either reflection or transmission
+			if( rand() < Re )
+			{	
+				r = Ray( x, mix( normalize(d), reflect(r.direction, nl), shininess ) );
+			    	///mask = vec3(1); // ClearCoat white specular value
+				continue;	
+			}
+			else
+			{
 				r = Ray( x, normalize(d) );
 				mask *= f;
-				continue;
-			}
-		
+				continue;  	
+			}    
 		}
-       
+	
 	}
 	
-        return accumCol;
+	return accumCol;      
 }
 
 //-----------------------------------------------------------------------
@@ -660,20 +675,20 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0.0);
-	vec3 L1 = vec3(1.0, 0.8, 0.6) * 1.0;// Whiteish-Yellowish light
+	vec3 L1 = vec3(1.0, 0.9, 0.8) * 5.0;// Whiteish-Yellowish light
 	vec3 L2 = vec3(1.0, 0.8, 0.5) * 0.0;// Yellowish light
-	vec3 L3 = vec3(0.1, 0.7, 1.0) * 5.0;// Blueish light * 5.0
+	vec3 L3 = vec3(0.1, 0.7, 1.0) * 3.0;// Blueish light * 5.0
 		
-        spheres[0] = Sphere( 2001.0, vec3(0.0, 2000.0, 0.0), z, vec3(0.5,0.5,0.5), CHECK);//Checkered Floor
+        spheres[0] = Sphere( 2000.0, vec3(0.0, -2000.0, 0.0), z, vec3(0.3,0.3,0.3), CHECK);//Checkered Floor
 	
-        spheres[1] = Sphere( 400.0, vec3(0.0, 600.0, 0.0), L1, vec3(1.0,1.0,1.0), DIFF);//Light1 sphere
-	spheres[2] = Sphere( 0.0, vec3(300.0, 400.0, -300.0), L2, vec3(1.0,1.0,1.0), DIFF);//Light2 sphere
-	spheres[3] = Sphere( 90.0, vec3(800.0, 300.0, -200.0),   L3, vec3(1.0,1.0,1.0), DIFF);//Light3 sphere
+        spheres[1] = Sphere( 200.0, vec3(0.0, 300.0, 0.0), L1, z, DIFF);//Light1 sphere
+	spheres[2] = Sphere( 0.00001, vec3(300.0, 400.0, -300.0), L2, z, DIFF);//Light2 sphere
+	spheres[3] = Sphere( 90.0, vec3(800.0, 300.0, -200.0),   L3, z, DIFF);//Light3 sphere
 	
         spheres[4] = Sphere( 16.5, vec3(-16.0,16.5,5.0),  z, vec3(0.9,0.9,0.9), SPEC);//Mirror sphere
         spheres[5] = Sphere( 16.5, vec3(32.0,17.0,30.0),  z, vec3(1.0,1.0,1.0), REFR);//Glass sphere //0.6,0.9,0.7
         spheres[6] = Sphere( 10.0, vec3(-30.0,10.6,50.0), z, vec3(0.9,0.9,0.9), DIFF);//White diffuse sphere
-        spheres[7] = Sphere( 15.4, focalPoint,            z, vec3(0.9,0.0,0.0), COAT);//Red diffuse with ClearCoat sphere
+        spheres[7] = Sphere( 15.4, focalPoint,            z, vec3(0.3,0.0,0.0), COAT);//Red diffuse with ClearCoat sphere
         spheres[8] = Sphere(  5.0, vec3(5.0,5.2,35.0),    z, vec3(0.9,0.9,0.9), DIFF);//White diffuse sphere
 
 	planes[0]  = Plane( vec4( -1.0,-0.1,0.0,800.0), z, vec3(0.9,0.9,0.9), DIFF);//WhitePlane Right Wall
@@ -702,7 +717,7 @@ void main( void )
 	vec3 camForward = ( vec3(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]) );
 	
 	//rng seed
-	seed = uSampleCounter * uRandomVector.x + uRandomVector.y + uResolution.y * gl_FragCoord.x / uResolution.x + uResolution.x * gl_FragCoord.y / uResolution.y;
+	seed = mod(uSampleCounter,100.0) * uRandomVector.x + uRandomVector.y + uResolution.y * gl_FragCoord.x / uResolution.x + uResolution.x * gl_FragCoord.y / uResolution.y;
 	float r1 = 2.0 * rand();
 	float r2 = 2.0 * rand();
 	
@@ -739,13 +754,14 @@ void main( void )
 	SetupScene();
 	     		
 	// perform path tracing and get resulting pixel color
-	vec3 pixelColor = CalculateRadiance(ray);
+	vec3 pixelColor = clamp(CalculateRadiance(ray),0.0,1.0);
 	
 	vec3 previousColor = vec3(0);
 	if (uSampleCounter > 1.0)
 		previousColor = texture2D(tPreviousTexture, vUv).rgb;
 	
-	gl_FragColor = vec4(pixelColor + previousColor, 1.0);
+	pixelColor = pixelColor + previousColor;
+	gl_FragColor = vec4(pixelColor, 1.0);
 	
 }
 
@@ -816,7 +832,7 @@ void main( void )
 
 			if ( 'createTouch' in document ) {
 				mouseControl = false;
-				pixelRatio = window.devicePixelRatio * 0.3;
+				pixelRatio = window.devicePixelRatio * 0.2;
 			}
 			
 			// if on mobile device, unpause the app because there is no ESC key and no mouse capture to do
@@ -1186,8 +1202,8 @@ void main( void )
 				screenOutputUniforms.uOneOverSampleCounter.value = 1.0 / sampleCounter;
 				
 				sampleCounter += 1.0;
-				if (sampleCounter > 20000.0) {
-					sampleCounter = 20000.0;
+				if (sampleCounter > 100000.0) {
+					sampleCounter = 100000.0;
 				}
 				
 	
@@ -1208,9 +1224,9 @@ void main( void )
 
 					}
 
-					if ( decreaseResolution && pixelRatio != (window.devicePixelRatio * 0.6) ) {
+					if ( decreaseResolution && pixelRatio != (window.devicePixelRatio * 0.8) ) {
 
-						pixelRatio = window.devicePixelRatio * 0.6;
+						pixelRatio = window.devicePixelRatio * 0.8;
 						renderer.setPixelRatio(pixelRatio);
 						pathTracingUniforms.uResolution.value.x = SCREEN_WIDTH * pixelRatio;
 						pathTracingUniforms.uResolution.value.y = SCREEN_HEIGHT * pixelRatio;
@@ -1225,9 +1241,9 @@ void main( void )
 				
 				if ( !mouseControl ) {
 					
-					if ( !decreaseResolution && pixelRatio != (window.devicePixelRatio * 0.3) ) {
+					if ( !decreaseResolution && pixelRatio != (window.devicePixelRatio * 0.2) ) {
 
-						pixelRatio = window.devicePixelRatio * 0.3;
+						pixelRatio = window.devicePixelRatio * 0.2;
 						renderer.setPixelRatio(pixelRatio);
 						pathTracingUniforms.uResolution.value.x = SCREEN_WIDTH * pixelRatio;
 						pathTracingUniforms.uResolution.value.y = SCREEN_HEIGHT * pixelRatio;
