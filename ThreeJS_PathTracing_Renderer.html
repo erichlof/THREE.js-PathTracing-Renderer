@@ -120,7 +120,6 @@ void main() {
 precision highp float;
 
 varying vec2 vUv;
-uniform float uSampleCounter;
 uniform float uOneOverSampleCounter;
 uniform sampler2D tTexture0;
 
@@ -128,7 +127,7 @@ void main() {
 
 	vec3 pixelColor = texture2D(tTexture0, vUv).rgb * uOneOverSampleCounter;
 	
-	///pixelColor = clamp(pixelColor, 0.0, 1.0);
+	pixelColor = clamp(pixelColor, 0.0, 1.0);
 	
 	// apply gamma correction
 	pixelColor = pow(pixelColor,vec3(0.4545));
@@ -202,7 +201,7 @@ varying vec2 vUv;
 #define CHECK 3
 #define COAT 4
 
-vec3 focalPoint;
+vec3 redSpherePos;
 
 float seed = 0.0;
 float rand()
@@ -219,7 +218,7 @@ struct Plane { vec4 pla; vec3 emission; vec3 color; int type; };
 struct Disk { float radiusSq; vec3 pos; vec3 normal; vec3 emission; vec3 color; int type; };
 struct Triangle { vec3 normal; vec3 v0; vec3 v1; vec3 v2; vec3 emission; vec3 color; int type; };
 struct Quad { vec3 normal; vec3 v0; vec3 v1; vec3 v2; vec3 v3; vec3 emission; vec3 color; int type; };
-struct Intersection { vec3 hitPoint; vec3 normal; vec3 emission; vec3 color; int type; int id; };
+struct Intersection { vec3 normal; vec3 emission; vec3 color; int type; int id; };
 
 Sphere spheres[N_SPHERES];
 Plane planes[N_PLANES];
@@ -430,7 +429,6 @@ bool SceneIntersect( Ray r, inout float t, inout Intersection intersec )
 		if (d > 0.0 && d < t)
 		{
 			t = d;
-			///intersec.hitPoint = r.origin + r.direction * t;
 			intersec.normal = (r.origin + r.direction * t) - spheres[i].position;
 			intersec.emission = spheres[i].emission;
 			intersec.color = spheres[i].color;
@@ -445,7 +443,6 @@ bool SceneIntersect( Ray r, inout float t, inout Intersection intersec )
 		if (d > 0.0 && d < t)
 		{
 			t = d;
-			///intersec.hitPoint = r.origin + r.direction * t;
 			intersec.normal = (planes[i].pla.xyz);
 			intersec.emission = planes[i].emission;
 			intersec.color = planes[i].color;
@@ -460,7 +457,6 @@ bool SceneIntersect( Ray r, inout float t, inout Intersection intersec )
 		if (d > 0.0 && d < t)
 		{
 			t = d;
-			///intersec.hitPoint = r.origin + r.direction * t;
 			intersec.normal = (disks[i].normal);
 			intersec.emission = disks[i].emission;
 			intersec.color = disks[i].color;
@@ -475,7 +471,6 @@ bool SceneIntersect( Ray r, inout float t, inout Intersection intersec )
 		if (d > 0.0 && d < t)
 		{
 			t = d;
-			///intersec.hitPoint = r.origin + r.direction * t;
 			intersec.normal = (triangles[i].normal);
 			intersec.emission = triangles[i].emission;
 			intersec.color = triangles[i].color;
@@ -490,7 +485,6 @@ bool SceneIntersect( Ray r, inout float t, inout Intersection intersec )
 		if (d > 0.0 && d < t)
 		{
 			t = d;
-			///intersec.hitPoint = r.origin + r.direction * t;
 			intersec.normal = (quads[i].normal);
 			intersec.emission = quads[i].emission;
 			intersec.color = quads[i].color;
@@ -529,9 +523,9 @@ vec3 CalculateRadiance( Ray r )
 			break;
 		}
 		
-		
-		vec3 x = r.origin + r.direction * (t-1.0);
-		vec3 n = intersec.normal;
+		// avoid future self-intersection by stepping hitPoint back by 1 unit (t-2.0)
+		vec3 x = r.origin + r.direction * (t-2.0);
+		vec3 n = normalize(intersec.normal);
                 vec3 nl = dot(n,r.direction) <= 0.0 ? normalize(n) : normalize(n * -1.0);
 
                 vec3 f = intersec.color;
@@ -583,22 +577,34 @@ vec3 CalculateRadiance( Ray r )
 			bool into = dot(n,nl) > 0.0;  // Ray from outside going in?
 			float nc = 1.0; // IOR of air
 			float nt = 1.5; // IOR of solid glass
-			float nnt = into ? nc / nt : nt / nc;
+			if ( !into ) 
+			{
+				nc = 1.5;
+				nt = 1.0;
+			}
+			float nnt = nc / nt;
 
 			vec3 tdir = refract(r.direction, nl, nnt);
-
+		/*
 			// Original Fresnel equations
 			float cosThetaInc = dot(nl, r.direction);
 			float cosThetaTra = dot(nl, tdir);
 			float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
 			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
 			float Re = ((coefS * coefS) + (coefP * coefP)) * 0.5; // Unpolarized
-			float Tr = 1.0 - Re;
+			///float Tr = 1.0 - Re;
+		*/			
+			// Schlick Fresnel approx.
+			float R0 = (nc - nt) / (nc + nt);
+			R0 *= R0;
+			float ddn = dot(-r.direction, nl);
+			float c = 1.0 - ddn;
+			float Re = R0 + (1.0 - R0) * c * c * c * c * c;
 
 			if( rand() < Re )
 			{
 			    r = Ray( x, reflect(r.direction, nl) );
-			    mask *= f;
+			    ///mask *= f;
 			    continue;
 			}
 			else
@@ -639,7 +645,6 @@ vec3 CalculateRadiance( Ray r )
 			float c = 1.0 - ddn;
 			float Re = R0 + (1.0 - R0) * c * c * c * c * c;
 			///Re *= 0.5; // fudge factor for more inner diffuse color
-			///float Tr = 1.0 - Re;
 			float shininess = 1.0;
 			
 			// choose random Diffuse sample vector for material underneath ClearCoat
@@ -650,11 +655,11 @@ vec3 CalculateRadiance( Ray r )
 				vec3 v = normalize( cross(nl, u) );
 				vec3 d = ( cos(around) * over * u ) + ( sin(around) * over * v ) + (up * nl);
 			
-			// choose either reflection or transmission
+			// choose either specular reflection or diffuse
 			if( rand() < Re )
 			{	
 				r = Ray( x, mix( normalize(d), reflect(r.direction, nl), shininess ) );
-			    	///mask = vec3(1); // ClearCoat white specular value
+			    	///mask *= f; not needed because ClearCoat specular is white: vec3(1.0) 
 				continue;	
 			}
 			else
@@ -685,10 +690,10 @@ void SetupScene(void)
 	spheres[2] = Sphere( 0.00001, vec3(300.0, 400.0, -300.0), L2, z, DIFF);//Light2 sphere
 	spheres[3] = Sphere( 90.0, vec3(800.0, 300.0, -200.0),   L3, z, DIFF);//Light3 sphere
 	
-        spheres[4] = Sphere( 16.5, vec3(-16.0,16.5,5.0),  z, vec3(0.9,0.9,0.9), SPEC);//Mirror sphere
+        spheres[4] = Sphere( 16.5, vec3(-16.0,16.5,5.0),  z, vec3(1.0,1.0,1.0), SPEC);//Mirror sphere
         spheres[5] = Sphere( 16.5, vec3(32.0,17.0,30.0),  z, vec3(1.0,1.0,1.0), REFR);//Glass sphere //0.6,0.9,0.7
         spheres[6] = Sphere( 10.0, vec3(-30.0,10.6,50.0), z, vec3(0.9,0.9,0.9), DIFF);//White diffuse sphere
-        spheres[7] = Sphere( 15.4, focalPoint,            z, vec3(0.3,0.0,0.0), COAT);//Red diffuse with ClearCoat sphere
+        spheres[7] = Sphere( 15.4, redSpherePos,          z, vec3(0.3,0.0,0.0), COAT);//Red diffuse with ClearCoat sphere
         spheres[8] = Sphere(  5.0, vec3(5.0,5.2,35.0),    z, vec3(0.9,0.9,0.9), DIFF);//White diffuse sphere
 
 	planes[0]  = Plane( vec4( -1.0,-0.1,0.0,800.0), z, vec3(0.9,0.9,0.9), DIFF);//WhitePlane Right Wall
@@ -697,7 +702,7 @@ void SetupScene(void)
 	planes[3]  = Plane( vec4( 0.0,-0.1,-1.0,800.0), z, vec3(0.0,0.9,0.9), DIFF);//CyanPlane Front Wall
 	
 	disks[0]   = Disk( 16.5 * 16.5, vec3(-60.0,13.0,-10.0), vec3( 1.0,-1.0,0.0 ), z, vec3(0.9,0.0,0.0), DIFF);//RedDisk Left 
-	disks[1]   = Disk( 16.5 * 16.5, vec3( 30.0,-10.0,-200.0), vec3( -1.0,0.0,0.1 ), L3, z, DIFF);//DiskLight Right
+	disks[1]   = Disk( 16.5 * 16.5, vec3( 30.0,-10.0,-180.0), vec3( -1.0,0.0,0.3 ), L3, z, DIFF);//DiskLight Right
 	
 	triangles[0] = Triangle( vec3(0.0,0.0,1.0), vec3( 0.0,20.0,-50.0), vec3( 30.0,70.0,-50.0), vec3( -30.0,70.0,-50.0 ), z, vec3(0.0,0.9,0.0), DIFF);//Green Triangle
 	
@@ -716,8 +721,9 @@ void main( void )
     	vec3 camUp      = ( vec3( uCameraMatrix[1][0],  uCameraMatrix[1][1],  uCameraMatrix[1][2]) );
 	vec3 camForward = ( vec3(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]) );
 	
-	//rng seed
-	seed = mod(uSampleCounter,100.0) * uRandomVector.x + uRandomVector.y + uResolution.y * gl_FragCoord.x / uResolution.x + uResolution.x * gl_FragCoord.y / uResolution.y;
+	// seed for rand() function
+	seed = mod(uSampleCounter,500.0) * uRandomVector.x + uRandomVector.y + uResolution.y * gl_FragCoord.x / uResolution.x + uResolution.x * gl_FragCoord.y / uResolution.y;
+	
 	float r1 = 2.0 * rand();
 	float r2 = 2.0 * rand();
 	
@@ -732,36 +738,36 @@ void main( void )
 	vec3 rayDir = normalize( d.x * camRight * uULen + d.y * camUp * uVLen + camForward );
 	
 	// depth of field
-	float aperture    = 0.5;
+	float aperture    =   0.5;
 	float focalLength = 100.0;
-    	focalPoint  = focalLength * rayDir;
-	
-    
+    	vec3 focalPoint = focalLength * rayDir;
+	  
     	//pick random point on aperture
-    	float randomAngle       = rand() * TWO_PI;
-    	float randomRadius      = rand() * aperture;
+    	float randomAngle = rand() * TWO_PI;
+    	float randomRadius = rand() * aperture;
     	vec3  randomAperturePos = ( cos(randomAngle) * camRight + sin(randomAngle) * camUp ) * randomRadius;
     
     	//point on aperture to focal point
     	vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
     
 	Ray ray = Ray( camPos + randomAperturePos , finalRayDir );
-	
-	// debug DOF - uncomment 2nd line below to make red sphere match your focal point
-	//focalPoint = vec3(10000);//move red sphere out of scene
-	focalPoint = camPos + focalLength * camForward;
+
+	// debug DOF(depth of field) - uncomment 2nd line below to make red sphere match your focal point
+	redSpherePos = vec3(50.0,13.0,-90.0); // place red sphere on ground
+	//redSpherePos = camPos + focalLength * camForward; // DOF debug mode, red sphere follows your line of sight
 	
 	SetupScene();
 	     		
 	// perform path tracing and get resulting pixel color
-	vec3 pixelColor = clamp(CalculateRadiance(ray),0.0,1.0);
+	vec3 pixelColor = clamp( CalculateRadiance(ray), 0.0, 1.0 );
 	
 	vec3 previousColor = vec3(0);
 	if (uSampleCounter > 1.0)
+	{
 		previousColor = texture2D(tPreviousTexture, vUv).rgb;
+	}
 	
-	pixelColor = pixelColor + previousColor;
-	gl_FragColor = vec4(pixelColor, 1.0);
+	gl_FragColor = vec4(pixelColor + previousColor, 1.0);
 	
 }
 
@@ -790,7 +796,7 @@ void main( void )
 			var decreaseResolution = false;
 			var TWO_PI = Math.PI * 2;
 			var randomVector = new THREE.Vector3();
-			var sampleCounter = 1.0;
+			var sampleCounter = 0.0;
 			var keyboard = new THREEx.KeyboardState();
 			var isPaused = true;
 			var oldYawRotation, oldPitchRotation;
@@ -1029,7 +1035,6 @@ void main( void )
 				screenOutputGeometry = new THREE.PlaneBufferGeometry( 2, 2 );
 				
 				screenOutputUniforms = {
-					uSampleCounter: { type: "f", value: 0.0 },
 					uOneOverSampleCounter: { type: "f", value: 0.0 },
 					tTexture0: { type: "t", value: pathTracingRenderTarget.texture }
 				}
@@ -1121,11 +1126,11 @@ void main( void )
 				// check user controls
 				
 				if (oldYawRotation != cameraControlsYawObject.rotation.y){
-					sampleCounter = 1.0;
+					sampleCounter = 0.0;
 					decreaseResolution = true;
 				}
 				if (oldPitchRotation != cameraControlsPitchObject.rotation.x) {
-					sampleCounter = 1.0;
+					sampleCounter = 0.0;
 					decreaseResolution = true;
 				}
 				// save state for next frame
@@ -1142,7 +1147,7 @@ void main( void )
 					cameraControlsPitchObject.rotation.x = Math.max( - PI_2, Math.min( PI_2, cameraControlsPitchObject.rotation.x ) );
 
 					if (joystick.deltaX() || joystick.deltaY()) {
-						sampleCounter = 1.0;
+						sampleCounter = 0.0;
 						decreaseResolution = true;
 					}
 				}
@@ -1162,54 +1167,50 @@ void main( void )
 				if ( joystick.button3Pressed || keyboard.pressed('W') ) {
 
 					cameraControlsObject.position.add(cameraDirectionVector.multiplyScalar(camFlightSpeed * frameTime));
-					sampleCounter = 1.0;
+					sampleCounter = 0.0;
 					decreaseResolution = true;
 				}
 				if ( keyboard.pressed('S') ) {
 
 					cameraControlsObject.position.sub(cameraDirectionVector.multiplyScalar(camFlightSpeed * frameTime));
-					sampleCounter = 1.0;
+					sampleCounter = 0.0;
 					decreaseResolution = true;
 				}
 				if ( joystick.button1Pressed || keyboard.pressed('D') ) {
 
 					cameraControlsObject.position.add(cameraRightVector.multiplyScalar(camFlightSpeed * frameTime));
-					sampleCounter = 1.0;
+					sampleCounter = 0.0;
 					decreaseResolution = true;
 				}
 				if ( keyboard.pressed('A') ) {
 
 					cameraControlsObject.position.sub(cameraRightVector.multiplyScalar(camFlightSpeed * frameTime));
-					sampleCounter = 1.0;
+					sampleCounter = 0.0;
 					decreaseResolution = true;
 				}
 				if ( joystick.button2Pressed || keyboard.pressed('Q') ) {
 
 					cameraControlsObject.position.add(cameraUpVector.multiplyScalar(camFlightSpeed * frameTime));
-					sampleCounter = 1.0;
+					sampleCounter = 0.0;
 					decreaseResolution = true;
 				}
 				if ( keyboard.pressed('Z') ) {
 
 					cameraControlsObject.position.sub(cameraUpVector.multiplyScalar(camFlightSpeed * frameTime));
-					sampleCounter = 1.0;
+					sampleCounter = 0.0;
 					decreaseResolution = true;
 				}
-				
-				
-				pathTracingUniforms.uSampleCounter.value = sampleCounter;
-				screenOutputUniforms.uSampleCounter.value = sampleCounter;
-				screenOutputUniforms.uOneOverSampleCounter.value = 1.0 / sampleCounter;
 				
 				sampleCounter += 1.0;
 				if (sampleCounter > 100000.0) {
 					sampleCounter = 100000.0;
 				}
-				
+				pathTracingUniforms.uSampleCounter.value = sampleCounter;
+				screenOutputUniforms.uOneOverSampleCounter.value = 1.0 / sampleCounter;
 	
 				// CAMERA			
 				pathTracingUniforms.uCameraMatrix.value.copy( worldCamera.matrixWorld );
-					
+				/*	
 				if ( mouseControl ) {
 					
 					if ( !decreaseResolution && pixelRatio != (window.devicePixelRatio) ) {
@@ -1237,22 +1238,11 @@ void main( void )
 					}
 					
 				}
+				*/
 				
-				
+				/*
 				if ( !mouseControl ) {
 					
-					if ( !decreaseResolution && pixelRatio != (window.devicePixelRatio * 0.2) ) {
-
-						pixelRatio = window.devicePixelRatio * 0.2;
-						renderer.setPixelRatio(pixelRatio);
-						pathTracingUniforms.uResolution.value.x = SCREEN_WIDTH * pixelRatio;
-						pathTracingUniforms.uResolution.value.y = SCREEN_HEIGHT * pixelRatio;
-
-						pathTracingRenderTarget.setSize( SCREEN_WIDTH * pixelRatio, SCREEN_HEIGHT * pixelRatio );
-						screenTextureRenderTarget.setSize( SCREEN_WIDTH * pixelRatio, SCREEN_HEIGHT * pixelRatio );
-
-					}
-
 					if ( decreaseResolution && pixelRatio != (window.devicePixelRatio * 0.1) ) {
 
 						pixelRatio = window.devicePixelRatio * 0.1;
@@ -1265,16 +1255,27 @@ void main( void )
 
 					}
 					
+					if ( !decreaseResolution && pixelRatio != (window.devicePixelRatio * 0.2) ) {
+
+						pixelRatio = window.devicePixelRatio * 0.2;
+						renderer.setPixelRatio(pixelRatio);
+						pathTracingUniforms.uResolution.value.x = SCREEN_WIDTH * pixelRatio;
+						pathTracingUniforms.uResolution.value.y = SCREEN_HEIGHT * pixelRatio;
+
+						pathTracingRenderTarget.setSize( SCREEN_WIDTH * pixelRatio, SCREEN_HEIGHT * pixelRatio );
+						screenTextureRenderTarget.setSize( SCREEN_WIDTH * pixelRatio, SCREEN_HEIGHT * pixelRatio );
+
+					}
+					
 				}
-				
+				*/
 				
 				// RENDERING in 3 steps
 				
 				// STEP 1
 				// Perform PathTracing and Render(save) into pathTracingRenderTarget
 				// Read previous screenTextureRenderTarget to use as a new starting point to blend with
-				renderer.render( pathTracingScene, worldCamera, pathTracingRenderTarget );
-				
+				renderer.render( pathTracingScene, worldCamera, pathTracingRenderTarget );	
 				
 				// STEP 2
 				// Render(copy) the final pathTracingScene output(above) into screenTextureRenderTarget
