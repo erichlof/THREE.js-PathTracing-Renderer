@@ -1412,6 +1412,8 @@ void main( void )
 				
 				// check user controls
 				
+				cameraControlsObject.updateMatrixWorld(true);
+				
 				if (oldYawRotation != cameraControlsYawObject.rotation.y){
 					sampleCounter = 0.0;
 					decreaseResolution = true;
