@@ -21,6 +21,7 @@ Click here for [Live Demo](https://erichlof.github.io/THREE.js-PathTracing-Rende
 
 <h2>TODO</h2>
 * Instead of scene description hard-coded in the path tracing shader, let the scene be defined using the Three.js library
+* As of now, Cylinder/Cone/Elipsoid are rendered in non-rotated world space because finding ray intersections with rotated quadrics is difficult and slow. Let users rotate, translate these objects and interesect them by transforming rays into their object space. 
 * Implement AABB BVH (bounding volume hierarchy) for object/primitive culling.
 * hopefully, entire triangular models/meshes will soon be supported - for instance, loading and rendering a model in .obj format.
 * Scene description/BVH streaming into the GPU path tracer via Data Texture?
