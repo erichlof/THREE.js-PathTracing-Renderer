@@ -190,6 +190,8 @@ varying vec2 vUv;
 #define QUAD_ID 4
 #define BOX_ID 5
 #define ELLIPSOID_ID 6
+#define CYLINDER_ID 7
+#define CONE_ID 8
 
 #define N_SPHERES 9
 #define N_ELLIPSOIDS 1
@@ -198,6 +200,8 @@ varying vec2 vUv;
 #define N_TRIANGLES 1
 #define N_QUADS 1
 #define N_BOXES 2
+#define N_CYLINDERS 1
+#define N_CONES 1
 
 #define DIFF 0
 #define REFR 1
@@ -221,6 +225,8 @@ float rand()
 struct Ray { vec3 origin; vec3 direction; };
 struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; int type; };
 struct Ellipsoid { vec3 radii; vec3 position; vec3 emission; vec3 color; int type; };
+struct Cylinder { float radius; float height; vec3 position; vec3 emission; vec3 color; int type; };
+struct Cone { float radius; float height; vec3 position; vec3 emission; vec3 color; int type; };
 struct Plane { vec4 pla; vec3 emission; vec3 color; int type; };
 struct Disk { float radiusSq; vec3 pos; vec3 normal; vec3 emission; vec3 color; int type; };
 struct Triangle { vec3 normal; vec3 v0; vec3 v1; vec3 v2; vec3 emission; vec3 color; int type; };
@@ -230,6 +236,8 @@ struct Intersection { vec3 normal; vec3 emission; vec3 color; int type; int id; 
 
 Sphere spheres[N_SPHERES];
 Ellipsoid ellipsoids[N_ELLIPSOIDS];
+Cylinder cylinders[N_CYLINDERS];
+Cone cones[N_CONES];
 Plane planes[N_PLANES];
 Disk disks[N_DISKS];
 Triangle triangles[N_TRIANGLES];
@@ -291,7 +299,113 @@ float EllipsoidIntersect( vec3 radii, vec3 pos, Ray r )
 		return t2;
 	
 	return 0.0;	
+}
+
+//-----------------------------------------------------------------------
+float CylinderIntersect( float radius, float height, vec3 pos, Ray r )
+//-----------------------------------------------------------------------
+{
+	float eps = 0.0001;
+	float ox = r.origin.x - pos.x;
+	float oy = r.origin.y - pos.y;
+	float oz = r.origin.z - pos.z;
+	float dx = r.direction.x;
+	float dy = r.direction.y;
+	float dz = r.direction.z;
+	float y0 = 0.0;
+	float y1 = height;
+
+	// quadratic equation coefficients
+	float a = dx * dx + dz * dz;  	
+	float b = 2.0 * (ox * dx + oz * dz);
+	float c = ox * ox + oz * oz - radius * radius;
+	float disc = b * b - 4.0 * a * c ;
+
+	if (disc < 0.0) 
+		return 0.0;
+		
+	float e = sqrt(disc);
+	float denom = 2.0 * a;
+	float t = (-b - e) / denom;    // smaller root
+		
+	if (t > eps) 
+	{
+		float yhit = (oy + t * dy);
+			
+		if (yhit > y0 && yhit < y1) 
+		{	
+			return t;
+		}
+	} 
+		
+	t = (-b + e) / denom;    // larger root
+		
+	if (t > eps)
+	{
+		float yhit = (oy + t * dy);
+			
+		if (yhit > y0 && yhit < y1)
+		{
+			return t;
+		}
+	} 
 	
+	return 0.0;		
+}
+
+//-----------------------------------------------------------------------
+float ConeIntersect( float radius, float height, vec3 pos, Ray r )
+//-----------------------------------------------------------------------
+{
+	float eps = 0.0001;
+	float ox = r.origin.x;// - pos.x;
+	float oy = r.origin.y;// - pos.y;
+	float oz = r.origin.z;// - pos.z;
+	float dx = r.direction.x;
+	float dy = r.direction.y;
+	float dz = r.direction.z;
+	float y0 = 0.0;
+	float y1 = height;
+
+	// quadratic equation coefficients
+	float k = radius / height;
+	k = k*k;
+	
+	float a = dx * dx - k * dy * dy + dz * dz;
+	float b = 2.0 * (dx * ox - k * dy * (oy-height) + dz * oz );
+	float c = ox * ox - k * (oy - height) * (oy - height) + oz * oz ;
+	float disc = b * b - 4.0 * a * c ;
+
+	if (disc < 0.0) 
+		return 0.0;
+		
+	float e = sqrt(disc);
+	float denom = 2.0 * a;
+	float t = (-b - e) / denom;    // smaller root
+		
+	if (t > eps) 
+	{
+		float yhit = (oy + t * dy);
+			
+		if (yhit > y0 && yhit < y1)
+		{	
+			return t;
+		}
+	} 
+		
+	t = (-b + e) / denom;    // larger root
+		
+	if (t > eps)
+	{
+		float yhit = (oy + t * dy);
+			
+		if (yhit > y0 && yhit < y1)
+		{
+			return t;
+		}
+	} 
+	
+	return 0.0;		
 }
 
 //-----------------------------------------------------------------------
@@ -487,7 +601,7 @@ bool SceneIntersect( Ray r, inout float t, inout Intersection intersec )
 	
         for (int i = 0; i < N_SPHERES; i++)
         {
-		d = SphereIntersect( spheres[i].radius , spheres[i].position , r );
+		d = SphereIntersect( spheres[i].radius, spheres[i].position, r );
 		if (d > 0.0 && d < t)
 		{
 			t = d;
@@ -501,7 +615,7 @@ bool SceneIntersect( Ray r, inout float t, inout Intersection intersec )
 	/*
 	for (int i = 0; i < N_PLANES; i++)
         {
-		d = PlaneIntersect( planes[i].pla , r );
+		d = PlaneIntersect( planes[i].pla, r );
 		if (d > 0.0 && d < t)
 		{
 			t = d;
@@ -586,7 +700,7 @@ bool SceneIntersect( Ray r, inout float t, inout Intersection intersec )
 	
 	for (int i = 0; i < N_ELLIPSOIDS; i++)
         {
-		d = EllipsoidIntersect( ellipsoids[i].radii , ellipsoids[i].position , r );
+		d = EllipsoidIntersect( ellipsoids[i].radii, ellipsoids[i].position, r );
 		if (d > 0.0 && d < t)
 		{
 			t = d;
@@ -595,6 +709,34 @@ bool SceneIntersect( Ray r, inout float t, inout Intersection intersec )
 			intersec.color = ellipsoids[i].color;
 			intersec.type = ellipsoids[i].type;
 			intersec.id = ELLIPSOID_ID;
+		}
+        }
+	
+	for (int i = 0; i < N_CYLINDERS; i++)
+        {
+		d = CylinderIntersect( cylinders[i].radius, cylinders[i].height, cylinders[i].position, r );
+		if (d > 0.0 && d < t)
+		{
+			t = d;
+			intersec.normal = normalize( vec3( (r.origin.x + r.direction.x * t) - cylinders[i].position.x, 0.0, (r.origin.z + r.direction.z * t) - cylinders[i].position.z ) );
+			intersec.emission = cylinders[i].emission;
+			intersec.color = cylinders[i].color;
+			intersec.type = cylinders[i].type;
+			intersec.id = CYLINDER_ID;
+		}
+        }
+	
+	for (int i = 0; i < N_CONES; i++)
+        {
+		d = ConeIntersect( cones[i].radius, cones[i].height, cones[i].position, r );
+		if (d > 0.0 && d < t)
+		{
+			t = d;
+			intersec.normal = normalize( vec3( (r.origin.x + r.direction.x * t) - cones[i].position.x , (cones[i].radius/cones[i].height), (r.origin.z + r.direction.z * t) - cones[i].position.z  ) );
+			intersec.emission = cones[i].emission;
+			intersec.color = cones[i].color;
+			intersec.type = cones[i].type;
+			intersec.id = CONE_ID;
 		}
         }
 	
@@ -610,12 +752,20 @@ vec3 CalculateRadiance( Ray r )
 	vec3 accumCol = vec3(0.0);
         vec3 mask = vec3(1.0);
         Intersection intersec;
+	float inf = 100000.0;
+	float t   = inf;
 	
 	
         for (int depth = 0; depth < 6; depth++)
 	{
 
-                float t = 0.0;    // distance to intersection
+                t = inf;    // distance to intersection
+		
+		intersec.normal = vec3(0);
+		intersec.emission = vec3(0);
+		intersec.color = vec3(0);
+		intersec.type = -1;
+		intersec.id = -1;
 		
 		if ( !SceneIntersect(r, t, intersec) )
 		{
@@ -809,32 +959,36 @@ void SetupScene(void)
 	vec3 L2 = vec3(1.0, 0.8, 0.5) * 0.0;// Yellowish light
 	vec3 L3 = vec3(0.1, 0.7, 1.0) * 3.0;// Blueish light * 5.0
 		
-        spheres[0] = Sphere( 2000.0, vec3(0, -2000, 0), z, vec3(0.3,0.3,0.3), CHECK);//Checkered Floor
+        spheres[0] = Sphere( 4000.0, vec3(0, -4000, 0), z, vec3(0.3,0.3,0.3), CHECK);//Checkered Floor
 	
         spheres[1] = Sphere( 500.0, vec3(0.0, 600.0, 0.0), L1, z, DIFF);//Light1 sphere
 	spheres[2] = Sphere( 0.00001, vec3(300.0, 400.0, -300.0), L2, z, DIFF);//Light2 sphere
 	spheres[3] = Sphere( 90.0, vec3(800.0, 300.0, -200.0),   L3, z, DIFF);//Light3 sphere
 	
-        spheres[4] = Sphere( 16.5, vec3(-16.0,16.5,5.0),  z, vec3(1.0,1.0,1.0), SPEC);//Mirror sphere
+        spheres[4] = Sphere( 16.5, vec3(-25.0,16.5,5.0),  z, vec3(1.0,1.0,1.0), SPEC);//Mirror sphere
         spheres[5] = Sphere( 16.5, vec3(32.0,17.0,30.0),  z, vec3(1.0,1.0,1.0), REFR);//Glass sphere //0.6,0.9,0.7
         spheres[6] = Sphere( 10.0, vec3(-30.0,12.6,50.0), z, vec3(0.99,0.99,0.99), VOLUME);//Volume-filled sphere
         spheres[7] = Sphere( 15.4, redSpherePos,          z, vec3(0.3,0.0,0.0), COAT);//Red diffuse with ClearCoat sphere
         spheres[8] = Sphere(  5.0, vec3(5.0,5.2,35.0),    z, vec3(0.9,0.9,0.9), DIFF);//White diffuse sphere
 	
 	///ellipsoids[0] = Ellipsoid(  vec3(500.0,1000.0,1000.0), vec3(0.0,0.0,0.0),    z, vec3(0.01,0.01,0.01), DIFF);//diffuse ellipsoid
-	ellipsoids[0] = Ellipsoid(  vec3(30,40,16), vec3(90,5,5),    z, vec3(0.9,0.7,0.1), SPEC);//metallic ellipsoid
+	ellipsoids[0] = Ellipsoid(  vec3(30,40,16), vec3(90,5,-20),    z, vec3(0.9,0.7,0.1), SPEC);//metallic ellipsoid
+	
+	cylinders[0] = Cylinder( 15.0, 30.0, vec3(-80,0,-50), z, vec3(0.5,0.0,0.0), REFR);//red glass Cylinder
+	
+	cones[0] = Cone( 20.0, 20.0, vec3(0,0,0), z, vec3(0.0,0.0,0.9), COAT);//blue Cone
 	
 	planes[0]  = Plane( vec4( -1.0,-0.1,0.0,800.0), z, vec3(0.9,0.9,0.9), DIFF);//WhitePlane Right Wall
 	planes[1]  = Plane( vec4(  1.0,-0.1,0.0,800.0), z, vec3(0.9,0.0,0.9), DIFF);//MagentaPlane Left Wall
 	planes[2]  = Plane( vec4(  0.0,-0.1,1.0,800.0), z, vec3(0.9,0.9,0.9), DIFF);//WhitePlane Back Wall
 	planes[3]  = Plane( vec4( 0.0,-0.1,-1.0,800.0), z, vec3(0.0,0.9,0.9), DIFF);//CyanPlane Front Wall
 	
-	disks[0]   = Disk( 16.5 * 16.5, vec3(-60.0,13.0,-10.0), vec3( 1.0,-1.0,0.0 ), z, vec3(0.9,0.0,0.0), DIFF);//RedDisk Left 
+	disks[0]   = Disk( 16.5 * 16.5, vec3(-100.0,13.0,-10.0), vec3( 1.0,-1.0,0.0 ), z, vec3(0.9,0.0,0.0), DIFF);//RedDisk Left 
 	disks[1]   = Disk( 16.5 * 16.5, vec3( 30.0,-10.0,-180.0), vec3( -1.0,0.0,0.3 ), L3, z, DIFF);//DiskLight Right
 	
-	triangles[0] = Triangle( vec3(0.0,0.0,1.0), vec3( 0.0,20.0,-50.0), vec3( 30.0,70.0,-50.0), vec3( -30.0,70.0,-50.0 ), z, vec3(0.0,0.9,0.0), DIFF);//Green Triangle
+	triangles[0] = Triangle( vec3(0.0,0.0,1.0), vec3( 0.0,30.0,-50.0), vec3( 20.0,60.0,-50.0), vec3( -20.0,60.0,-50.0 ), z, vec3(0.0,0.9,0.0), DIFF);//Green Triangle
 	
-	quads[0] = Quad( vec3(0.0,0.0,1.0), vec3( -150.0,20.0,-50.0), vec3( -100.0,20.0,-50.0), vec3( -100.0,70.0,-50.0 ), vec3( -150.0,70.0,-50.0 ), z, vec3(0.0,0.0,0.9), DIFF);//Blue Quad
+	quads[0] = Quad( vec3(0.0,0.0,1.0), vec3( -150.0,40.0,-50.0), vec3( -100.0,40.0,-50.0), vec3( -100.0,90.0,-50.0 ), vec3( -150.0,90.0,-50.0 ), z, vec3(0.0,0.0,0.9), DIFF);//Blue Quad
 	
 	boxes[0]  = Box( vec3(0.0,7.0,-90.0), vec3(50.0,14.0,-180.0), z, vec3(0.2,1.0,0.8), REFR);//Glass Box
 	boxes[1]  = Box( vec3(1.0,8.0,-91.0), vec3(49.0,13.0,-179.0), z, vec3(0.001,0.001,0.001), DIFF);//Black Box
@@ -883,7 +1037,7 @@ void main( void )
 	Ray ray = Ray( camPos + randomAperturePos , finalRayDir );
 
 	// debug DOF(depth of field) - uncomment 2nd line below to make red sphere match your focal point
-	redSpherePos = vec3(50.0,13.0,-90.0); // place red sphere on ground
+	redSpherePos = vec3(50.0,14.0,-90.0); // place red sphere on ground
 	//redSpherePos = camPos + focalLength * camForward; // DOF debug mode, red sphere follows your line of sight
 	
 	SetupScene();
@@ -968,7 +1122,7 @@ void main( void )
 
 			if ( 'createTouch' in document ) {
 				mouseControl = false;
-				pixelRatio = window.devicePixelRatio * 0.2;
+				pixelRatio = window.devicePixelRatio * 0.15;
 			}
 			
 			// if on mobile device, unpause the app because there is no ESC key and no mouse capture to do
@@ -1078,11 +1232,14 @@ void main( void )
 
 				// for flyCam
 				cameraControlsObject.position.set(0,35,95);
-				cameraControlsYawObject.rotation.y = 0.0;
+				///cameraControlsYawObject.rotation.y = 0.0;
 				// look slightly downward
-				cameraControlsPitchObject.rotation.x = -0.4;
-				joystick.previousRotationX = -0.4;
+				cameraControlsPitchObject.rotation.x = -0.2;
+				joystick.previousRotationX = -0.2;
 				
+				// now that we moved and rotated the camera, the following line force updates the camera's matrix,
+				//  and prevents rendering the very first frame in the old default camera position/orientation
+				cameraControlsObject.updateMatrixWorld(true);
 				
 				pathTracingRenderTarget = new THREE.WebGLRenderTarget( (window.innerWidth * pixelRatio), (window.innerHeight * pixelRatio), {
 					minFilter: THREE.NearestFilter,
