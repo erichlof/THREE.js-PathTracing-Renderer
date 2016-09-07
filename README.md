@@ -7,21 +7,20 @@ Click here for [Live Demo](https://erichlof.github.io/THREE.js-PathTracing-Rende
 
 <h2>FEATURES</h2>
 * Real-time realistic Path Tracing in your Chrome browser - even on your smartphone! ( What?! )
-* First-Person camera navigation through the 3D scene
-* When camera is still, switches to HQ progressive rendering mode
+* First-Person camera navigation through the 3D scene.
+* When camera is still, switches to HQ progressive rendering mode.
 * The accumulated render image will converge at around 3,000 samples (shorter for simple scenes, longer for complex scenes).
-* Supports most primitives: Spheres, Planes, Discs, Quads, Triangles, and quadrics such as Cylinders, Cones, and Ellipsoids
+* Supports most primitives: Spheres, Planes, Discs, Quads, Triangles, and quadrics such as Cylinders, Cones, and Ellipsoids.
 * Any supported shape can be an Area Light!
 * Current material options: Mirror, Glass/water, Matte(diffuse), ClearCoat(cars,pool balls,etc.), more coming! 
-* Diffuse/Matte objects use Monte Carlo integration (a random process, hence the visual noise) to sample the unit-hemisphere oriented around the normal of the ray-object hitpoint and collects any light that is being received.  This is the key-difference between path tracing and simple old-fashioned ray tracing.  This is what produces realistic global illumination effects such as color bleeding/sharing between diffuse objects.
+* Diffuse/Matte objects use Monte Carlo integration (a random process, hence the visual noise) to sample the unit-hemisphere oriented around the normal of the ray-object hitpoint and collects any light that is being received.  This is the key-difference between path tracing and simple old-fashioned ray tracing.  This is what produces realistic global illumination effects such as color bleeding/sharing between diffuse objects and refractive caustics from glass objects.
 * Camera has Depth of Field with real-time adjustable Focal Distance and Aperture Size settings for a still-photography or cinematic look.
 * SuperSampling gives beautiful, clean Anti-Aliasing (no jagged edges!)
-* Users will be able to use easy, familiar commands from the Three.js library, but under-the-hood the Three.js Renderer will use the path tracing engine to render the final output to the screen.
+* Users will be able to use easy, familiar commands from the Three.js library, but under-the-hood the Three.js Renderer will use this path tracing engine to render the final output to the screen.
 
 
 <h2>TODO</h2>
-* Instead of scene description in the path tracing shader code, let the scene be defined using the Three.js library
-* Add more primitives support: Ra
+* Instead of scene description hard-coded in the path tracing shader, let the scene be defined using the Three.js library
 * Implement AABB BVH (bounding volume hierarchy) for object/primitive culling.
 * hopefully, entire triangular models/meshes will soon be supported - for instance, loading and rendering a model in .obj format.
 * Scene description/BVH streaming into the GPU path tracer via Data Texture?
