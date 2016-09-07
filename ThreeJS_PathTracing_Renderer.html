@@ -1412,8 +1412,6 @@ void main( void )
 				
 				// check user controls
 				
-				cameraControlsObject.updateMatrixWorld(true);
-				
 				if (oldYawRotation != cameraControlsYawObject.rotation.y){
 					sampleCounter = 0.0;
 					decreaseResolution = true;
@@ -1497,7 +1495,8 @@ void main( void )
 				pathTracingUniforms.uSampleCounter.value = sampleCounter;
 				screenOutputUniforms.uOneOverSampleCounter.value = 1.0 / sampleCounter;
 	
-				// CAMERA			
+				// CAMERA
+				cameraControlsObject.updateMatrixWorld(true);			
 				pathTracingUniforms.uCameraMatrix.value.copy( worldCamera.matrixWorld );
 				/*	
 				if ( mouseControl ) {
