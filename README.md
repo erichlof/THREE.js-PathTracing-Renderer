@@ -12,6 +12,7 @@ Click here for [Live Demo](https://erichlof.github.io/THREE.js-PathTracing-Rende
 * The accumulated render image will converge at around 3,000 samples (shorter for simple scenes, longer for complex scenes).
 * Supports most primitives: Spheres, Planes, Discs, Quads, Triangles, and quadrics such as Cylinders, Cones, and Ellipsoids.
 * Any supported shape can be an Area Light!
+* Basic support for loading models in .obj format (currently only triangle models are supported, no quads allowed in .obj file)
 * Current material options: Mirror, Glass/water, Matte(diffuse), ClearCoat(cars,pool balls,etc.), more coming! 
 * Diffuse/Matte objects use Monte Carlo integration (a random process, hence the visual noise) to sample the unit-hemisphere oriented around the normal of the ray-object hitpoint and collects any light that is being received.  This is the key-difference between path tracing and simple old-fashioned ray tracing.  This is what produces realistic global illumination effects such as color bleeding/sharing between diffuse objects and refractive caustics from glass objects.
 * Camera has Depth of Field with real-time adjustable Focal Distance and Aperture Size settings for a still-photography or cinematic look.
@@ -22,9 +23,9 @@ Click here for [Live Demo](https://erichlof.github.io/THREE.js-PathTracing-Rende
 <h2>TODO</h2>
 * Instead of scene description hard-coded in the path tracing shader, let the scene be defined using the Three.js library
 * As of now, Cylinder/Cone/Elipsoid are rendered in non-rotated world space because finding ray intersections with rotated quadrics is difficult and slow. Let users rotate, translate these objects and interesect them by transforming rays into their object space. 
-* Implement AABB BVH (bounding volume hierarchy) for object/primitive culling.
-* hopefully, entire triangular models/meshes will soon be supported - for instance, loading and rendering a model in .obj format.
-* Scene description/BVH streaming into the GPU path tracer via Data Texture?
+* Allow variable triangle counts in fragment shader due to varying .obj file model complexity
+* Implement AABB BVH (bounding volume hierarchy) for object/primitive culling, especially to speed up .obj model rendering.
+* Dynamic Scene description/BVH updating and streaming into the GPU path tracer via Data Texture
 
 
 <h2>ABOUT</h2>
