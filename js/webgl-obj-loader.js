@@ -45,8 +45,13 @@ OBJ.Mesh = function (objectData) {
                         textures.push.apply(textures, elements);
                 } else if (FACE_RE.test(line)) {
                         // if this is a face
+                        var quad = false;
                         for (var j = 0, eleLen = elements.length; j < eleLen; j++) {
-                                
+                                if (j === 3 && !quad) {
+                                        // add v2/t2/vn2 in again before continuing to 3
+                                        j = 2;
+                                        quad = true;
+                                }
                                 var currentValues = elements[ j ].split( '/' );
 
                                 // vertex position
@@ -67,6 +72,11 @@ OBJ.Mesh = function (objectData) {
                                 
                                 // add the newly created vertex to the list of faceIndices
                                 unpacked.faceIndices.push(currentValues[0]-1);
+                                
+                                if (j === 3 && quad) {
+                                        // add v0/t0/vn0 onto the second triangle
+                                        unpacked.faceIndices.push( unpacked.faceIndices[unpacked.faceIndices.length - 5] );
+                                }
                                 
                         } // end for j = 0
                         
