@@ -13,10 +13,8 @@ OBJ.Mesh = function (objectData) {
     
         var uniqueVertexList = [], vertNormals = [], textures = [], unpacked = {};
         // unpacking stuff
-        ///unpacked.vertices = [];
         unpacked.norms = [];
         unpacked.textures = [];
-        unpacked.hashfaceIndices = {};
         unpacked.faceIndices = [];
         unpacked.index = 0;
         // array of lines separated by the newline
@@ -36,7 +34,10 @@ OBJ.Mesh = function (objectData) {
 
                 if (VERTEX_RE.test(line)) {
                         // if this is a vertex
-                        uniqueVertexList.push.apply(uniqueVertexList, elements);
+                        //uniqueVertexList.push.apply(uniqueVertexList, elements);
+                        uniqueVertexList.push(parseFloat(elements[0]));
+                        uniqueVertexList.push(parseFloat(elements[1]));
+                        uniqueVertexList.push(parseFloat(elements[2]));
                 } else if (NORMAL_RE.test(line)) {
                         // if this is a vertex normal
                         vertNormals.push.apply(vertNormals, elements);
@@ -47,18 +48,13 @@ OBJ.Mesh = function (objectData) {
                         // if this is a face
                         var quad = false;
                         for (var j = 0, eleLen = elements.length; j < eleLen; j++) {
-                                if (j === 3 && !quad) {
+                                if (j === 3 && quad === false) {
                                         // add v2/t2/vn2 in again before continuing to 3
                                         j = 2;
                                         quad = true;
                                 }
                                 var currentValues = elements[ j ].split( '/' );
-
-                                // vertex position
-                                ///unpacked.vertices.push( uniqueVertexList[(currentValues[0] - 1) * 3 + 0] );
-                                ///unpacked.vertices.push( uniqueVertexList[(currentValues[0] - 1) * 3 + 1] );
-                                ///unpacked.vertices.push( uniqueVertexList[(currentValues[0] - 1) * 3 + 2] );
-                                
+                                /*
                                 // vertex textures
                                 if (textures.length) {
                                         unpacked.textures.push(textures[(currentValues[1] - 1) * 2 + 0]);
@@ -69,13 +65,14 @@ OBJ.Mesh = function (objectData) {
                                 unpacked.norms.push(vertNormals[(currentValues[2] - 1) * 3 + 0]);
                                 unpacked.norms.push(vertNormals[(currentValues[2] - 1) * 3 + 1]);
                                 unpacked.norms.push(vertNormals[(currentValues[2] - 1) * 3 + 2]);
-                                
+                                */
                                 // add the newly created vertex to the list of faceIndices
-                                unpacked.faceIndices.push(currentValues[0]-1);
+                                unpacked.faceIndices.push(parseInt(currentValues[0]-1));
                                 
-                                if (j === 3 && quad) {
+                                if (j === 3 && quad === true) {
+                                        var faceLength = unpacked.faceIndices.length;
                                         // add v0/t0/vn0 onto the second triangle
-                                        unpacked.faceIndices.push( unpacked.faceIndices[unpacked.faceIndices.length - 5] );
+                                        unpacked.faceIndices.push( parseInt(unpacked.faceIndices[ faceLength - 5 ]) );
                                 }
                                 
                         } // end for j = 0
@@ -85,9 +82,8 @@ OBJ.Mesh = function (objectData) {
         } // end for i = 0
         
         this.uniqueVertexList = uniqueVertexList;
-        ///this.vertices = unpacked.vertices;
-        this.vertexNormals = unpacked.norms;
-        this.textures = unpacked.textures;
+        //this.vertexNormals = unpacked.norms;
+        //this.textures = unpacked.textures;
         this.faceIndices = unpacked.faceIndices;
         
 }; // end OBJ.Mesh
@@ -110,6 +106,8 @@ var Ajax = function() {
                 };
                 
                 _this.xmlhttp.open('GET', url, true);
+                _this.responseType = "text/plain";
+                _this.xmlhttp.overrideMimeType("text/plain");
                 _this.xmlhttp.send();
         };
         
@@ -158,6 +156,3 @@ OBJ.downloadMeshes = function (nameAndURLs, completionCallback, meshes) {
         }
         
 };
-
-  
-
