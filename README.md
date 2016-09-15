@@ -22,7 +22,8 @@ Click here for [Live Demo](https://erichlof.github.io/THREE.js-PathTracing-Rende
 
 <h2>TODO</h2>
 * Instead of scene description hard-coded in the path tracing shader, let the scene be defined using the Three.js library
-* As of now, Cylinder/Cone/Elipsoid are rendered in non-rotated world space because finding ray intersections with rotated quadrics is difficult and slow. Let users rotate, translate these objects and interesect them by transforming rays into their object space. 
+* As of now, Cylinder/Cone/Elipsoid are rendered in non-rotated world space because finding ray intersections with rotated quadrics is difficult and slow. Let users rotate, translate these objects and interesect them by transforming rays into their object space.
+* Implement sub-surface scattering (or an approximation to it) for wax, marble, leaves, skin, fruit, etc.
 * Allow variable triangle counts in fragment shader due to varying .obj file model complexity.
 * Consider splitting up triangle list DataTexture into multiple textures for higher-poly-count models.  Current texture width/size limit is 4096 for Android (that's 4096 / 3 vertices per triangle / 3 floating-point coordinates per vertex = 455 possible triangles.  Need to increase this limit to 100,000 (or more) possible triangles somehow.
 * Implement AABB BVH (bounding volume hierarchy) for object/primitive culling, especially to speed up .obj model rendering.
