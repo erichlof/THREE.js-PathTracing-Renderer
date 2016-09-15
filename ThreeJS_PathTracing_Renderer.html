@@ -1512,6 +1512,9 @@ void main( void )
 				// onWindowResize() must be at the end of the init() function
 				onWindowResize();
 				
+				// everything is set up, now we can start animating
+				animate();
+				
 			} // end function init()
 			
 			
@@ -1557,9 +1560,6 @@ void main( void )
 				else if (SCREEN_WIDTH > SCREEN_HEIGHT ) {
 					joystick._button3El.style.bottom = 21 + "%";
 				}
-				
-				// everything is set up, now we can start animating
-				animate();
 				
 			} // end function onWindowResize( event )
 			
