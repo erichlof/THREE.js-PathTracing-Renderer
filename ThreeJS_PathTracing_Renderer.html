@@ -477,16 +477,16 @@ vec3 getTriangleNormal( int triangleIndex )
 {		
 	vec3 edge1;
 	vec3 edge2;
-	float InvWidth = 1.0 / 96.0;
-	float iX12 = float(triangleIndex) * 12.0;
+	float InvWidth = 0.00024414062;
+	float iX9 = float(triangleIndex) * 9.0;
 			      
-	edge1 = vec3( texture2D(tTriangleTexture, vec2( (iX12 + 4.0)  * InvWidth, 0) ).a,
-		      texture2D(tTriangleTexture, vec2( (iX12 + 5.0)  * InvWidth, 0) ).a,
-		      texture2D(tTriangleTexture, vec2( (iX12 + 6.0)  * InvWidth, 0) ).a );
+	edge1 = vec3( texture2D(tTriangleTexture, vec2( (iX9 + 3.0) * InvWidth, 0) ).a,
+		      texture2D(tTriangleTexture, vec2( (iX9 + 4.0) * InvWidth, 0) ).a,
+		      texture2D(tTriangleTexture, vec2( (iX9 + 5.0) * InvWidth, 0) ).a );
 			      
-	edge2 = vec3( texture2D(tTriangleTexture, vec2( (iX12 + 8.0)  * InvWidth, 0) ).a,
-		      texture2D(tTriangleTexture, vec2( (iX12 + 9.0)  * InvWidth, 0) ).a,
-	              texture2D(tTriangleTexture, vec2( (iX12 + 10.0) * InvWidth, 0) ).a );
+	edge2 = vec3( texture2D(tTriangleTexture, vec2( (iX9 + 6.0) * InvWidth, 0) ).a,
+		      texture2D(tTriangleTexture, vec2( (iX9 + 7.0) * InvWidth, 0) ).a,
+	              texture2D(tTriangleTexture, vec2( (iX9 + 8.0) * InvWidth, 0) ).a );
 
 	vec3 trinormal = cross(edge1, edge2);
 	trinormal = normalize(trinormal);
@@ -793,8 +793,8 @@ bool SceneIntersect( Ray r, inout float t, inout Intersection intersec )
 		}
         }
 	
-	float iX12;
-	float InvWidth = 1.0 / 96.0;
+	float iX9;
+	float InvWidth = 0.00024414062;
 	
 	for (int i = 0; i < 8; i++)
 	{
@@ -802,19 +802,19 @@ bool SceneIntersect( Ray r, inout float t, inout Intersection intersec )
 		vec3 edge1;
 		vec3 edge2;
 		
-		iX12 = float(i) * 12.0;
+		iX9 = float(i) * 9.0;
 		
-		v0    = vec3( texture2D(tTriangleTexture, vec2( (iX12 + 0.0)  * InvWidth, 0) ).a,
-			      texture2D(tTriangleTexture, vec2( (iX12 + 1.0)  * InvWidth, 0) ).a,
-			      texture2D(tTriangleTexture, vec2( (iX12 + 2.0)  * InvWidth, 0) ).a );
+		v0    = vec3( texture2D(tTriangleTexture, vec2( (iX9 + 0.0) * InvWidth, 0) ).a,
+			      texture2D(tTriangleTexture, vec2( (iX9 + 1.0) * InvWidth, 0) ).a,
+			      texture2D(tTriangleTexture, vec2( (iX9 + 2.0) * InvWidth, 0) ).a );
 			      
-		edge1 = vec3( texture2D(tTriangleTexture, vec2( (iX12 + 4.0)  * InvWidth, 0) ).a,
-			      texture2D(tTriangleTexture, vec2( (iX12 + 5.0)  * InvWidth, 0) ).a,
-			      texture2D(tTriangleTexture, vec2( (iX12 + 6.0)  * InvWidth, 0) ).a );
+		edge1 = vec3( texture2D(tTriangleTexture, vec2( (iX9 + 3.0) * InvWidth, 0) ).a,
+			      texture2D(tTriangleTexture, vec2( (iX9 + 4.0) * InvWidth, 0) ).a,
+			      texture2D(tTriangleTexture, vec2( (iX9 + 5.0) * InvWidth, 0) ).a );
 			      
-		edge2 = vec3( texture2D(tTriangleTexture, vec2( (iX12 + 8.0)  * InvWidth, 0) ).a,
-			      texture2D(tTriangleTexture, vec2( (iX12 + 9.0)  * InvWidth, 0) ).a,
-			      texture2D(tTriangleTexture, vec2( (iX12 + 10.0) * InvWidth, 0) ).a );
+		edge2 = vec3( texture2D(tTriangleTexture, vec2( (iX9 + 6.0) * InvWidth, 0) ).a,
+			      texture2D(tTriangleTexture, vec2( (iX9 + 7.0) * InvWidth, 0) ).a,
+			      texture2D(tTriangleTexture, vec2( (iX9 + 8.0) * InvWidth, 0) ).a );
 		
 
 		d = RayTriangleIntersection( r, v0, edge1, edge2 );
@@ -825,8 +825,8 @@ bool SceneIntersect( Ray r, inout float t, inout Intersection intersec )
 			t = d;
 			//intersec.normal = getTriangleNormal( i );
 			intersec.normal = normalize( cross(edge1, edge2) );
-			intersec.emission = vec3(0,0,0);
-			intersec.color = vec3(0.7,0.9,1.0);
+			intersec.emission = vec3(0);
+			intersec.color = vec3(0.5,0.0,1.0);
 			intersec.type = REFR;
 			intersec.id = OBJ_TRIANGLE_ID;
 		}
@@ -1167,7 +1167,7 @@ void main( void )
 			var renderer, clock;
 			var frameTime, elapsedTime;
 			var fovScale;
-			var pixelRatio = window.devicePixelRatio;
+			var pixelRatio = window.devicePixelRatio * 0.5;
 			var decreaseResolution = false;
 			var TWO_PI = Math.PI * 2;
 			var randomVector = new THREE.Vector3();
@@ -1175,7 +1175,7 @@ void main( void )
 			var keyboard = new THREEx.KeyboardState();
 			var isPaused = true;
 			var oldYawRotation, oldPitchRotation;
-			var camFlightSpeed = 40;
+			var camFlightSpeed = 50;
 			var fontAspect;
 			var objMeshes = {};
 			var total_number_of_triangles = 0;
@@ -1281,17 +1281,25 @@ void main( void )
 			
 
 			OBJ.downloadMeshes( {
-    				//'my_mesh': 'models/teapot.obj', // located in the models folder on the server
+    				//'my_mesh': 'models/name.obj', // located in the models folder on the server
     				//'my_mesh': 'models/my_cube.obj'
 				'my_mesh': 'models/diamond.obj'
-				//'my_mesh': 'models/bunny.obj'
+				//'my_mesh': 'models/emerald.obj'
+				//'my_mesh': 'models/crane.obj'
+				//'my_mesh': 'models/VW.obj'
+				//'my_mesh': 'models/tree.obj'
+				//'my_mesh': 'models/PC.obj'
 				//'my_mesh': 'models/monkey.obj'
+				//'my_mesh': 'models/shuttle.obj'
+				//'my_mesh': 'models/teapot.obj'
+				//'my_mesh': 'models/bunny.obj'
+				
   			}, init );
 				
 				
 					
   							
-			function init(meshes) {
+			function init( meshes ) {
 
 				container = document.getElementById( 'container' );
 				renderer = new THREE.WebGLRenderer();
@@ -1368,73 +1376,57 @@ void main( void )
 				} );
 				screenTextureRenderTarget.texture.generateMipmaps = false;
 			
-					objMeshes = meshes;
-					//console.log(objMeshes.my_mesh.uniqueVertexList);
-  					//console.log(objMeshes.my_mesh.faceIndices);
-					///console.log(objMeshes.my_mesh.vertices);
-					
-					total_number_of_triangles = Math.ceil(objMeshes.my_mesh.faceIndices.length / 3);
-					triangle_array = new Float32Array( 96 );
-					var offsetVec = new THREE.Vector3(0,33,-50);
+				objMeshes = meshes;
+				//console.log(objMeshes.my_mesh.uniqueVertexList);
+  				//console.log(objMeshes.my_mesh.faceIndices);
+
+				total_number_of_triangles = objMeshes.my_mesh.faceIndices.length / 3;
+				console.log("Triangle count:" + total_number_of_triangles);
+				triangle_array = new Float32Array( 4096 );
+				//var offsetVec = new THREE.Vector3(0,14,-100); // good for PC computer
+				var offsetVec = new THREE.Vector3(0,10,-50);
+				var modelScale = 0.2;
 				
-					for (var i = 0, j = 0; i < objMeshes.my_mesh.faceIndices.length; i+=3, j++) {
-						/*
-						v0.set(objMeshes.my_mesh.vertices[(j*9) + 0],
-						       objMeshes.my_mesh.vertices[(j*9) + 1],
-						       objMeshes.my_mesh.vertices[(j*9) + 2]
-						      );
-						v1.set(objMeshes.my_mesh.vertices[(j*9) + 3],
-						       objMeshes.my_mesh.vertices[(j*9) + 4],
-						       objMeshes.my_mesh.vertices[(j*9) + 5] 
-						      );
-						v2.set(objMeshes.my_mesh.vertices[(j*9) + 6],
-						       objMeshes.my_mesh.vertices[(j*9) + 7],
-						       objMeshes.my_mesh.vertices[(j*9) + 8] 
-						      );
-						*/
-						v0.set(objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+0] + 0 ],
-						       objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+0] + 1 ],
-						       objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+0] + 2 ]
-						      );
-						v1.set(objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+1] + 0 ],
-						       objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+1] + 1 ],
-						       objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+1] + 2 ] 
-						      );
-						v2.set(objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+2] + 0 ],
-						       objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+2] + 1 ],
-						       objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+2] + 2 ] 
-						      );
+				for (var i = 0, j = 0; i < objMeshes.my_mesh.faceIndices.length; i+=3, j++) {
 						
+					v0.set(objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+0] + 0 ],
+					       objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+0] + 1 ],
+					       objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+0] + 2 ]
+					      );
+					v1.set(objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+1] + 0 ],
+					       objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+1] + 1 ],
+				               objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+1] + 2 ] 
+					      );
+					v2.set(objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+2] + 0 ],
+					       objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+2] + 1 ],
+					       objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+2] + 2 ] 
+				              );
 						
-						v0.multiplyScalar(0.2);
-						v1.multiplyScalar(0.2);
-						v2.multiplyScalar(0.2);
+							
+					v0.multiplyScalar( modelScale );
+					v1.multiplyScalar( modelScale );
+					v2.multiplyScalar( modelScale );
 						
-						v0.add(offsetVec);
-						v1.add(offsetVec);
-						v2.add(offsetVec);
-						//v0.x += 0; v0.y += 20; v0.z += 0;
-						//v1.x += 0; v1.y += 20; v1.z += 0;
-						//v2.x += 0; v2.y += 20; v2.z += 0;
+					v0.add( offsetVec );
+					v1.add( offsetVec );
+					v2.add( offsetVec );
+							
+					triangle_array[9*j+0] = v0.x;        triangle_array[9*j+1] = v0.y;        triangle_array[9*j+2] = v0.z;     
+					triangle_array[9*j+3] = v1.x - v0.x; triangle_array[9*j+4] = v1.y - v0.y; triangle_array[9*j+5] = v1.z - v0.z;
+					triangle_array[9*j+6] = v2.x - v0.x; triangle_array[9*j+7] = v2.y - v0.y; triangle_array[9*j+8] = v2.z - v0.z;
 						
-						
-						triangle_array[12*j+0] = v0.x;        triangle_array[12*j+1] = v0.y;        triangle_array[12*j+2] =  v0.z;        triangle_array[12*j+3]  = 0;
-						triangle_array[12*j+4] = v1.x - v0.x; triangle_array[12*j+5] = v1.y - v0.y; triangle_array[12*j+6] =  v1.z - v0.z; triangle_array[12*j+7]  = 0;
-						triangle_array[12*j+8] = v2.x - v0.x; triangle_array[12*j+9] = v2.y - v0.y; triangle_array[12*j+10] = v2.z - v0.z; triangle_array[12*j+11] = 0;
-						
-						/*
-						triangle_array[12*j+0] = v0.x; triangle_array[12*j+1] = v0.y; triangle_array[12*j+2] =  v0.z; triangle_array[12*j+3]  = 0;
-						triangle_array[12*j+4] = v1.x; triangle_array[12*j+5] = v1.y; triangle_array[12*j+6] =  v1.z; triangle_array[12*j+7]  = 0;
-						triangle_array[12*j+8] = v2.x; triangle_array[12*j+9] = v2.y; triangle_array[12*j+10] = v2.z; triangle_array[12*j+11] = 0;
-						*/
-					}
-					
-				triangleDataTexture = new THREE.DataTexture( triangle_array, 96, 1, THREE.AlphaFormat, THREE.FloatType, THREE.Texture.DEFAULT_MAPPING, THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping, THREE.NearestFilter, THREE.NearestFilter, 1, THREE.LinearEncoding );
-				
-				triangleDataTexture.flipY = false;
-				triangleDataTexture.generateMipmaps  = false;
-				
+				}
+				/*
+				for ( var i=0; i < (12*total_number_of_triangles); i++ ){
+					console.log(triangle_array[i]);
+				}
+				*/
+				triangleDataTexture = new THREE.DataTexture( triangle_array, 4096, 1, THREE.AlphaFormat, THREE.FloatType, THREE.Texture.DEFAULT_MAPPING, THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping, THREE.NearestFilter, THREE.NearestFilter, 1, THREE.LinearEncoding );
 				triangleDataTexture.needsUpdate = true;
+				triangleDataTexture.flipY = false;
+				triangleDataTexture.generateMipmaps = false;
+				
+				
 				
 				pathTracingGeometry = new THREE.PlaneBufferGeometry( 2, 2 );
 
@@ -1517,12 +1509,8 @@ void main( void )
 				///console.log(renderer.context.getSupportedExtensions());	
 				///console.log(renderer.context.getExtension('OES_texture_float'));
 				
-				
-				
 				// onWindowResize() must be at the end of the init() function
 				onWindowResize();
-				
-				animate();
 				
 			} // end function init()
 			
@@ -1570,8 +1558,10 @@ void main( void )
 					joystick._button3El.style.bottom = 21 + "%";
 				}
 				
+				// everything is set up, now we can start animating
+				animate();
 				
-			}
+			} // end function onWindowResize( event )
 			
 
 
@@ -1587,8 +1577,6 @@ void main( void )
 				pathTracingUniforms.uTime.value = elapsedTime;
 				
 				pathTracingUniforms.uRandomVector.value = randomVector.set( Math.random(), Math.random(), Math.random() );
-				
-				///pathTracingUniforms.tTriangleTexture.value = triangleDataTexture;
 				
 				debugElement.innerHTML = "samples: " + sampleCounter;
 				
