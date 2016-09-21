@@ -60,7 +60,7 @@
 		samples: 0
 		</div>
 
-		<script src="js/three-r80.min.js"> </script>
+		<script src="js/three-r81.min.js"> </script>
 		<script src="js/threex.keyboardstate.js"> </script>
 		<script src="js/FirstPersonCameraControls.js"> </script>
 		<script src="js/virtualButtonJoystick.js"> </script>
@@ -78,7 +78,7 @@ varying vec2 vUv;
 void main() {
 
 	vUv = uv;
-	gl_Position = vec4(position, 1.0);
+	gl_Position = vec4( position, 1.0 );
 
 }
 
@@ -130,9 +130,9 @@ void main() {
 	pixelColor = clamp(pixelColor, 0.0, 1.0);
 	
 	// apply gamma correction
-	pixelColor = pow(pixelColor,vec3(0.4545));
+	pixelColor = pow( pixelColor, vec3(0.4545) );
 	
-	gl_FragColor = vec4(pixelColor,1.0);
+	gl_FragColor = vec4( pixelColor, 1.0 );
 	
 }
 		
@@ -149,7 +149,7 @@ varying vec2 vUv;
 void main()
 {
 	vUv = uv;
-	gl_Position = vec4(position, 1.0);
+	gl_Position = vec4( position, 1.0 );
 }
 
 		</script>
@@ -165,10 +165,11 @@ uniform float uTime;
 uniform float uSampleCounter;
 uniform float uULen;
 uniform float uVLen;
-uniform int uNumber_of_triangles;
 uniform mat4 uCameraMatrix;
 //uniform mat4 uSphereMeshesMatrix[4];
 
+uniform vec3 uMeshBBox_min;
+uniform vec3 uMeshBBox_max;
 uniform vec3 uRandomVector;
 
 uniform sampler2D tPreviousTexture;
@@ -182,6 +183,7 @@ varying vec2 vUv;
 #define FOUR_PI          12.5663706143591729
 #define ONE_OVER_FOUR_PI 0.07957747154594767
 #define PI_OVER_TWO      1.57079632679489662
+#define E                2.71828182845904524
 
 
 #define SPHERE_ID 0
@@ -200,7 +202,6 @@ varying vec2 vUv;
 #define N_PLANES 4
 #define N_DISKS 2
 #define N_TRIANGLES 1
-#define NUMBER_OF_TRIANGLES uNumber_of_triangles;
 #define N_QUADS 1
 #define N_BOXES 2
 #define N_CYLINDERS 1
@@ -212,8 +213,9 @@ varying vec2 vUv;
 #define CHECK 3
 #define COAT 4
 #define VOLUME 5
+#define TRANSLUCENT 6
 
-vec3 redSpherePos;
+vec3 debugSpherePos;
 
 float seed = 0.0;
 
@@ -628,16 +630,21 @@ float BoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r )
 {
 	float epsilon = 0.001; // required to prevent self intersection
 
-	vec3 tmin = (minCorner - r.origin) / r.direction;
-	vec3 tmax = (maxCorner - r.origin) / r.direction;
+	vec3 invDir = 1.0 / r.direction;
+	vec3 tmin = (minCorner - r.origin) * invDir;
+	vec3 tmax = (maxCorner - r.origin) * invDir;
 
 	vec3 real_min = min(tmin, tmax);
-	vec3 real_max = max(tmin, tmax);
+   	vec3 real_max = max(tmin, tmax);
+   
+   	float minmax = min( min(real_max.x, real_max.y), real_max.z);
+   	float maxmin = max( max(real_min.x, real_min.y), real_min.z);
 
-	float minmax = min(min(real_max.x, real_max.y), real_max.z);
-	float maxmin = max(max(real_min.x, real_min.y), real_min.z);
-
-	if (minmax >= maxmin) { return maxmin > epsilon ? maxmin : -1.0; }
+	if (minmax >= maxmin)
+	{
+		return maxmin > 0.0 ? maxmin : minmax;
+	}
+	
 	return -1.0;
 }
 
@@ -793,46 +800,106 @@ bool SceneIntersect( Ray r, inout float t, inout Intersection intersec )
 		}
         }
 	
-	float iX9;
-	float InvWidth = 0.00024414062;
-	
-	for (int i = 0; i < 8; i++)
+	/*
+	// DEBUG AABB Bounding Box intersection
+	float tBox = BoxIntersect(uMeshBBox_min, uMeshBBox_max, r);
+	if ( tBox > 0.0 && tBox < t )
 	{
-		vec3 v0;
-		vec3 edge1;
-		vec3 edge2;
-		
-		iX9 = float(i) * 9.0;
-		
-		v0    = vec3( texture2D(tTriangleTexture, vec2( (iX9 + 0.0) * InvWidth, 0) ).a,
-			      texture2D(tTriangleTexture, vec2( (iX9 + 1.0) * InvWidth, 0) ).a,
-			      texture2D(tTriangleTexture, vec2( (iX9 + 2.0) * InvWidth, 0) ).a );
-			      
-		edge1 = vec3( texture2D(tTriangleTexture, vec2( (iX9 + 3.0) * InvWidth, 0) ).a,
-			      texture2D(tTriangleTexture, vec2( (iX9 + 4.0) * InvWidth, 0) ).a,
-			      texture2D(tTriangleTexture, vec2( (iX9 + 5.0) * InvWidth, 0) ).a );
-			      
-		edge2 = vec3( texture2D(tTriangleTexture, vec2( (iX9 + 6.0) * InvWidth, 0) ).a,
-			      texture2D(tTriangleTexture, vec2( (iX9 + 7.0) * InvWidth, 0) ).a,
-			      texture2D(tTriangleTexture, vec2( (iX9 + 8.0) * InvWidth, 0) ).a );
-		
+		t = tBox;
+			vec3 point = r.origin + r.direction * t;
+			vec3 minCorner = uMeshBBox_min;
+			vec3 maxCorner = uMeshBBox_max;
+			vec3 normal;
+			float epsilon = 0.001;
 
-		d = RayTriangleIntersection( r, v0, edge1, edge2 );
-		//d = TriangleIntersect( v0, edge1, edge2, vec3(0), r );
+			if (abs(minCorner.x - point.x) < epsilon) normal = vec3(-1, 0, 0);
+			else if (abs(maxCorner.x - point.x) < epsilon) normal = vec3(1, 0, 0);
+			else if (abs(minCorner.y - point.y) < epsilon) normal = vec3(0, -1, 0);
+			else if (abs(maxCorner.y - point.y) < epsilon) normal = vec3(0, 1, 0);
+			else if (abs(minCorner.z - point.z) < epsilon) normal = vec3(0, 0, -1);
+			else normal = vec3(0, 0, 1);
 
-		if (d > 0.0 && d < t)
-		{
-			t = d;
-			//intersec.normal = getTriangleNormal( i );
-			intersec.normal = normalize( cross(edge1, edge2) );
-			intersec.emission = vec3(0);
-			intersec.color = vec3(0.5,0.0,1.0);
-			intersec.type = REFR;
-			intersec.id = OBJ_TRIANGLE_ID;
-		}
-	}
+			
+			intersec.normal = normal;
 	
+		intersec.emission = vec3(0);
+		intersec.color = vec3(1,0,1);
+		intersec.type = DIFF;
+		intersec.id = BOX_ID;
+	}
+	*/
+	
+	
+	float tBox = BoxIntersect(uMeshBBox_min, uMeshBBox_max, r);
+	if ( tBox > 0.0 )
+	{
+		float iX9;
+		float InvWidth = 0.00024414062;
+
+		for (int i = 0; i < NUMBER_OF_TRIANGLES; i++)
+		{
+			vec3 v0;
+			vec3 edge1;
+			vec3 edge2;
+
+			iX9 = float(i) * 9.0;
+
+			v0    = vec3( texture2D(tTriangleTexture, vec2( (iX9 + 0.0) * InvWidth, 0) ).a,
+				      texture2D(tTriangleTexture, vec2( (iX9 + 1.0) * InvWidth, 0) ).a,
+				      texture2D(tTriangleTexture, vec2( (iX9 + 2.0) * InvWidth, 0) ).a );
+
+			edge1 = vec3( texture2D(tTriangleTexture, vec2( (iX9 + 3.0) * InvWidth, 0) ).a,
+				      texture2D(tTriangleTexture, vec2( (iX9 + 4.0) * InvWidth, 0) ).a,
+				      texture2D(tTriangleTexture, vec2( (iX9 + 5.0) * InvWidth, 0) ).a );
+
+			edge2 = vec3( texture2D(tTriangleTexture, vec2( (iX9 + 6.0) * InvWidth, 0) ).a,
+				      texture2D(tTriangleTexture, vec2( (iX9 + 7.0) * InvWidth, 0) ).a,
+				      texture2D(tTriangleTexture, vec2( (iX9 + 8.0) * InvWidth, 0) ).a );
+
+
+			d = RayTriangleIntersection( r, v0, edge1, edge2 );
+			//d = TriangleIntersect( v0, edge1, edge2, vec3(0), r );
+
+			if (d > 0.0 && d < t)
+			{
+				t = d;
+				//intersec.normal = getTriangleNormal( i );
+				intersec.normal = normalize( cross(edge1, edge2) );
+				intersec.emission = vec3(0);
+				intersec.color = vec3(1,0,0);
+				intersec.type = REFR;
+				intersec.id = OBJ_TRIANGLE_ID;
+			}
+		} // end for (int i = 0; i < NUMBER_OF_TRIANGLES; i++)
+	
+	} // end if ( BoxIntersect(uMeshBBox_min, uMeshBBox_max, r) > 0.0 )
+	
+
 	return t < inf;
+}
+
+vec3 randomDirectionInSphere()
+{
+    float up = rand() * 2.0 - 1.0; // cos(theta)
+    float over = sqrt(1.0 - up * up); // sin(theta)
+    float around = rand() * TWO_PI;
+
+    return vec3( up, cos(around) * over, sin(around) * over );
+}
+
+vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
+{
+	float up = sqrt(rand()); // weighted cos(theta)
+    	float over = sqrt(1.0 - up * up); // sin(theta)
+    	float around = rand() * TWO_PI;
+	vec3 u = normalize( cross( abs(nl.x) > 0.1 ? vec3(0, 1, 0) : vec3(1, 0, 0), nl ) );
+	vec3 v = normalize( cross(nl, u) );
+    	return vec3( cos(around) * over * u ) + ( sin(around) * over * v ) + (up * nl);		
+}
+
+vec3 computeTransmission(vec3 absorptionCoefficient, float distance) 
+{
+	return vec3( pow(vec3(E), (-1.0 * absorptionCoefficient * distance) ) );	
 }
 
 
@@ -846,27 +913,19 @@ vec3 CalculateRadiance( Ray r )
 	float inf = 100000.0;
 	float t   = inf;
 	
-	
-        for (int depth = 0; depth < 6; depth++)
+        for (int depth = 0; depth < 5; depth++)
 	{
-
-                t = inf;    // distance to intersection
-		
-		intersec.normal = vec3(0);
-		intersec.emission = vec3(0);
-		intersec.color = vec3(0);
-		intersec.type = -1;
-		intersec.id = -1;
 		
 		if ( !SceneIntersect(r, t, intersec) )
 		{
                     break;
 		}
+		
 		// if we reached something bright, don't spawn any more rays
 		if (intersec.emission.r > 0.1 || intersec.emission.b > 0.1 || intersec.emission.g > 0.1 )
 		{
 			
-			accumCol = mask * intersec.emission;
+			accumCol += mask * intersec.emission;
 			break;
 		}
 		
@@ -885,8 +944,7 @@ vec3 CalculateRadiance( Ray r )
 			else
 			    break;
 		    */ 
-		
-
+		    
                 if (intersec.type == DIFF || intersec.type == CHECK) // Ideal DIFFUSE reflection
                 {
 			
@@ -897,15 +955,8 @@ vec3 CalculateRadiance( Ray r )
 				f *= 0.3;					
 			}
 		
-		
 			// choose random Diffuse sample vector
-			float up = sqrt(rand()); // cos(theta)
-    			float over = sqrt(1.0 - up * up); // sin(theta)
-    			float around = rand() * TWO_PI;
-			vec3 u = normalize( cross( abs(nl.x) > .1 ? vec3(0, 1, 0) : vec3(1, 0, 0), nl ) );
-			vec3 v = normalize( cross(nl, u) );
-    			vec3 d = ( cos(around) * over * u ) + ( sin(around) * over * v ) + (up * nl);
-		
+			vec3 d = randomCosWeightedDirectionInHemisphere( nl );
                 	r = Ray( x, normalize(d) );
 			r.origin += r.direction;
 			mask *= f;
@@ -978,15 +1029,11 @@ vec3 CalculateRadiance( Ray r )
 			float c = 1.0 - ddn;
 			float Re = R0 + (1.0 - R0) * c * c * c * c * c;
 			///Re *= 0.5; // fudge factor for more inner diffuse color
+			
 			float shininess = 1.0;
 			
 			// choose random Diffuse sample vector for material underneath ClearCoat
-			float up = sqrt(rand()); // cos(theta)
-			float over = sqrt(1.0 - up * up); // sin(theta)
-			float around = rand() * TWO_PI;
-			vec3 u = normalize( cross( abs(nl.x) > .1 ? vec3(0, 1, 0) : vec3(1, 0, 0), nl ) );
-			vec3 v = normalize( cross(nl, u) );
-			vec3 d = ( cos(around) * over * u ) + ( sin(around) * over * v ) + (up * nl);
+			vec3 d = randomCosWeightedDirectionInHemisphere( nl );
 			
 			// choose either specular reflection or diffuse
 			if( rand() < Re )
@@ -1005,21 +1052,43 @@ vec3 CalculateRadiance( Ray r )
 			
 		} //end if (intersec.type == COAT)
 		
+		if (intersec.type == TRANSLUCENT)  // Translucent Sub-Surface Scattering material
+                {
+			float translucentDensity = 0.02;
+			float scatteringDistance = -log( rand() ) / translucentDensity;
+			if (scatteringDistance < t) {
+				// Scatter the ray:
+				x = x + r.direction * scatteringDistance;
+				vec3 d = randomDirectionInSphere(); // Isoptropic scattering
+				r = Ray( x, d );
+				r.origin += r.direction;
+				// Compute how much light was absorbed along the ray before it was scattered:
+				mask *= computeTransmission(vec3(0.9, 0.1, 0.0), scatteringDistance);
+				continue;
+			} else 
+			{
+				x = x + r.direction * scatteringDistance;
+				///vec3 d = randomDirectionInSphere();
+				vec3 d = randomCosWeightedDirectionInHemisphere( nl );
+				r = Ray( x, d );
+				///r = Ray( x, r.direction ); //transmission
+				r.origin += r.direction;
+				mask *= computeTransmission(vec3(0.9, 0.1, 0.0), t);
+				continue;
+			}
+		
+                } // end if (intersec.type == TRANSLUCENT)
+		
 		if (intersec.type == VOLUME)  // Volume filled with participating medium (i.e. smoke, fog, dust, etc.)
 		{
                 
-			///bool into = dot(n,nl) > 0.0;  // Ray from outside going in?
-			float density = 0.2;
+			float density = 0.25;
 			if (rand() < density)
 			{
-				// choose random Diffuse reflection vector for participating medium
-				float up = sqrt(rand()); // cos(theta)
-				float over = sqrt(1.0 - up * up); // sin(theta)
-				float around = rand() * TWO_PI;
-				vec3 u = normalize( cross( abs(n.x) > .1 ? vec3(0, 1, 0) : vec3(1, 0, 0), n ) );
-				vec3 v = normalize( cross(n, u) );
-				vec3 d = ( cos(around) * over * u ) + ( sin(around) * over * v ) + (up * n);
-			
+				// scattering
+				// choose cosWeighted random Diffuse reflection vector for participating medium
+				vec3 d = randomCosWeightedDirectionInHemisphere( nl ); //weighted scattering (reflects light better)
+				//vec3 d = randomDirectionInSphere(); //true isotropic scattering
 				r = Ray( x, normalize(d) );
 				r.origin += r.direction;
 				mask *= f;
@@ -1027,14 +1096,13 @@ vec3 CalculateRadiance( Ray r )
 			}
 			else
 			{
+				// transmission
 				r = Ray( x, r.direction );
 				r.origin += r.direction;
 				continue;
 			}
-			
-			
-			
-		}
+				
+		} // end if (intersec.type == VOLUME)
 	
 	} // end for (int depth = 0; depth < 6; depth++)
 	
@@ -1045,24 +1113,23 @@ vec3 CalculateRadiance( Ray r )
 void SetupScene(void)
 //-----------------------------------------------------------------------
 {
-	vec3 z  = vec3(0.0);
-	vec3 L1 = vec3(1.0, 0.9, 0.8) * 5.0;// Whiteish-Yellowish light
-	vec3 L2 = vec3(1.0, 0.8, 0.5) * 0.0;// Yellowish light
-	vec3 L3 = vec3(0.1, 0.7, 1.0) * 3.0;// Blueish light * 5.0
+	vec3 z  = vec3(0);          
+	vec3 L1 = vec3(1.0, 1.0, 1.0) * 2.0;// Whiteish light
+	vec3 L2 = vec3(1.0, 0.8, 0.1) * 1.5;// Yellowish light
+	vec3 L3 = vec3(0.1, 0.7, 1.0) * 1.5;// Blueish light
 		
-        spheres[0] = Sphere( 4000.0, vec3(0, -4000, 0), z, vec3(0.3,0.3,0.3), CHECK);//Checkered Floor
+        spheres[0] = Sphere( 4000.0, vec3(0, -4000, 0), z, vec3(0.4,0.4,0.4), CHECK);//Checkered Floor
 	
-        spheres[1] = Sphere( 500.0, vec3(0.0, 600.0, 0.0), L1, z, DIFF);//Light1 sphere
-	spheres[2] = Sphere( 0.00001, vec3(300.0, 400.0, -300.0), L2, z, DIFF);//Light2 sphere
-	spheres[3] = Sphere( 90.0, vec3(800.0, 300.0, -200.0),   L3, z, DIFF);//Light3 sphere
+        spheres[1] = Sphere( 500.0, vec3(0.0, 700.0, 0.0),      L1, z, DIFF);//spherical white Light1 
+	spheres[2] = Sphere( 100.0, vec3(200.0, 300.0, -200.0), L2, z, DIFF);//spherical yellowish Light2
+	spheres[3] = Sphere( 100.0, vec3(800.0, 300.0, -200.0), L3, z, DIFF);//spherical blueish Light3
 	
-        spheres[4] = Sphere( 16.5, vec3(-25.0,16.5,5.0),  z, vec3(1.0,1.0,1.0), SPEC);//Mirror sphere
-        spheres[5] = Sphere( 16.5, vec3(32.0,17.0,30.0),  z, vec3(1.0,1.0,1.0), REFR);//Glass sphere //0.6,0.9,0.7
-        spheres[6] = Sphere( 10.0, vec3(-30.0,12.6,50.0), z, vec3(0.99,0.99,0.99), VOLUME);//Volume-filled sphere
-        spheres[7] = Sphere( 15.4, redSpherePos,          z, vec3(0.3,0.0,0.0), COAT);//Red diffuse with ClearCoat sphere
+        spheres[4] = Sphere( 16.5, vec3(-25.0,16.5,5.0),  z, vec3(0.9,0.9,0.9), SPEC);//Mirror sphere
+        spheres[5] = Sphere( 16.5, vec3(32.0,17.0,30.0),  z, vec3(0.9,0.9,0.9), REFR);//Glass sphere //0.6,0.9,0.7
+        spheres[6] = Sphere( 10.0, vec3(-30.0,12.6,50.0), z, vec3(0.5,0.5,0.5), VOLUME);//Volume-filled sphere
+        spheres[7] = Sphere( 15.4, debugSpherePos,        z, vec3(0.9,0.9,0.9), TRANSLUCENT);//debug translucent sphere
         spheres[8] = Sphere(  5.0, vec3(5.0,5.2,35.0),    z, vec3(0.9,0.9,0.9), DIFF);//White diffuse sphere
 	
-	///ellipsoids[0] = Ellipsoid(  vec3(500.0,1000.0,1000.0), vec3(0.0,0.0,0.0),    z, vec3(0.01,0.01,0.01), DIFF);//diffuse ellipsoid
 	ellipsoids[0] = Ellipsoid(  vec3(30,40,16), vec3(90,5,-20),    z, vec3(0.9,0.7,0.1), SPEC);//metallic ellipsoid
 	
 	cylinders[0] = Cylinder( 15.0, 30.0, vec3(-80,0,-50), z, vec3(0.5,0.0,0.0), REFR);//red glass Cylinder
@@ -1081,8 +1148,8 @@ void SetupScene(void)
 	
 	quads[0] = Quad( vec3(0.0,0.0,1.0), vec3( -150.0,40.0,-50.0), vec3( -100.0,40.0,-50.0), vec3( -100.0,90.0,-50.0 ), vec3( -150.0,90.0,-50.0 ), z, vec3(0.0,0.0,0.9), DIFF);//Blue Quad
 	
-	boxes[0]  = Box( vec3(0.0,7.0,-90.0), vec3(50.0,14.0,-180.0), z, vec3(0.2,1.0,0.8), REFR);//Glass Box
-	boxes[1]  = Box( vec3(1.0,8.0,-91.0), vec3(49.0,13.0,-179.0), z, vec3(0.001,0.001,0.001), DIFF);//Black Box
+	boxes[0]  = Box( vec3(0.0,7.0,-90.0), vec3(50.0,14.0,-180.0), z, vec3(0.2,0.9,0.7), REFR);//Glass Box
+	boxes[1]  = Box( vec3(2.0,9.0,-92.0), vec3(48.0,12.0,-178.0), z, vec3(0.0,0.0,0.0), DIFF);//Diffuse Box
 }
 
 
@@ -1127,22 +1194,24 @@ void main( void )
     
 	Ray ray = Ray( camPos + randomAperturePos , finalRayDir );
 
-	// debug DOF(depth of field) - uncomment 2nd line below to make red sphere match your focal point
-	redSpherePos = vec3(50.0,14.0,-90.0); // place red sphere on ground
-	//redSpherePos = camPos + focalLength * camForward; // DOF debug mode, red sphere follows your line of sight
+	// debug DOF(depth of field) - uncomment 2nd line below to make sphere match your focal point
+	debugSpherePos = vec3(50.0,14.2,-90.0); // place sphere on ground
+	//debugSpherePos = camPos + focalLength * camForward; // DOF debug mode, sphere follows your line of sight
 	
 	SetupScene();
 	     		
 	// perform path tracing and get resulting pixel color
+	///vec3 pixelColor = CalculateRadiance(ray);
 	vec3 pixelColor = clamp( CalculateRadiance(ray), 0.0, 1.0 );
 	
 	vec3 previousColor = vec3(0);
+	
 	if (uSampleCounter > 1.0)
 	{
 		previousColor = texture2D(tPreviousTexture, vUv).rgb;
 	}
 	
-	gl_FragColor = vec4(pixelColor + previousColor, 1.0);
+	gl_FragColor = vec4( pixelColor + previousColor, 1.0 );
 	
 }
 
@@ -1159,6 +1228,7 @@ void main( void )
 			var controls;
 			var pathTracingScene, screenTextureScene, screenOutputScene;
 			var pathTracingUniforms, screenTextureUniforms, screenOutputUniforms;
+			var pathTracingDefines;
 			var pathTracingGeometry, pathTracingMaterial, pathTracingMesh;
 			var screenTextureGeometry, screenTextureMaterial, screenTextureMesh;
 			var screenOutputGeometry, screenOutputMaterial, screenOutputMesh;
@@ -1184,6 +1254,8 @@ void main( void )
 			var v0 = new THREE.Vector3();
 			var v1 = new THREE.Vector3();
 			var v2 = new THREE.Vector3();
+			var scene_aabbox_min = new THREE.Vector3();
+			var scene_aabbox_max = new THREE.Vector3();
 			
 			// the following variables will be used to calculate rotations and directions from the camera
 			var cameraDirectionVector = new THREE.Vector3();//for moving where the camera is looking
@@ -1230,7 +1302,7 @@ void main( void )
 
 			if ( 'createTouch' in document ) {
 				mouseControl = false;
-				pixelRatio = window.devicePixelRatio * 0.15;
+				pixelRatio = window.devicePixelRatio * 0.2;
 			}
 			
 			// if on mobile device, unpause the app because there is no ESC key and no mouse capture to do
@@ -1282,16 +1354,16 @@ void main( void )
 
 			OBJ.downloadMeshes( {
     				//'my_mesh': 'models/name.obj', // located in the models folder on the server
-    				//'my_mesh': 'models/my_cube.obj'
-				'my_mesh': 'models/diamond.obj'
-				//'my_mesh': 'models/emerald.obj'
-				//'my_mesh': 'models/crane.obj'
-				//'my_mesh': 'models/VW.obj'
-				//'my_mesh': 'models/tree.obj'
-				//'my_mesh': 'models/PC.obj'
-				//'my_mesh': 'models/monkey.obj'
-				//'my_mesh': 'models/shuttle.obj'
-				//'my_mesh': 'models/teapot.obj'
+    				'my_mesh': 'models/diamond.obj' // 8 tris
+				//'my_mesh': 'models/cube.obj' // 12 tris
+				//'my_mesh': 'models/crane.obj' // 36 tris
+				//'my_mesh': 'models/emerald.obj' // 140 tris
+				//'my_mesh': 'models/PC.obj' // 215 tris
+				//'my_mesh': 'models/VW.obj' // 284 tris
+				//'my_mesh': 'models/tree.obj' // 500 tris
+				//'my_mesh': 'models/shuttle.obj' // 616 tris
+				//'my_mesh': 'models/monkey.obj' // 968 tris
+				//'my_mesh': 'models/teapot.obj' // 1024 tris
 				//'my_mesh': 'models/bunny.obj'
 				
   			}, init );
@@ -1383,25 +1455,35 @@ void main( void )
 				total_number_of_triangles = objMeshes.my_mesh.faceIndices.length / 3;
 				console.log("Triangle count:" + total_number_of_triangles);
 				triangle_array = new Float32Array( 4096 );
+				
+				var modelScale = 1.0;
 				//var offsetVec = new THREE.Vector3(0,14,-100); // good for PC computer
 				var offsetVec = new THREE.Vector3(0,10,-50);
-				var modelScale = 0.2;
+				
+				var b_box_min = new THREE.Vector3(1000000, 1000000, 1000000);
+        			var b_box_max = new THREE.Vector3(-1000000, -1000000, -1000000);
 				
 				for (var i = 0, j = 0; i < objMeshes.my_mesh.faceIndices.length; i+=3, j++) {
 						
-					v0.set(objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+0] + 0 ],
-					       objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+0] + 1 ],
-					       objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+0] + 2 ]
+					v0.set( objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+0] + 0 ],
+					        objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+0] + 1 ],
+					        objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+0] + 2 ]
 					      );
-					v1.set(objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+1] + 0 ],
-					       objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+1] + 1 ],
-				               objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+1] + 2 ] 
+					v1.set( objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+1] + 0 ],
+					        objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+1] + 1 ],
+				                objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+1] + 2 ] 
 					      );
-					v2.set(objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+2] + 0 ],
-					       objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+2] + 1 ],
-					       objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+2] + 2 ] 
+					v2.set( objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+2] + 0 ],
+					        objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+2] + 1 ],
+					        objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+2] + 2 ] 
 				              );
-						
+					
+					b_box_min.copy( b_box_min.min(v0) );
+	        			b_box_max.copy( b_box_max.max(v0) );
+					b_box_min.copy( b_box_min.min(v1) );
+	        			b_box_max.copy( b_box_max.max(v1) );
+					b_box_min.copy( b_box_min.min(v2) );
+	        			b_box_max.copy( b_box_max.max(v2) );
 							
 					v0.multiplyScalar( modelScale );
 					v1.multiplyScalar( modelScale );
@@ -1416,6 +1498,15 @@ void main( void )
 					triangle_array[9*j+6] = v2.x - v0.x; triangle_array[9*j+7] = v2.y - v0.y; triangle_array[9*j+8] = v2.z - v0.z;
 						
 				}
+				
+				objMeshes.my_mesh.bounding_box_min.copy(b_box_min);
+        			objMeshes.my_mesh.bounding_box_max.copy(b_box_max);
+				
+				objMeshes.my_mesh.bounding_box_min.multiplyScalar( modelScale );
+				objMeshes.my_mesh.bounding_box_max.multiplyScalar( modelScale );
+				
+				objMeshes.my_mesh.bounding_box_min.add( offsetVec );
+				objMeshes.my_mesh.bounding_box_max.add( offsetVec );
 				/*
 				for ( var i=0; i < (12*total_number_of_triangles); i++ ){
 					console.log(triangle_array[i]);
@@ -1442,14 +1533,21 @@ void main( void )
 					
 					uResolution: { type: "v2", value: new THREE.Vector2() },
 					
+					uMeshBBox_min: { type: "v3", value: objMeshes.my_mesh.bounding_box_min },
+					uMeshBBox_max: { type: "v3", value: objMeshes.my_mesh.bounding_box_max },
 					uRandomVector: { type: "v3", value: new THREE.Vector3() },
 				
 					uCameraMatrix: { type: "m4", value: new THREE.Matrix4() },
 	
 				};
+				
+				pathTracingDefines = {
+					NUMBER_OF_TRIANGLES: total_number_of_triangles
+				};
 			
 				pathTracingMaterial = new THREE.ShaderMaterial( {
 					uniforms: pathTracingUniforms,
+					defines: pathTracingDefines,
 					vertexShader: document.getElementById( 'pathTracingVertexShader' ).textContent,
 					fragmentShader: document.getElementById( 'pathTracingFragmentShader' ).textContent,
 				        depthTest: false,
