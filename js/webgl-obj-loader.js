@@ -85,6 +85,8 @@ OBJ.Mesh = function (objectData) {
         //this.vertexNormals = unpacked.norms;
         //this.textures = unpacked.textures;
         this.faceIndices = unpacked.faceIndices;
+        this.bounding_box_min = new THREE.Vector3();
+        this.bounding_box_max = new THREE.Vector3();
         
 }; // end OBJ.Mesh
 
