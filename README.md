@@ -27,7 +27,7 @@ Click here for [Live Demo](https://erichlof.github.io/THREE.js-PathTracing-Rende
 * Consider splitting up triangle list DataTexture into multiple textures for higher-poly-count models.  Current texture width/size limit is 4096 for Android (that's 4096 / 3 vertices per triangle / 3 floating-point coordinates per vertex = 455 possible triangles.  Need to increase this limit to 100,000 (or more) possible triangles somehow.  Maybe data going in the texture's v direction in addition to the u direction?
 * Implement AABB BVH (bounding volume hierarchy) for object/primitive culling, especially to speed up .obj model rendering.
 * Dynamic Scene description/BVH updating and streaming into the GPU path tracer via Data Texture.
-
+* Until a decent BVH is implemented, triangle models are not included in the GitHub repo demo (although they load and render perfectly, the frame rate is still too low, especially with models of 100 or more triangles).
 
 <h2>ABOUT</h2>
 * This began as a port of Kevin Beason's brilliant 'smallPT' ("small PathTracer") over to the Three.js WebGL framework.  http://www.kevinbeason.com/smallpt/  Kevin's original 'smallPT' only supports spheres of various sizes and is meant to render offline, saving the image to a PPM text file (not real-time). I have so far added features such as real-time progressive rendering on any device with a Chrome browser, FirstPerson Camera controls with Depth of Field, more Ray-Primitive object intersection support (such as planes and triangles), and support for more materials like ClearCoat. 
