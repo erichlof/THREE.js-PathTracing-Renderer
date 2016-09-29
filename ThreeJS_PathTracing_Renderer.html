@@ -1290,8 +1290,8 @@ void main( void )
 	SetupScene();
 	     		
 	// perform path tracing and get resulting pixel color
-	///vec3 pixelColor = CalculateRadiance(ray);
-	vec3 pixelColor = clamp( CalculateRadiance(ray), 0.0, 1.0 );
+	vec3 pixelColor = CalculateRadiance(ray);
+	///vec3 pixelColor = clamp( CalculateRadiance(ray), 0.0, 1.0 );
 	
 	vec3 previousColor = vec3(0);
 	
