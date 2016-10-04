@@ -710,16 +710,16 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0.0, 0.0, 0.0);// No color value, Black        
-	vec3 L1 = vec3(0.736507, 0.642866, 0.310431) * 50.0;// Bright Yellowish light
+	vec3 L1 = vec3(0.736507, 0.642866, 0.250431) * 50.0;// Bright Yellowish light
 		                         //0.210431
-        boxes[0]  = Box( vec3(213.0,547.0,-227.0), vec3(343.0,548.0,-332.0), L1, z, DIFF);// Area Light Box in ceiling
+        boxes[0]  = Box( vec3(213.0,548.0,-227.0), vec3(343.0,549.0,-332.0), L1, z, DIFF);// Area Light Box in ceiling
 	
 	boxes[1]  = Box( vec3(-82.0,-165.0, -80.0), vec3(82.0,165.0, 80.0), z, vec3(1.0, 1.0, 1.0 ), SPEC);// Tall Mirror Box Left
 	boxes[2]  = Box( vec3(-86.0, -85.0, -80.0), vec3(86.0, 85.0, 80.0), z, vec3(0.99,0.99,0.99), DIFF);// Short Diffuse Box Right
 	
 	quads[0] = Quad( vec3( 0.0, 0.0, 1.0 ), vec3(   0.0,   0.0,-559.2), vec3( 549.6,   0.0,-559.2), vec3( 549.6, 548.8,-559.2), vec3(   0.0, 548.8,-559.2), z, vec3(0.99,0.99,0.99), DIFF);// Back Wall
-	quads[1] = Quad( vec3( 1.0, 0.0, 0.0 ), vec3(   0.0,   0.0,   0.0), vec3(   0.0,   0.0,-559.2), vec3(   0.0, 548.8,-559.2), vec3(   0.0, 548.8,   0.0), z, vec3(0.7, 0.15,0.1 ), DIFF);// Left Wall Red
-	quads[2] = Quad( vec3(-1.0, 0.0, 0.0 ), vec3( 549.6,   0.0,-559.2), vec3( 549.6,   0.0,   0.0), vec3( 549.6, 548.8,   0.0), vec3( 549.6, 548.8,-559.2), z, vec3(0.2, 0.4, 0.35), DIFF);// Right Wall Green
+	quads[1] = Quad( vec3( 1.0, 0.0, 0.0 ), vec3(   0.0,   0.0,   0.0), vec3(   0.0,   0.0,-559.2), vec3(   0.0, 548.8,-559.2), vec3(   0.0, 548.8,   0.0), z, vec3(0.7, 0.12,0.05), DIFF);// Left Wall Red
+	quads[2] = Quad( vec3(-1.0, 0.0, 0.0 ), vec3( 549.6,   0.0,-559.2), vec3( 549.6,   0.0,   0.0), vec3( 549.6, 548.8,   0.0), vec3( 549.6, 548.8,-559.2), z, vec3(0.2, 0.4, 0.36), DIFF);// Right Wall Green
 	quads[3] = Quad( vec3( 0.0,-1.0, 0.0 ), vec3(   0.0, 548.8,-559.2), vec3( 549.6, 548.8,-559.2), vec3( 549.6, 548.8,   0.0), vec3(   0.0, 548.8,   0.0), z, vec3(0.99,0.99,0.99), DIFF);// Ceiling
 	quads[4] = Quad( vec3( 0.0, 1.0, 0.0 ), vec3(   0.0,   0.0,   0.0), vec3( 549.6,   0.0,   0.0), vec3( 549.6,   0.0,-559.2), vec3(   0.0,   0.0,-559.2), z, vec3(0.99,0.99,0.99), DIFF);// Floor
 	
