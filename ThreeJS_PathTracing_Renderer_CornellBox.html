@@ -97,11 +97,7 @@ uniform sampler2D tTexture0;
 
 void main() {
 	
-	//vec3 pixelColor = texture2D(tTexture0, vUv).rgb;
-	
-	//pixelColor = clamp(pixelColor, 0.0, 1.0);
-	
-	gl_FragColor = texture2D(tTexture0, vUv);
+	gl_FragColor = vec4( texture2D(tTexture0, vUv).rgb, 1.0 );
 	
 }
 		
@@ -173,20 +169,25 @@ precision highp float;
 precision highp int;
 precision highp sampler2D;
 
-uniform vec2 uResolution;
+uniform bool uCameraIsMoving;
+uniform bool uCameraHasJustStopped;
+
 uniform float uTime;
 uniform float uSampleCounter;
 uniform float uULen;
 uniform float uVLen;
+
+uniform vec2 uResolution;
+
+uniform vec3 uMeshBBox_min;
+uniform vec3 uMeshBBox_max;
+uniform vec3 uRandomVector;
+
 uniform mat4 uCameraMatrix;
 uniform mat4 uTallBoxMeshMatrix;
 uniform mat4 uTallBoxMeshInvMatrix;
 uniform mat4 uShortBoxMeshMatrix;
 uniform mat4 uShortBoxMeshInvMatrix;
-
-uniform vec3 uMeshBBox_min;
-uniform vec3 uMeshBBox_max;
-uniform vec3 uRandomVector;
 
 uniform sampler2D tPreviousTexture;
 uniform sampler2D tTriangleTexture;
@@ -709,16 +710,16 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0.0, 0.0, 0.0);// No color value, Black        
-	vec3 L1 = vec3(0.736507, 0.642866, 0.210431) * 50.0;// Bright Yellowish light
-		
-        boxes[0]  = Box( vec3(213.0,548.0,-227.0), vec3(343.0,548.8,-332.0), L1, z, DIFF);// Area Light Box in ceiling
+	vec3 L1 = vec3(0.736507, 0.642866, 0.310431) * 50.0;// Bright Yellowish light
+		                         //0.210431
+        boxes[0]  = Box( vec3(213.0,547.0,-227.0), vec3(343.0,548.0,-332.0), L1, z, DIFF);// Area Light Box in ceiling
 	
 	boxes[1]  = Box( vec3(-82.0,-165.0, -80.0), vec3(82.0,165.0, 80.0), z, vec3(1.0, 1.0, 1.0 ), SPEC);// Tall Mirror Box Left
 	boxes[2]  = Box( vec3(-86.0, -85.0, -80.0), vec3(86.0, 85.0, 80.0), z, vec3(0.99,0.99,0.99), DIFF);// Short Diffuse Box Right
 	
 	quads[0] = Quad( vec3( 0.0, 0.0, 1.0 ), vec3(   0.0,   0.0,-559.2), vec3( 549.6,   0.0,-559.2), vec3( 549.6, 548.8,-559.2), vec3(   0.0, 548.8,-559.2), z, vec3(0.99,0.99,0.99), DIFF);// Back Wall
-	quads[1] = Quad( vec3( 1.0, 0.0, 0.0 ), vec3(   0.0,   0.0,   0.0), vec3(   0.0,   0.0,-559.2), vec3(   0.0, 548.8,-559.2), vec3(   0.0, 548.8,   0.0), z, vec3(0.5, 0.03,0.02), DIFF);// Left Wall Red
-	quads[2] = Quad( vec3(-1.0, 0.0, 0.0 ), vec3( 549.6,   0.0,-559.2), vec3( 549.6,   0.0,   0.0), vec3( 549.6, 548.8,   0.0), vec3( 549.6, 548.8,-559.2), z, vec3(0.05, 0.3, 0.35), DIFF);// Right Wall Green
+	quads[1] = Quad( vec3( 1.0, 0.0, 0.0 ), vec3(   0.0,   0.0,   0.0), vec3(   0.0,   0.0,-559.2), vec3(   0.0, 548.8,-559.2), vec3(   0.0, 548.8,   0.0), z, vec3(0.7, 0.15,0.1 ), DIFF);// Left Wall Red
+	quads[2] = Quad( vec3(-1.0, 0.0, 0.0 ), vec3( 549.6,   0.0,-559.2), vec3( 549.6,   0.0,   0.0), vec3( 549.6, 548.8,   0.0), vec3( 549.6, 548.8,-559.2), z, vec3(0.2, 0.4, 0.35), DIFF);// Right Wall Green
 	quads[3] = Quad( vec3( 0.0,-1.0, 0.0 ), vec3(   0.0, 548.8,-559.2), vec3( 549.6, 548.8,-559.2), vec3( 549.6, 548.8,   0.0), vec3(   0.0, 548.8,   0.0), z, vec3(0.99,0.99,0.99), DIFF);// Ceiling
 	quads[4] = Quad( vec3( 0.0, 1.0, 0.0 ), vec3(   0.0,   0.0,   0.0), vec3( 549.6,   0.0,   0.0), vec3( 549.6,   0.0,-559.2), vec3(   0.0,   0.0,-559.2), z, vec3(0.99,0.99,0.99), DIFF);// Floor
 	
@@ -773,14 +774,18 @@ void main( void )
 	SetupScene();
 	     		
 	// perform path tracing and get resulting pixel color
-	vec3 pixelColor = CalculateRadiance(ray);
-	///vec3 pixelColor = clamp( CalculateRadiance(ray), 0.0, 1.0 );
+	vec3 pixelColor = CalculateRadiance( ray );
 	
-	vec3 previousColor = vec3(0);
+	vec3 previousColor = texture2D(tPreviousTexture, vUv).rgb;
 	
-	if (uSampleCounter > 1.0)
+	if ( uCameraHasJustStopped )
 	{
-		previousColor = texture2D(tPreviousTexture, vUv).rgb;
+		previousColor = vec3(0); // clear rendering accumulation buffer
+	}
+	else if ( uCameraIsMoving )
+	{
+		previousColor *= 0.4; // motion-blur trail amount
+		pixelColor *= (uSampleCounter * 0.7); // brightness
 	}
 	
 	gl_FragColor = vec4( pixelColor + previousColor, 1.0 );
@@ -817,6 +822,10 @@ void main( void )
 			var randomVector = new THREE.Vector3();
 			var sampleCounter = 0.0;
 			var keyboard = new THREEx.KeyboardState();
+			var cameraIsMoving = false;
+			var cameraHasJustStopped = false;
+			var cameraRecentlyMoving = false;
+			var clearRenderBufferTimer = 0.0;
 			var isPaused = true;
 			var oldYawRotation, oldPitchRotation;
 			var camFlightSpeed = 300;
@@ -1002,6 +1011,9 @@ void main( void )
 					
 					tPreviousTexture: { type: "t", value: screenTextureRenderTarget.texture },
 					
+					uCameraIsMoving: { type: "b1", value: false },
+					uCameraHasJustStopped: { type: "b1", value: false },
+					
 					uTime: { type: "f", value: 0.0 },
 					uSampleCounter: { type: "f", value: 0.0 },
 					uULen: { type: "f", value: 1.0 },
@@ -1171,46 +1183,45 @@ void main( void )
 				
 				requestAnimationFrame( animate );
 				
-				decreaseResolution = false;
-				
 				frameTime = clock.getDelta();
 				
 				elapsedTime = clock.getElapsedTime() % 1000;
-				pathTracingUniforms.uTime.value = elapsedTime;
 				
-				pathTracingUniforms.uRandomVector.value = randomVector.set( Math.random(), Math.random(), Math.random() );
-				
-				debugElement.innerHTML = "samples: " + sampleCounter;
-				
+				// reset flags
+				cameraIsMoving = false;
+				cameraHasJustStopped = false;
 				
 				// check user controls
-				
-				if (oldYawRotation != cameraControlsYawObject.rotation.y){
-					sampleCounter = 0.0;
-					decreaseResolution = true;
-				}
-				if (oldPitchRotation != cameraControlsPitchObject.rotation.x) {
-					sampleCounter = 0.0;
-					decreaseResolution = true;
-				}
-				// save state for next frame
-				oldYawRotation = cameraControlsYawObject.rotation.y;
-				oldPitchRotation = cameraControlsPitchObject.rotation.x;
+				if (mouseControl) {
+					// movement detected
+					if ( oldYawRotation != cameraControlsYawObject.rotation.y || 
+					      oldPitchRotation != cameraControlsPitchObject.rotation.x ) {
+	
+						cameraIsMoving = true;
+					}
+					
+					// save state for next frame
+					oldYawRotation = cameraControlsYawObject.rotation.y;
+					oldPitchRotation = cameraControlsPitchObject.rotation.x;
+					
+				} // end if (mouseControl)
 			
 				// if not playing on desktop, get the rotation from the mobile-touch virtual Joystick
-				if (!mouseControl) {
+				if ( !mouseControl ) {
 
 					cameraControlsYawObject.rotation.y = joystick.previousRotationY - joystick.deltaX() * 0.005;
 					cameraControlsPitchObject.rotation.x = joystick.previousRotationX - joystick.deltaY() * 0.005;
 					// clamp the camera's vertical movement (around the x-axis) to the 'ceiling' and 'floor',
 					// so you can't accidentally flip the camera upside down
 					cameraControlsPitchObject.rotation.x = Math.max( - PI_2, Math.min( PI_2, cameraControlsPitchObject.rotation.x ) );
-
-					if (joystick.deltaX() || joystick.deltaY()) {
-						sampleCounter = 0.0;
-						decreaseResolution = true;
+					
+					// movement detected
+					if ( joystick.deltaX() || joystick.deltaY() ) {
+							
+						cameraIsMoving = true;
 					}
-				}
+					
+				} // end if ( !mouseControl )
 				
 				// this gives us a vector in the direction that the camera is pointing,
 				// which will be useful for moving the camera 'forward' and shooting projectiles in that direction
@@ -1227,52 +1238,68 @@ void main( void )
 				if ( joystick.button3Pressed || keyboard.pressed('W') ) {
 
 					cameraControlsObject.position.add(cameraDirectionVector.multiplyScalar(camFlightSpeed * frameTime));
-					sampleCounter = 0.0;
-					decreaseResolution = true;
+					cameraIsMoving = true;
 				}
 				if ( keyboard.pressed('S') ) {
 
 					cameraControlsObject.position.sub(cameraDirectionVector.multiplyScalar(camFlightSpeed * frameTime));
-					sampleCounter = 0.0;
-					decreaseResolution = true;
+					cameraIsMoving = true;
 				}
 				if ( joystick.button1Pressed || keyboard.pressed('D') ) {
 
 					cameraControlsObject.position.add(cameraRightVector.multiplyScalar(camFlightSpeed * frameTime));
-					sampleCounter = 0.0;
-					decreaseResolution = true;
+					cameraIsMoving = true;
 				}
 				if ( keyboard.pressed('A') ) {
 
 					cameraControlsObject.position.sub(cameraRightVector.multiplyScalar(camFlightSpeed * frameTime));
-					sampleCounter = 0.0;
-					decreaseResolution = true;
+					cameraIsMoving = true;
 				}
 				if ( joystick.button2Pressed || keyboard.pressed('Q') ) {
 
 					cameraControlsObject.position.add(cameraUpVector.multiplyScalar(camFlightSpeed * frameTime));
-					sampleCounter = 0.0;
-					decreaseResolution = true;
+					cameraIsMoving = true;
 				}
 				if ( keyboard.pressed('Z') ) {
 
 					cameraControlsObject.position.sub(cameraUpVector.multiplyScalar(camFlightSpeed * frameTime));
-					sampleCounter = 0.0;
-					decreaseResolution = true;
+					cameraIsMoving = true;
 				}
 				
-				sampleCounter += 1.0;
-				if (sampleCounter > 100000.0) {
-					sampleCounter = 100000.0;
+				// movement detected
+				if ( cameraIsMoving ) {
+					clearRenderBufferTimer = 0.0;
+					cameraRecentlyMoving = true;
 				}
+				// no movement detected
+				if ( !cameraIsMoving ) {
+					
+					if ( cameraRecentlyMoving ) {
+						clearRenderBufferTimer += frameTime;
+					}
+					
+					if ( clearRenderBufferTimer > 0.0 ) {
+						sampleCounter = 1.0;
+						cameraHasJustStopped = true;
+						clearRenderBufferTimer = 0.0;
+						cameraRecentlyMoving = false;
+					}
+					
+				}
+				
+				pathTracingUniforms.uCameraIsMoving.value = cameraIsMoving;
+				pathTracingUniforms.uCameraHasJustStopped.value = cameraHasJustStopped;
 				pathTracingUniforms.uSampleCounter.value = sampleCounter;
 				screenOutputUniforms.uOneOverSampleCounter.value = 1.0 / sampleCounter;
-	
+				pathTracingUniforms.uRandomVector.value = randomVector.set( Math.random(), Math.random(), Math.random() );
 				// CAMERA
 				cameraControlsObject.updateMatrixWorld(true);			
 				pathTracingUniforms.uCameraMatrix.value.copy( worldCamera.matrixWorld );
 				
-				
+				debugElement.innerHTML = "samples: " + sampleCounter;
+				if ( !cameraIsMoving ) {
+					sampleCounter += 1.0;
+				}
 				
 				// RENDERING in 3 steps
 				
