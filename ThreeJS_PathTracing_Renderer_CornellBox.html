@@ -467,7 +467,7 @@ vec3 CalculateRadiance( Ray r )
 	float inf = 100000.0;
 	float t   = inf;
 	
-        for (int depth = 0; depth < 5; depth++)
+        for (int depth = 0; depth < 6; depth++)
 	{
 		
 		if ( !SceneIntersect(r, t, intersec) )
@@ -710,7 +710,7 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0.0, 0.0, 0.0);// No color value, Black        
-	vec3 L1 = vec3(0.736507, 0.642866, 0.250431) * 50.0;// Bright Yellowish light
+	vec3 L1 = vec3(0.736507, 0.642866, 0.250431) * 30.0;// Bright Yellowish light
 		                         //0.210431
         boxes[0]  = Box( vec3(213.0,548.0,-227.0), vec3(343.0,549.0,-332.0), L1, z, DIFF);// Area Light Box in ceiling
 	
