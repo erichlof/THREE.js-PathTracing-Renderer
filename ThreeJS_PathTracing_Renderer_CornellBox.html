@@ -189,6 +189,11 @@ uniform mat4 uTallBoxMeshInvMatrix;
 uniform mat4 uShortBoxMeshMatrix;
 uniform mat4 uShortBoxMeshInvMatrix;
 
+uniform mat4 uShortBoxMatrix4x4;
+uniform mat3 uShortBoxNormalMatrix3x3;
+uniform mat4 uTallBoxMatrix4x4;
+uniform mat3 uTallBoxNormalMatrix3x3;
+
 uniform sampler2D tPreviousTexture;
 uniform sampler2D tTriangleTexture;
 
@@ -201,7 +206,7 @@ varying vec2 vUv;
 #define ONE_OVER_FOUR_PI 0.07957747154594767
 #define PI_OVER_TWO      1.57079632679489662
 #define E                2.71828182845904524
-
+#define INFINITY         1000000.0
 
 #define SPHERE_ID 0
 #define PLANE_ID 1
@@ -266,12 +271,12 @@ float QuadIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 v3, vec3 normal, Ray r )
 	a = -dot(n,w0);
 	b = dot(n, r.direction);
 	if (b < 0.0001)   // ray is parallel to quad plane
-		return -1.0;
+		return INFINITY;
 
 	// get intersect point of ray with quad plane
 	rt = a / b;
 	if (rt < 0.0)          // ray goes away from quad
-		return -1.0;   // => no intersect
+		return INFINITY;   // => no intersect
 	    
 	x = r.origin + rt * r.direction; // intersect point of ray and plane
 
@@ -321,15 +326,13 @@ float QuadIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 v3, vec3 normal, Ray r )
 	}
 
 
-	return -1.0;
+	return INFINITY;
 }
 
 //----------------------------------------------------------------------------
 float BoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r )
 //----------------------------------------------------------------------------
 {
-	float epsilon = 0.001; // required to prevent self intersection
-
 	vec3 invDir = 1.0 / r.direction;
 	vec3 tmin = (minCorner - r.origin) * invDir;
 	vec3 tmax = (maxCorner - r.origin) * invDir;
@@ -340,26 +343,26 @@ float BoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r )
    	float minmax = min( min(real_max.x, real_max.y), real_max.z);
    	float maxmin = max( max(real_min.x, real_min.y), real_min.z);
 
-	if (minmax >= maxmin)
+	if (minmax > maxmin)
 	{
-		return maxmin > 0.0 ? maxmin : minmax;
+		return maxmin > 0.0 ? maxmin : INFINITY;
 	}
 	
-	return -1.0;
+	return INFINITY;
 }
 
 //-----------------------------------------------------------------------
-bool SceneIntersect( Ray r, inout float t, inout Intersection intersec )
+float SceneIntersect( Ray r, inout Intersection intersec )
 //-----------------------------------------------------------------------
 {
-	float d;
-	float inf = 100000.0;
-	t   = inf;
+
+        float d;
+	float t = INFINITY;
 		
 	for (int i = 0; i < N_QUADS; i++)
         {
 		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, quads[i].normal, r );
-		if (d > 0.0 && d < t)
+		if (d < t)
 		{
 			t = d;
 			intersec.normal = (quads[i].normal);
@@ -370,66 +373,100 @@ bool SceneIntersect( Ray r, inout float t, inout Intersection intersec )
 		}
         }
 	
+	// CEILING LIGHT BOX
+	d = BoxIntersect( boxes[0].minCorner, boxes[0].maxCorner, r );
+	if (d < t)
+	{
+		t = d;
+		vec3 point = r.origin + r.direction * t;
+		vec3 minCorner = boxes[0].minCorner;
+		vec3 maxCorner = boxes[0].maxCorner;
+		vec3 normal;
+		float epsilon = 0.001;
+
+		if (abs(minCorner.x - point.x) < epsilon) normal = vec3(-1, 0, 0);
+		else if (abs(maxCorner.x - point.x) < epsilon) normal = vec3(1, 0, 0);
+		else if (abs(minCorner.y - point.y) < epsilon) normal = vec3(0, -1, 0);
+		else if (abs(maxCorner.y - point.y) < epsilon) normal = vec3(0, 1, 0);
+		else if (abs(minCorner.z - point.z) < epsilon) normal = vec3(0, 0, -1);
+		else normal = vec3(0, 0, 1);
+			
+		intersec.normal = normal;
+		intersec.emission = boxes[0].emission;
+		intersec.color = boxes[0].color;
+		intersec.type = boxes[0].type;
+		intersec.id = BOX_ID;
+	}
+	
+	
+	// TALL MIRROR BOX
 	Ray rObj;
+	// transform ray into Tall Box's object space
+	rObj.origin = vec3( uTallBoxMatrix4x4 * vec4(r.origin, 1.0) );
+	rObj.direction = vec3( uTallBoxMatrix4x4 * vec4(r.direction, 0.0) );
+	d = BoxIntersect( boxes[1].minCorner, boxes[1].maxCorner, rObj );
 	
-	for (int i = 0; i < N_BOXES; i++)
-        {
-		rObj = Ray(r.origin, r.direction);
-		if(i == 1)
-		{
-			// transform ray into Tall Box's object space
-			rObj.origin = vec3( uTallBoxMeshInvMatrix * vec4(rObj.origin, 1.0) );
-			rObj.direction = vec3( uTallBoxMeshInvMatrix * vec4(rObj.direction, 0.0) );
-		}
-		if(i == 2)
-		{
-			// transform ray into Short Box's object space
-			rObj.origin = vec3( uShortBoxMeshInvMatrix * vec4(rObj.origin, 1.0) );
-			rObj.direction = vec3( uShortBoxMeshInvMatrix * vec4(rObj.direction, 0.0) );
-		}
+	if (d < t)
+	{	
+		t = d;
+		vec3 point = rObj.origin + rObj.direction * d;
+		vec3 minCorner = boxes[1].minCorner;
+		vec3 maxCorner = boxes[1].maxCorner;
+		vec3 normal;
+		float epsilon = 0.001;
+
+		if (abs(minCorner.x - point.x) < epsilon) normal = vec3(-1, 0, 0);
+		else if (abs(maxCorner.x - point.x) < epsilon) normal = vec3(1, 0, 0);
+		else if (abs(minCorner.y - point.y) < epsilon) normal = vec3(0, -1, 0);
+		else if (abs(maxCorner.y - point.y) < epsilon) normal = vec3(0, 1, 0);
+		else if (abs(minCorner.z - point.z) < epsilon) normal = vec3(0, 0, -1);
+		else normal = vec3(0, 0, 1);
+
+		// transfom normal back into world space
+		normal = vec3(uTallBoxNormalMatrix3x3 * normal);
 		
-		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, rObj );
-		if (d > 0.0 && d < t)
-		{
-			
-			t = d;
-			vec3 point = rObj.origin + rObj.direction * t;
-			vec3 minCorner = boxes[i].minCorner;
-			vec3 maxCorner = boxes[i].maxCorner;
-			vec3 normal;
-			float epsilon = 0.001;
-
-			if (abs(minCorner.x - point.x) < epsilon) normal = vec3(-1, 0, 0);
-			else if (abs(maxCorner.x - point.x) < epsilon) normal = vec3(1, 0, 0);
-			else if (abs(minCorner.y - point.y) < epsilon) normal = vec3(0, -1, 0);
-			else if (abs(maxCorner.y - point.y) < epsilon) normal = vec3(0, 1, 0);
-			else if (abs(minCorner.z - point.z) < epsilon) normal = vec3(0, 0, -1);
-			else normal = vec3(0, 0, 1);
-
-			if(i == 1)
-			{
-				// transform intersection point and normal back into world space
-				point = vec3( uTallBoxMeshMatrix * vec4(point, 1.0) );
-				t = distance(r.origin, point);
-				normal = vec3( uTallBoxMeshMatrix * vec4(normal, 0.0) );
-			}
-			if(i == 2)
-			{
-				// transform intersection point and normal back into world space
-				point = vec3( uShortBoxMeshMatrix * vec4(point, 1.0) );
-				t = distance(r.origin, point);
-				normal = vec3( uShortBoxMeshMatrix * vec4(normal, 0.0) );
-			}
-			
-			intersec.normal = normal;
-			intersec.emission = boxes[i].emission;
-			intersec.color = boxes[i].color;
-			intersec.type = boxes[i].type;
-			intersec.id = BOX_ID;
-		}
-        }
+		intersec.normal = normalize(normal);
+		intersec.emission = boxes[1].emission;
+		intersec.color = boxes[1].color;
+		intersec.type = boxes[1].type;
+		intersec.id = BOX_ID;
+	}
 	
-	return t < inf;
+	
+	// SHORT DIFFUSE WHITE BOX
+	// transform ray into Short Box's object space
+	rObj.origin = vec3( uShortBoxMatrix4x4 * vec4(r.origin, 1.0) );
+	rObj.direction = vec3( uShortBoxMatrix4x4 * vec4(r.direction, 0.0) );
+	d = BoxIntersect( boxes[2].minCorner, boxes[2].maxCorner, rObj );
+	
+	if (d < t)
+	{	
+		t = d;
+		vec3 point = rObj.origin + rObj.direction * d;
+		vec3 minCorner = boxes[2].minCorner;
+		vec3 maxCorner = boxes[2].maxCorner;
+		vec3 normal;
+		float epsilon = 0.001;
+
+		if (abs(minCorner.x - point.x) < epsilon) normal = vec3(-1, 0, 0);
+		else if (abs(maxCorner.x - point.x) < epsilon) normal = vec3(1, 0, 0);
+		else if (abs(minCorner.y - point.y) < epsilon) normal = vec3(0, -1, 0);
+		else if (abs(maxCorner.y - point.y) < epsilon) normal = vec3(0, 1, 0);
+		else if (abs(minCorner.z - point.z) < epsilon) normal = vec3(0, 0, -1);
+		else normal = vec3(0, 0, 1);
+
+		// transfom normal back into world space
+		normal = vec3(uShortBoxNormalMatrix3x3 * normal);
+		
+		intersec.normal = normalize(normal);
+		intersec.emission = boxes[2].emission;
+		intersec.color = boxes[2].color;
+		intersec.type = boxes[2].type;
+		intersec.id = BOX_ID;
+	}
+	
+	
+	return t;
 }
 
 vec3 randomDirectionInSphere()
@@ -464,22 +501,23 @@ vec3 CalculateRadiance( Ray r )
 	vec3 accumCol = vec3(0.0);
         vec3 mask = vec3(1.0);
         Intersection intersec;
-	float inf = 100000.0;
-	float t   = inf;
 	
-        for (int depth = 0; depth < 6; depth++)
+        for (int depth = 0; depth < 5; depth++)
 	{
+                
 		
-		if ( !SceneIntersect(r, t, intersec) )
+		float t = SceneIntersect(r, intersec);
+		if (t == INFINITY)
 		{
-                    break;
+                        break;
+                        //calculateSkyColor(r);
 		}
 		
 		// if we reached something bright, don't spawn any more rays
 		if (intersec.emission.r > 0.1 || intersec.emission.b > 0.1 || intersec.emission.g > 0.1 )
 		{
 			
-			accumCol += mask * intersec.emission;
+		        accumCol = mask * intersec.emission;
 			break;
 		}
 		
@@ -488,16 +526,6 @@ vec3 CalculateRadiance( Ray r )
 		vec3 x = r.origin + r.direction * t;
 		
                 vec3 f = intersec.color;
-		
-		    /*
-			// Russian Roulette
-			// in original smallPT, only used if trace path nodes length is greater than 5)
-			float p = max(max(f.x,f.y),f.z);
-			if ( rand() < p)
-			    f = f / p;
-			else
-			    break;
-		    */ 
 		    
                 if (intersec.type == DIFF || intersec.type == CHECK) // Ideal DIFFUSE reflection
                 {
@@ -700,7 +728,7 @@ vec3 CalculateRadiance( Ray r )
 				
 		} // end if (intersec.type == VOLUME)
 	
-	} // end for (int depth = 0; depth < 6; depth++)
+	} // end for (int depth = 0; depth < 5; depth++)
 	
 	return accumCol;      
 }
@@ -747,8 +775,8 @@ void main( void )
         d.y = r2 < 1.0 ? sqrt(r2) - 1.0 : 1.0 - sqrt(2.0 - r2);
 	
 	// TODO save this as a uniform to avoid division
-	d *= (1.0 / uResolution);
-	d += vUv - 0.5;
+	d /= (uResolution * 0.5);
+	d += (2.0 * vUv - 1.0);
 	
 	vec3 rayDir = normalize( d.x * camRight * uULen + d.y * camUp * uVLen + camForward );
 	
@@ -816,7 +844,7 @@ void main( void )
 			var renderer, clock;
 			var frameTime, elapsedTime;
 			var fovScale;
-			var pixelRatio = window.devicePixelRatio * 0.6;
+			var pixelRatio = window.devicePixelRatio * 0.6;//0.6
 			var decreaseResolution = false;
 			var TWO_PI = Math.PI * 2;
 			var randomVector = new THREE.Vector3();
@@ -962,7 +990,7 @@ void main( void )
 				// worldCamera is the dynamic camera 3d object that will be positioned, oriented and 
 				// constantly updated inside the 3d scene.  Its view will ultimately get passed back to the 
 				// stationary quadCamera, which renders the scene to a fullscreen quad (made up of 2 large triangles).
-				worldCamera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
+				worldCamera = new THREE.PerspectiveCamera(31, window.innerWidth / window.innerHeight, 1, 1000);
 				pathTracingScene.add(worldCamera);
 				
 				controls = new FirstPersonCameraControls( worldCamera );
@@ -974,11 +1002,11 @@ void main( void )
 				pathTracingScene.add( cameraControlsObject );
 
 				// for flyCam
-				cameraControlsObject.position.set(278, 273, 1000);
+				cameraControlsObject.position.set(278, 270, 1050);
 				///cameraControlsYawObject.rotation.y = 0.0;
-				// look slightly downward
-				cameraControlsPitchObject.rotation.x = 0.0;
-				joystick.previousRotationX = 0.0;
+				// look slightly upward
+				cameraControlsPitchObject.rotation.x = 0.005;
+				joystick.previousRotationX = 0.005;
 				
 				// now that we moved and rotated the camera, the following line force updates the camera's matrix,
 				//  and prevents rendering the very first frame in the old default camera position/orientation
@@ -1027,7 +1055,12 @@ void main( void )
 					uTallBoxMeshMatrix: { type: "m4", value: new THREE.Matrix4() },
 					uTallBoxMeshInvMatrix: { type: "m4", value: new THREE.Matrix4() },
 					uShortBoxMeshMatrix: { type: "m4", value: new THREE.Matrix4() },
-					uShortBoxMeshInvMatrix: { type: "m4", value: new THREE.Matrix4() }
+					uShortBoxMeshInvMatrix: { type: "m4", value: new THREE.Matrix4() },
+					
+					uShortBoxMatrix4x4: { type: "m4", value: new THREE.Matrix4() },
+					uShortBoxNormalMatrix3x3: { type: "m3", value: new THREE.Matrix3() },
+					uTallBoxMatrix4x4: { type: "m4", value: new THREE.Matrix4() },
+					uTallBoxNormalMatrix3x3: { type: "m3", value: new THREE.Matrix3() }
 				};
 				
 				
@@ -1102,11 +1135,14 @@ void main( void )
 				// it is just a data placeholder as well as an Object3D that can be transformed/manipulated by 
 				// using familiar Three.js library commands. It is then fed into the GPU path tracing renderer
 				// through its 'matrixWorld' matrix. See below:
-				tallBoxMesh.rotation.set(0, Math.PI * 0.105, 0);
+				tallBoxMesh.rotation.set(0, Math.PI * 0.1, 0);
 				tallBoxMesh.position.set(180, 165, -350);
 				tallBoxMesh.updateMatrixWorld(true); // 'true' forces immediate matrix update
 				pathTracingUniforms.uTallBoxMeshMatrix.value.copy( tallBoxMesh.matrixWorld );
 				pathTracingUniforms.uTallBoxMeshInvMatrix.value.getInverse( tallBoxMesh.matrixWorld );
+				
+				pathTracingUniforms.uTallBoxMatrix4x4.value.getInverse( tallBoxMesh.matrixWorld );
+				pathTracingUniforms.uTallBoxNormalMatrix3x3.value.getNormalMatrix( tallBoxMesh.matrixWorld );
 				
 				shortBoxGeometry = new THREE.BoxGeometry(1,1,1);
 				shortBoxMaterial = new THREE.MeshPhysicalMaterial( {
@@ -1122,6 +1158,9 @@ void main( void )
 				shortBoxMesh.updateMatrixWorld(true); // 'true' forces immediate matrix update
 				pathTracingUniforms.uShortBoxMeshMatrix.value.copy( shortBoxMesh.matrixWorld );
 				pathTracingUniforms.uShortBoxMeshInvMatrix.value.getInverse( shortBoxMesh.matrixWorld );
+				
+				pathTracingUniforms.uShortBoxMatrix4x4.value.getInverse( shortBoxMesh.matrixWorld );
+				pathTracingUniforms.uShortBoxNormalMatrix3x3.value.getNormalMatrix( shortBoxMesh.matrixWorld );
 				
 				// onWindowResize() must be at the end of the init() function
 				onWindowResize();
