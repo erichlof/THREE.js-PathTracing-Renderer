@@ -222,14 +222,15 @@ varying vec2 vUv;
 #define N_QUADS 5
 #define N_BOXES 3
 
-#define DIFF 0
-#define REFR 1
-#define SPEC 2
-#define CHECK 3
-#define COAT 4
-#define VOLUME 5
-#define TRANSLUCENT 6
-#define SPECSUB 7
+#define LIGHT 0
+#define DIFF 1
+#define REFR 2
+#define SPEC 3
+#define CHECK 4
+#define COAT 5
+#define VOLUME 6
+#define TRANSLUCENT 7
+#define SPECSUB 8
 
 vec3 debugSpherePos;
 
@@ -344,8 +345,11 @@ float BoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r )
    	float maxmin = max( max(real_min.x, real_min.y), real_min.z);
 
 	if (minmax > maxmin)
-	{
-		return maxmin > 0.0 ? maxmin : INFINITY;
+	{	
+		if (maxmin > 0.0) // if we are outside the box
+			return maxmin;	
+		else if (minmax > 0.0) // else if we are inside the box
+			return minmax;	
 	}
 	
 	return INFINITY;
@@ -514,9 +518,8 @@ vec3 CalculateRadiance( Ray r )
 		}
 		
 		// if we reached something bright, don't spawn any more rays
-		if (intersec.emission.r > 0.1 || intersec.emission.b > 0.1 || intersec.emission.g > 0.1 )
+		if (intersec.type == LIGHT )
 		{
-			
 		        accumCol = mask * intersec.emission;
 			break;
 		}
@@ -738,18 +741,18 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0.0, 0.0, 0.0);// No color value, Black        
-	vec3 L1 = vec3(0.736507, 0.642866, 0.250431) * 30.0;// Bright Yellowish light
-		                         //0.210431
-        boxes[0]  = Box( vec3(213.0,548.0,-227.0), vec3(343.0,549.0,-332.0), L1, z, DIFF);// Area Light Box in ceiling
+	vec3 L1 = vec3(0.936507, 0.642866, 0.310431) * 30.0;// Bright Yellowish light
+		    // 0.736507, 0.642866, 0.210431  Original values
+        boxes[0]  = Box( vec3(213.0,548.0,-227.0), vec3(343.0,549.0,-332.0), L1, z, LIGHT);// Area Light Box in ceiling
 	
-	boxes[1]  = Box( vec3(-82.0,-165.0, -80.0), vec3(82.0,165.0, 80.0), z, vec3(1.0, 1.0, 1.0 ), SPEC);// Tall Mirror Box Left
-	boxes[2]  = Box( vec3(-86.0, -85.0, -80.0), vec3(86.0, 85.0, 80.0), z, vec3(0.99,0.99,0.99), DIFF);// Short Diffuse Box Right
+	boxes[1]  = Box( vec3(-82.0,-170.0, -80.0), vec3(82.0,170.0, 80.0), z, vec3(1.0, 1.0, 1.0), SPEC);// Tall Mirror Box Left
+	boxes[2]  = Box( vec3(-86.0, -85.0, -80.0), vec3(86.0, 85.0, 80.0), z, vec3(1.0, 1.0, 1.0), DIFF);// Short Diffuse Box Right
 	
-	quads[0] = Quad( vec3( 0.0, 0.0, 1.0 ), vec3(   0.0,   0.0,-559.2), vec3( 549.6,   0.0,-559.2), vec3( 549.6, 548.8,-559.2), vec3(   0.0, 548.8,-559.2), z, vec3(0.99,0.99,0.99), DIFF);// Back Wall
-	quads[1] = Quad( vec3( 1.0, 0.0, 0.0 ), vec3(   0.0,   0.0,   0.0), vec3(   0.0,   0.0,-559.2), vec3(   0.0, 548.8,-559.2), vec3(   0.0, 548.8,   0.0), z, vec3(0.7, 0.12,0.05), DIFF);// Left Wall Red
-	quads[2] = Quad( vec3(-1.0, 0.0, 0.0 ), vec3( 549.6,   0.0,-559.2), vec3( 549.6,   0.0,   0.0), vec3( 549.6, 548.8,   0.0), vec3( 549.6, 548.8,-559.2), z, vec3(0.2, 0.4, 0.36), DIFF);// Right Wall Green
-	quads[3] = Quad( vec3( 0.0,-1.0, 0.0 ), vec3(   0.0, 548.8,-559.2), vec3( 549.6, 548.8,-559.2), vec3( 549.6, 548.8,   0.0), vec3(   0.0, 548.8,   0.0), z, vec3(0.99,0.99,0.99), DIFF);// Ceiling
-	quads[4] = Quad( vec3( 0.0, 1.0, 0.0 ), vec3(   0.0,   0.0,   0.0), vec3( 549.6,   0.0,   0.0), vec3( 549.6,   0.0,-559.2), vec3(   0.0,   0.0,-559.2), z, vec3(0.99,0.99,0.99), DIFF);// Floor
+	quads[0] = Quad( vec3( 0.0, 0.0, 1.0), vec3(  0.0,   0.0,-559.2), vec3(549.6,   0.0,-559.2), vec3(549.6, 548.8,-559.2), vec3(  0.0, 548.8,-559.2), z, vec3(1.0, 1.0, 1.0 ), DIFF);// Back Wall
+	quads[1] = Quad( vec3( 1.0, 0.0, 0.0), vec3(  0.0,   0.0,   0.0), vec3(  0.0,   0.0,-559.2), vec3(  0.0, 548.8,-559.2), vec3(  0.0, 548.8,   0.0), z, vec3(0.7, 0.12,0.05), DIFF);// Left Wall Red
+	quads[2] = Quad( vec3(-1.0, 0.0, 0.0), vec3(549.6,   0.0,-559.2), vec3(549.6,   0.0,   0.0), vec3(549.6, 548.8,   0.0), vec3(549.6, 548.8,-559.2), z, vec3(0.2, 0.4, 0.36), DIFF);// Right Wall Green
+	quads[3] = Quad( vec3( 0.0,-1.0, 0.0), vec3(  0.0, 548.8,-559.2), vec3(549.6, 548.8,-559.2), vec3(549.6, 548.8,   0.0), vec3(  0.0, 548.8,   0.0), z, vec3(1.0, 1.0, 1.0 ), DIFF);// Ceiling
+	quads[4] = Quad( vec3( 0.0, 1.0, 0.0), vec3(  0.0,   0.0,   0.0), vec3(549.6,   0.0,   0.0), vec3(549.6,   0.0,-559.2), vec3(  0.0,   0.0,-559.2), z, vec3(1.0, 1.0, 1.0 ), DIFF);// Floor
 	
 }
 
@@ -1136,7 +1139,7 @@ void main( void )
 				// using familiar Three.js library commands. It is then fed into the GPU path tracing renderer
 				// through its 'matrixWorld' matrix. See below:
 				tallBoxMesh.rotation.set(0, Math.PI * 0.1, 0);
-				tallBoxMesh.position.set(180, 165, -350);
+				tallBoxMesh.position.set(180, 170, -350);
 				tallBoxMesh.updateMatrixWorld(true); // 'true' forces immediate matrix update
 				pathTracingUniforms.uTallBoxMeshMatrix.value.copy( tallBoxMesh.matrixWorld );
 				pathTracingUniforms.uTallBoxMeshInvMatrix.value.getInverse( tallBoxMesh.matrixWorld );
