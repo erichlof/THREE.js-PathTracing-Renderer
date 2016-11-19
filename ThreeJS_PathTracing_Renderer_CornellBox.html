@@ -545,6 +545,7 @@ vec3 CalculateRadiance( Ray r )
                 	r = Ray( x, normalize(d) );
 			r.origin += r.direction;
 			mask *= f;
+			mask *= dot(d, nl);
                 	continue;
                 }
                 if (intersec.type == SPEC)  // Ideal SPECULAR reflection
@@ -630,6 +631,7 @@ vec3 CalculateRadiance( Ray r )
 				r = Ray( x, normalize(d) );
 				r.origin += r.direction;
 				mask *= f;
+				mask *= dot(d, nl);
 				continue;  	
 			}
 			
@@ -657,6 +659,7 @@ vec3 CalculateRadiance( Ray r )
 				///r = Ray( x, r.direction ); //transmission
 				r.origin += r.direction;
 				mask *= computeTransmission(vec3(0.9, 0.1, 0.01), t);
+				mask *= dot(d, nl);
 				continue;
 			}
 		
@@ -701,6 +704,7 @@ vec3 CalculateRadiance( Ray r )
 				///r = Ray( x, r.direction ); //transmission
 				r.origin += r.direction;
 				mask *= computeTransmission(vec3(0.0, 100.0, 100.0), t);
+				///mask *= dot(d, nl);
 				continue;
 			}
 		
@@ -719,6 +723,7 @@ vec3 CalculateRadiance( Ray r )
 				r = Ray( x, normalize(d) );
 				r.origin += r.direction;
 				mask *= f;
+				mask *= dot(d, nl);
 				continue;
 			}
 			else
@@ -741,7 +746,7 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0.0, 0.0, 0.0);// No color value, Black        
-	vec3 L1 = vec3(0.936507, 0.642866, 0.310431) * 30.0;// Bright Yellowish light
+	vec3 L1 = vec3(0.936507, 0.642866, 0.310431) * 50.0;// Bright Yellowish light
 		    // 0.736507, 0.642866, 0.210431  Original values
         boxes[0]  = Box( vec3(213.0,548.0,-227.0), vec3(343.0,549.0,-332.0), L1, z, LIGHT);// Area Light Box in ceiling
 	
