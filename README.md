@@ -2,10 +2,11 @@
 Real-time PathTracing with global illumination and progressive rendering, all on top of the Three.js WebGL framework. <br>
 
 Click here for [Live Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer.html) <br>
-Another demo rendering the famous [Cornell Box](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_CornellBox.html) <br>
+This demo is a rendering of the famous [Cornell Box](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_CornellBox.html) <br>
 For comparison, here is a real photograph of the original Cornell Box: http://www.graphics.cornell.edu/online/box/measured.jpg <br>
 (Hint: to get the render to closely match the photo, you might have to wait until the samples counter gets to 50,000 or higher)
 <br>
+Another demo featuring a [Physical Sky Model](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_PhysicalSkyModel.html) <br>
 <br>
 
 ![](threejsPathTracing.png)
