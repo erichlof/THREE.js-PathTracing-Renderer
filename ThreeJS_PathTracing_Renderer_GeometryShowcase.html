@@ -206,10 +206,10 @@ varying vec2 vUv;
 #define CONE_ID 9
 #define OBJ_TRIANGLE_ID 10
 
-#define N_SPHERES 9
+#define N_SPHERES 8
 #define N_ELLIPSOIDS 1
-#define N_PLANES 4
-#define N_DISKS 2
+#define N_PLANES 1
+#define N_DISKS 1
 #define N_TRIANGLES 1
 #define N_QUADS 1
 #define N_BOXES 2
@@ -1172,7 +1172,7 @@ vec3 CalculateRadiance( Ray r )
 			float ddn = dot(-r.direction, nl);
 			float c = 1.0 - ddn;
 			float Re = R0 + (1.0 - R0) * c * c * c * c * c;
-			Re *= 2.0; // bump up the reflectivity (just for looks)
+			//Re *= 2.0; // bump up the reflectivity (just for looks)
 			float reflProbability = rand();
 			
 			if( reflProbability < Re )
@@ -1236,15 +1236,15 @@ vec3 CalculateRadiance( Ray r )
 		
 		if (intersec.type == TRANSLUCENT)  // Translucent Sub-Surface Scattering material
                 {
-			float translucentDensity = 0.25;//0.02
+			float translucentDensity = 0.3;//0.02
 			float scatteringDistance = -log( rand() ) / translucentDensity;
 			if (scatteringDistance > t) 
 			{
 				x = x + r.direction * scatteringDistance;
 				r = Ray( x, r.direction ); //transmission
 				r.origin += r.direction;
-				mask *= computeTransmission(vec3(0.0, 0.18, 0.25), t);
-				bounceIsSpecular = false;
+				mask *= computeTransmission(vec3(1.0, 0.1, 0.0), t);
+				//bounceIsSpecular = false;
 				continue;
 			}
 			else
@@ -1256,7 +1256,7 @@ vec3 CalculateRadiance( Ray r )
 				r = Ray( x, normalize(d) );
 				r.origin += r.direction;
 				// Compute how much light was absorbed along the ray before it was scattered:
-				mask *= computeTransmission(vec3(0.0, 0.18, 0.25), scatteringDistance);
+				mask *= computeTransmission(vec3(1.0, 0.1, 0.0), scatteringDistance);
 					
 				accumCol += calcDirectLighting(mask, x, nl, lightChoice);
 				
@@ -1275,7 +1275,7 @@ vec3 CalculateRadiance( Ray r )
 				// transmission
 				r = Ray( x, r.direction );
 				r.origin += r.direction;
-				bounceIsSpecular = false;
+				//bounceIsSpecular = false;
 				continue;
 			}
 			else
@@ -1342,7 +1342,7 @@ vec3 CalculateRadiance( Ray r )
 				r.origin += r.direction;
 				mask *= computeTransmission(transColorCoefficient, t); // transmission
 				accumCol += calcDirectLighting(mask, x, nl, lightChoice);
-				bounceIsSpecular = false;
+				//bounceIsSpecular = false;
 				continue;
 			}
 		
@@ -1363,26 +1363,28 @@ void SetupScene(void)
 	vec3 L2 = vec3(1.0, 0.8, 0.2) * 10.0;// Yellow light
 	vec3 L3 = vec3(0.1, 0.7, 1.0) * 10.0;// Blue light
 		
-        spheres[0] = Sphere( 50.0, vec3(200.0, 1000.0, 200.0), L1, z, LIGHT);//spherical white Light1 
+        spheres[0] = Sphere( 50.0, vec3(-400.0, 900.0, 200.0), L1, z, LIGHT);//spherical white Light1 
 	spheres[1] = Sphere(100.0, vec3(300.0, 400.0, -300.0), L2, z, LIGHT);//spherical yellow Light2
 	spheres[2] = Sphere( 50.0, vec3(500.0, 250.0, -100.0), L3, z, LIGHT);//spherical blue Light3
 	
-	spheres[3] = Sphere(1000.0, vec3(  0.0, 1000.0,  0.0), z, vec3(0.9, 0.9, 0.9),       CHECK);//Checkered Floor
-        spheres[4] = Sphere(  16.5, vec3(-25.0,    16.5,  5.0), z, vec3(1.0, 1.0, 1.0),        SPEC);//Mirror sphere
-        spheres[5] = Sphere(  16.5, vec3( 32.0,    17.0, 30.0), z, vec3(1.0, 1.0, 1.0),        REFR);//Glass sphere //0.6,0.9,0.7
-        spheres[6] = Sphere(  10.0, vec3(-30.0,    12.6, 50.0), z, vec3(0.5, 0.5, 0.5),      VOLUME);//Volume-filled sphere
-        spheres[7] = Sphere(  15.4, vec3( 50.0,    14.2,-90.0), z,                   z, TRANSLUCENT);//debug translucent sphere
-        spheres[8] = Sphere(  10.0, vec3(  5.0,    10.1, 35.0), z,                   z,     SPECSUB);//shiny covering over sub-surface material
+	spheres[3] = Sphere(1000.0, vec3(  0.0, 1000.0,  0.0), z, vec3(0.9, 0.9, 0.9),     CHECK);//Checkered Floor
+        spheres[4] = Sphere(  16.5, vec3(-25.0,   17.5,  5.0), z, vec3(1.0, 1.0, 1.0),      SPEC);//Mirror sphere
+        spheres[5] = Sphere(  15.0, vec3( 32.0,   17.0, 30.0), z, vec3(1.0, 1.0, 1.0),      REFR);//Glass sphere //0.6,0.9,0.7
+        //spheres[6] = Sphere(  10.0, vec3(-30.0,   12.6, 50.0), z, vec3(0.5, 0.5, 0.5),  VOLUME);//Volume-filled sphere
+        spheres[6] = Sphere(  10.0, vec3( 50.0,   15.0,-90.0), z,  z, TRANSLUCENT);//blue translucent sphere
+        spheres[7] = Sphere(  9.0, vec3(  5.0,   10.3, 35.0), z,                   z,    SPECSUB);//shiny covering over sub-surface material
 	
 	ellipsoids[0] = Ellipsoid(  vec3(30,40,16), vec3(90,5,-20),    z, vec3(1.0, 0.765557, 0.336057), SPEC);//metallic ellipsoid
 	
-	cylinders[0] = Cylinder( 15.0, 30.0, vec3(-80,0,-50), z, vec3(0.6,0.01,0.01), REFR);//red glass Cylinder
-	closedCylinders[0] = ClosedCylinder( 10.0, vec3(-30,10,-100), vec3(-80,30,-100), z, vec3(0.01,0.9,0.01), COAT);//green ClosedCylinder
+	cylinders[0] = Cylinder( 15.0, 30.0, vec3(-80,2,-50), z, vec3(0.6,0.01,0.01), REFR);//red glass Cylinder
+	closedCylinders[0] = ClosedCylinder( 8.0, vec3(-40,10,30), vec3(-90,30,30), z, vec3(1.0,1.0,1.0), COAT);// ClosedCylinder
 	
 	cones[0] = Cone( 20.0, 20.0, vec3(0,0,0), z, vec3(0.01,0.01,0.9), COAT);//blue Cone
 	
-	boxes[0]  = Box( vec3(0.0,7.0,-90.0), vec3(50.0,14.0,-180.0), z, vec3(0.2,0.9,0.7), REFR);//Glass Box
-	boxes[1]  = Box( vec3(2.0,9.0,-92.0), vec3(48.0,12.0,-178.0), z, vec3(0.0,0.0,0.0), DIFF);//Diffuse Box
+	disks[0]   = Disk( 190.0, vec3(-100.0,18.0,-10.0), vec3( 1.0,-1.0,0.0 ), z, vec3(0.9,0.01,0.01), DIFF);//RedDisk Left
+	
+	boxes[0]  = Box( vec3(0.0,11.0,-40.0), vec3(50.0,18.0,-110.0), z, vec3(0.2,0.9,0.7), REFR);//Glass Box
+	boxes[1]  = Box( vec3(6.0,13.0,-46.0), vec3(44.0,16.0,-104.0), z, vec3(0.0,0.0,0.0), DIFF);//Diffuse Box
 	
 	/*
 	planes[0]  = Plane( vec4( -1.0,-0.1,0.0,800.0), z, vec3(0.9,0.9,0.9), DIFF);//WhitePlane Right Wall
@@ -1392,7 +1394,6 @@ void SetupScene(void)
 	
 	quads[0] = Quad( vec3(0.0,0.0,1.0), vec3( -150.0,40.0,-50.0), vec3( -100.0,40.0,-50.0), vec3( -100.0,90.0,-50.0 ), vec3( -150.0,90.0,-50.0 ), z, vec3(0.0,0.0,0.9), DIFF);//Blue Quad
 	
-	disks[0]   = Disk( 16.5 * 16.5, vec3(-100.0,11.0,-10.0), vec3( 1.0,-1.0,0.0 ), z, vec3(0.9,0.01,0.01), DIFF);//RedDisk Left 
 	disks[1]   = Disk( 16.5 * 16.5, vec3( 30.0,-10.0,-180.0), vec3( -1.0,0.0,0.3 ), L3, z, LIGHT);//DiskLight 
 	
 	triangles[0] = Triangle( vec3(0.0,0.0,1.0), vec3( 0.0,30.0,-50.0), vec3( 20.0,60.0,-50.0), vec3( -20.0,60.0,-50.0 ), z, vec3(0.0,0.9,0.0), DIFF);//Green Triangle
@@ -1489,7 +1490,7 @@ void main( void )
 			var renderer, clock;
 			var frameTime, elapsedTime;
 			var fovScale;
-			var pixelRatio = window.devicePixelRatio * 0.5;
+			var pixelRatio = window.devicePixelRatio * 0.6;
 			var TWO_PI = Math.PI * 2;
 			var randomVector = new THREE.Vector3();
 			var sampleCounter = 1.0;
@@ -1662,7 +1663,7 @@ void main( void )
 				// worldCamera is the dynamic camera 3d object that will be positioned, oriented and 
 				// constantly updated inside the 3d scene.  Its view will ultimately get passed back to the 
 				// stationary quadCamera, which renders the scene to a fullscreen quad (made up of 2 large triangles).
-				worldCamera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
+				worldCamera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 1, 1000);
 				pathTracingScene.add(worldCamera);
 				
 				controls = new FirstPersonCameraControls( worldCamera );
@@ -1674,11 +1675,11 @@ void main( void )
 				pathTracingScene.add( cameraControlsObject );
 
 				// for flyCam
-				cameraControlsObject.position.set(0,35,95);
+				cameraControlsObject.position.set(0,50,100);
 				///cameraControlsYawObject.rotation.y = 0.0;
 				// look slightly downward
-				cameraControlsPitchObject.rotation.x = -0.2;
-				joystick.previousRotationX = -0.2;
+				cameraControlsPitchObject.rotation.x = -0.4;
+				joystick.previousRotationX = -0.4;
 				
 				oldYawRotation = cameraControlsYawObject.rotation.y;
 				oldPitchRotation = cameraControlsPitchObject.rotation.x;
