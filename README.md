@@ -21,7 +21,7 @@ Metallic (Gold) and shiny SubSurface scattering (polished Jade/wax candles) mate
 * Real-time interactive Path Tracing in your Chrome browser - even on your smartphone! ( What?! )
 * First-Person camera navigation through the 3D scene.
 * When camera is still, switches to progressive rendering mode and converges on a photo-realistic result!
-* The accumulated render image will converge at around 1,000 samples (lower for simple scenes, higher for complex scenes).
+* The accumulated render image will converge at around 1,000-2,000 samples (lower for simple scenes, higher for complex scenes).
 * Supports most primitives: Spheres, Planes, Discs, Quads, Triangles, and quadrics such as Cylinders, Cones, and Ellipsoids.
 * Direct lighting makes images render/converge almost instantly!
 * Basic support for loading models in .obj format (triangle and quad faces are supported, but no higher-order polys like pentagon, hexagon, etc.)
