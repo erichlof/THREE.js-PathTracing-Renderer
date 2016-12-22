@@ -7,7 +7,6 @@ This demo renders the famous [Cornell Box](https://erichlof.github.io/THREE.js-P
 For comparison, here is a real photograph of the original Cornell Box: http://www.graphics.cornell.edu/online/box/measured.jpg <br>
 <br>
 A demo featuring a [Physical Sky Model](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_SkyModel.html) <br>
-<br>
 <h3>Materials Demos</h3>
 These demos showcase different materials possibilities: <br>
 Refractive (glass/water) and ClearCoat (billiard ball/car paint) materials: [Materials Showcase #1](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_MaterialsShowcase_1.html) <br>
