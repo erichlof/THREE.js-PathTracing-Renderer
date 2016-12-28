@@ -1037,17 +1037,20 @@ vec3 calcDirectLighting(vec3 mask, vec3 x, vec3 nl, Sphere light)
 	// cast shadow ray from intersection point
 	vec3 ld = light.position + (randomSphereDirection() * light.radius);
 	vec3 srDir = normalize(ld - x);
+	if( dot(srDir, nl) < 0.01 )
+		return dirLight;
+		
 	Ray shadowRay = Ray(x, srDir);
-	shadowRay.origin += nl;
+	shadowRay.origin += nl * 2.0;
 	float st = SceneIntersect(shadowRay, shadowIntersec);
-	if ( shadowIntersec.type == LIGHT || st == INFINITY )
+	if ( shadowIntersec.type == LIGHT )
 	{
 		float r2 = light.radius * light.radius;
-		vec3 d = light.position-shadowRay.origin;
-		float d2 = max(0.001,dot(d,d));
+		vec3 d = light.position - shadowRay.origin;
+		float d2 = max(0.0001, dot(d,d));
 		float cos_a_max = sqrt(1. - clamp( r2 / d2, 0., 1.));
                 float weight = 2. * (1. - cos_a_max);
-                dirLight = mask * light.emission * weight * clamp( dot(shadowRay.direction, nl), 0.0, 1.0);
+                dirLight = mask * light.emission * weight * dot(shadowRay.direction, nl);
 	}
 	
 	return dirLight;
@@ -1064,16 +1067,17 @@ vec3 CalculateRadiance( Ray r )
 	bool bounceIsSpecular = true;
 	Sphere lightChoice;
 	
-	float randChoose = rand();
-	if (randChoose < 0.33)
-		lightChoice = spheres[0];
-	else if (randChoose < 0.66)
-		lightChoice = spheres[1];
-	else lightChoice = spheres[2];
+	
 	
         for (int depth = 0; depth < 4; depth++)
 	{
 		
+		float randChoose = rand();
+		if (randChoose < 0.33)
+			lightChoice = spheres[0];
+		else if (randChoose < 0.66)
+			lightChoice = spheres[1];
+		else lightChoice = spheres[2];
 	
 		float t = SceneIntersect(r, intersec);
 		
@@ -1300,7 +1304,7 @@ vec3 CalculateRadiance( Ray r )
 			// Schlick Fresnel approx.
 			float ddn = dot(-r.direction, nl);
 			float nc = 1.0; // IOR of air
-			float nt = 1.1; // IOR of coating (slightly higher than air for polished jade)
+			float nt = 1.2; // IOR of coating (slightly higher than air for polished jade)
 			float R0 = (nc - nt) / (nc + nt);
 			R0 *= R0;
 			float c = 1.0 - ddn;
@@ -1490,7 +1494,7 @@ void main( void )
 			var renderer, clock;
 			var frameTime, elapsedTime;
 			var fovScale;
-			var pixelRatio = window.devicePixelRatio * 0.6;
+			var pixelRatio = window.devicePixelRatio * 0.55;
 			var TWO_PI = Math.PI * 2;
 			var randomVector = new THREE.Vector3();
 			var sampleCounter = 1.0;
@@ -1675,7 +1679,7 @@ void main( void )
 				pathTracingScene.add( cameraControlsObject );
 
 				// for flyCam
-				cameraControlsObject.position.set(0,25,130);
+				cameraControlsObject.position.set(0,20,120);
 				///cameraControlsYawObject.rotation.y = 0.0;
 				// look slightly downward
 				///cameraControlsPitchObject.rotation.x = -0.4;
