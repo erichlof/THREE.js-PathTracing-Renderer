@@ -263,7 +263,7 @@ const float rayleighZenithLength = 8400.0;//8400.0
 const float mieZenithLength = 850.0;//1250.0
 const vec3 up = vec3(0.0, 1.0, 0.0);
 
-const float sunIntensity = 500.0;
+const float sunIntensity = 800.0;
 const float sunAngularDiameterCos = 0.99983194915; // 66 arc seconds -> degrees, and the cosine of that
 
 // earth shadow hack
@@ -306,7 +306,7 @@ Quad quads[N_QUADS];
 Box boxes[N_BOXES];
 
 
-
+/*
 //-----------------------------------------------------------------------
 float SphereIntersect( float rad, vec3 pos, Ray r )
 //-----------------------------------------------------------------------
@@ -566,6 +566,7 @@ float RayTriangleIntersection( Ray r, vec3 v0, vec3 edge1, vec3 edge2 )
 
 	return dot(edge2, qvec) * det;
 }
+*/
 
 /*
 vec3 getTriangleNormal( int triangleIndex )
@@ -588,7 +589,7 @@ vec3 getTriangleNormal( int triangleIndex )
 
 	return trinormal;
 }
-*/
+
 
 //-------------------------------------------------------------------------------
 float ArenbergTriangleIntersect( vec3 p0, vec3 v0, vec3 v1, vec3 v2, Ray r )
@@ -610,7 +611,7 @@ float ArenbergTriangleIntersect( vec3 p0, vec3 v0, vec3 v1, vec3 v2, Ray r )
     	float b = dot(p, v1);
     	if (a < 0.0 || b < 0.0 || (a + b) > 1.0) return INFINITY;
     
-        /* barycentric coordinates, not currently used */
+        // barycentric coordinates, not currently used 
 	//float b1 = 1.0 - a - b;
     	//float b2 = a;
     	//float b3 = b;
@@ -668,6 +669,7 @@ float TriangleIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 normal, Ray r )
 
 	return rt;                    // x is in T
 }
+*/
 
 //----------------------------------------------------------------------------
 float QuadIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 v3, vec3 normal, Ray r )
@@ -876,15 +878,6 @@ vec3 randomHemisphereDirection( const vec3 n )
 	return dot(dr,n) * dr;
 }
 
-vec3 randomDirectionInSphere()
-{
-    float up = rand() * 2.0 - 1.0; // cos(theta)
-    float over = sqrt(1.0 - up * up); // sin(theta)
-    float around = rand() * TWO_PI;
-
-    return vec3( up, cos(around) * over, sin(around) * over );
-}
-
 vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 {
 	float up = sqrt(rand()); // weighted cos(theta)
@@ -1000,8 +993,10 @@ vec3 calcDirectLightingSun(vec3 mask, vec3 x, vec3 nl, vec3 sunDirection)
 	vec3 dirLight = vec3(0.0);
 	Intersection shadowIntersec;
 	
+	if( dot(sunDirection, nl) < 0.01 )
+		return dirLight;
+		
 	// cast shadow ray from intersection point
-	
 	Ray shadowRay = Ray(x, sunDirection);
 	shadowRay.origin += nl * 2.0;
 	float st = SceneIntersect(shadowRay, shadowIntersec);
@@ -1012,9 +1007,8 @@ vec3 calcDirectLightingSun(vec3 mask, vec3 x, vec3 nl, vec3 sunDirection)
 		//float d2 = max(0.001,dot(d,d));
 		//float cos_a_max = sqrt(1. - clamp( r2 / d2, 0., 1.));
                 //float weight = 2. * (1. - cos_a_max);
-		float weight = 1.0;
-		vec3 sunEmission = Get_Sky_Color(shadowRay, sunDirection);
-                dirLight = mask * sunEmission * weight * clamp( dot(shadowRay.direction, nl), 0.0, 1.0);
+		vec3 sunEmission = Get_Sky_Color(shadowRay, sunDirection) * 0.9;
+                dirLight = mask * sunEmission * dot(shadowRay.direction, nl);
 	}
 	
 	return dirLight;
@@ -1041,19 +1035,6 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection )
                         break;
 		}
 		
-		/*
-		// if we reached something bright, don't spawn any more rays
-		if (intersec.type == LIGHT)
-		{	
-
-			if (bounceIsSpecular)
-			{
-				accumCol += mask * intersec.emission;
-			}
-			
-			//break;
-		}
-		*/
 		
 		// useful data 
 		vec3 n = intersec.normal;
@@ -1131,7 +1112,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection )
 				bounceIsSpecular = true;
 			    	continue;
 			}
-			if( reflProbability > Re )
+			else
 			{
 			    	float nnt = nc / nt;
 			    	vec3 tdir = refract(r.direction, nl, nnt);
@@ -1203,7 +1184,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection )
 				bounceIsSpecular = false;
 				continue;
 			}
-			if (scatteringDistance >= t)
+			else
 			{
 				x = x + r.direction * scatteringDistance;
 				r = Ray( x, r.direction ); //transmission
@@ -1282,7 +1263,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection )
 				bounceIsSpecular = false;
 				continue;
 			}
-			if (scatteringDistance >= t)
+			else
 			{
 				x = x + r.direction * scatteringDistance;
 				vec3 d = randomSphereDirection(); 
