@@ -1037,10 +1037,10 @@ vec3 calcDirectLighting(vec3 mask, vec3 x, vec3 nl, Sphere light)
 	{
 		float r2 = light.radius * light.radius;
 		vec3 d = light.position - shadowRay.origin;
-		float d2 = max(0.0001, dot(d,d));
+		float d2 = dot(d,d);
 		float cos_a_max = sqrt(1. - clamp( r2 / d2, 0., 1.));
                 float weight = 2. * (1. - cos_a_max);
-                dirLight = mask * light.emission * weight * dot(shadowRay.direction, nl);
+                dirLight = mask * light.emission * weight * max(0.01, dot(shadowRay.direction, nl));
 	}
 	
 	return dirLight;
