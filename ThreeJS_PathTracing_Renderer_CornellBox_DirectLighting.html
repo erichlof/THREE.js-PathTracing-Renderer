@@ -894,12 +894,12 @@ vec3 calcDirectLightingSphere(vec3 mask, vec3 x, vec3 nl, Sphere light)
 	return dirLight;
 }
 
+
 vec3 calcDirectLightingQuad(vec3 mask, vec3 x, vec3 nl, Quad light)
 {
 	vec3 dirLight = vec3(0.0);
 	Intersection shadowIntersec;
 	
-	// cast shadow ray from intersection point
 	vec3 randPointOnLight;
 	randPointOnLight.x = mix(light.v0.x, light.v1.x, rand());
 	randPointOnLight.y = light.v0.y;
@@ -907,7 +907,8 @@ vec3 calcDirectLightingQuad(vec3 mask, vec3 x, vec3 nl, Quad light)
 	vec3 srDir = normalize(randPointOnLight - x);
 	if( dot(srDir, nl) < 0.01 )
 		return dirLight;
-		
+	
+	// cast shadow ray from intersection point	
 	Ray shadowRay = Ray(x, srDir);
 	shadowRay.origin += nl * 2.0;
 	float st = SceneIntersect(shadowRay, shadowIntersec);
