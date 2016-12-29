@@ -1047,6 +1047,7 @@ vec3 calcDirectLighting(vec3 mask, vec3 x, vec3 nl, Sphere light)
 }
 
 
+
 //-----------------------------------------------------------------------
 vec3 CalculateRadiance( Ray r )
 //-----------------------------------------------------------------------
@@ -1409,7 +1410,7 @@ void main( void )
 	if ( uCameraJustStartedMoving )
 	{
 		previousColor = vec3(0.0); // clear rendering accumulation buffer
-		pixelColor *= 1.1;
+		pixelColor *= 1.2;
 	}
 	else if ( uCameraIsMoving )
 	{
@@ -1512,7 +1513,7 @@ void main( void )
 
 			if ( 'createTouch' in document ) {
 				mouseControl = false;
-				pixelRatio = window.devicePixelRatio * 0.2;
+				pixelRatio = window.devicePixelRatio * 0.15;
 			}
 			
 			// if on mobile device, unpause the app because there is no ESC key and no mouse capture to do
