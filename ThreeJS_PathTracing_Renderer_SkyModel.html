@@ -1008,7 +1008,7 @@ vec3 calcDirectLightingSun(vec3 mask, vec3 x, vec3 nl, vec3 sunDirection)
 		//float cos_a_max = sqrt(1. - clamp( r2 / d2, 0., 1.));
                 //float weight = 2. * (1. - cos_a_max);
 		vec3 sunEmission = Get_Sky_Color(shadowRay, sunDirection) * 0.9;
-                dirLight = mask * sunEmission * dot(shadowRay.direction, nl);
+                dirLight = mask * sunEmission * max(0.01, dot(shadowRay.direction, nl));
 	}
 	
 	return dirLight;
