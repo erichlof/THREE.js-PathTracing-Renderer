@@ -51,10 +51,9 @@
 		<div id="container"></div>
 		<div id="info"> three.js PathTracing Renderer - Geometry Showcase</div>
 		
-		<div id="instructions">
-		<span style="font-size:40px"></span>
+		<div id="instructions" style="font-size:40px; font-family:arial; font-type:bold; color:rgb(255,255,255);">
+			Loading... 
 		</div>
-		
 		
 		<div id="debug" style="position:fixed; left:3%; bottom:1%; font-family:arial; font-type:bold; color:rgb(255,255,255);">
 		samples: 0
@@ -204,18 +203,20 @@ varying vec2 vUv;
 #define CYLINDER_ID 7
 #define CLOSEDCYLINDER_ID 8
 #define CONE_ID 9
-#define OBJ_TRIANGLE_ID 10
+#define CAPSULE_ID 10
+#define OBJ_TRIANGLE_ID 11
 
 #define N_SPHERES 8
-#define N_ELLIPSOIDS 1
 #define N_PLANES 1
 #define N_DISKS 1
 #define N_TRIANGLES 1
 #define N_QUADS 1
 #define N_BOXES 2
+#define N_ELLIPSOIDS 1
 #define N_CYLINDERS 1
 #define N_CLOSEDCYLINDERS 1
 #define N_CONES 1
+#define N_CAPSULES 1
 
 #define LIGHT 0
 #define DIFF 1
@@ -244,11 +245,12 @@ struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; int type
 struct Ellipsoid { vec3 radii; vec3 position; vec3 emission; vec3 color; int type; };
 struct Cylinder { float radius; float height; vec3 position; vec3 emission; vec3 color; int type; };
 struct ClosedCylinder { float radius; vec3 cap1pos; vec3 cap2pos; vec3 emission; vec3 color; int type; };
-struct Cone { float radius; float height; vec3 position; vec3 emission; vec3 color; int type; };
-struct Plane { vec4 pla; vec3 emission; vec3 color; int type; };
+struct Cone { vec3 pos0; float radius0; vec3 pos1; float radius1; vec3 emission; vec3 color; int type; };
+struct Capsule { vec3 pos0; float radius0; vec3 pos1; float radius1; vec3 emission; vec3 color; int type; };
+//struct Plane { vec4 pla; vec3 emission; vec3 color; int type; };
 struct Disk { float radiusSq; vec3 pos; vec3 normal; vec3 emission; vec3 color; int type; };
-struct Triangle { vec3 normal; vec3 v0; vec3 v1; vec3 v2; vec3 emission; vec3 color; int type; };
-struct Quad { vec3 normal; vec3 v0; vec3 v1; vec3 v2; vec3 v3; vec3 emission; vec3 color; int type; };
+//struct Triangle { vec3 normal; vec3 v0; vec3 v1; vec3 v2; vec3 emission; vec3 color; int type; };
+//struct Quad { vec3 normal; vec3 v0; vec3 v1; vec3 v2; vec3 v3; vec3 emission; vec3 color; int type; };
 struct Box { vec3 minCorner; vec3 maxCorner; vec3 emission; vec3 color; int type; };
 struct Intersection { vec3 normal; vec3 emission; vec3 color; int type; int id; };
 
@@ -257,10 +259,11 @@ Ellipsoid ellipsoids[N_ELLIPSOIDS];
 Cylinder cylinders[N_CYLINDERS];
 ClosedCylinder closedCylinders[N_CLOSEDCYLINDERS];
 Cone cones[N_CONES];
-Plane planes[N_PLANES];
+Capsule capsules[N_CAPSULES];
+//Plane planes[N_PLANES];
 Disk disks[N_DISKS];
-Triangle triangles[N_TRIANGLES];
-Quad quads[N_QUADS];
+//Triangle triangles[N_TRIANGLES];
+//Quad quads[N_QUADS];
 Box boxes[N_BOXES];
 
 
@@ -270,19 +273,19 @@ float SphereIntersect( float rad, vec3 pos, Ray r )
 //-----------------------------------------------------------------------
 {
 	vec3 op = pos - r.origin;
-	float eps = 0.0001;
+	//float eps = 0.0;
 	float b = dot(op, r.direction);
 	float det = b * b - dot(op,op) + rad * rad;
-       	if (det < 0.0)
+	if (det < 0.0)
 		return INFINITY;
         
 	det = sqrt(det);	
 	float t1 = b - det;
-	if( t1 > eps )
+	if( t1 > 0.0 )
 		return t1;
 		
 	float t2 = b + det;
-	if( t2 > eps )
+	if( t2 > 0.0 )
 		return t2;
 
 	return INFINITY;	
@@ -321,55 +324,71 @@ float EllipsoidIntersect( vec3 radii, vec3 pos, Ray r )
 }
 
 //-----------------------------------------------------------------------
-float CylinderIntersect( float radius, float height, vec3 pos, Ray r )
+float CylinderIntersect( vec3 p0, vec3 p1, float rad, Ray r, out vec3 n )
 //-----------------------------------------------------------------------
 {
-	float eps = 0.0001;
-	float ox = r.origin.x - pos.x;
-	float oy = r.origin.y - pos.y;
-	float oz = r.origin.z - pos.z;
-	float dx = r.direction.x;
-	float dy = r.direction.y;
-	float dz = r.direction.z;
-	float y0 = 0.0;
-	float y1 = height;
+	float r2=rad*rad;
 
-	// quadratic equation coefficients
-	float a = dx * dx + dz * dz;  	
-	float b = 2.0 * (ox * dx + oz * dz);
-	float c = ox * ox + oz * oz - radius * radius;
-	float disc = b * b - 4.0 * a * c ;
 
-	if (disc < 0.0) 
-		return INFINITY;
-		
-	float e = sqrt(disc);
-	float denom = 2.0 * a;
-	float t = (-b - e) / denom;    // smaller root
-		
-	if (t > eps) 
+	vec3 dp=p1-p0;
+	vec3 dpt=dp/dot(dp,dp);
+
+	vec3 ao=r.origin-p0;
+	vec3 aoxab=cross(ao,dpt);
+	vec3 vxab=cross(r.direction,dpt);
+	float ab2=dot(dpt,dpt);
+	float a=2.0*dot(vxab,vxab);
+	float ra=1.0/a;
+	float b=2.0*dot(vxab,aoxab);
+	float c=dot(aoxab,aoxab)-r2*ab2;
+
+	float det=b*b-2.0*a*c;
+
+	if(det<0.0)
+   		return INFINITY;
+
+
+	det=sqrt(det);
+
+	float t = INFINITY;
+
+	float t0=(-b-det)*ra;
+	float t1=(-b+det)*ra;
+
+	vec3 ip;
+	vec3 lp;
+	float ct;
+	float d;
+
+	d=t1;
+	if (d > 0.0)
 	{
-		float yhit = (oy + t * dy);
-			
-		if (yhit > y0 && yhit < y1) 
-		{	
-			return t;
-		}
-	} 
-		
-	t = (-b + e) / denom;    // larger root
-		
-	if (t > eps)
-	{
-		float yhit = (oy + t * dy);
-			
-		if (yhit > y0 && yhit < y1)
+		ip=r.origin+r.direction*d;
+		lp=ip-p0;
+		ct=dot(lp,dpt);
+		if((ct>0.0)&&(ct<1.0))
 		{
-			return t;
+			t = t1;
+		     	n=((p0+dp*ct)-ip);
 		}
-	} 
+
+	}
+
+	d=t0;
+	if (d > 0.0)
+	{
+		ip=r.origin+r.direction*d;
+		lp=ip-p0;
+		ct=dot(lp,dpt);
+		if((ct>0.0)&&(ct<1.0))
+		{
+			t = t0;
+			n=(ip-(p0+dp*ct));
+		}
+
+	}
 	
-	return INFINITY;		
+	return t;
 }
 
 vec4 iCylinder( vec3 ro, vec3 rd, vec3 pa, vec3 pb, float ra )
@@ -412,59 +431,141 @@ vec4 iCylinder( vec3 ro, vec3 rd, vec3 pa, vec3 pb, float ra )
 	return vec4(INFINITY);
 }
 
-//-----------------------------------------------------------------------
-float ConeIntersect( float radius, float height, vec3 pos, Ray r )
-//-----------------------------------------------------------------------
+//----------------------------------------------------------------------------
+float ConeIntersect( vec3 p0, float r0, vec3 p1, float r1, Ray r, out vec3 n )
+//----------------------------------------------------------------------------   
 {
-	float eps = 0.0001;
-	float ox = r.origin.x;// - pos.x;
-	float oy = r.origin.y;// - pos.y;
-	float oz = r.origin.z;// - pos.z;
-	float dx = r.direction.x;
-	float dy = r.direction.y;
-	float dz = r.direction.z;
-	float y0 = 0.0;
-	float y1 = height;
+	r0 += 0.001;
+	float t = INFINITY;
+	vec3 locX;
+	vec3 locY;
+	vec3 locZ=-(p1-p0)/(1.0 - r1/r0);
 
-	// quadratic equation coefficients
-	float k = radius / height;
-	k = k*k;
+	Ray ray = r;
+	ray.origin-=p0-locZ;
+
+	if(abs(locZ.x)<abs(locZ.y))
+		locX=vec3(1,0,0);
+	else
+		locX=vec3(0,1,0);
+
+	float len=length(locZ);
+	locZ=normalize(locZ)/len;
+	locY=normalize(cross(locX,locZ))/r0;
+	locX=normalize(cross(locY,locZ))/r0;
+
+	mat3 tm;
+	tm[0]=locX;
+	tm[1]=locY;
+	tm[2]=locZ;
 	
-	float a = dx * dx - k * dy * dy + dz * dz;
-	float b = 2.0 * (dx * ox - k * dy * (oy-height) + dz * oz );
-	float c = ox * ox - k * (oy - height) * (oy - height) + oz * oz ;
-	float disc = b * b - 4.0 * a * c ;
+	ray.direction*=tm;
+	ray.origin*=tm;
+	
+	float dx=ray.direction.x;
+	float dy=ray.direction.y;
+	float dz=ray.direction.z;
 
-	if (disc < 0.0) 
+	float x0=ray.origin.x;
+	float y0=ray.origin.y;
+	float z0=ray.origin.z;
+
+	float x02=x0*x0;
+	float y02=y0*y0;
+	float z02=z0*z0;
+
+	float dx2=dx*dx;
+	float dy2=dy*dy;
+	float dz2=dz*dz;
+
+	float det=(
+		-2.0*x0*dx*z0*dz
+        +2.0*x0*dx*y0*dy
+        -2.0*z0*dz*y0*dy
+        +dz2*x02
+        +dz2*y02
+        +dx2*z02
+        +dy2*z02
+        -dy2*x02
+        -dx2*y02
+        );
+    
+	if(det<0.0)
 		return INFINITY;
-		
-	float e = sqrt(disc);
-	float denom = 2.0 * a;
-	float t = (-b - e) / denom;    // smaller root
-		
-	if (t > eps) 
+
+	float t0=(-x0*dx+z0*dz-y0*dy-sqrt(abs(det)))/(dx2-dz2+dy2);
+	float t1=(-x0*dx+z0*dz-y0*dy+sqrt(abs(det)))/(dx2-dz2+dy2);
+	vec3 pt0=ray.origin+t0*ray.direction;
+	vec3 pt1=ray.origin+t1*ray.direction;
+    
+        if(t1>0.0 && pt1.z>r1/r0 && pt1.z<1.0)
 	{
-		float yhit = (oy + t * dy);
-			
-		if (yhit > y0 && yhit < y1)
-		{	
-			return t;
-		}
-	} 
-		
-	t = (-b + e) / denom;    // larger root
-		
-	if (t > eps)
+		t=t1;
+		n=pt1;
+		n.z=0.0;
+		n=normalize(n);
+		n.z=-pt1.z/abs(pt1.z);
+		n=normalize(n);
+		n=tm*-n;
+		//n=normalize(n);
+	}
+
+	if(t0>0.0 && pt0.z>r1/r0 && pt0.z<1.0)
 	{
-		float yhit = (oy + t * dy);
-			
-		if (yhit > y0 && yhit < y1)
-		{
-			return t;
-		}
-	} 
-	
-	return INFINITY;		
+		t=t0;
+		n=pt0;
+		n.z=0.0;
+		n=normalize(n);
+		n.z=-pt0.z/abs(pt0.z);
+		n=normalize(n);
+		n=tm*n;
+		//n=normalize(n);
+	}
+
+	return t;	
+}
+
+//-------------------------------------------------------------------------------
+float CapsuleIntersect( vec3 p0, float r0, vec3 p1, float r1, Ray r, out vec3 n )
+//-------------------------------------------------------------------------------
+{
+	vec3 l  = p1-p0;
+	float ld = length(l);
+	l=l/ld;
+	float d= r0-r1;
+	float sa = d/ld;
+	float h0 = r0*sa;
+	float h1 = r1*sa;
+	float cr0 = sqrt(r0*r0-h0*h0);
+	float cr1 = sqrt(r1*r1-h1*h1);
+	vec3 coneP0=p0+l*h0;
+	vec3 coneP1=p1+l*h1;
+
+	float t0=INFINITY;
+	    
+	float t1;
+	vec3 uv1;
+	vec3 n1;
+	t1 = ConeIntersect(coneP0,cr0,coneP1,cr1,r,n1);
+	if(t1<t0)
+	{
+		t0=t1;
+		n=n1;
+	}
+	t1 = SphereIntersect(r0,p0,r);
+	if(t1<t0)
+	{
+		t0=t1;
+		n=(r.origin + r.direction * t1) - p0;
+	}
+	t1 = SphereIntersect(r1,p1,r);
+	if(t1<t0)
+	{
+		t0=t1;
+		n=(r.origin + r.direction * t1) - p1;
+	}
+	    
+	return t0;
 }
 
 /*
@@ -564,19 +665,19 @@ float ArenbergTriangleIntersect( vec3 p0, vec3 v0, vec3 v1, vec3 v2, Ray r )
 	float Den = dot(r.direction, v2);
         if (Den <= 0.0) return INFINITY;
 	
-    	float Num = dot( (p0 - r.origin), v2 );
-    	float t = Num / Den;
-    	if (t < 0.0) return INFINITY;
+	float Num = dot( (p0 - r.origin), v2 );
+	float t = Num / Den;
+	if (t < 0.0) return INFINITY;
 	
         vec3 p = t * r.direction + r.origin - p0;
-   	float a = dot(p, v0);
-    	float b = dot(p, v1);
-    	if (a < 0.0 || b < 0.0 || (a + b) > 1.0) return INFINITY;
+	float a = dot(p, v0);
+	float b = dot(p, v1);
+	if (a < 0.0 || b < 0.0 || (a + b) > 1.0) return INFINITY;
     
         // barycentric coordinates, not currently used 
 	//float b1 = 1.0 - a - b;
-    	//float b2 = a;
-    	//float b3 = b;
+	//float b2 = a;
+	//float b3 = b;
     
 	return t;
 }
@@ -721,10 +822,10 @@ float BoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r )
 	vec3 tmax = (maxCorner - r.origin) * invDir;
 
 	vec3 real_min = min(tmin, tmax);
-   	vec3 real_max = max(tmin, tmax);
+	vec3 real_max = max(tmin, tmax);
    
-   	float minmax = min( min(real_max.x, real_max.y), real_max.z);
-   	float maxmin = max( max(real_min.x, real_min.y), real_min.z);
+	float minmax = min( min(real_max.x, real_max.y), real_max.z);
+	float maxmin = max( max(real_min.x, real_min.y), real_min.z);
 
 	if (minmax > maxmin)
 	{	
@@ -863,11 +964,12 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	
 	for (int i = 0; i < N_CYLINDERS; i++)
         {
-		d = CylinderIntersect( cylinders[i].radius, cylinders[i].height, cylinders[i].position, r );
+		vec3 n;
+		d = CylinderIntersect( cylinders[i].position, cylinders[i].position + vec3(0,30,30), cylinders[i].radius, r, n );
 		if (d < t)
 		{
 			t = d;
-			intersec.normal = normalize( vec3( (r.origin.x + r.direction.x * t) - cylinders[i].position.x, 0.0, (r.origin.z + r.direction.z * t) - cylinders[i].position.z ) );
+			intersec.normal = normalize(n);
 			intersec.emission = cylinders[i].emission;
 			intersec.color = cylinders[i].color;
 			intersec.type = cylinders[i].type;
@@ -892,15 +994,31 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	
 	for (int i = 0; i < N_CONES; i++)
         {
-		d = ConeIntersect( cones[i].radius, cones[i].height, cones[i].position, r );
+		vec3 n;
+		d = ConeIntersect( cones[i].pos0, cones[i].radius0, cones[i].pos1, cones[i].radius1, r, n );
 		if (d < t)
 		{
 			t = d;
-			intersec.normal = normalize( vec3( (r.origin.x + r.direction.x * t) - cones[i].position.x, (cones[i].radius/cones[i].height), (r.origin.z + r.direction.z * t) - cones[i].position.z  ) );
+			intersec.normal = normalize(n);
 			intersec.emission = cones[i].emission;
 			intersec.color = cones[i].color;
 			intersec.type = cones[i].type;
 			intersec.id = CONE_ID;
+		}
+        }
+	
+	for (int i = 0; i < N_CAPSULES; i++)
+        {
+		vec3 n;
+		d = CapsuleIntersect( capsules[i].pos0, capsules[i].radius0, capsules[i].pos1, capsules[i].radius1, r, n );
+		if (d < t)
+		{
+			t = d;
+			intersec.normal = normalize(n);
+			intersec.emission = capsules[i].emission;
+			intersec.color = capsules[i].color;
+			intersec.type = capsules[i].type;
+			intersec.id = CAPSULE_ID;
 		}
         }
 	
@@ -994,7 +1112,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 
 vec3 randomSphereDirection()
 {
-    	vec2 r = vec2(rand(),rand())*TWO_PI;
+	vec2 r = vec2(rand(),rand())*TWO_PI;
 	return vec3(sin(r.x)*vec2(sin(r.y),cos(r.y)),cos(r.x));	
 }
 /*
@@ -1007,21 +1125,21 @@ vec3 randomHemisphereDirection( const vec3 n )
 
 vec3 randomDirectionInSphere()
 {
-    float up = rand() * 2.0 - 1.0; // cos(theta)
-    float over = sqrt(1.0 - up * up); // sin(theta)
-    float around = rand() * TWO_PI;
+	float up = rand() * 2.0 - 1.0; // cos(theta)
+	float over = sqrt(1.0 - up * up); // sin(theta)
+	float around = rand() * TWO_PI;
 
-    return vec3( up, cos(around) * over, sin(around) * over );
+	return vec3( up, cos(around) * over, sin(around) * over );
 }
 */
 vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 {
 	float up = sqrt(rand()); // weighted cos(theta)
-    	float over = sqrt(1.0 - up * up); // sin(theta)
-    	float around = rand() * TWO_PI;
+	float over = sqrt(1.0 - up * up); // sin(theta)
+	float around = rand() * TWO_PI;
 	vec3 u = normalize( cross( abs(nl.x) > 0.1 ? vec3(0, 1, 0) : vec3(1, 0, 0), nl ) );
 	vec3 v = normalize( cross(nl, u) );
-    	return vec3( cos(around) * over * u ) + ( sin(around) * over * v ) + (up * nl);		
+	return vec3( cos(around) * over * u ) + ( sin(around) * over * v ) + (up * nl);		
 }
 
 vec3 computeTransmission(vec3 absorptionCoefficient, float distance) 
@@ -1103,7 +1221,7 @@ vec3 CalculateRadiance( Ray r )
 	
 		// useful data 
 		vec3 n = intersec.normal;
-                vec3 nl = dot(n,r.direction) <= 0.0 ? normalize(n) : normalize(n * -1.0);
+                vec3 nl = dot(n,r.direction) < 0.0 ? normalize(n) : normalize(n * -1.0);
 		vec3 x = r.origin + r.direction * t;
 		float rayDotNormal = max(0.0, dot(-r.direction, nl));
 		
@@ -1130,7 +1248,7 @@ vec3 CalculateRadiance( Ray r )
 			// choose random Diffuse sample vector
 			vec3 d = randomCosWeightedDirectionInHemisphere( nl );
 			//vec3 d = randomHemisphereDirection(nl);
-                	r = Ray( x, normalize(d) );
+			r = Ray( x, normalize(d) );
 			r.origin += nl;
 			mask *= intersec.color;
 			
@@ -1205,7 +1323,7 @@ vec3 CalculateRadiance( Ray r )
 			// Schlick Fresnel approx.
 			float ddn = dot(-r.direction, nl);
 			float nc = 1.0; // IOR of air
-			float nt = 1.4; // IOR of ClearCoat 
+			float nt = 1.5; // IOR of ClearCoat 
 			float R0 = (nc - nt) / (nc + nt);
 			R0 *= R0;
 			float c = 1.0 - ddn;
@@ -1304,7 +1422,7 @@ vec3 CalculateRadiance( Ray r )
 			// Schlick Fresnel approx.
 			float ddn = dot(-r.direction, nl);
 			float nc = 1.0; // IOR of air
-			float nt = 1.2; // IOR of coating (slightly higher than air for polished jade)
+			float nt = 1.3; // IOR of coating (slightly higher than air for polished jade)
 			float R0 = (nc - nt) / (nc + nt);
 			R0 *= R0;
 			float c = 1.0 - ddn;
@@ -1312,13 +1430,13 @@ vec3 CalculateRadiance( Ray r )
 			
 			// choose either specular reflection or translucent subsurface scattering/transmission
 			if( rand() < Re )
-                	{
+			{
 				r = Ray( x, reflect(r.direction, nl) );
 				r.origin += nl;
 				bounceIsSpecular = true;
 				continue;
-                	}
-				          	       // 0.2, 0.0, 0.1 polished jade
+			}
+			
 			vec3 transColorCoefficient = vec3(0.2, 0.0, 0.1);
 			float translucentDensity = 0.1;
 			float scatteringDistance = -log(rand()) / translucentDensity;
@@ -1374,31 +1492,32 @@ void SetupScene(void)
 	spheres[3] = Sphere(1000.0, vec3(  0.0, 1000.0,  0.0), z, vec3(0.9, 0.9, 0.9),       CHECK);//Checkered Floor
         spheres[4] = Sphere(  16.5, vec3(-25.0,   16.9,  5.0), z, vec3(1.0, 1.0, 1.0),        SPEC);//Mirror sphere
         spheres[5] = Sphere(  15.0, vec3( 32.0,   16.2, 30.0), z, vec3(1.0, 1.0, 1.0),        REFR);//Glass sphere //0.6,0.9,0.7
-        //spheres[6] = Sphere(  10.0, vec3(-30.0,   12.6, 50.0), z, vec3(0.5, 0.5, 0.5),      VOLUME);//Volume-filled sphere
         spheres[6] = Sphere(  10.0, vec3( 50.0,   15.0,-90.0), z,                   z, TRANSLUCENT);//blue translucent sphere
         spheres[7] = Sphere(   9.0, vec3(  5.0,   10.0, 35.0), z,                   z,     SPECSUB);//shiny covering over sub-surface material
 	
 	ellipsoids[0] = Ellipsoid(  vec3(30,40,16), vec3(90,5,-20),    z, vec3(1.0, 0.765557, 0.336057), SPEC);//metallic ellipsoid
 	
-	cylinders[0] = Cylinder( 15.0, 30.0, vec3(-80,2,-50), z, vec3(0.6,0.01,0.01), REFR);//red glass Cylinder
+	cylinders[0] = Cylinder( 15.0, 30.0, vec3(-70,7,-80), z, vec3(0.7,0.01,0.01), REFR);//red glass Cylinder
 	closedCylinders[0] = ClosedCylinder( 8.0, vec3(-40,10,30), vec3(-90,30,30), z, vec3(1.0,1.0,1.0), COAT);// ClosedCylinder
 	
-	cones[0] = Cone( 20.0, 20.0, vec3(0,0,0), z, vec3(0.01,0.01,0.9), COAT);//blue Cone
+	cones[0] = Cone( vec3(0,0,0), 15.0, vec3(0,20,0), 0.0, z, vec3(0.01,0.1,0.5), SPEC);//blue Cone
 	
-	disks[0]   = Disk( 190.0, vec3(-100.0,18.0,-10.0), vec3( 1.0,-1.0,0.0 ), z, vec3(0.9,0.01,0.01), DIFF);//RedDisk Left
+	capsules[0] = Capsule( vec3(80,13.8,15), 10.0, vec3(110,16.4,15), 10.0, z, vec3(0.1,0.1,0.1), COAT);//gray Capsule
 	
-	boxes[0]  = Box( vec3(0.0,11.0,-40.0), vec3(50.0,18.0,-110.0), z, vec3(0.2,0.9,0.7), REFR);//Glass Box
-	boxes[1]  = Box( vec3(6.0,13.0,-46.0), vec3(44.0,16.0,-104.0), z, vec3(0.0,0.0,0.0), DIFF);//Diffuse Box
+	disks[0] = Disk( 190.0, vec3(-100.0,18.0,-10.0), vec3( 1.0,-1.0,0.0 ), z, vec3(0.9,0.01,0.01), DIFF);//RedDisk Left
+	
+	boxes[0] = Box( vec3(0.0,11.0,-40.0), vec3(50.0,18.0,-110.0), z, vec3(0.2,0.9,0.7), REFR);//Glass Box
+	boxes[1] = Box( vec3(6.0,13.0,-46.0), vec3(44.0,16.0,-104.0), z, vec3(0.0,0.0,0.0), DIFF);//Diffuse Box
 	
 	/*
-	planes[0]  = Plane( vec4( -1.0,-0.1,0.0,800.0), z, vec3(0.9,0.9,0.9), DIFF);//WhitePlane Right Wall
-	planes[1]  = Plane( vec4(  1.0,-0.1,0.0,800.0), z, vec3(0.9,0.0,0.9), DIFF);//MagentaPlane Left Wall
-	planes[2]  = Plane( vec4(  0.0,-0.1,1.0,800.0), z, vec3(0.9,0.9,0.9), DIFF);//WhitePlane Back Wall
-	planes[3]  = Plane( vec4( 0.0,-0.1,-1.0,800.0), z, vec3(0.0,0.9,0.9), DIFF);//CyanPlane Front Wall
+	planes[0] = Plane( vec4( -1.0,-0.1,0.0,800.0), z, vec3(0.9,0.9,0.9), DIFF);//WhitePlane Right Wall
+	planes[1] = Plane( vec4(  1.0,-0.1,0.0,800.0), z, vec3(0.9,0.0,0.9), DIFF);//MagentaPlane Left Wall
+	planes[2] = Plane( vec4(  0.0,-0.1,1.0,800.0), z, vec3(0.9,0.9,0.9), DIFF);//WhitePlane Back Wall
+	planes[3] = Plane( vec4( 0.0,-0.1,-1.0,800.0), z, vec3(0.0,0.9,0.9), DIFF);//CyanPlane Front Wall
 	
 	quads[0] = Quad( vec3(0.0,0.0,1.0), vec3( -150.0,40.0,-50.0), vec3( -100.0,40.0,-50.0), vec3( -100.0,90.0,-50.0 ), vec3( -150.0,90.0,-50.0 ), z, vec3(0.0,0.0,0.9), DIFF);//Blue Quad
 	
-	disks[1]   = Disk( 16.5 * 16.5, vec3( 30.0,-10.0,-180.0), vec3( -1.0,0.0,0.3 ), L3, z, LIGHT);//DiskLight 
+	disks[1] = Disk( 16.5 * 16.5, vec3( 30.0,-10.0,-180.0), vec3( -1.0,0.0,0.3 ), L3, z, LIGHT);//DiskLight 
 	
 	triangles[0] = Triangle( vec3(0.0,0.0,1.0), vec3( 0.0,30.0,-50.0), vec3( 20.0,60.0,-50.0), vec3( -20.0,60.0,-50.0 ), z, vec3(0.0,0.9,0.0), DIFF);//Green Triangle
 	*/
@@ -1411,9 +1530,8 @@ void main( void )
 {
 
 	vec3 camPos     = vec3( uCameraMatrix[3][0],  uCameraMatrix[3][1],  uCameraMatrix[3][2]);
-	
-    	vec3 camRight   = vec3( uCameraMatrix[0][0],  uCameraMatrix[0][1],  uCameraMatrix[0][2]);
-    	vec3 camUp      = vec3( uCameraMatrix[1][0],  uCameraMatrix[1][1],  uCameraMatrix[1][2]);
+	vec3 camRight   = vec3( uCameraMatrix[0][0],  uCameraMatrix[0][1],  uCameraMatrix[0][2]);
+	vec3 camUp      = vec3( uCameraMatrix[1][0],  uCameraMatrix[1][1],  uCameraMatrix[1][2]);
 	vec3 camForward = vec3(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]);
 	
 	// seed for rand() function
@@ -1438,20 +1556,20 @@ void main( void )
 	// depth of field
 	float aperture    =   0.3; // 0.5
 	float focalLength = 100.0;
-    	vec3 focalPoint = focalLength * rayDir;
-	  
-    	// pick random point on aperture
-    	float randomAngle = rand() * TWO_PI;
-    	float randomRadius = rand() * aperture;
-    	vec3  randomAperturePos = ( cos(randomAngle) * camRight + sin(randomAngle) * camUp ) * randomRadius;
-    
-    	// point on aperture to focal point
-    	vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
-    
+	vec3 focalPoint = focalLength * rayDir;
+	
+	// pick random point on aperture
+	float randomAngle = rand() * TWO_PI;
+	float randomRadius = rand() * aperture;
+	vec3  randomAperturePos = ( cos(randomAngle) * camRight + sin(randomAngle) * camUp ) * randomRadius;
+	
+	// point on aperture to focal point
+	vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
+	
 	Ray ray = Ray( camPos + randomAperturePos , finalRayDir );
-
+	
 	SetupScene();
-	     		
+	
 	// perform path tracing and get resulting pixel color
 	vec3 pixelColor = CalculateRadiance( ray );
 	
