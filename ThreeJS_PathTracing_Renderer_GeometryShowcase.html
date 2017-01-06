@@ -435,7 +435,7 @@ vec4 iCylinder( vec3 ro, vec3 rd, vec3 pa, vec3 pb, float ra )
 float ConeIntersect( vec3 p0, float r0, vec3 p1, float r1, Ray r, out vec3 n )
 //----------------------------------------------------------------------------   
 {
-	r0 += 0.001;
+	r0 += 0.1;
 	float t = INFINITY;
 	vec3 locX;
 	vec3 locY;
@@ -1502,7 +1502,7 @@ void SetupScene(void)
 	
 	cones[0] = Cone( vec3(0,0,0), 15.0, vec3(0,20,0), 0.0, z, vec3(0.01,0.1,0.5), SPEC);//blue Cone
 	
-	capsules[0] = Capsule( vec3(80,13.8,15), 10.0, vec3(110,16.4,15), 10.0, z, vec3(0.1,0.1,0.1), COAT);//gray Capsule
+	capsules[0] = Capsule( vec3(80,13.8,15), 10.0, vec3(110,16.4,15), 10.0, z, vec3(0.3,0.3,0.3), COAT);//gray Capsule
 	
 	disks[0] = Disk( 190.0, vec3(-100.0,18.0,-10.0), vec3( 1.0,-1.0,0.0 ), z, vec3(0.9,0.01,0.01), DIFF);//RedDisk Left
 	
@@ -1686,7 +1686,11 @@ void main( void )
 			
 			// if on mobile device, unpause the app because there is no ESC key and no mouse capture to do
 			if ( !mouseControl )
+			{
+				instructionsElement.innerHTML = '';
 				isPaused = false;
+			}
+				
 			
 			if (mouseControl) {
 	
