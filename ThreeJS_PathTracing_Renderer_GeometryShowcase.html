@@ -273,7 +273,6 @@ float SphereIntersect( float rad, vec3 pos, Ray r )
 //-----------------------------------------------------------------------
 {
 	vec3 op = pos - r.origin;
-	//float eps = 0.0;
 	float b = dot(op, r.direction);
 	float det = b * b - dot(op,op) + rad * rad;
 	if (det < 0.0)
@@ -295,7 +294,7 @@ float SphereIntersect( float rad, vec3 pos, Ray r )
 float EllipsoidIntersect( vec3 radii, vec3 pos, Ray r )
 //-----------------------------------------------------------------------
 {
-	float eps = 0.0001;
+	//float eps = 0.0001;
 	vec3 oc = r.origin - pos;
 	vec3 oc2 = oc*oc;
 	vec3 ocrd = oc*r.direction;
@@ -313,11 +312,11 @@ float EllipsoidIntersect( vec3 radii, vec3 pos, Ray r )
 		
 	det = sqrt(det);
 	float t1 = (-b - det) / (2.0 * a);
-	if( t1 > eps )
+	if( t1 > 0.0 )
 		return t1;
 		
 	float t2 = (-b + det) / (2.0 * a);
-	if( t2 > eps )
+	if( t2 > 0.0 )
 		return t2;
 	
 	return INFINITY;	
@@ -358,32 +357,29 @@ float CylinderIntersect( vec3 p0, vec3 p1, float rad, Ray r, out vec3 n )
 	vec3 ip;
 	vec3 lp;
 	float ct;
-	float d;
-
-	d=t1;
-	if (d > 0.0)
+	
+	if (t1 > 0.0)
 	{
-		ip=r.origin+r.direction*d;
+		ip=r.origin+r.direction*t1;
 		lp=ip-p0;
 		ct=dot(lp,dpt);
 		if((ct>0.0)&&(ct<1.0))
 		{
 			t = t1;
-		     	n=((p0+dp*ct)-ip);
+		     	n=(p0+dp*ct)-ip;
 		}
 
 	}
 
-	d=t0;
-	if (d > 0.0)
+	if (t0 > 0.0)
 	{
-		ip=r.origin+r.direction*d;
+		ip=r.origin+r.direction*t0;
 		lp=ip-p0;
 		ct=dot(lp,dpt);
 		if((ct>0.0)&&(ct<1.0))
 		{
 			t = t0;
-			n=(ip-(p0+dp*ct));
+			n=ip-(p0+dp*ct);
 		}
 
 	}
@@ -423,7 +419,6 @@ vec4 iCylinder( vec3 ro, vec3 rd, vec3 pa, vec3 pb, float ra )
 	float sy = sign(y);
 	float tp = (sy*ch - caoc)/card;
 	if( tp>t1 && tp<t2 )
-	//if( abs(b+a*tp)<h )
 	{
 		return vec4( tp, ca*sy );
 	}
@@ -507,7 +502,6 @@ float ConeIntersect( vec3 p0, float r0, vec3 p1, float r1, Ray r, out vec3 n )
 		n.z=-pt1.z/abs(pt1.z);
 		n=normalize(n);
 		n=tm*-n;
-		//n=normalize(n);
 	}
 
 	if(t0>0.0 && pt0.z>r1/r0 && pt0.z<1.0)
@@ -519,7 +513,6 @@ float ConeIntersect( vec3 p0, float r0, vec3 p1, float r1, Ray r, out vec3 n )
 		n.z=-pt0.z/abs(pt0.z);
 		n=normalize(n);
 		n=tm*n;
-		//n=normalize(n);
 	}
 
 	return t;	
@@ -1500,9 +1493,9 @@ void SetupScene(void)
 	cylinders[0] = Cylinder( 15.0, 30.0, vec3(-70,7,-80), z, vec3(0.7,0.01,0.01), REFR);//red glass Cylinder
 	closedCylinders[0] = ClosedCylinder( 8.0, vec3(-40,10,30), vec3(-90,30,30), z, vec3(1.0,1.0,1.0), COAT);// ClosedCylinder
 	
-	cones[0] = Cone( vec3(0,0,0), 15.0, vec3(0,20,0), 0.0, z, vec3(0.01,0.1,0.5), SPEC);//blue Cone
+	cones[0] = Cone( vec3(0,20,0), 15.0, vec3(0,0,0), 0.0, z, vec3(0.01,0.1,0.5), REFR);//blue Cone
 	
-	capsules[0] = Capsule( vec3(80,13.8,15), 10.0, vec3(110,16.4,15), 10.0, z, vec3(0.3,0.3,0.3), COAT);//gray Capsule
+	capsules[0] = Capsule( vec3(80,13,15), 10.0, vec3(110,15.8,15), 10.0, z, vec3(0.6,0.6,0.6), COAT);//gray Capsule
 	
 	disks[0] = Disk( 190.0, vec3(-100.0,18.0,-10.0), vec3( 1.0,-1.0,0.0 ), z, vec3(0.9,0.01,0.01), DIFF);//RedDisk Left
 	
@@ -1612,7 +1605,7 @@ void main( void )
 			var renderer, clock;
 			var frameTime, elapsedTime;
 			var fovScale;
-			var pixelRatio = window.devicePixelRatio * 0.6;
+			var pixelRatio = window.devicePixelRatio * 0.5;
 			var TWO_PI = Math.PI * 2;
 			var randomVector = new THREE.Vector3();
 			var sampleCounter = 1.0;
