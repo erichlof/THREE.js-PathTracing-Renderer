@@ -1146,13 +1146,14 @@ vec3 calcDirectLighting(vec3 mask, vec3 x, vec3 nl, Sphere light)
 	Intersection shadowIntersec;
 	
 	// cast shadow ray from intersection point
-	vec3 ld = light.position + (randomSphereDirection() * light.radius);
+	vec3 ld = light.position + (normalize(randomSphereDirection()) * (light.radius*0.8));
 	vec3 srDir = normalize(ld - x);
-	if( dot(srDir, nl) < 0.01 )
-		return dirLight;
+	float srDotNl = max(0.001, dot(srDir, nl));
+	//if( srDotNl < 0.01 )
+	//	return dirLight;
 		
 	Ray shadowRay = Ray(x, srDir);
-	shadowRay.origin += nl;
+	shadowRay.origin += srDir;
 	float st = SceneIntersect(shadowRay, shadowIntersec);
 	if ( shadowIntersec.type == LIGHT )
 	{
@@ -1161,7 +1162,7 @@ vec3 calcDirectLighting(vec3 mask, vec3 x, vec3 nl, Sphere light)
 		float d2 = dot(d,d);
 		float cos_a_max = sqrt(1. - clamp( r2 / d2, 0., 1.));
                 float weight = 2. * (1. - cos_a_max);
-                dirLight = mask * light.emission * weight * max(0.01, dot(shadowRay.direction, nl));
+                dirLight = mask * light.emission * weight * srDotNl;
 	}
 	
 	return dirLight;
@@ -1179,24 +1180,30 @@ vec3 CalculateRadiance( Ray r )
 	Sphere lightChoice;
 	
 	float randChoose = rand();
-		if (randChoose < 0.33)
-			lightChoice = spheres[0];
-		else if (randChoose < 0.66)
-			lightChoice = spheres[1];
-		else lightChoice = spheres[2];
+	if (randChoose < 0.33)
+		lightChoice = spheres[0];
+	else if (randChoose < 0.66)
+		lightChoice = spheres[1];
+	else lightChoice = spheres[2];
 	
         for (int depth = 0; depth < 4; depth++)
 	{
-		
-		
+		// Russian Roulette
+		if(depth > 0)
+		{
+			if (rand() > 0.5)
+				break;
+			else mask *= 2.0;
+		}
 	
 		float t = SceneIntersect(r, intersec);
-		
+		/*
+		//not used in this scene because we are inside a huge sphere - no rays can escape
 		if (t == INFINITY)
 		{
                         break;
 		}
-		
+		*/
 		
 		// if we reached something bright, don't spawn any more rays
 		if (intersec.type == LIGHT)
@@ -1211,22 +1218,13 @@ vec3 CalculateRadiance( Ray r )
 		}
 		
 		
-	
 		// useful data 
 		vec3 n = intersec.normal;
                 vec3 nl = dot(n,r.direction) < 0.0 ? normalize(n) : normalize(n * -1.0);
 		vec3 x = r.origin + r.direction * t;
 		float rayDotNormal = max(0.0, dot(-r.direction, nl));
 		
-			/*
-			// if this is the last bounce,
-			// directly sample the light source
-			if (depth == 3)
-			{
-				accumCol += calcDirectLighting(mask, x, nl, lightChoice);
-			}
-			*/
-		    
+		
                 if (intersec.type == DIFF || intersec.type == CHECK) // Ideal DIFFUSE reflection
                 {
 			
@@ -1237,25 +1235,25 @@ vec3 CalculateRadiance( Ray r )
 				intersec.color *= 0.5;					
 			}
 			
+			mask *= intersec.color;
+			accumCol += calcDirectLighting(mask, x, nl, lightChoice);
 			
 			// choose random Diffuse sample vector
 			vec3 d = randomCosWeightedDirectionInHemisphere( nl );
 			//vec3 d = randomHemisphereDirection(nl);
 			r = Ray( x, normalize(d) );
-			r.origin += nl;
-			mask *= intersec.color;
-			
-			accumCol += calcDirectLighting(mask, x, nl, lightChoice);
-			
+			r.origin += r.direction;
+			mask *= max(0.01, dot(r.direction, nl));
 			bounceIsSpecular = false;
 			continue;	
                 }
 		
                 if (intersec.type == SPEC)  // Ideal SPECULAR reflection
                 {
+			mask *= intersec.color;
+			
 			r = Ray( x, reflect(r.direction, nl) );
 			r.origin += nl;
-			mask *= intersec.color;
 			bounceIsSpecular = true;
                         continue;
                 }
@@ -1299,11 +1297,12 @@ vec3 CalculateRadiance( Ray r )
 			}
 			else
 			{
+				mask *= intersec.color;
+				
 			    	float nnt = nc / nt;
 			    	vec3 tdir = refract(r.direction, nl, nnt);
 			    	r = Ray(x, normalize(tdir));
 			    	r.origin += r.direction;
-			    	mask *= intersec.color;
 				bounceIsSpecular = true;
 			    	continue;
 			}
@@ -1337,12 +1336,12 @@ vec3 CalculateRadiance( Ray r )
 			}
 			else
 			{
-				r = Ray( x, normalize(d) );
-				r.origin += nl;
 				mask *= intersec.color;
+				accumCol += calcDirectLighting(mask, x, nl, lightChoice);
 				
-				accumCol += calcDirectLighting(mask, x, n, lightChoice);
-				
+				r = Ray( x, normalize(d) );
+				r.origin += r.direction;
+				//mask *= max(0.01, dot(r.direction, nl));
 				bounceIsSpecular = false;
 				continue;
 			}
@@ -1355,26 +1354,27 @@ vec3 CalculateRadiance( Ray r )
 			float scatteringDistance = -log( rand() ) / translucentDensity;
 			if (scatteringDistance > t) 
 			{
+				mask *= computeTransmission(vec3(1.0, 0.1, 0.0), t);
+				accumCol += calcDirectLighting(mask, x, nl, lightChoice);
+				
 				x = x + r.direction * scatteringDistance;
 				r = Ray( x, r.direction ); //transmission
 				r.origin += r.direction;
-				mask *= computeTransmission(vec3(1.0, 0.1, 0.0), t);
-				//bounceIsSpecular = false;
+				//bounceIsSpecular = false; // so lights can be seen through thin material
 				continue;
 			}
 			else
 			{
-				// Scatter the ray:
-				x = x + r.direction * scatteringDistance;
-				vec3 d = randomSphereDirection(); // Isotropic scattering
-				//vec3 d = randomCosWeightedDirectionInHemisphere( n ); // weighted scattering (reflects light better)
-				r = Ray( x, normalize(d) );
-				r.origin += r.direction;
 				// Compute how much light was absorbed along the ray before it was scattered:
 				mask *= computeTransmission(vec3(1.0, 0.1, 0.0), scatteringDistance);
-					
 				accumCol += calcDirectLighting(mask, x, nl, lightChoice);
 				
+				// Scatter the ray:
+				x = x + r.direction * scatteringDistance;
+				//vec3 d = randomSphereDirection(); // Isotropic scattering
+				vec3 d = randomCosWeightedDirectionInHemisphere( nl ); // weighted scattering (reflects light better)
+				r = Ray( x, normalize(d) );
+				r.origin += r.direction;
 				bounceIsSpecular = false;
 				continue;
 			}	
@@ -1384,26 +1384,26 @@ vec3 CalculateRadiance( Ray r )
 		if (intersec.type == VOLUME)  // Volume filled with participating medium (i.e. smoke, fog, dust, etc.)
 		{
                 
-			float density = 0.7;
+			float density = 0.5;
 			if (rand() > density)
 			{
 				// transmission
 				r = Ray( x, r.direction );
 				r.origin += r.direction;
-				//bounceIsSpecular = false;
+				//bounceIsSpecular = false; // so lights can be seen through haze
 				continue;
 			}
 			else
 			{
-				// scattering
-				// choose cosWeighted random Diffuse reflection vector for participating medium
-				vec3 d = randomSphereDirection(); // true isotropic scattering
-				r = Ray( x, normalize(d) );
-				r.origin += nl;
 				mask *= intersec.color;
-				
 				accumCol += calcDirectLighting(mask, x, nl, lightChoice);
 				
+				// scattering
+				// choose cosWeighted random Diffuse reflection vector for participating medium
+				//vec3 d = randomSphereDirection(); // true isotropic scattering
+				vec3 d = randomCosWeightedDirectionInHemisphere( nl ); // weighted scattering (reflects light better)
+				r = Ray( x, normalize(d) );
+				r.origin += r.direction;
 				bounceIsSpecular = false;
 				continue;
 			}
@@ -1436,31 +1436,26 @@ vec3 CalculateRadiance( Ray r )
 			
 			if (scatteringDistance < t) 
 			{
-				// Scatter the ray:
-				x = x + r.direction * scatteringDistance;
-				vec3 d = randomSphereDirection(); // true Isotropic scattering
-				r = Ray( x, normalize(d) );
-				r.origin += r.direction;
 				// Compute how much light was absorbed along the ray before it was scattered:
 				mask *= computeTransmission(transColorCoefficient, scatteringDistance);
-					
-				accumCol += calcDirectLighting(mask, x, nl, lightChoice);
-				
-				bounceIsSpecular = false;
-				continue;
 			}
 			else
 			{
-				x = x + r.direction * scatteringDistance;
-				vec3 d = randomSphereDirection(); 
-				r = Ray( x, normalize(d) );
-				r.origin += r.direction;
 				mask *= computeTransmission(transColorCoefficient, t); // transmission
-				accumCol += calcDirectLighting(mask, x, nl, lightChoice);
-				//bounceIsSpecular = false;
-				continue;
 			}
-		
+			
+			accumCol += calcDirectLighting(mask, x, nl, lightChoice);
+			
+			
+			x = x + r.direction * scatteringDistance;
+			//vec3 d = randomSphereDirection(); // true Isotropic scattering
+			vec3 d = randomCosWeightedDirectionInHemisphere( nl );
+			r = Ray( x, normalize(d) );
+			r.origin += r.direction;
+			//mask *= max(0.01, dot(r.direction, nl));
+			bounceIsSpecular = false;
+			continue;
+				
                 } // end if (intersec.type == SPECSUB)
 		
 		
@@ -1478,20 +1473,20 @@ void SetupScene(void)
 	vec3 L2 = vec3(1.0, 0.8, 0.2) * 10.0;// Yellow light
 	vec3 L3 = vec3(0.1, 0.7, 1.0) * 10.0;// Blue light
 		
-        spheres[0] = Sphere( 50.0, vec3(-400.0, 900.0, 200.0), L1, z, LIGHT);//spherical white Light1 
+        spheres[0] = Sphere(150.0, vec3(-400.0, 900.0, 200.0), L1, z, LIGHT);//spherical white Light1 
 	spheres[1] = Sphere(100.0, vec3(300.0, 400.0, -300.0), L2, z, LIGHT);//spherical yellow Light2
 	spheres[2] = Sphere( 50.0, vec3(500.0, 250.0, -100.0), L3, z, LIGHT);//spherical blue Light3
 	
 	spheres[3] = Sphere(1000.0, vec3(  0.0, 1000.0,  0.0), z, vec3(0.9, 0.9, 0.9),       CHECK);//Checkered Floor
         spheres[4] = Sphere(  16.5, vec3(-25.0,   16.9,  5.0), z, vec3(1.0, 1.0, 1.0),        SPEC);//Mirror sphere
-        spheres[5] = Sphere(  15.0, vec3( 32.0,   16.2, 30.0), z, vec3(1.0, 1.0, 1.0),        REFR);//Glass sphere //0.6,0.9,0.7
-        spheres[6] = Sphere(  10.0, vec3( 50.0,   15.0,-90.0), z,                   z, TRANSLUCENT);//blue translucent sphere
-        spheres[7] = Sphere(   9.0, vec3(  5.0,   10.0, 35.0), z,                   z,     SPECSUB);//shiny covering over sub-surface material
+        spheres[5] = Sphere(  15.0, vec3( 32.0,   16.2, 30.0), z, vec3(1.0, 1.0, 1.0),        REFR);//Glass sphere
+        spheres[6] = Sphere(  10.0, vec3( 50.0,   15.0,-90.0), z,                   z, TRANSLUCENT);//light blue translucent sphere
+        spheres[7] = Sphere(   9.0, vec3(  5.0,   10.0, 35.0), z,                   z,     SPECSUB);//polished jade sphere
 	
-	ellipsoids[0] = Ellipsoid(  vec3(30,40,16), vec3(90,5,-20),    z, vec3(1.0, 0.765557, 0.336057), SPEC);//metallic ellipsoid
+	ellipsoids[0] = Ellipsoid(  vec3(30,40,16), vec3(90,5,-20), z, vec3(1.0, 0.765557, 0.336057), SPEC);//metallic gold ellipsoid
 	
 	cylinders[0] = Cylinder( 15.0, 30.0, vec3(-70,7,-80), z, vec3(0.7,0.01,0.01), REFR);//red glass Cylinder
-	closedCylinders[0] = ClosedCylinder( 8.0, vec3(-40,10,30), vec3(-90,30,30), z, vec3(1.0,1.0,1.0), COAT);// ClosedCylinder
+	closedCylinders[0] = ClosedCylinder( 8.0, vec3(-40,10,30), vec3(-90,30,30), z, vec3(1.0,1.0,1.0), COAT);// white ClosedCylinder
 	
 	cones[0] = Cone( vec3(1,20,-12), 15.0, vec3(1,0,-12), 0.0, z, vec3(0.01,0.1,0.5), REFR);//blue Cone
 	
