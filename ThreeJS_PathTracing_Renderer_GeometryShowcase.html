@@ -1148,7 +1148,7 @@ vec3 calcDirectLighting(vec3 mask, vec3 x, vec3 nl, Sphere light)
 	//	return dirLight;
 		
 	Ray shadowRay = Ray(x, srDir);
-	shadowRay.origin += srDir;
+	shadowRay.origin += nl;
 	float st = SceneIntersect(shadowRay, shadowIntersec);
 	if ( shadowIntersec.type == LIGHT )
 	{
@@ -1185,13 +1185,15 @@ vec3 CalculateRadiance( Ray r )
 	
 	for (int depth = 0; depth < 4; depth++)
 	{
+		/*
 		// Russian Roulette
-		if(depth > 0)
+		if(intersec.type == DIFF)
 		{
 			if (rand() > 0.5)
 				break;
 			else mask *= 2.0;
 		}
+		*/
 		
 		float t = SceneIntersect(r, intersec);
 		/*
