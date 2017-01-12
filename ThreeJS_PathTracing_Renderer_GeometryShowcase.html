@@ -804,7 +804,7 @@ float QuadIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 v3, vec3 normal, Ray r )
 */
 
 //----------------------------------------------------------------------------
-float BoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r )
+float BoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r, out vec3 normal )
 //----------------------------------------------------------------------------
 {
 	vec3 invDir = 1.0 / r.direction;
@@ -818,15 +818,25 @@ float BoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r )
 	float maxmin = max( max(real_min.x, real_min.y), real_min.z);
 	
 	if (minmax > maxmin)
-	{	
+	{
+		
 		if (maxmin > 0.0) // if we are outside the box
+		{
+			normal = -sign(r.direction) * step(real_min.yzx, real_min) * step(real_min.zxy, real_min);
 			return maxmin;	
+		}
+		
 		else if (minmax > 0.0) // else if we are inside the box
-			return minmax;	
+		{
+			normal = -sign(r.direction) * step(real_max, real_max.yzx) * step(real_max, real_max.zxy);
+			return minmax;
+		}
+				
 	}
 	
 	return INFINITY;
 }
+
 
 //-----------------------------------------------------------------------
 float SceneIntersect( Ray r, inout Intersection intersec )
@@ -834,6 +844,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 {
 	float d;
 	float t = INFINITY;
+	vec3 n;
 	
         for (int i = 0; i < N_SPHERES; i++)
         {
@@ -912,24 +923,11 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	for (int i = 0; i < N_BOXES; i++)
         {
 	
-		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, r );
+		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, r, n );
 		if (d < t)
 		{
 			t = d;
-			vec3 point = r.origin + r.direction * t;
-			vec3 minCorner = boxes[i].minCorner;
-			vec3 maxCorner = boxes[i].maxCorner;
-			vec3 normal;
-			float epsilon = 0.001;
-			
-			if (abs(minCorner.x - point.x) < epsilon) normal = vec3(-1, 0, 0);
-			else if (abs(maxCorner.x - point.x) < epsilon) normal = vec3(1, 0, 0);
-			else if (abs(minCorner.y - point.y) < epsilon) normal = vec3(0, -1, 0);
-			else if (abs(maxCorner.y - point.y) < epsilon) normal = vec3(0, 1, 0);
-			else if (abs(minCorner.z - point.z) < epsilon) normal = vec3(0, 0, -1);
-			else normal = vec3(0, 0, 1);
-			
-			intersec.normal = normal;
+			intersec.normal = normalize(n);
 			intersec.emission = boxes[i].emission;
 			intersec.color = boxes[i].color;
 			intersec.type = boxes[i].type;
@@ -953,7 +951,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	
 	for (int i = 0; i < N_CYLINDERS; i++)
         {
-		vec3 n;
+		//vec3 n;
 		d = CylinderIntersect( cylinders[i].position, cylinders[i].position + vec3(0,30,30), cylinders[i].radius, r, n );
 		if (d < t)
 		{
@@ -983,7 +981,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	
 	for (int i = 0; i < N_CONES; i++)
         {
-		vec3 n;
+		//vec3 n;
 		d = ConeIntersect( cones[i].pos0, cones[i].radius0, cones[i].pos1, cones[i].radius1, r, n );
 		if (d < t)
 		{
@@ -998,7 +996,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	
 	for (int i = 0; i < N_CAPSULES; i++)
         {
-		vec3 n;
+		//vec3 n;
 		d = CapsuleIntersect( capsules[i].pos0, capsules[i].radius0, capsules[i].pos1, capsules[i].radius1, r, n );
 		if (d < t)
 		{
@@ -1013,26 +1011,11 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	
 	/*
 	// DEBUG AABB Bounding Box intersection
-	float tBox = BoxIntersect(uMeshBBox_min, uMeshBBox_max, r);
+	float tBox = BoxIntersect(uMeshBBox_min, uMeshBBox_max, r, n);
 	if ( tBox < t )
 	{
-		t = tBox;
-			vec3 point = r.origin + r.direction * t;
-			vec3 minCorner = uMeshBBox_min;
-			vec3 maxCorner = uMeshBBox_max;
-			vec3 normal;
-			float epsilon = 0.001;
-			
-			if (abs(minCorner.x - point.x) < epsilon) normal = vec3(-1, 0, 0);
-			else if (abs(maxCorner.x - point.x) < epsilon) normal = vec3(1, 0, 0);
-			else if (abs(minCorner.y - point.y) < epsilon) normal = vec3(0, -1, 0);
-			else if (abs(maxCorner.y - point.y) < epsilon) normal = vec3(0, 1, 0);
-			else if (abs(minCorner.z - point.z) < epsilon) normal = vec3(0, 0, -1);
-			else normal = vec3(0, 0, 1);
-			
-			
-			intersec.normal = normal;
-	
+		t = tBox;	
+		intersec.normal = normalize(n);
 		intersec.emission = vec3(0);
 		intersec.color = vec3(1,0,1);
 		intersec.type = DIFF;
