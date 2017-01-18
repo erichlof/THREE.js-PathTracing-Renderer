@@ -189,6 +189,7 @@ varying vec2 vUv;
 #define FOUR_PI          12.5663706143591729
 #define ONE_OVER_FOUR_PI 0.07957747154594767
 #define PI_OVER_TWO      1.57079632679489662
+#define ONE_OVER_THREE   0.33333333333333333
 #define E                2.71828182845904524
 #define INFINITY         1000000.0
 
@@ -203,7 +204,8 @@ varying vec2 vUv;
 #define CLOSEDCYLINDER_ID 8
 #define CONE_ID 9
 #define CAPSULE_ID 10
-#define OBJ_TRIANGLE_ID 11
+#define TORUS_ID 11
+#define OBJ_TRIANGLE_ID 12
 
 #define N_SPHERES 8
 #define N_PLANES 1
@@ -216,6 +218,7 @@ varying vec2 vUv;
 #define N_CLOSEDCYLINDERS 1
 #define N_CONES 1
 #define N_CAPSULES 1
+#define N_TORII 1
 
 #define LIGHT 0
 #define DIFF 1
@@ -246,6 +249,7 @@ struct Cylinder { float radius; float height; vec3 position; vec3 emission; vec3
 struct ClosedCylinder { float radius; vec3 cap1pos; vec3 cap2pos; vec3 emission; vec3 color; int type; };
 struct Cone { vec3 pos0; float radius0; vec3 pos1; float radius1; vec3 emission; vec3 color; int type; };
 struct Capsule { vec3 pos0; float radius0; vec3 pos1; float radius1; vec3 emission; vec3 color; int type; };
+struct Torus { vec3 pos; float radius0; float radius1; vec3 emission; vec3 color; int type; };
 //struct Plane { vec4 pla; vec3 emission; vec3 color; int type; };
 struct Disk { float radiusSq; vec3 pos; vec3 normal; vec3 emission; vec3 color; int type; };
 //struct Triangle { vec3 normal; vec3 v0; vec3 v1; vec3 v2; vec3 emission; vec3 color; int type; };
@@ -259,6 +263,7 @@ Cylinder cylinders[N_CYLINDERS];
 ClosedCylinder closedCylinders[N_CLOSEDCYLINDERS];
 Cone cones[N_CONES];
 Capsule capsules[N_CAPSULES];
+Torus torii[N_TORII];
 //Plane planes[N_PLANES];
 Disk disks[N_DISKS];
 //Triangle triangles[N_TRIANGLES];
@@ -556,6 +561,90 @@ float CapsuleIntersect( vec3 p0, float r0, vec3 p1, float r1, Ray r, out vec3 n 
 	}
 	    
 	return t0;
+}
+
+//-----------------------------------------------------------------------
+float TorusIntersect( vec3 pos, float rad0, float rad1, Ray ray )
+//-----------------------------------------------------------------------
+{
+	vec3 rO = ray.origin;
+	vec3 rD = ray.direction;
+	
+	float Ra2 = rad0*rad0;
+	float ra2 = rad1*rad1;
+	
+	float m = dot(rO,rO);
+	float n = dot(rO,rD);
+		
+	float k = (m - ra2 - Ra2) * 0.5;
+	float a = n;
+	float b = n*n + Ra2*rD.z*rD.z + k;
+	float c = k*n + Ra2*rO.z*rD.z;
+	float d = k*k + Ra2*rO.z*rO.z - Ra2*ra2;
+	
+	float a2 = a * a;
+	float p = -3.0*a2     + 2.0*b;
+	float q =  2.0*a2*a   - 2.0*a*b   + 2.0*c;
+	float r = -3.0*a2*a2 + 4.0*a2*b - 8.0*a*c + 4.0*d;
+	p *= ONE_OVER_THREE;
+	r *= ONE_OVER_THREE;
+	float p2 = p * p;
+	float Q = p2 + r;
+	float R = 3.0*r*p - p2*p - q*q;
+	
+	float h = R*R - Q*Q*Q;
+	float z = 0.0;
+	if( h < 0.0 )
+	{
+		float sQ = sqrt(Q);
+		z = 2.0*sQ*cos( acos(R/(sQ*Q)) * ONE_OVER_THREE );
+	}
+	else
+	{
+		float sQ = pow( sqrt(h) + abs(R), ONE_OVER_THREE );
+		z = sign(R)*abs( sQ + Q/sQ );
+	}
+	
+	z = p - z;
+		
+	float d1 = z   - 3.0*p;
+	float d2 = z*z - 3.0*r;
+	
+	if( abs(d1)<0.0001 )
+	{
+		if( d2<0.0 ) return INFINITY;
+		d2 = sqrt(d2);
+	}
+	else
+	{
+		if( d1<0.0 ) return INFINITY;
+		d1 = sqrt( d1*0.5 );
+		d2 = q/d1;
+	}
+	
+	float result = INFINITY;
+	float d1SqMinusZ = d1*d1 - z;
+	h = d1SqMinusZ + d2;
+	if( h>0.0 )
+	{
+		h = sqrt(h);
+		float t1 = -d1 - h - a;
+		float t2 = -d1 + h - a;
+		if( t1>0.0 ) result=t1;
+		else if( t2>0.0 ) result=t2;
+	}
+	
+	h = d1SqMinusZ - d2;
+	if( h>0.0 )
+	{
+		h = sqrt(h);
+		float t1 = d1 - h - a;
+		float t2 = d1 + h - a;
+		if( t1>0.0 ) result=min(result,t1);
+		else if( t2>0.0 ) result=min(result,t2);
+	}
+	
+	return result;
 }
 
 /*
@@ -951,7 +1040,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	
 	for (int i = 0; i < N_CYLINDERS; i++)
         {
-		//vec3 n;
 		d = CylinderIntersect( cylinders[i].position, cylinders[i].position + vec3(0,30,30), cylinders[i].radius, r, n );
 		if (d < t)
 		{
@@ -981,7 +1069,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	
 	for (int i = 0; i < N_CONES; i++)
         {
-		//vec3 n;
 		d = ConeIntersect( cones[i].pos0, cones[i].radius0, cones[i].pos1, cones[i].radius1, r, n );
 		if (d < t)
 		{
@@ -996,7 +1083,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	
 	for (int i = 0; i < N_CAPSULES; i++)
         {
-		//vec3 n;
 		d = CapsuleIntersect( capsules[i].pos0, capsules[i].radius0, capsules[i].pos1, capsules[i].radius1, r, n );
 		if (d < t)
 		{
@@ -1006,6 +1092,25 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.color = capsules[i].color;
 			intersec.type = capsules[i].type;
 			intersec.id = CAPSULE_ID;
+		}
+        }
+	
+	Ray rTrans = r;
+	
+	for (int i = 0; i < N_TORII; i++)
+        {
+		rTrans = r;
+		rTrans.origin += vec3(50.0,-3.0,-50.0);
+		d = TorusIntersect( torii[i].pos, torii[i].radius0, torii[i].radius1, rTrans );
+		if (d < t)
+		{
+			t = d;
+			vec3 hit = rTrans.origin + rTrans.direction * t;
+			intersec.normal = normalize( hit*(dot(hit,hit)- torii[i].radius1*torii[i].radius1 - torii[i].radius0*torii[i].radius0*vec3(1.0,1.0,-1.0)));
+			intersec.emission = torii[i].emission;
+			intersec.color = torii[i].color;
+			intersec.type = torii[i].type;
+			intersec.id = TORUS_ID;
 		}
         }
 	
@@ -1170,7 +1275,7 @@ vec3 CalculateRadiance( Ray r )
 	{
 		/*
 		// Russian Roulette
-		if(intersec.type == DIFF)
+		if(depth>0)
 		{
 			if (rand() > 0.5)
 				break;
@@ -1471,6 +1576,8 @@ void SetupScene(void)
 	cones[0] = Cone( vec3(1,20,-12), 15.0, vec3(1,0,-12), 0.0, z, vec3(0.01,0.1,0.5), REFR);//blue Cone
 	
 	capsules[0] = Capsule( vec3(80,13,15), 10.0, vec3(110,15.8,15), 10.0, z, vec3(0.6,0.6,0.6), COAT);//gray Capsule
+	
+	torii[0] = Torus( vec3(0,0,0), 10.0, 1.5, z, vec3(0.955008, 0.637427, 0.538163), SPEC);//copper Torus
 	
 	disks[0] = Disk( 190.0, vec3(-100.0,18.0,-10.0), vec3( 1.0,-1.0,0.0 ), z, vec3(0.9,0.01,0.01), DIFF);//RedDisk Left
 	
