@@ -54,8 +54,9 @@
 			Loading... 
 		</div>
 		
-		<div id="debug" style="position:fixed; left:3%; bottom:1%; font-family:arial; font-type:bold; color:rgb(255,255,255);">
-		samples: 0
+		<div id="cameraInfo" style="position:fixed; left:3%; bottom:2%; font-family:arial; font-type:bold; color:rgb(255,255,255);">
+		FOV: 55 / Aperture: 0.4 / FocusDistance: 100 <br> 
+		Samples: 0
 		</div>
 		
 		<script src="js/three-r84.min.js"> </script>
@@ -167,6 +168,8 @@ uniform float uTime;
 uniform float uSampleCounter;
 uniform float uULen;
 uniform float uVLen;
+uniform float uApertureSize;
+uniform float uFocalLength;
 
 uniform vec2 uResolution;
 
@@ -1632,15 +1635,10 @@ void main( void )
 	vec3 rayDir = normalize( d.x * camRight * uULen + d.y * camUp * uVLen + camForward );
 	
 	// depth of field
-	float aperture    =   0.3; // 0.5
-	float focalLength = 100.0;
-	vec3 focalPoint = focalLength * rayDir;
-	
-	// pick random point on aperture
-	float randomAngle = rand() * TWO_PI;
-	float randomRadius = rand() * aperture;
+	vec3 focalPoint = uFocalLength * rayDir;
+	float randomAngle = rand() * TWO_PI; // pick random point on aperture
+	float randomRadius = rand() * uApertureSize;
 	vec3  randomAperturePos = ( cos(randomAngle) * camRight + sin(randomAngle) * camUp ) * randomRadius;
-	
 	// point on aperture to focal point
 	vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
 	
@@ -1690,6 +1688,8 @@ void main( void )
 			var renderer, clock;
 			var frameTime, elapsedTime;
 			var fovScale;
+			var apertureSize = 0.4;
+			var focalLength = 100.0;
 			var pixelRatio = window.devicePixelRatio * 0.5;
 			var TWO_PI = Math.PI * 2;
 			var randomVector = new THREE.Vector3();
@@ -1749,10 +1749,10 @@ void main( void )
 			instructionsElement.style.webkitUserSelect = "none";
 			instructionsElement.style.MozUserSelect = "none";
 			
-			var debugElement = document.getElementById( 'debug' );
-			debugElement.style.cursor = "default";
-			debugElement.style.webkitUserSelect = "none";
-			debugElement.style.MozUserSelect = "none";
+			var cameraInfoElement = document.getElementById( 'cameraInfo' );
+			cameraInfoElement.style.cursor = "default";
+			cameraInfoElement.style.webkitUserSelect = "none";
+			cameraInfoElement.style.MozUserSelect = "none";
 			
 			var mouseControl = true;
 			
@@ -1770,6 +1770,8 @@ void main( void )
 				
 			
 			if (mouseControl) {
+				
+				window.addEventListener( 'wheel', onMouseWheel, false );
 	
 				instructionsElement.innerHTML = 'Paused <br> Click to start';
 				
@@ -1810,6 +1812,35 @@ void main( void )
 				
 			}
 			
+			function onMouseWheel( event ) {
+
+				event.preventDefault();
+				event.stopPropagation();
+
+				if ( event.deltaY > 0 ) {
+
+					worldCamera.fov ++;
+					if (worldCamera.fov > 179)
+						worldCamera.fov = 179;
+					fovScale = worldCamera.fov * 0.5 * (Math.PI / 180.0);
+					pathTracingUniforms.uVLen.value = Math.tan(fovScale);
+					pathTracingUniforms.uULen.value = pathTracingUniforms.uVLen.value * worldCamera.aspect;
+				
+					cameraIsMoving = true;
+
+				} else if ( event.deltaY < 0 ) {
+
+					worldCamera.fov --;
+					if (worldCamera.fov < 1)
+						worldCamera.fov = 1;
+					fovScale = worldCamera.fov * 0.5 * (Math.PI / 180.0);
+					pathTracingUniforms.uVLen.value = Math.tan(fovScale);
+					pathTracingUniforms.uULen.value = pathTracingUniforms.uVLen.value * worldCamera.aspect;
+					cameraIsMoving = true;
+
+				}
+
+			}
 			
 			/*
 			OBJ.downloadMeshes( {
@@ -2016,6 +2047,8 @@ void main( void )
 					uSampleCounter: { type: "f", value: 0.0 },
 					uULen: { type: "f", value: 1.0 },
 					uVLen: { type: "f", value: 1.0 },
+					uApertureSize: { type: "f", value: 0.4 },
+					uFocalLength: { type: "f", value: 100.0 },
 					
 					uResolution: { type: "v2", value: new THREE.Vector2() },
 					
@@ -2154,9 +2187,7 @@ void main( void )
 				
 				elapsedTime = clock.getElapsedTime() % 1000;
 				
-				// reset flags
-				cameraIsMoving = false;
-				cameraJustStartedMoving = false;
+				
 				
 				// check user controls
 				if (mouseControl) {
@@ -2233,6 +2264,36 @@ void main( void )
 					cameraIsMoving = true;
 				}
 				
+				if ( keyboard.pressed('up') ) {
+					
+					focalLength ++;
+					cameraIsMoving = true;
+				}
+				if ( keyboard.pressed('down') ) {
+					
+					focalLength --;
+					if (focalLength < 1)
+						focalLength = 1;
+					
+					cameraIsMoving = true;
+				}
+				
+				if ( keyboard.pressed('right') ) {
+					
+					apertureSize += 0.02;
+					if (apertureSize > 20.0)
+						apertureSize = 20.0;
+					
+					cameraIsMoving = true;
+				}
+				if ( keyboard.pressed('left') ) {
+					
+					apertureSize -= 0.02;
+					if (apertureSize < 0.02)
+						apertureSize = 0.02;
+					
+					cameraIsMoving = true;
+				}
 				
 				if ( cameraIsMoving ) {
 					
@@ -2253,16 +2314,19 @@ void main( void )
 				}
 					
 				
+				pathTracingUniforms.uRandomVector.value = randomVector.set( Math.random(), Math.random(), Math.random() );
+				pathTracingUniforms.uApertureSize.value = apertureSize;
+				pathTracingUniforms.uFocalLength.value = focalLength;
 				pathTracingUniforms.uCameraIsMoving.value = cameraIsMoving;
 				pathTracingUniforms.uCameraJustStartedMoving.value = cameraJustStartedMoving;
 				pathTracingUniforms.uSampleCounter.value = sampleCounter;
 				screenOutputUniforms.uOneOverSampleCounter.value = 1.0 / sampleCounter;
-				pathTracingUniforms.uRandomVector.value = randomVector.set( Math.random(), Math.random(), Math.random() );
+				
 				// CAMERA
 				cameraControlsObject.updateMatrixWorld(true);			
 				pathTracingUniforms.uCameraMatrix.value.copy( worldCamera.matrixWorld );
 				
-				debugElement.innerHTML = "samples: " + sampleCounter;
+				cameraInfoElement.innerHTML = "FOV: " + worldCamera.fov + " / Aperture: " + apertureSize.toFixed(2) + " / FocusDistance: " + focalLength + "<br>" + "Samples: " + sampleCounter;
 				
 				
 				// RENDERING in 3 steps
@@ -2284,7 +2348,10 @@ void main( void )
 						
 				
 				stats.update();
-					
+				
+				// reset flags
+				cameraIsMoving = false;
+				cameraJustStartedMoving = false;
 				
 			} // end function animate()
 			
