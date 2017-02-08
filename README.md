@@ -2,7 +2,7 @@
 Real-time PathTracing with global illumination and progressive rendering, all on top of the Three.js WebGL framework. <br>
 
 <h2>LIVE DEMOS</h2>
-A scene showing different quadric (mathematical) shapes and materials [Live Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_QuadricGeometryShowcase.html) <br>
+A scene showing different quadric (mathematical) shapes and materials [Quadric Geometry Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_QuadricGeometryShowcase.html) <br>
 This demo renders the famous [Cornell Box](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_CornellBox_DirectLighting.html) <br>
 For comparison, here is a real photograph of the original Cornell Box: http://www.graphics.cornell.edu/online/box/measured.jpg <br>
 <br>
@@ -23,7 +23,7 @@ Metallic (Gold) and shiny SubSurface scattering (polished Jade/wax candles) mate
 * When camera is still, switches to progressive rendering mode and converges on a photo-realistic result!
 * The accumulated render image will converge at around 1,000-2,000 samples (lower for simple scenes, higher for complex scenes).
 * Direct lighting now makes images render/converge almost instantly!
-* Support for: Spheres, Planes, Discs, Quads, Triangles, and quadrics such as Cylinders, Cones, Ellipsoids, Capsules, and Rings/Torii.
+* Support for: Spheres, Planes, Discs, Quads, Triangles, and quadrics such as Cylinders, Cones, Ellipsoids, Paraboloids, Hyperboloids, Capsules, and Rings/Torii.
 * Basic support for loading models in .obj format (triangle and quad faces are supported, but no higher-order polys like pentagon, hexagon, etc.)
 * Current material options: Metallic (mirrors, gold, etc.), Refractive (glass, water, etc.), Diffuse(matte, chalk, etc), ClearCoat(cars, plastic, billiard balls, etc.), Translucent (skin, leaves, etc.), Subsurface w/ shiny coat (jelly beans, cherries, white glue, polished Jade, etc.), Volumetric (smoke, dust, fog, etc.)
 * Diffuse/Matte objects use Monte Carlo integration (a random process, hence the visual noise) to sample the unit-hemisphere oriented around the normal of the ray-object hitpoint and collects any light that is being received.  This is the key-difference between path tracing and simple old-fashioned ray tracing.  This is what produces realistic global illumination effects such as color bleeding/sharing between diffuse objects and refractive caustics from specular/glass/water objects.
