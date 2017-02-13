@@ -1046,7 +1046,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		if (d < t)
 		{
 			t = d;
-			intersec.normal = (r.origin + r.direction * t) - spheres[i].position;
+			intersec.normal = normalize((r.origin + r.direction * t) - spheres[i].position);
 			intersec.emission = spheres[i].emission;
 			intersec.color = spheres[i].color;
 			intersec.type = spheres[i].type;
