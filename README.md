@@ -3,7 +3,7 @@ Real-time PathTracing with global illumination and progressive rendering, all on
 
 <h2>LIVE DEMOS</h2>
 This demo renders the famous [Cornell Box](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_CornellBox_DirectLighting.html) <br>
-For comparison, here is a real photograph of the original Cornell Box: <br>
+For comparison, here is a real photograph of the original Cornell Box vs. a rendering with the three.js PathTracer: <br>
 <br>
 ![](readme-Images/measured.jpg) ![](readme-Images/CornellBox-Render0.png)
 <br>
