@@ -6,6 +6,7 @@ This demo renders the famous [Cornell Box](https://erichlof.github.io/THREE.js-P
 For comparison, here is a real photograph of the original Cornell Box: http://www.graphics.cornell.edu/online/box/measured.jpg <br>
 <br>
 A demo featuring a [Physical Sky Model](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_SkyModel.html) <br>
+<br>
 A scene showing different quadric (mathematical) shapes and materials [Quadric Geometry Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_QuadricGeometryShowcase.html) (Warning: this may take 7-10 seconds to load/compile)<br>
 <h3>Materials Demos</h3>
 These demos showcase different materials possibilities: <br>
