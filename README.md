@@ -3,9 +3,10 @@ Real-time PathTracing with global illumination and progressive rendering, all on
 
 <h2>LIVE DEMOS</h2>
 This demo renders the famous [Cornell Box](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_CornellBox_DirectLighting.html) <br>
-For comparison, here is a real photograph of the original Cornell Box: http://www.graphics.cornell.edu/online/box/measured.jpg <br>
+For comparison, here is a real photograph of the original Cornell Box: <br>
 <br>
-![](readme-Images/measured.jpg)
+![](readme-Images/measured.jpg) ![](readme-Images/measured.jpg)
+<br>
 A demo featuring a [Physical Sky Model](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_SkyModel.html) <br>
 <br>
 A scene showing different quadric (mathematical) shapes and materials [Quadric Geometry Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_QuadricGeometryShowcase.html) (Warning: this may take 7-10 seconds to load/compile)<br>
