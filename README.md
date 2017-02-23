@@ -10,7 +10,7 @@ For comparison, here is a real photograph of the original Cornell Box vs. a rend
 <br>
 A demo featuring a [Physical Sky Model](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_SkyModel.html) <br>
 <br>
-A scene showing different quadric (mathematical) shapes and materials [Quadric Geometry Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_QuadricGeometryShowcase.html) (Warning: this may take 7-10 seconds to load/compile)<br>
+A scene showing different quadric (mathematical) shapes and materials [Quadric Geometry Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_QuadricGeometryShowcase.html) (Warning: this may take 7-10 seconds to load/compile!)<br>
 <h3>Materials Demos</h3>
 These demos showcase different materials possibilities: <br>
 Refractive (glass/water) and ClearCoat (billiard ball/car paint) materials: [Materials Showcase #1](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_MaterialsShowcase_1.html) <br>
