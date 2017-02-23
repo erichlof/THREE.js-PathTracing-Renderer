@@ -3,58 +3,33 @@
 	<head>
 		<title>three.js PathTracing Renderer - Materials Showcase #1</title>
 		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1">
+		<meta name="viewport" content="width=device-width, user-scalable=no">
 		<style>
-			
-			body {
-				color: #ffffff;
-				font-family:Monospace;
-				font-size:13px;
-				text-align:center;
-				font-weight: bold;
 
-				background-color: #000000;
+			html, body {
+				width: 100%;
+				height: 100%;
+				font-family: Monospace;
+				background-color: #000;
+				color: #000;
 				margin: 0px;
 				overflow: hidden;
 			}
 			
-			#instructions {
-			
-				font-family: arial;
-				font-weight: bold;
-				width: 100%;
-				height: 100%;
-				position: fixed;
-				top: 35%;
-				color: #ffffff;
-				text-align: center;
-				cursor: pointer;
-			
-			}
-
 			#info {
 				position: absolute;
-				top: 0px; width: 100%;
-				padding: 5px;
-			}
-
-			a {
-
+				top: 5px;
+				width: 100%;
+				text-align: center;
 				color: #ffffff;
-			}
-
-			#oldie a { color:#da0 }
+			}		
+			
 		</style>
 	</head>
 	<body>
 
-		<div id="container"></div>
-		<div id="info"> three.js PathTracing Renderer - Materials Showcase #1</div>
-		
-		<div id="instructions">
-		<span style="font-size:40px"></span>
-		</div>
-		
+		<div id="container"> </div>
+		<div id="info">three.js PathTracing Renderer - Materials Showcase #1</div>
 		
 		<div id="debug" style="position:fixed; left:3%; bottom:1%; font-family:arial; font-type:bold; color:rgb(255,255,255);">
 		samples: 0
@@ -1480,11 +1455,6 @@ void main( void )
 			infoElement.style.webkitUserSelect = "none";
 			infoElement.style.MozUserSelect = "none";
 			
-			var instructionsElement = document.getElementById( 'instructions' );
-			instructionsElement.style.cursor = "default";
-			instructionsElement.style.webkitUserSelect = "none";
-			instructionsElement.style.MozUserSelect = "none";
-			
 			var debugElement = document.getElementById( 'debug' );
 			debugElement.style.cursor = "default";
 			debugElement.style.webkitUserSelect = "none";
@@ -1502,8 +1472,6 @@ void main( void )
 				isPaused = false;
 			
 			if (mouseControl) {
-	
-				instructionsElement.innerHTML = 'Paused <br> Click to start';
 
 				document.body.addEventListener("click", function() {
 					this.requestPointerLock = this.requestPointerLock || this.mozRequestPointerLock;
@@ -1520,15 +1488,13 @@ void main( void )
 
 				var pointerlockChange = function ( event ) {
 
-					if ( document.pointerLockElement === instructionsElement || document.mozPointerLockElement === instructionsElement || document.webkitPointerLockElement === instructionsElement ||
-						document.pointerLockElement === document.body || document.mozPointerLockElement === document.body || document.webkitPointerLockElement === document.body ) {
+					if ( document.pointerLockElement === document.body || 
+					    document.mozPointerLockElement === document.body || document.webkitPointerLockElement === document.body ) {
 
-						instructionsElement.style.display = 'none';
 						isPaused = false;
 
 					} else {
 
-						instructionsElement.style.display = '';
 						isPaused = true;
 
 					}
@@ -1565,19 +1531,22 @@ void main( void )
 		     // function init( meshes ) {
 			function init() {
 				
-				container = document.getElementById( 'container' );
 				renderer = new THREE.WebGLRenderer();
 				renderer.autoClear = false;
 				// 1 is full resolution, 0.5 is half, 0.25 is quarter, etc. (must be > than 0.0)
 				renderer.setPixelRatio(pixelRatio);
-				
-				container.appendChild( renderer.domElement );
-
+				renderer.setSize( window.innerWidth, window.innerHeight );
 				renderer.context.getExtension('OES_texture_float');
-							      
+				
+				container = document.getElementById( 'container' );
+				container.appendChild( renderer.domElement );
+		      
 				stats = new Stats();
 				stats.domElement.style.position = 'absolute';
 				stats.domElement.style.top = '0px';
+				stats.domElement.style.cursor = "default";
+				stats.domElement.style.webkitUserSelect = "none";
+				stats.domElement.style.MozUserSelect = "none";
 				container.appendChild( stats.domElement );
 				
 				window.addEventListener( 'resize', onWindowResize, false );
@@ -1824,6 +1793,27 @@ void main( void )
 				screenOutputMesh = new THREE.Mesh(screenOutputGeometry, screenOutputMaterial);
 				screenOutputScene.add(screenOutputMesh);
 
+				/*
+				// Fullscreen API
+				document.addEventListener("click", function() {
+					
+					if ( !document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement ) {
+
+						if (document.documentElement.requestFullscreen) {
+							document.documentElement.requestFullscreen();
+							
+						} else if (document.documentElement.mozRequestFullScreen) {
+							document.documentElement.mozRequestFullScreen();
+						
+						} else if (document.documentElement.webkitRequestFullscreen) {
+							document.documentElement.webkitRequestFullscreen();
+						
+						}
+
+					}
+				});
+				*/
+				
 				// onWindowResize() must be at the end of the init() function
 				onWindowResize();
 				
@@ -1838,14 +1828,14 @@ void main( void )
 				
 				SCREEN_WIDTH = window.innerWidth;
 				SCREEN_HEIGHT = window.innerHeight;
+				
+				renderer.setPixelRatio(pixelRatio);
 				renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT );
 				
 				fontAspect = (SCREEN_WIDTH / 175) * (SCREEN_HEIGHT / 200);
 				if (fontAspect > 25) fontAspect = 25;
 				if (fontAspect < 4) fontAspect = 4;
 				fontAspect *= 2;
-				instructionsElement.style.fontSize = fontAspect + "px";
-	
 
 				pathTracingUniforms.uResolution.value.x = SCREEN_WIDTH * pixelRatio;
 				pathTracingUniforms.uResolution.value.y = SCREEN_HEIGHT * pixelRatio;
