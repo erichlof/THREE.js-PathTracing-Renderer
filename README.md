@@ -16,7 +16,7 @@ Diffuse (matte wall paint/chalk) and Translucent (skin/balloons,etc.) materials:
 Metallic (Gold) and shiny SubSurface scattering (polished Jade/wax candles) materials: [Materials Showcase #4](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_MaterialsShowcase_4.html) <br>
 <br>
 
-![](threejsPathTracing.png)
+![](readme-Images/threejsPathTracing.png)
 
 <h2>FEATURES</h2>
 * Real-time interactive Path Tracing in your Chrome browser - even on your smartphone! ( What?! )
