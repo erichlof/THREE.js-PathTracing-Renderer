@@ -3,56 +3,33 @@
 	<head>
 		<title>three.js PathTracing Renderer - Quadric Geometry Showcase</title>
 		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1">
+		<meta name="viewport" content="width=device-width, user-scalable=no">
 		<style>
-			
-			body {
-				color: #ffffff;
-				font-family:Monospace;
-				font-size:13px;
-				text-align:center;
-				font-weight: bold;
-				background-color: #000000;
+
+			html, body {
+				width: 100%;
+				height: 100%;
+				font-family: Monospace;
+				background-color: #000;
+				color: #000;
 				margin: 0px;
 				overflow: hidden;
 			}
 			
-			#instructions {
-			
-				font-family: arial;
-				font-weight: bold;
-				width: 100%;
-				height: 100%;
-				position: fixed;
-				top: 35%;
-				color: #ffffff;
-				text-align: center;
-				cursor: pointer;
-			
-			}
-			
 			#info {
 				position: absolute;
-				top: 0px; width: 100%;
-				padding: 5px;
-			}
-			
-			a {
-				
+				top: 5px;
+				width: 100%;
+				text-align: center;
 				color: #ffffff;
-			}
+			}		
 			
-			#oldie a { color:#da0 }
 		</style>
 	</head>
 	<body>
 		
-		<div id="container"></div>
-		<div id="info"> three.js PathTracing Renderer - Quadric Geometry Showcase</div>
-		
-		<div id="instructions" style="font-size:40px; font-family:arial; font-type:bold; color:rgb(255,255,255);">
-			Loading... 
-		</div>
+		<div id="container"> </div>
+		<div id="info">three.js PathTracing Renderer - Quadric Geometry Showcase</div>
 		
 		<div id="cameraInfo" style="position:fixed; left:3%; bottom:2%; font-family:arial; font-type:bold; color:rgb(255,255,255);">
 		FOV: 55 / Aperture: 0.4 / FocusDistance: 100 <br> 
@@ -204,22 +181,24 @@ varying vec2 vUv;
 #define BOX_ID 5
 #define ELLIPSOID_ID 6
 #define PARABOLOID_ID 7
-#define HYPERBOLOID_ID 8
-#define CYLINDER_ID 9
-#define CLOSEDCYLINDER_ID 10
-#define CONE_ID 11
-#define CAPSULE_ID 12
-#define TORUS_ID 13
-#define OBJ_TRIANGLE_ID 14
+#define HYPERBOLICPARABOLOID_ID 8
+#define HYPERBOLOID_ID 9
+#define CYLINDER_ID 10
+#define CLOSEDCYLINDER_ID 11
+#define CONE_ID 12
+#define CAPSULE_ID 13
+#define TORUS_ID 14
+#define OBJ_TRIANGLE_ID 15
 
-#define N_SPHERES 8
+#define N_SPHERES 7
 #define N_PLANES 1
 #define N_DISKS 1
 #define N_TRIANGLES 1
 #define N_QUADS 1
 #define N_BOXES 2
-#define N_ELLIPSOIDS 1
+#define N_ELLIPSOIDS 2
 #define N_PARABOLOIDS 1
+#define N_HYPERBOLICPARABOLOIDS 1
 #define N_HYPERBOLOIDS 1
 #define N_CYLINDERS 1
 #define N_CLOSEDCYLINDERS 1
@@ -240,6 +219,18 @@ varying vec2 vUv;
 
 float seed = 0.0;
 
+float hash21(vec2 p)
+{
+	float h = dot(p,vec2(127.1,311.7));
+	
+	return fract(sin(h)*43758.5453123);
+}
+
+float noise3D(vec3 p)
+{
+	return fract(sin(dot(p ,vec3(12.9898,78.233,128.852))) * 43758.5453);
+}
+
 float rand()
 { 
 	seed -= uRandomVector.x * uRandomVector.y;
@@ -253,6 +244,7 @@ struct Ray { vec3 origin; vec3 direction; };
 struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; int type; };
 struct Ellipsoid { vec3 radii; vec3 position; vec3 emission; vec3 color; int type; };
 struct Paraboloid { float rad; float height; vec3 pos; vec3 emission; vec3 color; int type; };
+struct HyperbolicParaboloid { float rad; float height; vec3 pos; vec3 emission; vec3 color; int type; };
 struct Hyperboloid { float rad; float height; vec3 pos; vec3 emission; vec3 color; int type; };
 struct Cylinder { float radius; float height; vec3 position; vec3 emission; vec3 color; int type; };
 struct ClosedCylinder { float radius; vec3 cap1pos; vec3 cap2pos; vec3 emission; vec3 color; int type; };
@@ -269,6 +261,7 @@ struct Intersection { vec3 normal; vec3 emission; vec3 color; int type; int id; 
 Sphere spheres[N_SPHERES];
 Ellipsoid ellipsoids[N_ELLIPSOIDS];
 Paraboloid paraboloids[N_PARABOLOIDS];
+HyperbolicParaboloid hyperbolicParaboloids[N_HYPERBOLICPARABOLOIDS];
 Hyperboloid hyperboloids[N_HYPERBOLOIDS];
 Cylinder cylinders[N_CYLINDERS];
 ClosedCylinder closedCylinders[N_CLOSEDCYLINDERS];
@@ -287,18 +280,18 @@ Box boxes[N_BOXES];
 float SphereIntersect( float rad, vec3 pos, Ray r )
 //-----------------------------------------------------------------------
 {
-	vec3 op = pos - r.origin;
+	vec3 op = r.origin - pos;
 	float b = dot(op, r.direction);
 	float det = b * b - dot(op,op) + rad * rad;
 	if (det < 0.0)
 		return INFINITY;
         
 	det = sqrt(det);	
-	float t1 = b - det;
+	float t1 = -b - det;
 	if( t1 > 0.0 )
 		return t1;
 		
-	float t2 = b + det;
+	float t2 = -b + det;
 	if( t2 > 0.0 )
 		return t2;
 		
@@ -356,27 +349,107 @@ float ParaboloidIntersect( float rad, float height, vec3 pos, Ray r, out vec3 n 
 	float t1 = (-b - det) / (2.0 * a);
 	float t2 = (-b + det) / (2.0 * a);
 	float result = INFINITY;
-		
-	if( t2 > 0.0 )
-	{
-		vec3 ip = ro + rd * t2;
-		if (ip.y < height)
+	vec3 ip1 = ro + rd * t1;
+	vec3 ip2 = ro + rd * t2;
+	
+	if (t2 > 0.0)
+	{	
+		if (abs(ip2.y) < height)
 		{
-			n = vec3( -2.0 * ip.x, 1.0, -2.0 * ip.z );
+			n = vec3( -2.0 * ip2.x, 1.0, -2.0 * ip2.z );
 			result = t2;
-		}
-			
+		}		
 	}
 	
-	if( t1 > 0.0 )
+	if (t1 > 0.0)
 	{
-		vec3 ip = ro + rd * t1;
-		if (ip.y < height)
+		if (abs(ip1.y) < height)
 		{
-			n = vec3( 2.0 * ip.x, -1.0, 2.0 * ip.z );
+			n = vec3( 2.0 * ip1.x, -1.0, 2.0 * ip1.z );
 			result = t1;
-		}
-			
+		}		
+	}
+	
+	if( t1 > 0.0 && t2 > 0.0)
+	{
+		float dist1 = distance(ro,ip1);
+		float dist2 = distance(ro,ip2);
+		
+		if (dist2 < dist1 && abs(ip2.y) < height)
+		{
+			n = vec3( -2.0 * ip2.x, 1.0, -2.0 * ip2.z );
+			result = t2;
+		}	
+		
+		else if (abs(ip1.y) < height)
+		{
+			n = vec3( 2.0 * ip1.x, -1.0, 2.0 * ip1.z );
+			result = t1;
+		}			
+	}
+		
+	return result;	
+}
+
+
+//-----------------------------------------------------------------------------------------
+float HyperbolicParaboloidIntersect( float rad, float height, vec3 pos, Ray r, out vec3 n )
+//-----------------------------------------------------------------------------------------
+{
+	vec3 rd = r.direction;
+	vec3 ro = r.origin - pos;
+	float k = height / (rad * rad);
+	
+	// quadratic equation coefficients
+	float a = k * (rd.x * rd.x - rd.z * rd.z);
+	float b = k * 2.0 * (rd.x * ro.x - rd.z * ro.z) - rd.y;
+	float c = k * (ro.x * ro.x - ro.z * ro.z) - ro.y;
+	
+	float det = (b * b) - (4.0 * a * c);
+	if (det < 0.0) 
+		return INFINITY;
+		
+	det = sqrt(det);
+	float t1 = (-b - det) / (2.0 * a);
+	float t2 = (-b + det) / (2.0 * a);
+	float result = INFINITY;
+	vec3 ip1 = ro + rd * t1;
+	vec3 ip2 = ro + rd * t2;
+	
+	if (t2 > 0.0)
+	{	
+		if (abs(ip2.x) < height && abs(ip2.y) < height && abs(ip2.z) < height)
+		{
+			n = vec3( -2.0 * ip2.x, 1.0, 2.0 * ip2.z );
+			result = t2;
+		}		
+	}
+	
+	if (t1 > 0.0)
+	{
+		if (abs(ip1.x) < height && abs(ip1.y) < height && abs(ip1.z) < height)
+		{
+			n = vec3( 2.0 * ip1.x, -1.0, -2.0 * ip1.z );
+			result = t1;
+		}		
+	}
+	
+	if( t1 > 0.0 && t2 > 0.0)
+	{
+		float dist1 = distance(ro,ip1);
+		float dist2 = distance(ro,ip2);
+		
+		if (dist2 < dist1 && abs(ip2.x) < height && abs(ip2.y) < height && abs(ip2.z) < height)
+		{
+			n = vec3( -2.0 * ip2.x, 1.0, 2.0 * ip2.z );
+			result = t2;
+		}	
+		
+		else if (abs(ip1.x) < height && abs(ip1.y) < height && abs(ip1.z) < height)
+		{
+			n = vec3( 2.0 * ip1.x, -1.0, -2.0 * ip1.z );
+			result = t1;
+		}			
 	}
 		
 	return result;	
@@ -402,27 +475,45 @@ float HyperboloidIntersect( float rad, float height, vec3 pos, Ray r, out vec3 n
 	float t1 = (-b - det) / (2.0 * a);
 	float t2 = (-b + det) / (2.0 * a);
 	float result = INFINITY;
+	vec3 ip1 = ro + rd * t1;
+	vec3 ip2 = ro + rd * t2;
 	
-	if( t2 > 0.0 )
-	{
-		vec3 ip = ro + rd * t2;
-		if (abs(ip.y) < height)
+	if (t2 > 0.0)
+	{	
+		if (abs(ip2.y) < height)
 		{
-			n = vec3( -2.0 * ip.x, 2.0 * ip.y, -2.0 * ip.z );
+			n = vec3( -2.0 * ip2.x, 2.0 * ip2.y, -2.0 * ip2.z );
 			result = t2;
-		}
+		}		
 	}
 	
-	if( t1 > 0.0 )
+	if (t1 > 0.0)
 	{
-		vec3 ip = ro + rd * t1;
-		if (abs(ip.y) < height)
+		if (abs(ip1.y) < height)
 		{
-			n = vec3( 2.0 * ip.x, -2.0 * ip.y, 2.0 * ip.z );
+			n = vec3( 2.0 * ip1.x, -2.0 * ip1.y, 2.0 * ip1.z );
 			result = t1;
-		}
+		}		
 	}
+	
+	if( t1 > 0.0 && t2 > 0.0)
+	{
+		float dist1 = distance(ro,ip1);
+		float dist2 = distance(ro,ip2);
 		
+		if (dist2 < dist1 && abs(ip2.y) < height)
+		{
+			n = vec3( -2.0 * ip2.x, 2.0 * ip2.y, -2.0 * ip2.z );
+			result = t2;
+		}	
+		
+		else if (abs(ip1.y) < height)
+		{
+			n = vec3( 2.0 * ip1.x, -2.0 * ip1.y, 2.0 * ip1.z );
+			result = t1;
+		}			
+	}
+	
 	return result;	
 }
 
@@ -1061,7 +1152,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		if (d < t)
 		{
 			t = d;
-			intersec.normal = disks[i].normal;
+			intersec.normal = normalize(disks[i].normal);
 			intersec.emission = disks[i].emission;
 			intersec.color = disks[i].color;
 			intersec.type = disks[i].type;
@@ -1075,7 +1166,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		if (d < t)
 		{
 			t = d;
-			intersec.normal = planes[i].pla.xyz;
+			intersec.normal = normalize(planes[i].pla.xyz);
 			intersec.emission = planes[i].emission;
 			intersec.color = planes[i].color;
 			intersec.type = planes[i].type;
@@ -1090,7 +1181,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		if (d < t)
 		{
 			t = d;
-			intersec.normal = triangles[i].normal;
+			intersec.normal = normalize(triangles[i].normal);
 			intersec.emission = triangles[i].emission;
 			intersec.color = triangles[i].color;
 			intersec.type = triangles[i].type;
@@ -1105,7 +1196,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		if (d < t)
 		{
 			t = d;
-			intersec.normal = (quads[i].normal);
+			intersec.normal = normalize(quads[i].normal);
 			intersec.emission = quads[i].emission;
 			intersec.color = quads[i].color;
 			intersec.type = quads[i].type;
@@ -1156,6 +1247,20 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.color = paraboloids[i].color;
 			intersec.type = paraboloids[i].type;
 			intersec.id = PARABOLOID_ID;
+		}
+	}
+	
+	for (int i = 0; i < N_HYPERBOLICPARABOLOIDS; i++)
+        {
+		d = HyperbolicParaboloidIntersect( hyperbolicParaboloids[i].rad, hyperbolicParaboloids[i].height, hyperbolicParaboloids[i].pos, r, n );
+		if (d < t)
+		{
+			t = d;
+			intersec.normal = normalize(n);
+			intersec.emission = hyperbolicParaboloids[i].emission;
+			intersec.color = hyperbolicParaboloids[i].color;
+			intersec.type = hyperbolicParaboloids[i].type;
+			intersec.id = HYPERBOLICPARABOLOID_ID;
 		}
 	}
 	
@@ -1721,18 +1826,20 @@ void SetupScene(void)
 	spheres[1] = Sphere(100.0, vec3(300.0, 400.0, -300.0), L2, z, LIGHT);//spherical yellow Light2
 	spheres[2] = Sphere( 50.0, vec3(500.0, 250.0, -100.0), L3, z, LIGHT);//spherical blue Light3
 	
-	spheres[3] = Sphere(1000.0, vec3(  0.0, 1000.0,  0.0), z, vec3(1.0, 1.0, 1.0),       CHECK);//Checkered Floor
-        spheres[4] = Sphere(  16.5, vec3(-25.0,   16.9,  5.0), z, vec3(1.0, 1.0, 1.0),        SPEC);//Mirror sphere
-        spheres[5] = Sphere(  15.0, vec3( 32.0,   16.0, 30.0), z, vec3(1.0, 1.0, 1.0),        REFR);//Glass sphere
-        spheres[6] = Sphere(  10.0, vec3( 50.0,   15.2,-90.0), z,                   z, TRANSLUCENT);//light blue translucent sphere
-        spheres[7] = Sphere(   9.0, vec3(  5.0,    9.7, 35.0), z,                   z,     SPECSUB);//polished jade sphere
+	spheres[3] = Sphere(1000.0, vec3(  0.0, 1000.0,  0.0), z, vec3(1.0, 1.0, 1.0),       CHECK);//Checkered Floor Huge Sphere       
+        spheres[4] = Sphere(  15.0, vec3( 32.0,   16.0, 30.0), z, vec3(1.0, 1.0, 1.0),        REFR);//Glass sphere
+        spheres[5] = Sphere(  10.0, vec3( 50.0,   15.2,-90.0), z,                   z, TRANSLUCENT);//light blue translucent sphere
+        spheres[6] = Sphere(   9.0, vec3(  5.0,    9.7, 35.0), z,                   z,     SPECSUB);//polished jade sphere
 	
 	ellipsoids[0] = Ellipsoid(  vec3(30,40,16), vec3(90,5,-30), z, vec3(1.0, 0.765557, 0.336057), SPEC);//metallic gold ellipsoid
+	ellipsoids[1] = Ellipsoid(  vec3(6,18,20), vec3(-25,18.5,5), z, vec3(1.0, 1.0, 1.0), SPEC);//Mirror ellipsoid
 	
-	paraboloids[0] = Paraboloid(  16.5, 50.0, vec3(20,1,-50), z, vec3(1.0, 0.2, 0.7), REFR);//paraboloid
+	paraboloids[0] = Paraboloid( 20.0, 15.0, vec3(20,2,-50), z, vec3(1.0, 0.2, 0.7), REFR);//paraboloid
 	
-	//hyperboloids[0] = Hyperboloid(  4.0, 15.0, vec3(-15,22,-100), z, vec3(0.0, 0.2, 0.4), SPEC);//hyperboloid
-	hyperboloids[0] = Hyperboloid(  4.0, 15.0, vec3(-15,22,-100), z, vec3(0.3, 0.6, 0.5), REFR);//hyperboloid
+	hyperbolicParaboloids[0] = HyperbolicParaboloid( 40.0, 40.0, vec3(20,70,-50), z, vec3(1.0, 0.2, 0.7), CHECK);//hyperbolic paraboloid
+	
+	//hyperboloids[0] = Hyperboloid( 4.0, 15.0, vec3(-15,22,-100), z, vec3(0.0, 0.2, 0.4), SPEC);//hyperboloid
+	hyperboloids[0] = Hyperboloid( 4.0, 15.0, vec3(-15,22,-100), z, vec3(0.3, 0.7, 0.5), REFR);//hyperboloid
 	
 	cylinders[0] = Cylinder( 15.0, 30.0, vec3(-70,7,-80), z, vec3(0.7,0.01,0.01), REFR);//red glass Cylinder
 	closedCylinders[0] = ClosedCylinder( 14.0, vec3(-60,0,20), vec3(-60,14,20), z, vec3(0.05,0.05,0.05), COAT);//dark gray ClosedCylinder
@@ -1900,11 +2007,6 @@ void main( void )
 			infoElement.style.webkitUserSelect = "none";
 			infoElement.style.MozUserSelect = "none";
 			
-			var instructionsElement = document.getElementById( 'instructions' );
-			instructionsElement.style.cursor = "default";
-			instructionsElement.style.webkitUserSelect = "none";
-			instructionsElement.style.MozUserSelect = "none";
-			
 			var cameraInfoElement = document.getElementById( 'cameraInfo' );
 			cameraInfoElement.style.cursor = "default";
 			cameraInfoElement.style.webkitUserSelect = "none";
@@ -1920,52 +2022,47 @@ void main( void )
 			// if on mobile device, unpause the app because there is no ESC key and no mouse capture to do
 			if ( !mouseControl )
 			{
-				instructionsElement.innerHTML = '';
 				isPaused = false;
 			}
 				
 			
 			if (mouseControl) {
-				
+
 				window.addEventListener( 'wheel', onMouseWheel, false );
-	
-				instructionsElement.innerHTML = 'Paused <br> Click to start';
 				
 				document.body.addEventListener("click", function() {
 					this.requestPointerLock = this.requestPointerLock || this.mozRequestPointerLock;
 					this.requestPointerLock();
 				}, false);
-				
+
 				window.addEventListener("click", function(event) {
 					event.preventDefault();	
 				}, false);
 				window.addEventListener("dblclick", function(event) {
 					event.preventDefault();	
 				}, false);
-				
-				
+
+
 				var pointerlockChange = function ( event ) {
-					
-					if ( document.pointerLockElement === instructionsElement || document.mozPointerLockElement === instructionsElement || document.webkitPointerLockElement === instructionsElement ||
-						document.pointerLockElement === document.body || document.mozPointerLockElement === document.body || document.webkitPointerLockElement === document.body ) {
-						
-						instructionsElement.style.display = 'none';
+
+					if ( document.pointerLockElement === document.body || 
+					    document.mozPointerLockElement === document.body || document.webkitPointerLockElement === document.body ) {
+
 						isPaused = false;
-						
+
 					} else {
-						
-						instructionsElement.style.display = '';
+
 						isPaused = true;
-						
+
 					}
-					
+
 				};
-				
+
 				// Hook pointer lock state change events
 				document.addEventListener( 'pointerlockchange', pointerlockChange, false );
 				document.addEventListener( 'mozpointerlockchange', pointerlockChange, false );
 				document.addEventListener( 'webkitpointerlockchange', pointerlockChange, false );
-				
+
 			}
 			
 			function onMouseWheel( event ) {
@@ -2020,19 +2117,22 @@ void main( void )
 		     // function init( meshes ) {
 			function init() {
 				
-				container = document.getElementById( 'container' );
 				renderer = new THREE.WebGLRenderer();
 				renderer.autoClear = false;
 				// 1 is full resolution, 0.5 is half, 0.25 is quarter, etc. (must be > than 0.0)
 				renderer.setPixelRatio(pixelRatio);
-				
-				container.appendChild( renderer.domElement );
-				
+				renderer.setSize( window.innerWidth, window.innerHeight );
 				renderer.context.getExtension('OES_texture_float');
-							      
+				
+				container = document.getElementById( 'container' );
+				container.appendChild( renderer.domElement );
+		      
 				stats = new Stats();
 				stats.domElement.style.position = 'absolute';
 				stats.domElement.style.top = '0px';
+				stats.domElement.style.cursor = "default";
+				stats.domElement.style.webkitUserSelect = "none";
+				stats.domElement.style.MozUserSelect = "none";
 				container.appendChild( stats.domElement );
 				
 				window.addEventListener( 'resize', onWindowResize, false );
@@ -2280,6 +2380,27 @@ void main( void )
 				screenOutputMesh = new THREE.Mesh(screenOutputGeometry, screenOutputMaterial);
 				screenOutputScene.add(screenOutputMesh);
 				
+				/*
+				// Fullscreen API
+				document.addEventListener("click", function() {
+					
+					if ( !document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement ) {
+
+						if (document.documentElement.requestFullscreen) {
+							document.documentElement.requestFullscreen();
+							
+						} else if (document.documentElement.mozRequestFullScreen) {
+							document.documentElement.mozRequestFullScreen();
+						
+						} else if (document.documentElement.webkitRequestFullscreen) {
+							document.documentElement.webkitRequestFullscreen();
+						
+						}
+
+					}
+				});
+				*/
+				
 				// onWindowResize() must be at the end of the init() function
 				onWindowResize();
 				
@@ -2294,13 +2415,14 @@ void main( void )
 				
 				SCREEN_WIDTH = window.innerWidth;
 				SCREEN_HEIGHT = window.innerHeight;
+				
+				renderer.setPixelRatio(pixelRatio);
 				renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT );
 				
 				fontAspect = (SCREEN_WIDTH / 175) * (SCREEN_HEIGHT / 200);
 				if (fontAspect > 25) fontAspect = 25;
 				if (fontAspect < 4) fontAspect = 4;
 				fontAspect *= 2;
-				instructionsElement.style.fontSize = fontAspect + "px";
 				
 				pathTracingUniforms.uResolution.value.x = SCREEN_WIDTH * pixelRatio;
 				pathTracingUniforms.uResolution.value.y = SCREEN_HEIGHT * pixelRatio;
