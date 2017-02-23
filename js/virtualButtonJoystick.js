@@ -402,7 +402,7 @@ VirtualJoystick.prototype._onButton3Down = function() {
 
 VirtualJoystick.prototype._onTouchStart = function(event) {
 
-	event.preventDefault();
+	///event.preventDefault();
 	VJ_testTouch = event.changedTouches[0];
 	if (VJ_testTouch.target == this._button1El) {
 		return this._onButton1Down();
@@ -447,6 +447,7 @@ VirtualJoystick.prototype._onTouchStart = function(event) {
 
 VirtualJoystick.prototype._onTouchEnd = function(event) {
   
+	///event.preventDefault();
 	VJ_touch = event.changedTouches[0];
 	if (VJ_touch.target == this._button1El) 
 		return this._onButton1Up();
@@ -463,6 +464,7 @@ VirtualJoystick.prototype._onTouchEnd = function(event) {
 
 VirtualJoystick.prototype._onTouchMove = function(event) {
 
+	///event.preventDefault();
 	VJ_touch = event.targetTouches[0];
 	if (VJ_touch.target == this._button1El || VJ_touch.target == this._button2El || VJ_touch.target == this._button3El)
 		return;
