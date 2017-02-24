@@ -35,6 +35,20 @@ Metallic (Gold) and shiny SubSurface scattering (polished Jade/wax candles) mate
 * SuperSampling gives beautiful, clean Anti-Aliasing (no jagged edges!)
 * Users will be able to use easy, familiar commands from the Three.js library, but under-the-hood the Three.js Renderer will use this path tracing engine to render the final output to the screen.
 
+<h3>Experimental Works in Progress (W.I.P.)</h3>
+The following demos show what I have been experimenting with most recently.  They might not work 100% and might have small visual artifacts that I am trying to fix.  I just wanted to share with you more possible areas in the world of path tracing! :-)
+<br>
+This Demo renders objects inside a volume of gas/fog/clouds(etc.).  Notice the cool volumetric caustics from the glass sphere on the left!:
+<br>
+[Volumetric Rendering Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_VolumetricRendering.html) <br>
+
+<br>
+This Demo deliberately creates a very hard scene to render because the light source is almost 100% blocked.  Normal naive path tracing will be very dark and noisy because the rays from the camera can't find the light source unless they are very lucky:
+<br>
+[Naive Path Tracing comparison Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_CompareUni-Directional.html) <br>
+Enter Bi-Directional Path Tracing to the rescue!  Not only do we trace rays from the camera, we also trace rays from the light source as well, and then at the last moment, connect them.  The result is still a little noisy, but much better (we can actually see something!)
+<br>
+[Bi-Directional Path Tracing comparison Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_Bi-Directional_PathTracer.html) <br>
 
 <h2>TODO</h2>
 * Instead of scene description hard-coded in the path tracing shader, let the scene be defined using the Three.js library
