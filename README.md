@@ -48,6 +48,10 @@ This Demo deliberately creates a very hard scene to render because the light sou
 Enter Bi-Directional Path Tracing to the rescue!  Not only do we trace rays from the camera, we also trace rays from the light source as well, and then at the last moment, connect them.  The result is still a little noisy, but much better (we can actually see something!)
 <br>
 [Bi-Directional Path Tracing comparison Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_Bi-Directional_PathTracer.html) <br>
+<br>
+Rendering S\spheres, boxes and mathematical shapes is nice, but most modern graphics models are built out of triangles.  The following demo uses an .obj loader to load an model in .obj format (list of triangles) from disk and then places it in a scene to be path traced.  As of now it runs too slow for my taste.  It still needs a BVH acceleration structure to speed things up greatly (I am currently investigating different approaches on the GPU). I am showing this because I wanted to demonstrate the ability of the three.js Path Tracing renderer to load and render a model in one of the most popular model formats ever: 
+[.OBJ Model Loading Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_OBJModel_Loader.html) <br>
+<br>
 
 <h2>TODO</h2>
 * Instead of scene description hard-coded in the path tracing shader, let the scene be defined using the Three.js library
