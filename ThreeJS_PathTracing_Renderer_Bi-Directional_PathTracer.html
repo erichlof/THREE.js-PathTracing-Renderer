@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 	<head>
-		<title>three.js Bi-Directional PathTracing Renderer - Blocked Light Source</title>
+		<title>three.js PathTracing Renderer - Blocked Light Source, Bi-Directional Approach</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no">
 		<style>
@@ -29,7 +29,7 @@
 	<body>
 
 		<div id="container"> </div>
-		<div id="info">three.js Bi-Directional PathTracing Renderer - Blocked Light Source</div>
+		<div id="info">three.js PathTracing Renderer - Blocked Light Source, Bi-Directional Approach</div>
 		
 		<div id="debug" style="position:fixed; left:3%; bottom:1%; font-family:arial; font-type:bold; color:rgb(255,255,255);">
 		samples: 0
@@ -1153,7 +1153,7 @@ vec3 CalculateRadiance( Ray r )
 		maskEyePath *= max(0.01, dot(-connectRay.direction, nlEyePath));
 		
 		maskLightPath *= max(0.01, dot(connectRay.direction, nlLightPath));
-				accumCol += maskLightPath * maskEyePath * quads[5].emission * 0.2;	
+				accumCol = maskLightPath * maskEyePath * quads[5].emission * 0.2;	
 	}
 
 	return accumCol;      
