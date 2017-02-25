@@ -1154,7 +1154,7 @@ vec3 CalculateRadiance( Ray r )
 		
 		maskLightPath *= max(0.01, dot(connectRay.direction, nlLightPath));
 		
-		accumCol += maskLightPath * maskEyePath;// * quads[5].emission * 0.5;	
+		accumCol += maskLightPath * maskEyePath * quads[5].emission * 0.5;	
 	}
 
 	return accumCol;      
