@@ -693,9 +693,9 @@ vec3 CalculateRadiance( Ray r )
 	Ray volRay;
 	
 	
-	
-        for (int depth = 0; depth < 8; depth++)
+        for (int depth = 0; depth < 10; depth++)
 	{
+		
 		float u = rand();
 		float xx;
 		float pdf;
@@ -727,10 +727,10 @@ vec3 CalculateRadiance( Ray r )
 		if (vintersec.type == LIGHT)
 		{	
 			float sigma = 0.001;
-			float factor = (xx+d) * 0.1;
+			float factor = (xx+d)*0.5;
 			float trans = exp( -sigma * factor );
 			float geomTerm = 1.0 / dot(lightVec, lightVec);
-			accumCol += vec3(0,0,0.99)*vintersec.emission * geomTerm * trans / pdf;
+			accumCol += vec3(0,0,1.0)*vintersec.emission * geomTerm * trans / pdf;
 		}
 		
 		if (intersec.type == LIGHT)
