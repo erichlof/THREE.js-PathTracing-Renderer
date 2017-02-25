@@ -45,7 +45,7 @@ This Demo renders objects inside a volume of gas/dust/fog/clouds(etc.).  Notice 
 This Demo deliberately creates a very hard scene to render because the light source is almost 100% blocked.  Normal naive path tracing will be very dark and noisy because the rays from the camera can't find the light source unless they are very lucky:
 <br>
 [Naive Path Tracing comparison Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_CompareUni-Directional.html) <br>
-Enter Bi-Directional Path Tracing to the rescue!  Not only do we trace rays from the camera, we also trace rays from the light source as well, and then at the last moment, connect them.  The result is still a little noisy, but much better (we can actually see something!)
+Enter Bi-Directional Path Tracing to the rescue!  Not only do we trace rays from the camera, we trace rays from the light source as well, and then at the last moment, connect them.  The result is still a little noisy, but much better (we can actually see something!)
 <br>
 [Bi-Directional Path Tracing comparison Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_Bi-Directional_PathTracer.html) <br>
 <br>
