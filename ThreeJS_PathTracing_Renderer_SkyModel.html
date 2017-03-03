@@ -38,7 +38,7 @@
 		<script src="js/three-r84.min.js"> </script>
 		<script src="js/threex.keyboardstate.js"> </script>
 		<script src="js/FirstPersonCameraControls.js"> </script>
-		<script src="js/virtualButtonJoystick.js"> </script>
+		<script src="js/MobileJoystickControls.js"> </script>
 		<!-- <script src="js/webgl-obj-loader.js"> </script> -->
 		<script src="js/Detector.js"> </script>
 		<script src="js/stats.min.js"> </script>
@@ -1391,6 +1391,12 @@ void main( void )
 			var cameraRecentlyMoving = false;
 			var isPaused = true;
 			var oldYawRotation, oldPitchRotation;
+			var mobileJoystickControls = null;
+			var oldDeltaX = 0, oldDeltaY = 0;
+			var newDeltaX = 0, newDeltaY = 0;
+			var mobileControlsMoveX = 0;
+			var mobileControlsMoveY = 0;
+			var stillFlagX = true, stillFlagY = true;
 			var camFlightSpeed = 300;
 			var fontAspect;
 			/*
@@ -1414,21 +1420,6 @@ void main( void )
 			var cameraControlsYawObject;//allows access to control camera's left/right movements through mobile input
 			var cameraControlsPitchObject;//allows access to control camera's up/down movements through mobile input
 
-
-			// are we in portrait mobile view? if so, move the buttons over to the left a little..
-			// if not and we are in landscape mode, they can safely be moved farther right without running into each other
-			var b2PercentLeft = SCREEN_WIDTH < SCREEN_HEIGHT ? 50 : 65;
-			var b1PercentLeft = SCREEN_WIDTH < SCREEN_HEIGHT ? 77 : 81;
-			var b3PercentLeft = Math.floor( (b1PercentLeft + b2PercentLeft) / 2 );
-			var joystick = new VirtualJoystick({
-				add3Buttons: true,
-				hideJoystick: true,
-				hideButtons: false,
-				button1PercentLeft: b1PercentLeft,
-				button2PercentLeft: b2PercentLeft,
-				button3PercentLeft: b3PercentLeft
-			});
-
 			var PI_2 = Math.PI / 2;//used by controls below
 			
 			var infoElement = document.getElementById( 'info' );
@@ -1445,7 +1436,11 @@ void main( void )
 
 			if ( 'createTouch' in document ) {
 				mouseControl = false;
-				pixelRatio = window.devicePixelRatio * 0.15;
+				pixelRatio = window.devicePixelRatio * 0.2;
+				
+				mobileJoystickControls = new MobileJoystickControls ({
+					//showJoystick: true,
+				});	
 			}
 			
 			// if on mobile device, unpause the app because there is no ESC key and no mouse capture to do
@@ -1548,7 +1543,7 @@ void main( void )
 				// worldCamera is the dynamic camera 3d object that will be positioned, oriented and 
 				// constantly updated inside the 3d scene.  Its view will ultimately get passed back to the 
 				// stationary quadCamera, which renders the scene to a fullscreen quad (made up of 2 large triangles).
-				worldCamera = new THREE.PerspectiveCamera(31, window.innerWidth / window.innerHeight, 1, 1000);
+				worldCamera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 1000);
 				pathTracingScene.add(worldCamera);
 				
 				controls = new FirstPersonCameraControls( worldCamera );
@@ -1564,7 +1559,6 @@ void main( void )
 				///cameraControlsYawObject.rotation.y = 0.0;
 				// look slightly upward
 				cameraControlsPitchObject.rotation.x = 0.005;
-				joystick.previousRotationX = 0.005;
 				
 				oldYawRotation = cameraControlsYawObject.rotation.y;
 				oldPitchRotation = cameraControlsPitchObject.rotation.x;
@@ -1867,7 +1861,7 @@ void main( void )
 				if (fontAspect > 25) fontAspect = 25;
 				if (fontAspect < 4) fontAspect = 4;
 				fontAspect *= 2;
-
+				
 				pathTracingUniforms.uResolution.value.x = SCREEN_WIDTH * pixelRatio;
 				pathTracingUniforms.uResolution.value.y = SCREEN_HEIGHT * pixelRatio;
 				
@@ -1884,17 +1878,36 @@ void main( void )
 				pathTracingUniforms.uVLen.value = Math.tan(fovScale);
 				pathTracingUniforms.uULen.value = pathTracingUniforms.uVLen.value * worldCamera.aspect;
 				
-				// check if mobile device is in portrait or landscape mode and position buttons accordingly
-				b2PercentLeft = SCREEN_WIDTH < SCREEN_HEIGHT ? 50 : 65;
-				joystick._button2El.style.left = b2PercentLeft + "%";
-				b1PercentLeft = SCREEN_WIDTH < SCREEN_HEIGHT ? 77 : 81;
-				joystick._button1El.style.left = b1PercentLeft + "%";
-				joystick._button3El.style.left = Math.floor( (b1PercentLeft + b2PercentLeft) / 2 ) + "%";
-				if (SCREEN_WIDTH < SCREEN_HEIGHT ) {
-					joystick._button3El.style.bottom = 11 + "%";
-				}
-				else if (SCREEN_WIDTH > SCREEN_HEIGHT ) {
-					joystick._button3El.style.bottom = 21 + "%";
+				if (!mouseControl) {
+					
+					button1Element.style.display = "";
+					button2Element.style.display = "";
+					button3Element.style.display = "";
+					button4Element.style.display = "";
+					// check if mobile device is in portrait or landscape mode and position buttons accordingly
+					if (SCREEN_WIDTH < SCREEN_HEIGHT) {
+						button1Element.style.right = 36 + "%";
+						button2Element.style.right = 2 + "%";
+						button3Element.style.right = 16 + "%";
+						button4Element.style.right = 16 + "%";
+
+						button1Element.style.bottom = 5 + "%";
+						button2Element.style.bottom = 5 + "%";
+						button3Element.style.bottom = 13 + "%";
+						button4Element.style.bottom = 2 + "%";
+					}
+					else {
+						button1Element.style.right = 22 + "%";
+						button2Element.style.right = 3 + "%";
+						button3Element.style.right = 11 + "%";
+						button4Element.style.right = 11 + "%";
+
+						button1Element.style.bottom = 10 + "%";
+						button2Element.style.bottom = 10 + "%";
+						button3Element.style.bottom = 26 + "%";
+						button4Element.style.bottom = 4 + "%";
+					}
+					
 				}
 				
 			} // end function onWindowResize( event )
@@ -1928,19 +1941,53 @@ void main( void )
 					
 				} // end if (mouseControl)
 			
-				// if not playing on desktop, get the rotation from the mobile-touch virtual Joystick
+				// if not playing on desktop, get the rotation from the mobileJoystickControls
 				if ( !mouseControl ) {
 
-					cameraControlsYawObject.rotation.y = joystick.previousRotationY - joystick.deltaX() * 0.005;
-					cameraControlsPitchObject.rotation.x = joystick.previousRotationX - joystick.deltaY() * 0.005;
-					// clamp the camera's vertical movement (around the x-axis) to the 'ceiling' and 'floor',
+					newDeltaX = joystickDeltaX;
+					
+					if (newDeltaX) {
+						
+						mobileControlsMoveX = oldDeltaX - newDeltaX;
+						// smooth out jerkiness if camera was sitting still 
+						if (stillFlagX) {
+							mobileControlsMoveX *= 0.1;
+							stillFlagX = false;
+						}
+						// mobileJoystick X movement (left and right) affects camera rotation around the Y axis	
+						cameraControlsYawObject.rotation.y += (mobileControlsMoveX) * 0.01;
+					}
+					
+					newDeltaY = joystickDeltaY;
+					
+					if (newDeltaY) {
+						
+						mobileControlsMoveY = oldDeltaY - newDeltaY;
+						// smooth out jerkiness if camera was sitting still
+						if (stillFlagY) {
+							mobileControlsMoveY *= 0.1;
+							stillFlagY = false;
+						}
+						// mobileJoystick Y movement (up and down) affects camera rotation around the X axis	
+						cameraControlsPitchObject.rotation.x += (mobileControlsMoveY) * 0.01;
+					}
+					
+					// clamp the camera's vertical movement (around the x-axis) to the scene's 'ceiling' and 'floor',
 					// so you can't accidentally flip the camera upside down
 					cameraControlsPitchObject.rotation.x = Math.max( - PI_2, Math.min( PI_2, cameraControlsPitchObject.rotation.x ) );
 					
+					// save state for next frame
+					oldDeltaX = newDeltaX;
+					oldDeltaY = newDeltaY;
+					
 					// movement detected
-					if ( joystick.deltaX() || joystick.deltaY() ) {
-							
+					if ( newDeltaX || newDeltaY ) {
+						
 						cameraIsMoving = true;
+					}
+					else {
+						stillFlagX = true;
+						stillFlagY = true;
 					}
 					
 				} // end if ( !mouseControl )
@@ -1957,27 +2004,27 @@ void main( void )
 				worldCamera.getWorldQuaternion(cameraWorldQuaternion);
 				
 				// allow flying camera
-				if ( joystick.button3Pressed || keyboard.pressed('W') ) {
+				if ( keyboard.pressed('W') || button3Pressed ) {
 
 					cameraControlsObject.position.add(cameraDirectionVector.multiplyScalar(camFlightSpeed * frameTime));
 					cameraIsMoving = true;
 				}
-				if ( keyboard.pressed('S') ) {
+				if ( keyboard.pressed('S') || button4Pressed ) {
 
 					cameraControlsObject.position.sub(cameraDirectionVector.multiplyScalar(camFlightSpeed * frameTime));
 					cameraIsMoving = true;
 				}
-				if ( joystick.button1Pressed || keyboard.pressed('D') ) {
-
-					cameraControlsObject.position.add(cameraRightVector.multiplyScalar(camFlightSpeed * frameTime));
-					cameraIsMoving = true;
-				}
-				if ( keyboard.pressed('A') ) {
+				if ( keyboard.pressed('A') || button1Pressed ) {
 
 					cameraControlsObject.position.sub(cameraRightVector.multiplyScalar(camFlightSpeed * frameTime));
 					cameraIsMoving = true;
 				}
-				if ( joystick.button2Pressed || keyboard.pressed('Q') ) {
+				if ( keyboard.pressed('D') || button2Pressed ) {
+
+					cameraControlsObject.position.add(cameraRightVector.multiplyScalar(camFlightSpeed * frameTime));
+					cameraIsMoving = true;
+				}
+				if ( keyboard.pressed('Q') ) {
 
 					cameraControlsObject.position.add(cameraUpVector.multiplyScalar(camFlightSpeed * frameTime));
 					cameraIsMoving = true;
