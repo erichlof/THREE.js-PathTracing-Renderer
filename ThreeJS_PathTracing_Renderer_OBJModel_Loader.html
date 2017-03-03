@@ -38,7 +38,7 @@
 		<script src="js/three-r84.min.js"> </script>
 		<script src="js/threex.keyboardstate.js"> </script>
 		<script src="js/FirstPersonCameraControls.js"> </script>
-		<script src="js/virtualButtonJoystick.js"> </script>
+		<script src="js/MobileJoystickControls.js"> </script>
 		<script src="js/webgl-obj-loader.js"> </script>
 		<script src="js/Detector.js"> </script>
 		<script src="js/stats.min.js"> </script>
@@ -369,26 +369,21 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	float tBox = BoxIntersect(uMeshBBox_min, uMeshBBox_max, r);
 	if ( tBox < t && tBox > 0.0)
 	{
-		float iX9;
+		float iX3;
 		float InvWidth = 0.00024414062; // (1.0 / 4096 texture width)
 		vec3 v0, v1, v2;
 
 		for (int i = 0; i < NUMBER_OF_TRIANGLES; i++)
 		{
 		       
-			iX9 = float(i) * 9.0;
-
-			v0    = vec3( texture2D(tTriangleTexture, vec2( (iX9 + 0.0) * InvWidth, 0) ).a,
-				      texture2D(tTriangleTexture, vec2( (iX9 + 1.0) * InvWidth, 0) ).a,
-				      texture2D(tTriangleTexture, vec2( (iX9 + 2.0) * InvWidth, 0) ).a );
-
-			v1    = vec3( texture2D(tTriangleTexture, vec2( (iX9 + 3.0) * InvWidth, 0) ).a,
-				      texture2D(tTriangleTexture, vec2( (iX9 + 4.0) * InvWidth, 0) ).a,
-				      texture2D(tTriangleTexture, vec2( (iX9 + 5.0) * InvWidth, 0) ).a );
-
-			v2    = vec3( texture2D(tTriangleTexture, vec2( (iX9 + 6.0) * InvWidth, 0) ).a,
-				      texture2D(tTriangleTexture, vec2( (iX9 + 7.0) * InvWidth, 0) ).a,
-				      texture2D(tTriangleTexture, vec2( (iX9 + 8.0) * InvWidth, 0) ).a );
+			iX3 = float(i) * 3.0;
+			
+			v0 = texture2D(tTriangleTexture, vec2( (iX3 + 0.0) * InvWidth, 0) ).rgb;
+				      
+			v1 = texture2D(tTriangleTexture, vec2( (iX3 + 1.0) * InvWidth, 0) ).rgb;
+				      
+			v2 = texture2D(tTriangleTexture, vec2( (iX3 + 2.0) * InvWidth, 0) ).rgb;
+				     
 			
 			d = RayTriangleIntersection( r, v0, v1, v2 );
 			
@@ -708,8 +703,8 @@ void SetupScene(void)
 {
 	vec3 z  = vec3(0);          
 	vec3 L1 = vec3(1.0, 1.0, 1.0) * 2.0;// Whiteish light //2.0
-	vec3 L2 = vec3(1.0, 0.8, 0.1);// Yellowish light //1.5
-	vec3 L3 = vec3(0.1, 0.7, 1.0);// Blueish light //1.5
+	//vec3 L2 = vec3(1.0, 0.8, 0.1);// Yellowish light //1.5
+	//vec3 L3 = vec3(0.1, 0.7, 1.0);// Blueish light //1.5
 	
 	spheres[0] = Sphere( 500.0, vec3(  0.0, 1000.0,    0.0), L1, z, LIGHT);//spherical white Light1 
         
@@ -765,8 +760,8 @@ void main( void )
 	
 	if ( uCameraJustStartedMoving )
 	{
-		previousColor *= 0.001; // clear rendering accumulation buffer
-		pixelColor *= 1.6;
+		previousColor = vec3(0); // clear rendering accumulation buffer
+		pixelColor *= 2.0;
 	}
 	else if ( uCameraIsMoving )
 	{
@@ -810,6 +805,12 @@ void main( void )
 			var cameraRecentlyMoving = false;
 			var isPaused = true;
 			var oldYawRotation, oldPitchRotation;
+			var mobileJoystickControls = null;
+			var oldDeltaX = 0, oldDeltaY = 0;
+			var newDeltaX = 0, newDeltaY = 0;
+			var mobileControlsMoveX = 0;
+			var mobileControlsMoveY = 0;
+			var stillFlagX = true, stillFlagY = true;
 			var camFlightSpeed = 50;
 			var fontAspect;
 			var objMeshes = {};
@@ -831,21 +832,6 @@ void main( void )
 			var cameraControlsYawObject;//allows access to control camera's left/right movements through mobile input
 			var cameraControlsPitchObject;//allows access to control camera's up/down movements through mobile input
 
-
-			// are we in portrait mobile view? if so, move the buttons over to the left a little..
-			// if not and we are in landscape mode, they can safely be moved farther right without running into each other
-			var b2PercentLeft = SCREEN_WIDTH < SCREEN_HEIGHT ? 50 : 65;
-			var b1PercentLeft = SCREEN_WIDTH < SCREEN_HEIGHT ? 77 : 81;
-			var b3PercentLeft = Math.floor( (b1PercentLeft + b2PercentLeft) / 2 );
-			var joystick = new VirtualJoystick({
-				add3Buttons: true,
-				hideJoystick: true,
-				hideButtons: false,
-				button1PercentLeft: b1PercentLeft,
-				button2PercentLeft: b2PercentLeft,
-				button3PercentLeft: b3PercentLeft
-			});
-
 			var PI_2 = Math.PI / 2;//used by controls below
 			
 			var infoElement = document.getElementById( 'info' );
@@ -863,8 +849,12 @@ void main( void )
 			if ( 'createTouch' in document ) {
 				mouseControl = false;
 				pixelRatio = window.devicePixelRatio * 0.2;
+				
+				mobileJoystickControls = new MobileJoystickControls ({
+					//showJoystick: true,
+				});	
 			}
-			
+
 			// if on mobile device, unpause the app because there is no ESC key and no mouse capture to do
 			if ( !mouseControl )
 				isPaused = false;
@@ -979,10 +969,9 @@ void main( void )
 
 				// for flyCam
 				cameraControlsObject.position.set(0,35,95);
-				///cameraControlsYawObject.rotation.y = 0.0;
+				
 				// look slightly downward
 				cameraControlsPitchObject.rotation.x = -0.2;
-				joystick.previousRotationX = -0.2;
 				
 				oldYawRotation = cameraControlsYawObject.rotation.y;
 				oldPitchRotation = cameraControlsPitchObject.rotation.x;
@@ -1017,12 +1006,13 @@ void main( void )
 
 				total_number_of_triangles = objMeshes.my_mesh.faceIndices.length / 3;
 				console.log("Triangle count:" + total_number_of_triangles);
-				triangle_array = new Float32Array( 4096 );
 				
-				var modelScale = 1.0;
-				//var offsetVec = new THREE.Vector3(0,14,-100); // good for desktopPC computer model
-				//var offsetVec = new THREE.Vector3(0,10,-100);
-				var offsetVec = new THREE.Vector3(0,-5,0);
+				var buffer = new ArrayBuffer(4096 * 3 * 4); 
+				//4096 = max width of texture, 3 = r,g, and b components, 4 = bytes each (4bytes*8bits=32bit for Float32Array)
+				triangle_array = new Float32Array( buffer );
+				
+				var modelScale = 1;
+				var modelPositionOffset = new THREE.Vector3(0,11,0);
 				
 				var b_box_min = new THREE.Vector3(1000000, 1000000, 1000000);
         			var b_box_max = new THREE.Vector3(-1000000, -1000000, -1000000);
@@ -1053,47 +1043,9 @@ void main( void )
 					v1.multiplyScalar( modelScale );
 					v2.multiplyScalar( modelScale );
 						
-					v0.add( offsetVec );
-					v1.add( offsetVec );
-					v2.add( offsetVec );
-					
-					
-					
-					/*
-					p0.copy(v0);
-					
-					v1subv0.copy(v1).sub(v0);
-					v2subv0.copy(v2).sub(v0);
-					normal.crossVectors( v1subv0, v2subv0 ).normalize();
-					
-					triangleMatrix.set( v1subv0.x, v2subv0.x, normal.x,
-							    v1subv0.y, v2subv0.y, normal.y,
-							    v1subv0.z, v2subv0.z, normal.z  );
-						
-					inverseMatrix.getInverse(triangleMatrix);
-					*/
-					
-					/*
-					// be sure of multiplier number 12 or 15!
-					triangle_array[15*j+0]  = inverseMatrix.elements[0]; triangle_array[15*j+1]  = inverseMatrix.elements[3]; triangle_array[15*j+2]  = inverseMatrix.elements[6];     
-					triangle_array[15*j+3]  = inverseMatrix.elements[1]; triangle_array[15*j+4]  = inverseMatrix.elements[4]; triangle_array[15*j+5]  = inverseMatrix.elements[7];
-					triangle_array[15*j+6]  = inverseMatrix.elements[2]; triangle_array[15*j+7]  = inverseMatrix.elements[5]; triangle_array[15*j+8]  = inverseMatrix.elements[8];
-					triangle_array[15*j+9]  = p0.x;                      triangle_array[15*j+10] = p0.y;                      triangle_array[15*j+11] = p0.z;
-					triangle_array[15*j+12] = normal.x;                  triangle_array[15*j+13] = normal.y;                  triangle_array[15*j+14] = normal.z;
-					*/
-					
-					/*
-				        triangle_array[15*j+0]  = inverseMatrix.elements[0]; triangle_array[15*j+1]  = inverseMatrix.elements[1]; triangle_array[15*j+2]  = inverseMatrix.elements[2];     
-					triangle_array[15*j+3]  = inverseMatrix.elements[3]; triangle_array[15*j+4]  = inverseMatrix.elements[4]; triangle_array[15*j+5]  = inverseMatrix.elements[5];
-					triangle_array[15*j+6]  = inverseMatrix.elements[6]; triangle_array[15*j+7]  = inverseMatrix.elements[7]; triangle_array[15*j+8]  = inverseMatrix.elements[8];
-					triangle_array[15*j+9]  = p0.x;                      triangle_array[15*j+10] = p0.y;                      triangle_array[15*j+11] = p0.z;
-					triangle_array[15*j+12] = normal.x;                  triangle_array[15*j+13] = normal.y;                  triangle_array[15*j+14] = normal.z;
-					*/
-					/*
-					triangle_array[9*j+0] = v0.x;        triangle_array[9*j+1] = v0.y;        triangle_array[9*j+2] = v0.z;     
-					triangle_array[9*j+3] = v1.x - v0.x; triangle_array[9*j+4] = v1.y - v0.y; triangle_array[9*j+5] = v1.z - v0.z;
-					triangle_array[9*j+6] = v2.x - v0.x; triangle_array[9*j+7] = v2.y - v0.y; triangle_array[9*j+8] = v2.z - v0.z;
-					*/
+					v0.add( modelPositionOffset );
+					v1.add( modelPositionOffset );
+					v2.add( modelPositionOffset );
 					
 					triangle_array[9*j+0] = v0.x; triangle_array[9*j+1] = v0.y; triangle_array[9*j+2] = v0.z;     
 					triangle_array[9*j+3] = v1.x; triangle_array[9*j+4] = v1.y; triangle_array[9*j+5] = v1.z;
@@ -1107,18 +1059,30 @@ void main( void )
 				objMeshes.my_mesh.bounding_box_min.multiplyScalar( modelScale );
 				objMeshes.my_mesh.bounding_box_max.multiplyScalar( modelScale );
 				
-				objMeshes.my_mesh.bounding_box_min.add( offsetVec );
-				objMeshes.my_mesh.bounding_box_max.add( offsetVec );
+				objMeshes.my_mesh.bounding_box_min.add( modelPositionOffset );
+				objMeshes.my_mesh.bounding_box_max.add( modelPositionOffset );
 				/*
-				for ( var i=0; i < (12*total_number_of_triangles); i++ ){
+				for ( var i=0; i < (9*total_number_of_triangles); i++ ){
 					console.log(triangle_array[i]);
 				}
 				*/
-				triangleDataTexture = new THREE.DataTexture( triangle_array, 4096, 1, THREE.AlphaFormat, THREE.FloatType, THREE.Texture.DEFAULT_MAPPING, THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping, THREE.NearestFilter, THREE.NearestFilter, 1, THREE.LinearEncoding );
-				triangleDataTexture.needsUpdate = true;
+
+				triangleDataTexture = new THREE.DataTexture( triangle_array, 
+									     4096, 
+									     1, 
+									     THREE.RGBFormat, 
+									     THREE.FloatType, 
+									     THREE.Texture.DEFAULT_MAPPING, 
+									     THREE.ClampToEdgeWrapping, 
+									     THREE.ClampToEdgeWrapping, 
+									     THREE.NearestFilter, 
+									     THREE.NearestFilter, 
+									     1, 
+									     THREE.LinearEncoding );
+				
 				triangleDataTexture.flipY = false;
 				triangleDataTexture.generateMipmaps = false;
-				
+				triangleDataTexture.needsUpdate = true;
 				
 				
 				pathTracingGeometry = new THREE.PlaneBufferGeometry( 2, 2 );
@@ -1268,17 +1232,36 @@ void main( void )
 				pathTracingUniforms.uVLen.value = Math.tan(fovScale);
 				pathTracingUniforms.uULen.value = pathTracingUniforms.uVLen.value * worldCamera.aspect;
 				
-				// check if mobile device is in portrait or landscape mode and position buttons accordingly
-				b2PercentLeft = SCREEN_WIDTH < SCREEN_HEIGHT ? 50 : 65;
-				joystick._button2El.style.left = b2PercentLeft + "%";
-				b1PercentLeft = SCREEN_WIDTH < SCREEN_HEIGHT ? 77 : 81;
-				joystick._button1El.style.left = b1PercentLeft + "%";
-				joystick._button3El.style.left = Math.floor( (b1PercentLeft + b2PercentLeft) / 2 ) + "%";
-				if (SCREEN_WIDTH < SCREEN_HEIGHT ) {
-					joystick._button3El.style.bottom = 11 + "%";
-				}
-				else if (SCREEN_WIDTH > SCREEN_HEIGHT ) {
-					joystick._button3El.style.bottom = 21 + "%";
+				if (!mouseControl) {
+					
+					button1Element.style.display = "";
+					button2Element.style.display = "";
+					button3Element.style.display = "";
+					button4Element.style.display = "";
+					// check if mobile device is in portrait or landscape mode and position buttons accordingly
+					if (SCREEN_WIDTH < SCREEN_HEIGHT) {
+						button1Element.style.right = 36 + "%";
+						button2Element.style.right = 2 + "%";
+						button3Element.style.right = 16 + "%";
+						button4Element.style.right = 16 + "%";
+
+						button1Element.style.bottom = 5 + "%";
+						button2Element.style.bottom = 5 + "%";
+						button3Element.style.bottom = 13 + "%";
+						button4Element.style.bottom = 2 + "%";
+					}
+					else {
+						button1Element.style.right = 22 + "%";
+						button2Element.style.right = 3 + "%";
+						button3Element.style.right = 11 + "%";
+						button4Element.style.right = 11 + "%";
+
+						button1Element.style.bottom = 10 + "%";
+						button2Element.style.bottom = 10 + "%";
+						button3Element.style.bottom = 26 + "%";
+						button4Element.style.bottom = 4 + "%";
+					}
+					
 				}
 				
 			} // end function onWindowResize( event )
@@ -1312,19 +1295,53 @@ void main( void )
 					
 				} // end if (mouseControl)
 			
-				// if not playing on desktop, get the rotation from the mobile-touch virtual Joystick
+				// if not playing on desktop, get the rotation from the mobileJoystickControls
 				if ( !mouseControl ) {
 
-					cameraControlsYawObject.rotation.y = joystick.previousRotationY - joystick.deltaX() * 0.005;
-					cameraControlsPitchObject.rotation.x = joystick.previousRotationX - joystick.deltaY() * 0.005;
-					// clamp the camera's vertical movement (around the x-axis) to the 'ceiling' and 'floor',
+					newDeltaX = joystickDeltaX;
+					
+					if (newDeltaX) {
+						
+						mobileControlsMoveX = oldDeltaX - newDeltaX;
+						// smooth out jerkiness if camera was sitting still 
+						if (stillFlagX) {
+							mobileControlsMoveX *= 0.1;
+							stillFlagX = false;
+						}
+						// mobileJoystick X movement (left and right) affects camera rotation around the Y axis	
+						cameraControlsYawObject.rotation.y += (mobileControlsMoveX) * 0.01;
+					}
+					
+					newDeltaY = joystickDeltaY;
+					
+					if (newDeltaY) {
+						
+						mobileControlsMoveY = oldDeltaY - newDeltaY;
+						// smooth out jerkiness if camera was sitting still
+						if (stillFlagY) {
+							mobileControlsMoveY *= 0.1;
+							stillFlagY = false;
+						}
+						// mobileJoystick Y movement (up and down) affects camera rotation around the X axis	
+						cameraControlsPitchObject.rotation.x += (mobileControlsMoveY) * 0.01;
+					}
+					
+					// clamp the camera's vertical movement (around the x-axis) to the scene's 'ceiling' and 'floor',
 					// so you can't accidentally flip the camera upside down
 					cameraControlsPitchObject.rotation.x = Math.max( - PI_2, Math.min( PI_2, cameraControlsPitchObject.rotation.x ) );
 					
+					// save state for next frame
+					oldDeltaX = newDeltaX;
+					oldDeltaY = newDeltaY;
+					
 					// movement detected
-					if ( joystick.deltaX() || joystick.deltaY() ) {
-							
+					if ( newDeltaX || newDeltaY ) {
+						
 						cameraIsMoving = true;
+					}
+					else {
+						stillFlagX = true;
+						stillFlagY = true;
 					}
 					
 				} // end if ( !mouseControl )
@@ -1341,27 +1358,27 @@ void main( void )
 				worldCamera.getWorldQuaternion(cameraWorldQuaternion);
 				
 				// allow flying camera
-				if ( joystick.button3Pressed || keyboard.pressed('W') ) {
+				if ( keyboard.pressed('W') || button3Pressed ) {
 
 					cameraControlsObject.position.add(cameraDirectionVector.multiplyScalar(camFlightSpeed * frameTime));
 					cameraIsMoving = true;
 				}
-				if ( keyboard.pressed('S') ) {
+				if ( keyboard.pressed('S') || button4Pressed ) {
 
 					cameraControlsObject.position.sub(cameraDirectionVector.multiplyScalar(camFlightSpeed * frameTime));
 					cameraIsMoving = true;
 				}
-				if ( joystick.button1Pressed || keyboard.pressed('D') ) {
-
-					cameraControlsObject.position.add(cameraRightVector.multiplyScalar(camFlightSpeed * frameTime));
-					cameraIsMoving = true;
-				}
-				if ( keyboard.pressed('A') ) {
+				if ( keyboard.pressed('A') || button1Pressed ) {
 
 					cameraControlsObject.position.sub(cameraRightVector.multiplyScalar(camFlightSpeed * frameTime));
 					cameraIsMoving = true;
 				}
-				if ( joystick.button2Pressed || keyboard.pressed('Q') ) {
+				if ( keyboard.pressed('D') || button2Pressed ) {
+
+					cameraControlsObject.position.add(cameraRightVector.multiplyScalar(camFlightSpeed * frameTime));
+					cameraIsMoving = true;
+				}
+				if ( keyboard.pressed('Q') ) {
 
 					cameraControlsObject.position.add(cameraUpVector.multiplyScalar(camFlightSpeed * frameTime));
 					cameraIsMoving = true;
