@@ -731,7 +731,7 @@ vec3 CalculateRadiance( Ray r )
 		{	
 			float sigma = 0.001;
 			//float factor = (xx+d);
-			float factor = d;
+			float factor = d * 0.5;
 			float trans = exp( -sigma * factor );
 			float geomTerm = 1.0 / dot(lightVec, lightVec);
 			accumCol += vec3(0,0,1.0)*vintersec.emission * geomTerm * trans / pdf;
