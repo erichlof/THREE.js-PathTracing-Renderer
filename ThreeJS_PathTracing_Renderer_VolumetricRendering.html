@@ -687,64 +687,72 @@ vec3 CalculateRadiance( Ray r )
         Intersection intersec, vintersec;
 	vec3 x;
 	bool bounceIsSpecular = true;
-	float t, volt, camt;
+	float t, vt, camt;
 	int prevIntersecType = 0;
 	Ray cameraRay = r;
-	Ray volRay;
+	Ray vray;
 	
 	
         for (int depth = 0; depth < 6; depth++)
 	{
 		
-		float u = rand();
 		float xx;
 		float pdf;
 		float d;
+		float u = rand();
 		vec3 lightVec;
+		vec3 particlePos;
 		
-		
+		// half way through max bounce depth(6), set tracing ray to the volume ray - this is what helps find volume caustics
 		if (depth == 3)
 		{
-			r = volRay;
-			bounceIsSpecular = false;
+			r = vray;
+			bounceIsSpecular = false; // reset specular flag so we don't get false fireflies
 		}
-				
+
 		t = SceneIntersect(r, intersec);
-		
+
+		// on first loop iteration, save intersection distance along camera ray (t) into camt variable for use below
 		if (depth == 0) 
 			camt = t;
-		
-		// sample along ray from camera to surface
+
+		// sample along intial ray from camera into the scene
 		sampleEquiAngular(u, camt, cameraRay, vec3(275.0, 510.0, -280.0), xx, pdf);
 
-		// connect to light and check shadow ray
-		vec3 particlePos = cameraRay.origin + xx * cameraRay.direction;
+		// create a particle along cameraRay and cast a shadow ray towards light (similar to Direct Lighting)
+		particlePos = cameraRay.origin + xx * cameraRay.direction;
 		lightVec = vec3( 275.0, 510.0, -280.0 ) - particlePos;
 		d = length(lightVec);
-		volRay = Ray(particlePos, normalize(lightVec));
-		volt = SceneIntersect(volRay, vintersec);
+		vray = Ray(particlePos, normalize(lightVec));
+		vt = SceneIntersect(vray, vintersec);
 		
+		// if the particle can see the light source, apply volumetric lighting calculation
 		if (vintersec.type == LIGHT)
 		{	
 			float sigma = 0.001;
-			float factor = (xx+d);
+			//float factor = (xx+d);
+			float factor = d;
 			float trans = exp( -sigma * factor );
 			float geomTerm = 1.0 / dot(lightVec, lightVec);
 			accumCol += vec3(0,0,1.0)*vintersec.emission * geomTerm * trans / pdf;
 		}
+		// otherwise the particle will remain in shadow - this is what prduces the characteristic shafts of light vs. volume shadows
 		
+		// this is the normal ray tracing scene intersection result
 		if (intersec.type == LIGHT)
 		{	
+			// if we have just bounced off a refractive surface(REFR) like glass, then allow particle to be lit
 			if (prevIntersecType == REFR && depth > 3)
 			{
 				accumCol += mask * intersec.emission;
 			}
+			// this is part of the normal path tracing algorithm
 			else if (depth < 3 && bounceIsSpecular)
 			{
 				accumCol += mask * intersec.emission;
 			}	
 		}
-		
+		// reset previous material type
 		prevIntersecType = 0;
 		
 		// useful data 
@@ -1257,7 +1265,7 @@ void main( void )
 				pathTracingScene.add( cameraControlsObject );
 
 				// for flyCam
-				cameraControlsObject.position.set(278, 270, 550);
+				cameraControlsObject.position.set(278, 270, 1000);
 				///cameraControlsYawObject.rotation.y = 0.0;
 				// look slightly upward
 				cameraControlsPitchObject.rotation.x = 0.005;
