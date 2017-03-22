@@ -1387,7 +1387,7 @@ vec3 CalculateRadiance( Ray r )
 	
 	for (int depth = 0; depth < 4; depth++)
 	{
-		
+		/*
 		// Russian Roulette
 		if(depth>0)
 		{
@@ -1395,7 +1395,7 @@ vec3 CalculateRadiance( Ray r )
 				break;
 			mask *= 2.0;
 		}
-		
+		*/
 		
 		float t = SceneIntersect(r, intersec);
 		/*
