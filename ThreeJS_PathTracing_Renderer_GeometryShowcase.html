@@ -3,7 +3,7 @@
 	<head>
 		<title>three.js PathTracing Renderer - Geometry Showcase</title>
 		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, user-scalable=no">
+		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1">
 		<style>
 
 			html, body {
@@ -32,7 +32,7 @@
 		<div id="info">three.js PathTracing Renderer - Geometry Showcase</div>
 		
 		<div id="cameraInfo" style="position:fixed; left:3%; bottom:2%; font-family:arial; font-type:bold; color:rgb(255,255,255);">
-		FOV: 55 / Aperture: 0.4 / FocusDistance: 100 <br> 
+		FOV: 55 / Aperture: 0.00 / FocusDistance: 132 <br> 
 		Samples: 0
 		</div>
 		
@@ -146,7 +146,7 @@ uniform float uSampleCounter;
 uniform float uULen;
 uniform float uVLen;
 uniform float uApertureSize;
-uniform float uFocalLength;
+uniform float uFocusDistance;
 
 uniform vec2 uResolution;
 
@@ -1375,6 +1375,7 @@ vec3 CalculateRadiance( Ray r )
         Intersection intersec;
 	bool bounceIsSpecular = true;
 	int sampleDirLightBudget = 2;
+	int sampleDiffuseBudget = 2;
 	Sphere lightChoice;
 	
 	float randChoose = rand();
@@ -1386,15 +1387,15 @@ vec3 CalculateRadiance( Ray r )
 	
 	for (int depth = 0; depth < 4; depth++)
 	{
-		/*
+		
 		// Russian Roulette
 		if(depth>0)
 		{
 			if (rand() > 0.5)
 				break;
-			else mask *= 2.0;
+			mask *= 2.0;
 		}
-		*/
+		
 		
 		float t = SceneIntersect(r, intersec);
 		/*
@@ -1425,6 +1426,8 @@ vec3 CalculateRadiance( Ray r )
 		
 		if (intersec.type == DIFF || intersec.type == CHECK) // Ideal DIFFUSE reflection
 		{
+			sampleDiffuseBudget -= 1;
+			if (sampleDiffuseBudget < 0) break;
 			
 			if( intersec.type == CHECK )
 			{
@@ -1433,11 +1436,17 @@ vec3 CalculateRadiance( Ray r )
 			}
 			
 			mask *= intersec.color;
+			
+			accumCol += calcDirectLighting(mask, x, nl, lightChoice);
+			/*
 			if (sampleDirLightBudget > 0)
 			{
 				accumCol += calcDirectLighting(mask, x, nl, lightChoice);
 				sampleDirLightBudget -= 1;
 			}
+			else break;
+			*/
+			
 			// choose random Diffuse sample vector
 			vec3 d = randomCosWeightedDirectionInHemisphere( nl );
 			//vec3 d = randomHemisphereDirection(nl);
@@ -1536,12 +1545,20 @@ vec3 CalculateRadiance( Ray r )
 			}
 			else
 			{
+				//sampleDiffuseBudget -= 1;
+				//if (sampleDiffuseBudget < 0) break;
+				
 				mask *= intersec.color;
+				
+				accumCol += calcDirectLighting(mask, x, nl, lightChoice);
+				/*
 				if (sampleDirLightBudget > 0)
 				{
 					accumCol += calcDirectLighting(mask, x, nl, lightChoice);
 					sampleDirLightBudget -= 1;
 				}
+                                else break;
+				*/
 				
 				r = Ray( x, normalize(d) );
 				r.origin += r.direction;
@@ -1558,12 +1575,20 @@ vec3 CalculateRadiance( Ray r )
 			float scatteringDistance = -log( rand() ) / translucentDensity;
 			if (scatteringDistance > t) 
 			{
+				//sampleDiffuseBudget -= 1;
+				//if (sampleDiffuseBudget < 0) break;
+			
 				mask *= computeTransmission(vec3(1.0, 0.1, 0.0), t);
+				
+				accumCol += calcDirectLighting(mask, x, nl, lightChoice);
+				/*
 				if (sampleDirLightBudget > 0)
 				{
 					accumCol += calcDirectLighting(mask, x, nl, lightChoice);
 					sampleDirLightBudget -= 1;
 				}
+				else break;
+				*/
 				
 				x = x + r.direction * scatteringDistance;
 				r = Ray( x, r.direction ); //transmission
@@ -1573,13 +1598,21 @@ vec3 CalculateRadiance( Ray r )
 			}
 			else
 			{
+				//sampleDiffuseBudget -= 1;
+				//if (sampleDiffuseBudget < 0) break;
+				
 				// Compute how much light was absorbed along the ray before it was scattered:
 				mask *= computeTransmission(vec3(1.0, 0.1, 0.0), scatteringDistance);
+				
+				accumCol += calcDirectLighting(mask, x, nl, lightChoice);
+				/*
 				if (sampleDirLightBudget > 0)
 				{
 					accumCol += calcDirectLighting(mask, x, nl, lightChoice);
 					sampleDirLightBudget -= 1;
 				}
+				else break;
+				*/
 				
 				// Scatter the ray:
 				x = x + r.direction * scatteringDistance;
@@ -1607,12 +1640,20 @@ vec3 CalculateRadiance( Ray r )
 			}
 			else
 			{
+				//sampleDiffuseBudget -= 1;
+				//if (sampleDiffuseBudget < 0) break;
+			
 				mask *= intersec.color;
+				
+				accumCol += calcDirectLighting(mask, x, nl, lightChoice);
+				/*
 				if (sampleDirLightBudget > 0)
 				{
 					accumCol += calcDirectLighting(mask, x, nl, lightChoice);
 					sampleDirLightBudget -= 1;
 				}
+				else break;
+				*/
 				
 				// scattering
 				// choose cosWeighted random Diffuse reflection vector for participating medium
@@ -1660,12 +1701,18 @@ vec3 CalculateRadiance( Ray r )
 				mask *= computeTransmission(transColorCoefficient, t); // transmission
 			}
 			
+			//sampleDiffuseBudget -= 1;
+			//if (sampleDiffuseBudget < 0) break;
+			
+			accumCol += calcDirectLighting(mask, x, nl, lightChoice);
+			/*
 			if (sampleDirLightBudget > 0)
 			{
 				accumCol += calcDirectLighting(mask, x, nl, lightChoice);
 				sampleDirLightBudget -= 1;
 			}
-			
+			else break;
+                        */
 			
 			x = x + r.direction * scatteringDistance;
 			//vec3 d = randomSphereDirection(); // true Isotropic scattering
@@ -1767,7 +1814,7 @@ void main( void )
 	vec3 rayDir = normalize( d.x * camRight * uULen + d.y * camUp * uVLen + camForward );
 	
 	// depth of field
-	vec3 focalPoint = uFocalLength * rayDir;
+	vec3 focalPoint = uFocusDistance * rayDir;
 	float randomAngle = rand() * TWO_PI; // pick random point on aperture
 	float randomRadius = rand() * uApertureSize;
 	vec3  randomAperturePos = ( cos(randomAngle) * camRight + sin(randomAngle) * camUp ) * randomRadius;
@@ -1792,6 +1839,7 @@ void main( void )
 	{
 		previousColor *= 0.5; // motion-blur trail amount (old image)
 		pixelColor *= (uSampleCounter) * 0.5; // brightness of new image (noisy)
+		
 	}
 		
 	gl_FragColor = vec4( pixelColor + previousColor, 1.0 );
@@ -1820,8 +1868,14 @@ void main( void )
 			var renderer, clock;
 			var frameTime, elapsedTime;
 			var fovScale;
-			var apertureSize = 0.4;
-			var focalLength = 100.0;
+			var increaseFOV = false;
+			var decreaseFOV = false;
+			var apertureSize = 0.0;
+			var increaseAperture = false;
+			var decreaseAperture = false;
+			var focusDistance = 132.0;
+			var increaseFocusDist = false;
+			var decreaseFocusDist = false;
 			var pixelRatio = window.devicePixelRatio * 0.5;
 			var TWO_PI = Math.PI * 2;
 			var randomVector = new THREE.Vector3();
@@ -1838,6 +1892,10 @@ void main( void )
 			var mobileControlsMoveX = 0;
 			var mobileControlsMoveY = 0;
 			var stillFlagX = true, stillFlagY = true;
+			var oldPinchWidthX = 0;
+			var oldPinchWidthY = 0;
+			var pinchDeltaX = 0;
+			var pinchDeltaY = 0;
 			var camFlightSpeed = 60;
 			var fontAspect;
 			/*
@@ -1877,10 +1935,11 @@ void main( void )
 			
 			if ( 'createTouch' in document ) {
 				mouseControl = false;
-				pixelRatio = window.devicePixelRatio * 0.2;
+				pixelRatio = window.devicePixelRatio * 0.15;
 				
 				mobileJoystickControls = new MobileJoystickControls ({
 					//showJoystick: true,
+					enableMultiTouch: true
 				});	
 			}
 			
@@ -1935,26 +1994,13 @@ void main( void )
 				event.stopPropagation();
 
 				if ( event.deltaY > 0 ) {
-
-					worldCamera.fov ++;
-					if (worldCamera.fov > 179)
-						worldCamera.fov = 179;
-					fovScale = worldCamera.fov * 0.5 * (Math.PI / 180.0);
-					pathTracingUniforms.uVLen.value = Math.tan(fovScale);
-					pathTracingUniforms.uULen.value = pathTracingUniforms.uVLen.value * worldCamera.aspect;
+					
+					increaseFOV = true;
 				
-					cameraIsMoving = true;
-
 				} else if ( event.deltaY < 0 ) {
-
-					worldCamera.fov --;
-					if (worldCamera.fov < 1)
-						worldCamera.fov = 1;
-					fovScale = worldCamera.fov * 0.5 * (Math.PI / 180.0);
-					pathTracingUniforms.uVLen.value = Math.tan(fovScale);
-					pathTracingUniforms.uULen.value = pathTracingUniforms.uVLen.value * worldCamera.aspect;
-					cameraIsMoving = true;
-
+					
+					decreaseFOV = true;
+					
 				}
 
 			}
@@ -2166,8 +2212,8 @@ void main( void )
 					uSampleCounter: { type: "f", value: 0.0 },
 					uULen: { type: "f", value: 1.0 },
 					uVLen: { type: "f", value: 1.0 },
-					uApertureSize: { type: "f", value: 0.4 },
-					uFocalLength: { type: "f", value: 100.0 },
+					uApertureSize: { type: "f", value: 0.0 },
+					uFocusDistance: { type: "f", value: 132.0 },
 					
 					uResolution: { type: "v2", value: new THREE.Vector2() },
 					
@@ -2303,37 +2349,51 @@ void main( void )
 				pathTracingUniforms.uVLen.value = Math.tan(fovScale);
 				pathTracingUniforms.uULen.value = pathTracingUniforms.uVLen.value * worldCamera.aspect;
 				
-				if (!mouseControl) {
+				if ( !mouseControl ) {
 					
 					button1Element.style.display = "";
 					button2Element.style.display = "";
 					button3Element.style.display = "";
 					button4Element.style.display = "";
+					button5Element.style.display = "";
+					button6Element.style.display = "";
 					// check if mobile device is in portrait or landscape mode and position buttons accordingly
 					if (SCREEN_WIDTH < SCREEN_HEIGHT) {
+						
 						button1Element.style.right = 36 + "%";
 						button2Element.style.right = 2 + "%";
 						button3Element.style.right = 16 + "%";
 						button4Element.style.right = 16 + "%";
+						button5Element.style.right = 3 + "%";
+						button6Element.style.right = 3 + "%";
 
 						button1Element.style.bottom = 5 + "%";
 						button2Element.style.bottom = 5 + "%";
 						button3Element.style.bottom = 13 + "%";
 						button4Element.style.bottom = 2 + "%";
+						button5Element.style.bottom = 25 + "%";
+						button6Element.style.bottom = 18 + "%";
+						
 					}
 					else {
+						
 						button1Element.style.right = 22 + "%";
 						button2Element.style.right = 3 + "%";
 						button3Element.style.right = 11 + "%";
 						button4Element.style.right = 11 + "%";
+						button5Element.style.right = 3 + "%";
+						button6Element.style.right = 3 + "%";
 
 						button1Element.style.bottom = 10 + "%";
 						button2Element.style.bottom = 10 + "%";
 						button3Element.style.bottom = 26 + "%";
 						button4Element.style.bottom = 4 + "%";
+						button5Element.style.bottom = 48 + "%";
+						button6Element.style.bottom = 34 + "%";
+						
 					}
 					
-				}
+				} // end if ( !mouseControl ) {
 				
 			} // end function onWindowResize( event )
 			
@@ -2345,9 +2405,11 @@ void main( void )
 				
 				frameTime = clock.getDelta();
 				
-				elapsedTime = clock.getElapsedTime() % 1000;
+				//elapsedTime = clock.getElapsedTime() % 1000;
 				
-				
+				// reset flags
+				cameraIsMoving = false;
+				cameraJustStartedMoving = false;
 				
 				// check user controls
 				if (mouseControl) {
@@ -2364,7 +2426,7 @@ void main( void )
 					
 				} // end if (mouseControl)
 			
-				// if not playing on desktop, get the rotation from the mobileJoystickControls
+				// if not playing on desktop, get input from the mobileJoystickControls
 				if ( !mouseControl ) {
 
 					newDeltaX = joystickDeltaX;
@@ -2413,6 +2475,25 @@ void main( void )
 						stillFlagY = true;
 					}
 					
+					newPinchWidthX = pinchWidthX;
+					newPinchWidthY = pinchWidthY;
+					pinchDeltaX = newPinchWidthX - oldPinchWidthX;
+					pinchDeltaY = newPinchWidthY - oldPinchWidthY;
+					
+					if( Math.abs(pinchDeltaX) > Math.abs(pinchDeltaY) ) {
+						if (pinchDeltaX < -3) increaseFOV = true;
+						if (pinchDeltaX >  3) decreaseFOV = true;
+					}
+					
+					if( Math.abs(pinchDeltaY) >= Math.abs(pinchDeltaX) ) {
+						if (pinchDeltaY >  1) increaseAperture = true;
+						if (pinchDeltaY < -1) decreaseAperture = true;
+					}
+					
+					// save state for next frame
+					oldPinchWidthX = newPinchWidthX;
+					oldPinchWidthY = newPinchWidthY;
+					
 				} // end if ( !mouseControl )
 				
 				// this gives us a vector in the direction that the camera is pointing,
@@ -2427,66 +2508,106 @@ void main( void )
 				worldCamera.getWorldQuaternion(cameraWorldQuaternion);
 				
 				// allow flying camera
-				if ( keyboard.pressed('W') || button3Pressed ) {
+				if ( (keyboard.pressed('W') || button3Pressed) && !(keyboard.pressed('S') || button4Pressed) ) {
 
 					cameraControlsObject.position.add(cameraDirectionVector.multiplyScalar(camFlightSpeed * frameTime));
 					cameraIsMoving = true;
 				}
-				if ( keyboard.pressed('S') || button4Pressed ) {
+				if ( (keyboard.pressed('S') || button4Pressed) && !(keyboard.pressed('W') || button3Pressed) ) {
 
 					cameraControlsObject.position.sub(cameraDirectionVector.multiplyScalar(camFlightSpeed * frameTime));
 					cameraIsMoving = true;
 				}
-				if ( keyboard.pressed('A') || button1Pressed ) {
+				if ( (keyboard.pressed('A') || button1Pressed) && !(keyboard.pressed('D') || button2Pressed) ) {
 
 					cameraControlsObject.position.sub(cameraRightVector.multiplyScalar(camFlightSpeed * frameTime));
 					cameraIsMoving = true;
 				}
-				if ( keyboard.pressed('D') || button2Pressed ) {
+				if ( (keyboard.pressed('D') || button2Pressed) && !(keyboard.pressed('A') || button1Pressed) ) {
 
 					cameraControlsObject.position.add(cameraRightVector.multiplyScalar(camFlightSpeed * frameTime));
 					cameraIsMoving = true;
 				}
-				if ( keyboard.pressed('Q') ) {
+				if ( keyboard.pressed('Q') && !keyboard.pressed('Z') ) {
 
 					cameraControlsObject.position.add(cameraUpVector.multiplyScalar(camFlightSpeed * frameTime));
 					cameraIsMoving = true;
 				}
-				if ( keyboard.pressed('Z') ) {
+				if ( keyboard.pressed('Z') && !keyboard.pressed('Q') ) {
 
 					cameraControlsObject.position.sub(cameraUpVector.multiplyScalar(camFlightSpeed * frameTime));
 					cameraIsMoving = true;
 				}
-				
-				if ( keyboard.pressed('up') ) {
+				if ( (keyboard.pressed('up') || button5Pressed) && !(keyboard.pressed('down') || button6Pressed) ) {
 					
-					focalLength ++;
-					cameraIsMoving = true;
+					increaseFocusDist = true;
 				}
-				if ( keyboard.pressed('down') ) {
+				if ( (keyboard.pressed('down') || button6Pressed) && !(keyboard.pressed('up') || button5Pressed) ) {
 					
-					focalLength --;
-					if (focalLength < 1)
-						focalLength = 1;
+					decreaseFocusDist = true;
+				}
+				if ( keyboard.pressed('right') && !keyboard.pressed('left') ) {
 					
-					cameraIsMoving = true;
+					increaseAperture = true;
+				}
+				if ( keyboard.pressed('left') && !keyboard.pressed('right') ) {
+					
+					decreaseAperture = true;
 				}
 				
-				if ( keyboard.pressed('right') ) {
+				if ( increaseFOV ) {
+					worldCamera.fov ++;
+					if (worldCamera.fov > 150)
+						worldCamera.fov = 150;
+					fovScale = worldCamera.fov * 0.5 * (Math.PI / 180.0);
+					pathTracingUniforms.uVLen.value = Math.tan(fovScale);
+					pathTracingUniforms.uULen.value = pathTracingUniforms.uVLen.value * worldCamera.aspect;
+				
+					cameraIsMoving = true;
+					increaseFOV = false;
+				}
+				if ( decreaseFOV ) {
+					worldCamera.fov --;
+					if (worldCamera.fov < 1)
+						worldCamera.fov = 1;
+					fovScale = worldCamera.fov * 0.5 * (Math.PI / 180.0);
+					pathTracingUniforms.uVLen.value = Math.tan(fovScale);
+					pathTracingUniforms.uULen.value = pathTracingUniforms.uVLen.value * worldCamera.aspect;
 					
-					apertureSize += 0.02;
+					cameraIsMoving = true;
+					decreaseFOV = false;
+				}
+				
+				if (increaseFocusDist) {
+					focusDistance ++;
+					pathTracingUniforms.uFocusDistance.value = focusDistance;
+					cameraIsMoving = true;
+					increaseFocusDist = false;
+				}
+				if (decreaseFocusDist) {
+					focusDistance --;
+					if (focusDistance < 1)
+						focusDistance = 1;
+					pathTracingUniforms.uFocusDistance.value = focusDistance;
+					cameraIsMoving = true;
+					decreaseFocusDist = false;
+				}
+				
+				if (increaseAperture) {
+					apertureSize += 0.1;
 					if (apertureSize > 20.0)
 						apertureSize = 20.0;
-					
+					pathTracingUniforms.uApertureSize.value = apertureSize;
 					cameraIsMoving = true;
+					increaseAperture = false;
 				}
-				if ( keyboard.pressed('left') ) {
-					
-					apertureSize -= 0.02;
-					if (apertureSize < 0.02)
-						apertureSize = 0.02;
-					
+				if (decreaseAperture) {
+					apertureSize -= 0.1;
+					if (apertureSize < 0.0)
+						apertureSize = 0.0;
+					pathTracingUniforms.uApertureSize.value = apertureSize;
 					cameraIsMoving = true;
+					decreaseAperture = false;
 				}
 				
 				if ( cameraIsMoving ) {
@@ -2509,8 +2630,6 @@ void main( void )
 					
 				
 				pathTracingUniforms.uRandomVector.value = randomVector.set( Math.random(), Math.random(), Math.random() );
-				pathTracingUniforms.uApertureSize.value = apertureSize;
-				pathTracingUniforms.uFocalLength.value = focalLength;
 				pathTracingUniforms.uCameraIsMoving.value = cameraIsMoving;
 				pathTracingUniforms.uCameraJustStartedMoving.value = cameraJustStartedMoving;
 				pathTracingUniforms.uSampleCounter.value = sampleCounter;
@@ -2520,7 +2639,7 @@ void main( void )
 				cameraControlsObject.updateMatrixWorld(true);			
 				pathTracingUniforms.uCameraMatrix.value.copy( worldCamera.matrixWorld );
 				
-				cameraInfoElement.innerHTML = "FOV: " + worldCamera.fov + " / Aperture: " + apertureSize.toFixed(2) + " / FocusDistance: " + focalLength + "<br>" + "Samples: " + sampleCounter;
+				cameraInfoElement.innerHTML = "FOV: " + worldCamera.fov + " / Aperture: " + apertureSize.toFixed(2) + " / FocusDistance: " + focusDistance + "<br>" + "Samples: " + sampleCounter;
 				
 				
 				// RENDERING in 3 steps
@@ -2543,9 +2662,6 @@ void main( void )
 				
 				stats.update();
 				
-				// reset flags
-				cameraIsMoving = false;
-				cameraJustStartedMoving = false;
 				
 			} // end function animate()
 			
