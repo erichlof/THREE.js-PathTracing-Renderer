@@ -61,6 +61,7 @@ Rendering spheres, boxes and mathematical shapes is nice, but most modern graphi
 
 <h2>Updates</h2>
 
+* March 22nd, 2017: Added 2 buttons to mobile controls (tablet and smartphone), for a total of 6 buttons.  With the addition of these buttons, now all the physical camera properties can be changed in real time just like the desktop version could.  Horizontal pinching controls the field of view (FOV), Vertical pinching controls the camera aperture size, and the 2 new buttons are used to move the focus distance (focal point) farther from the camera or closer to the camera. <br>
 * March 3rd, 2017: Complete overhaul of mobile joystick controls.  Now the controls on Cell Phones and Tablets have a smooth, fluid response.  Also I changed the look of the buttons to directional, which makes more sense in this fly-cam setting.  However, I left the vintage joystick arcade-style circular buttons code intact, but commented out, so if you want a character jump-action button, etc., you can just mix and match the button shapes to your liking! :-) <br>
 
 <h2>TODO</h2>
