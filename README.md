@@ -3,23 +3,25 @@ Real-time PathTracing with global illumination and progressive rendering, all on
 
 <h2>LIVE DEMOS</h2>
 
-This demo renders the famous [Cornell Box](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_CornellBox_DirectLighting.html)
+* [Geometry Showcase Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_GeometryShowcase.html) demonstrating some primitive shapes for ray tracing.
+
+* [Cornell Box Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_CornellBox_DirectLighting.html) which renders the famous Cornell Box, but at ~60 fps!
 
 For comparison, here is a real photograph of the original Cornell Box vs. a rendering with the three.js PathTracer:
 
 ![](readme-Images/measured.jpg) ![](readme-Images/CornellBox-Render0.png)
 
-A demo featuring a [Physical Sky Model](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_SkyModel.html)
+* [Physical Sky Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_SkyModel.html) which models Earth's atmospheric scattering and time of day.
 
-A scene showing different quadric (mathematical) shapes and materials [Quadric Geometry Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_QuadricGeometryShowcase.html) (Warning: this may take 7-10 seconds to load/compile!)
+* [Quadric Geometry Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_QuadricGeometryShowcase.html) showing different quadric (mathematical) shapes (Warning: this may take 7-10 seconds to load/compile!)
 
 <h3>Materials Demos</h3>
 
 These demos showcase different materials possibilities: <br>
-Refractive (glass/water) and ClearCoat (billiard ball/car paint) materials: [Materials Showcase #1](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_MaterialsShowcase_1.html) <br>
-Volumetric (smoke/fog/gas) and Metallic (aluminum mirror) materials: [Materials Showcase #2](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_MaterialsShowcase_2.html) <br>
-Diffuse (matte wall paint/chalk) and Translucent (skin/balloons,etc.) materials: [Materials Showcase #3](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_MaterialsShowcase_3.html) <br>
-Metallic (Gold) and shiny SubSurface scattering (polished Jade/wax candles) materials: [Materials Showcase #4](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_MaterialsShowcase_4.html) <br>
+Refractive (glass/water) and ClearCoat (billiard ball/car paint) materials: [Materials Demo #1](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_MaterialsShowcase_1.html) <br>
+Volumetric (smoke/fog/gas) and Metallic (aluminum mirror) materials: [Materials Demo #2](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_MaterialsShowcase_2.html) <br>
+Diffuse (matte wall paint/chalk) and Translucent (skin/balloons,etc.) materials: [Materials Demo #3](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_MaterialsShowcase_3.html) <br>
+Metallic (Gold) and shiny SubSurface scattering (polished Jade/wax candles) materials: [Materials Demo #4](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_MaterialsShowcase_4.html) <br>
 
 ![](readme-Images/threejsPathTracing.png)
 
@@ -45,22 +47,26 @@ The following demos show what I have been experimenting with most recently.  The
 
 This Demo renders objects inside a volume of gas/dust/fog/clouds(etc.).  Notice the cool volumetric caustics from the glass sphere on the left!: <br>
 
-[Volumetric Rendering Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_VolumetricRendering.html) <br>
+* [Volumetric Rendering Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_VolumetricRendering.html) <br>
 
 This Demo deliberately creates a very hard scene to render because the light source is almost 100% blocked.  Normal naive path tracing will be very dark and noisy because the rays from the camera can't find the light source unless they are very lucky: <br>
 
-[Naive Path Tracing comparison Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_CompareUni-Directional.html) <br>
+* [Naive Path Tracing Hidden-Light comparison Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_CompareUni-Directional.html) <br>
 
 Enter Bi-Directional Path Tracing to the rescue!  Not only do we trace rays from the camera, we trace rays from the light source as well, and then at the last moment, connect them.  The result is still a little noisy, but much better (we can actually see something!)<br>
 
-[Bi-Directional Path Tracing comparison Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_Bi-Directional_PathTracer.html) <br>
+* [Bi-Directional Path Tracing Hidden-Light comparison Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_Bi-Directional_PathTracer.html) <br>
 
 Rendering spheres, boxes and mathematical shapes is nice, but most modern graphics models are built out of triangles.  The following demo uses an .obj loader to load a model in .obj format (list of triangles) from disk and then places it in a scene to be path traced.  As of now, it runs too slow for my taste.  It still needs a BVH acceleration structure to speed things up greatly (I am currently investigating different approaches on the GPU). I am showing this because I wanted to demonstrate the ability of the three.js PathTracing renderer to load and render a model in one of the most popular model formats ever: <br>
 
-[.OBJ Model Loading Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_OBJModel_Loader.html)<br>
+* [.OBJ Model Loading Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_OBJModel_Loader.html)<br>
+
+Some pretty interesting shapes can be obtained by deforming objects and/or warping the ray space (position and direction).  This demo applies a twist warp to the spheres and mirror box and randomizes the object space of the top purple sphere, creating an acceptable representation of a cloud (for free - no extra processing time for volumetrics!)
+* [Ray/Object Warping Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_RayWarping.html)<br>
 
 <h2>Updates</h2>
 
+* March 29th, 2017: New Ray-Warping exprimental W.I.P. demo!  Also, I am actively working on the GPU BVH Acceleration structure to speed up triangle model rendering.  There are not many easy-to-understand BVH resources on the internet, so I'm putting all the pieces together by myself one step at a time.  So far I have the BVH builder working.  Now I'm writing the GPU ray-BVH intersection code which has to quickly grab the BVH off of GPU texture memory.  Hard to debug with Javascript/Browser, as I don't have much printout options from what's happening on the GPU.  As soon as I have something decent, I'll share it to this repo!  :) <br>
 * March 22nd, 2017: Added 2 buttons to mobile controls (tablet and smartphone), for a total of 6 buttons.  With the addition of these buttons, now all the physical camera properties can be changed in real time just like the desktop version could.  Horizontal pinching controls the field of view (FOV), Vertical pinching controls the camera aperture size, and the 2 new buttons are used to move the focus distance (focal point) farther from the camera or closer to the camera. <br>
 * March 3rd, 2017: Complete overhaul of mobile joystick controls.  Now the controls on Cell Phones and Tablets have a smooth, fluid response.  Also I changed the look of the buttons to directional, which makes more sense in this fly-cam setting.  However, I left the vintage joystick arcade-style circular buttons code intact, but commented out, so if you want a character jump-action button, etc., you can just mix and match the button shapes to your liking! :-) <br>
 
