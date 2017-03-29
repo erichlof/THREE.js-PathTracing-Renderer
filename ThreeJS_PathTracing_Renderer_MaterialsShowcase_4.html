@@ -1033,6 +1033,7 @@ vec3 CalculateRadiance( Ray r )
         Intersection intersec;
 	bool bounceIsSpecular = true;
 	
+	
         for (int depth = 0; depth < 4; depth++)
 	{
 	
@@ -1125,7 +1126,7 @@ vec3 CalculateRadiance( Ray r )
 				bounceIsSpecular = true;
 			    	continue;
 			}
-			if( reflProbability > Re )
+			else
 			{
 			    	float nnt = nc / nt;
 			    	vec3 tdir = refract(r.direction, nl, nnt);
@@ -1197,7 +1198,7 @@ vec3 CalculateRadiance( Ray r )
 				bounceIsSpecular = false;
 				continue;
 			}
-			if (scatteringDistance >= t)
+			else
 			{
 				x = x + r.direction * scatteringDistance;
 				r = Ray( x, r.direction ); //transmission
@@ -1238,7 +1239,7 @@ vec3 CalculateRadiance( Ray r )
 		} // end if (intersec.type == VOLUME)
 		
 		if (intersec.type == SPECSUB)  // Shiny(specular) coating over Sub-Surface Scattering material
-                {
+		{
 			// Schlick Fresnel approx.
 			float ddn = dot(-r.direction, nl);
 			float nc = 1.0; // IOR of air
@@ -1250,45 +1251,38 @@ vec3 CalculateRadiance( Ray r )
 			
 			// choose either specular reflection or translucent subsurface scattering/transmission
 			if( rand() < Re )
-                	{
+			{
 				r = Ray( x, reflect(r.direction, nl) );
-				r.origin += nl * 2.0;
+				r.origin += nl;
 				bounceIsSpecular = true;
 				continue;
-                	}
-				          	       // 0.2, 0.0, 0.1 polished jade
-			vec3 transColorCoefficient = vec3(0.2, 0.0, 0.1);
+			}
+			
+			vec3 transColorCoefficient = vec3(0.3, 0.02, 0.2);
 			float translucentDensity = 0.1;
 			float scatteringDistance = -log(rand()) / translucentDensity;
 			
 			if (scatteringDistance < t) 
 			{
-				// Scatter the ray:
-				x = x + r.direction * scatteringDistance;
-				vec3 d = randomSphereDirection(); // true Isotropic scattering
-				r = Ray( x, normalize(d) );
-				r.origin += r.direction * 2.0;
 				// Compute how much light was absorbed along the ray before it was scattered:
 				mask *= computeTransmission(transColorCoefficient, scatteringDistance);
-					
-				accumCol += calcDirectLighting(mask, x, nl, spheres[0]);
-				
-				bounceIsSpecular = false;
-				continue;
 			}
-			if (scatteringDistance >= t)
+			else
 			{
-				x = x + r.direction * scatteringDistance;
-				vec3 d = randomSphereDirection(); 
-				r = Ray( x, normalize(d) );
-				r.origin += r.direction * 2.0;
 				mask *= computeTransmission(transColorCoefficient, t); // transmission
-				accumCol += calcDirectLighting(mask, x, nl, spheres[0]);
-				//bounceIsSpecular = true;
-				continue;
 			}
-		
-                } // end if (intersec.type == SPECSUB)
+			
+			accumCol += calcDirectLighting(mask, x, nl, spheres[0]);
+			
+			x = x + r.direction * scatteringDistance;
+			vec3 d = randomSphereDirection(); // true Isotropic scattering
+			//vec3 d = randomCosWeightedDirectionInHemisphere( nl );
+			r = Ray( x, normalize(d) );
+			r.origin += r.direction;
+			bounceIsSpecular = false;
+			continue;
+				
+		} // end if (intersec.type == SPECSUB)
 		
 		
 	} // end for (int depth = 0; depth < 4; depth++)
@@ -2029,7 +2023,7 @@ void main( void )
 				// this gives us a vector in the direction that the camera is pointing,
 				// which will be useful for moving the camera 'forward' and shooting projectiles in that direction
 				controls.getDirection(cameraDirectionVector);
-				//cameraDirectionVector.normalize();
+				cameraDirectionVector.normalize();
 				controls.getUpVector(cameraUpVector);
 				controls.getRightVector(cameraRightVector);
 
