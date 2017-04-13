@@ -1846,6 +1846,13 @@ vec3 CalculateRadiance( Ray r )
 			
 			accumCol += calcDirectLightingQuad(mask, x, nl, quads[0]);
 			
+			// Russian Roulette
+			{
+				if (rand() > 0.3)
+					break;
+				mask *= 3.33;
+			}
+			
 			sampleDiffuseBudget -= 1;
 			if (sampleDiffuseBudget < 1) break;
 			
