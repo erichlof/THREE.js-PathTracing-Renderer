@@ -1568,7 +1568,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	*/
 	
 	// pink and blue sphere-cylinders along right wall
-	A_near = CSG_SphereIntersect( 20.0, vec3(250, 21, 30), r, A_n1, A_n2, A_far);
+	A_near = CSG_SphereIntersect( 20.0, vec3(250, 20.5, 30), r, A_n1, A_n2, A_far);
 	B_near = CSG_OpenCylinderIntersect( vec3(-INFINITY, 20, 30), vec3(INFINITY, 20, 30), 8.0, r, B_n1, B_n2, B_far );
 	d = operation_SolidA_Minus_SolidB( A_near, A_far, B_near, B_far, A_n1, A_n2, B_n1, B_n2, n );
 	if (d < t)
@@ -1826,7 +1826,7 @@ vec3 CalculateRadiance( Ray r )
         vec3 mask = vec3(1.0);
         Intersection intersec;
 	bool bounceIsSpecular = true;
-	int sampleDiffuseBudget = 1;
+	int sampleDiffuseBudget = 2;
 	
 	
 	for (int depth = 0; depth < 4; depth++)
