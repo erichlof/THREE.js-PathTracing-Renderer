@@ -1527,7 +1527,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	
         
 	// Blue Glass Sphere-Boxes along back wall
-	A_near = CSG_SphereIntersect( 20.0, vec3(-100, 21, -200), r, A_n1, A_n2, A_far);
+	A_near = CSG_SphereIntersect( 20.0, vec3(-100, 20, -200), r, A_n1, A_n2, A_far);
 	B_near = CSG_BoxIntersect( vec3(-115, 6, -215), vec3(-85, 36, -185), r, B_n1, B_n2, B_far );
 	d = operation_HollowA_Plus_HollowB( A_near, A_far, B_near, B_far, A_n1, A_n2, B_n1, B_n2, n );
 	if (d < t)
@@ -1540,8 +1540,8 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		intersec.id = CSG_ID;
 	}
 	
-	A_near = CSG_SphereIntersect( 20.0, vec3(0, 19, -200), r, A_n1, A_n2, A_far);
-	B_near = CSG_BoxIntersect( vec3(-15, 4, -215), vec3(15, 34, -185), r, B_n1, B_n2, B_far );
+	A_near = CSG_SphereIntersect( 20.0, vec3(0, 20, -200), r, A_n1, A_n2, A_far);
+	B_near = CSG_BoxIntersect( vec3(-15, 6, -215), vec3(15, 36, -185), r, B_n1, B_n2, B_far );
 	d = operation_HollowA_Minus_SolidB( A_near, A_far, B_near, B_far, A_n1, A_n2, B_n1, B_n2, n );
 	if (d < t)
 	{
@@ -1553,8 +1553,8 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		intersec.id = CSG_ID;
 	}
 	
-	A_near = CSG_SphereIntersect( 20.0, vec3(100, 16, -200), r, A_n1, A_n2, A_far);
-	B_near = CSG_BoxIntersect( vec3(85, 1, -215), vec3(115, 31, -185), r, B_n1, B_n2, B_far );
+	A_near = CSG_SphereIntersect( 20.0, vec3(100, 20, -200), r, A_n1, A_n2, A_far);
+	B_near = CSG_BoxIntersect( vec3(85, 0, -215), vec3(115, 36, -185), r, B_n1, B_n2, B_far );
 	d = operation_HollowA_Overlap_HollowB( A_near, A_far, B_near, B_far, A_n1, A_n2, B_n1, B_n2, n );
 	if (d < t)
 	{
@@ -1826,7 +1826,7 @@ vec3 CalculateRadiance( Ray r )
         vec3 mask = vec3(1.0);
         Intersection intersec;
 	bool bounceIsSpecular = true;
-	int sampleDiffuseBudget = 1;
+	int sampleDiffuseBudget = 2;
 	
 	
 	for (int depth = 0; depth < 4; depth++)
