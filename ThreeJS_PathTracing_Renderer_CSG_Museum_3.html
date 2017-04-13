@@ -1806,7 +1806,7 @@ vec3 CalculateRadiance( Ray r )
         vec3 mask = vec3(1.0);
         Intersection intersec;
 	bool bounceIsSpecular = true;
-	int sampleDiffuseBudget = 1;
+	int sampleDiffuseBudget = 2;
 	
 	
 	for (int depth = 0; depth < 4; depth++)
