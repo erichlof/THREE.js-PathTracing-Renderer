@@ -1579,7 +1579,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		t = d;
 		intersec.normal = normalize(n);
 		intersec.emission = vec3(0);
-		intersec.color = vec3(1.0,0.3,1.0);
+		intersec.color = vec3(0.8,0.4,0.65);
 		intersec.type = COAT;
 		intersec.id = CSG_ID;
 	}
@@ -1592,7 +1592,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		t = d;
 		intersec.normal = normalize(n);
 		intersec.emission = vec3(0);
-		intersec.color = vec3(0.2,0.5,1.0);
+		intersec.color = vec3(0.2,0.3,0.7);
 		intersec.type = COAT;
 		intersec.id = CSG_ID;
 	}
@@ -1701,7 +1701,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		t = d;
 		intersec.normal = normalize(n);
 		intersec.emission = vec3(0);
-		intersec.color = vec3(1,1,1);
+		intersec.color = vec3(0.9);
 		intersec.type = COAT;
 		intersec.id = CSG_ID;
 	}
@@ -1802,24 +1802,26 @@ vec3 calcDirectLightingQuad(vec3 mask, vec3 x, vec3 nl, Quad light)
 	randPointOnLight.y = light.v0.y;
 	randPointOnLight.z = mix(light.v0.z, light.v3.z, rand());
 	vec3 srDir = normalize(randPointOnLight - x);
-	if( dot(srDir, nl) < 0.01 ) return dirLight;
+	float nlDotSrDir = dot(nl, srDir);
+	if (nlDotSrDir < 0.01) return dirLight;
 	
 	// cast shadow ray from intersection point	
 	Ray shadowRay = Ray(x, srDir);
-	shadowRay.origin += srDir;
+	shadowRay.origin += nl;
 	float st = SceneIntersect(shadowRay, shadowIntersec);
 	if ( shadowIntersec.type == LIGHT )
 	{
 		float r2 = distance(light.v0, light.v1) * distance(light.v0, light.v3);
 		vec3 d = randPointOnLight - shadowRay.origin;
 		float d2 = dot(d, d);
-		float weight = max(0.01, dot(-shadowRay.direction, shadowIntersec.normal)) * r2 / d2;
+		//float weight = max(0.01, dot(-shadowRay.direction, shadowIntersec.normal)) * r2 / d2;
+		float weight = dot(-shadowRay.direction, shadowIntersec.normal) * nlDotSrDir * (r2 / d2);
                 dirLight = mask * light.emission * clamp(weight, 0.0, 1.0);
 	}
 	
-	return clamp(dirLight, 0.0, 1.0);
+	//return clamp(dirLight, 0.0, 1.0);
+	return dirLight;
 }
-
 
 //-----------------------------------------------------------------------
 vec3 CalculateRadiance( Ray r )
@@ -1855,7 +1857,7 @@ vec3 CalculateRadiance( Ray r )
 		{
 			if (bounceIsSpecular)
 			{
-				accumCol += mask * intersec.emission;
+				accumCol = mask * intersec.emission;
 			}
 			
 			break;
@@ -1871,26 +1873,26 @@ vec3 CalculateRadiance( Ray r )
 		if (intersec.type == DIFF ) // Ideal DIFFUSE reflection
 		{
 			mask *= intersec.color;
-			
 			accumCol += calcDirectLightingQuad(mask, x, nl, lightChoice);
-			
+                        
 			// Russian Roulette
 			{
 				if (rand() > 0.3)
 					break;
 				mask *= 3.33;
 			}
-			
+                        
+			/*
 			sampleDiffuseBudget -= 1;
 			if (sampleDiffuseBudget < 1) break;
+			*/
 			
 			// choose random Diffuse sample vector
 			vec3 d = randomCosWeightedDirectionInHemisphere( nl );
-			//vec3 d = randomHemisphereDirection(nl);
 			r = Ray( x, normalize(d) );
 			//r.origin += r.direction;
 			r.origin += nl;
-			mask *= max(0.01, dot(r.direction, nl));
+			//mask *= max(0.01, dot(r.direction, nl));
 			bounceIsSpecular = false;
 			continue;
 		}
@@ -1938,7 +1940,8 @@ vec3 CalculateRadiance( Ray r )
 				float nnt = nc / nt;
 				vec3 tdir = refract(r.direction, nl, nnt);
 				r = Ray(x, normalize(tdir));
-				r.origin += r.direction;
+				//r.origin += r.direction;
+				r.origin -= nl;
 				bounceIsSpecular = true;
 				continue;
 			}
@@ -1988,8 +1991,6 @@ vec3 CalculateRadiance( Ray r )
 			{
 				mask *= intersec.color;
 				accumCol += calcDirectLightingQuad(mask, x, nl, lightChoice);
-				//sampleDiffuseBudget -= 1;
-				//if (sampleDiffuseBudget < 1) break;
 				// choose random sample vector for diffuse material underneath ClearCoat
 				vec3 d = randomCosWeightedDirectionInHemisphere( nl );
 				r = Ray( x, normalize(d) );
@@ -2034,6 +2035,7 @@ vec3 CalculateRadiance( Ray r )
 				r = Ray( x, normalize(d) );
 				//r.origin += r.direction;
 				r.origin += nl;
+				//mask *= max(0.01, dot(r.direction, nl));
 				bounceIsSpecular = false;
 				continue;
 			}	
@@ -2065,6 +2067,7 @@ vec3 CalculateRadiance( Ray r )
 				r = Ray( x, normalize(d) );
 				//r.origin += r.direction;
 				r.origin += nl;
+				//mask *= max(0.01, dot(r.direction, nl));
 				bounceIsSpecular = false;
 				continue;
 			}		
@@ -2113,7 +2116,7 @@ vec3 CalculateRadiance( Ray r )
 			r = Ray( x, normalize(d) );
 			r.origin += r.direction;
 			//r.origin += nl;
-			mask *= max(0.01, dot(r.direction, nl));
+			//mask *= max(0.01, dot(r.direction, nl));
 			bounceIsSpecular = false;
 			continue;		
 		} // end if (intersec.type == SPECSUB)
@@ -2129,13 +2132,13 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0.0);          
-	vec3 L1 = vec3(1.0, 1.0, 1.0) * 5.0;// White light
+	vec3 L1 = vec3(1.0, 1.0, 1.0) * 4.0;// White light
 	vec3 L2 = vec3(1.0, 0.8, 0.2);// Yellow light
 	vec3 L3 = vec3(0.2, 0.8, 1.0);// Blue light
 	float ceilingHeight = 300.0;
 	
-	quads[0] = Quad( vec3( 0.0,-1.0, 0.0), vec3(-150.0, ceilingHeight,-250.0), vec3(150.0, ceilingHeight,-250.0), vec3(150.0, ceilingHeight,-50.0), vec3(-150.0, ceilingHeight,-50.0), L1, z, LIGHT);// rectangular Area Light in ceiling
-	quads[1] = Quad( vec3( 0.0,-1.0, 0.0), vec3(-150.0, ceilingHeight,50.0), vec3(150.0, ceilingHeight,50.0), vec3(150.0, ceilingHeight,250.0), vec3(-150.0, ceilingHeight,250.0), L1, z, LIGHT);// rectangular Area Light in ceiling
+	quads[0] = Quad( vec3( 0.0,-1.0, 0.0), vec3(-150.0, ceilingHeight,-200.0), vec3(150.0, ceilingHeight,-200.0), vec3(150.0, ceilingHeight,-25.0), vec3(-150.0, ceilingHeight,-25.0), L1, z, LIGHT);// rectangular Area Light in ceiling
+	quads[1] = Quad( vec3( 0.0,-1.0, 0.0), vec3(-150.0, ceilingHeight,25.0), vec3(150.0, ceilingHeight,25.0), vec3(150.0, ceilingHeight,200.0), vec3(-150.0, ceilingHeight,200.0), L1, z, LIGHT);// rectangular Area Light in ceiling
 	
 	spheres[0] = Sphere(100000.0, vec3(  0.0, 100000.0, 0.0), z, vec3(1.0), CHECK);//Checkered Floor
         
@@ -2145,7 +2148,7 @@ void SetupScene(void)
 	planes[0] = Plane( vec4( 0,0,1,  300.0), z, vec3(0.5), DIFF);//Facing PositiveZ Wall
 	planes[1] = Plane( vec4( 0,0,-1, 300.0), z, vec3(0.5), DIFF);//Facing NegativeZ Wall
 	planes[2] = Plane( vec4(-1,0,0,  300.0), z, vec3(0.15,0.05,0.15), DIFF);//Right Purple Wall
-	planes[3] = Plane( vec4( 0,-1,0, 302.0), z, vec3(1), DIFF);//Ceiling
+	planes[3] = Plane( vec4( 0,-1,0, 301.0), z, vec3(0.5), DIFF);//Ceiling
 	
 	disks[0] = Disk( 8.0, vec3(220, 20, 115), vec3(-1,0,0), z, vec3(0.2,0.5,1.0), COAT);
 	disks[1] = Disk( 8.0, vec3(220, 20, 200), vec3(-1,0,0), z, vec3(1.0,0.0,0.7), REFR);
@@ -2371,23 +2374,6 @@ void main( void )
 
 			}
 			
-			/*
-			OBJ.downloadMeshes( {
-				//'my_mesh': 'models/name.obj', // located in the models folder on the server
-				'my_mesh': 'models/diamond.obj' // 8 tris
-				//'my_mesh': 'models/cube.obj' // 12 tris
-				//'my_mesh': 'models/crane.obj' // 36 tris
-				//'my_mesh': 'models/emerald.obj' // 140 tris
-				//'my_mesh': 'models/PC.obj' // 215 tris
-				//'my_mesh': 'models/VW.obj' // 284 tris
-				//'my_mesh': 'models/tree.obj' // 500 tris
-				//'my_mesh': 'models/shuttle.obj' // 616 tris
-				//'my_mesh': 'models/monkey.obj' // 968 tris
-				//'my_mesh': 'models/teapot.obj' // 1024 tris
-				//'my_mesh': 'models/bunny.obj'
-				
-				}, init );
-			*/
 			
 			init();					
 		     // function init( meshes ) {
@@ -2473,97 +2459,6 @@ void main( void )
 				} );
 				screenTextureRenderTarget.texture.generateMipmaps = false;
 			
-			/*
-				objMeshes = meshes;
-				total_number_of_triangles = objMeshes.my_mesh.faceIndices.length / 3;
-				console.log("Triangle count:" + total_number_of_triangles);
-				triangle_array = new Float32Array( 4096 );
-				
-				var modelScale = 1.0;
-				//var offsetVec = new THREE.Vector3(0,14,-100); // good for PC computer
-				var offsetVec = new THREE.Vector3(0,10,-50);
-				
-				var b_box_min = new THREE.Vector3(1000000, 1000000, 1000000);
-				var b_box_max = new THREE.Vector3(-1000000, -1000000, -1000000);
-				
-				var triangleMatrix = new THREE.Matrix3();
-				var inverseMatrix = new THREE.Matrix3();
-				var v1subv0 = new THREE.Vector3(); 
-				var v2subv0 = new THREE.Vector3();
-				var normal = new THREE.Vector3();
-				var p0 = new THREE.Vector3();
-				
-				for (var i = 0, j = 0; i < objMeshes.my_mesh.faceIndices.length; i+=3, j++) {
-						
-					v0.set( objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+0] + 0 ],
-					        objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+0] + 1 ],
-					        objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+0] + 2 ]
-					      );
-					v1.set( objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+1] + 0 ],
-					        objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+1] + 1 ],
-				                objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+1] + 2 ] 
-					      );
-					v2.set( objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+2] + 0 ],
-					        objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+2] + 1 ],
-					        objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+2] + 2 ] 
-				              );
-					
-					b_box_min.copy( b_box_min.min(v0) );
-					b_box_max.copy( b_box_max.max(v0) );
-					b_box_min.copy( b_box_min.min(v1) );
-					b_box_max.copy( b_box_max.max(v1) );
-					b_box_min.copy( b_box_min.min(v2) );
-					b_box_max.copy( b_box_max.max(v2) );
-							
-					v0.multiplyScalar( modelScale );
-					v1.multiplyScalar( modelScale );
-					v2.multiplyScalar( modelScale );
-						
-					v0.add( offsetVec );
-					v1.add( offsetVec );
-					v2.add( offsetVec );
-					
-					p0.copy(v0);
-					
-					v1subv0.copy(v1).sub(v0);
-					v2subv0.copy(v2).sub(v0);
-					normal.crossVectors( v1subv0, v2subv0 ).normalize();
-					
-					triangleMatrix.set( v1subv0.x, v2subv0.x, normal.x,
-							    v1subv0.y, v2subv0.y, normal.y,
-							    v1subv0.z, v2subv0.z, normal.z  );
-						
-					inverseMatrix.getInverse(triangleMatrix);
-				
-					
-					// be sure of multiplier number 12 or 15!
-					triangle_array[15*j+0]  = inverseMatrix.elements[0]; triangle_array[15*j+1]  = inverseMatrix.elements[3]; triangle_array[15*j+2]  = inverseMatrix.elements[6];     
-					triangle_array[15*j+3]  = inverseMatrix.elements[1]; triangle_array[15*j+4]  = inverseMatrix.elements[4]; triangle_array[15*j+5]  = inverseMatrix.elements[7];
-					triangle_array[15*j+6]  = inverseMatrix.elements[2]; triangle_array[15*j+7]  = inverseMatrix.elements[5]; triangle_array[15*j+8]  = inverseMatrix.elements[8];
-					triangle_array[15*j+9]  = p0.x;                      triangle_array[15*j+10] = p0.y;                      triangle_array[15*j+11] = p0.z;
-					triangle_array[15*j+12] = normal.x;                  triangle_array[15*j+13] = normal.y;                  triangle_array[15*j+14] = normal.z;
-					
-					
-					
-					
-					
-				}
-				
-				objMeshes.my_mesh.bounding_box_min.copy(b_box_min)
-				objMeshes.my_mesh.bounding_box_max.copy(b_box_max);
-				
-				objMeshes.my_mesh.bounding_box_min.multiplyScalar( modelScale );
-				objMeshes.my_mesh.bounding_box_max.multiplyScalar( modelScale );
-				
-				objMeshes.my_mesh.bounding_box_min.add( offsetVec );
-				objMeshes.my_mesh.bounding_box_max.add( offsetVec );
-				
-				triangleDataTexture = new THREE.DataTexture( triangle_array, 4096, 1, THREE.AlphaFormat, THREE.FloatType, THREE.Texture.DEFAULT_MAPPING, THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping, THREE.NearestFilter, THREE.NearestFilter, 1, THREE.LinearEncoding );
-				triangleDataTexture.needsUpdate = true;
-				triangleDataTexture.flipY = false;
-				triangleDataTexture.generateMipmaps = false;
-			*/
-				
 				
 				pathTracingGeometry = new THREE.PlaneBufferGeometry( 2, 2 );
 				
