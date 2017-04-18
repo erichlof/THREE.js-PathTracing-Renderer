@@ -57,6 +57,14 @@ Metallic (Gold) and shiny SubSurface scattering (polished Jade/wax candles) mate
 
 The following demos show what I have been experimenting with most recently.  They might not work 100% and might have small visual artifacts that I am trying to fix.  I just wanted to share some more possible areas in the world of path tracing! :-) <br>
 
+Rendering spheres, boxes and mathematical shapes is nice, but most modern graphics models are built out of triangles.  The following demo uses an .obj loader to load a model in .obj format (list of triangles) from disk and then places it in a scene to be path traced.  As of now, it runs too slow for my taste.  It still needs a BVH acceleration structure to speed things up greatly (I am currently investigating different approaches on the GPU). I am showing this because I wanted to demonstrate the ability of the three.js PathTracing renderer to load and render a model in one of the most popular model formats ever: <br>
+
+* [.OBJ Model Loading Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_OBJModel_Loader.html)<br>
+
+I now have a working BVH (Bounding Volume Hierarchy) builder.  It builds a nested set of bounding boxes to avoid having to test every single triangle in the scene.  Scenes which used to render at 10 FPS are now rendering at 50-60 FPS! However, I've hit a wall with the current WebGL 1.0 shader language (GLSL):  It doesn't allow accessing an array with a variable, like you can easily do in other languages.  For example, vec3 myData[64];  int x = 13; float node = myData[x].  The statement with myData[x] fails under the current implementation of WebGL 1.0 (It must be a constant like '2' or something).  Hopefully Khronos will rectify this situation with WebGL 2.0, but in the meantime, I'm trying to figure out a workaround.  For test purposes, I randomize the branch that the ray takes when it is traversing the array of Bounding Boxes.  Hence the following demo, which renders the triangle model (a vintage desktop DOS PC - ha ha) as more of a point cloud than a solid object. THis is because the rays are taking random branches since I can't keep a stack like Boxes[x] where x is the correct branch. But at least the model is loading and rendering very quickly.  I just have to access the arrays of boxes somehow so that the ray always takes the correct branch, and backs up and takes the other fork if it fails.  In the meantime, enjoy this 'artistic' rendering, where it asks "What is real?  Does the computer create the scene, or does the ray tracing scene create the computer?"  I know, I know - programmer art! <br>
+
+* [BVH Debugging Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_BVH_Debugging.html)<br>
+
 This Demo renders objects inside a volume of gas/dust/fog/clouds(etc.).  Notice the cool volumetric caustics from the glass sphere on the left!: <br>
 
 * [Volumetric Rendering Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_VolumetricRendering.html) <br>
@@ -68,10 +76,6 @@ This Demo deliberately creates a very hard scene to render because the light sou
 Enter Bi-Directional Path Tracing to the rescue!  Not only do we trace rays from the camera, we trace rays from the light source as well, and then at the last moment, connect them.  The result is still a little noisy, but much better (we can actually see something!)<br>
 
 * [Bi-Directional Path Tracing Hidden-Light comparison Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_Bi-Directional_PathTracer.html) <br>
-
-Rendering spheres, boxes and mathematical shapes is nice, but most modern graphics models are built out of triangles.  The following demo uses an .obj loader to load a model in .obj format (list of triangles) from disk and then places it in a scene to be path traced.  As of now, it runs too slow for my taste.  It still needs a BVH acceleration structure to speed things up greatly (I am currently investigating different approaches on the GPU). I am showing this because I wanted to demonstrate the ability of the three.js PathTracing renderer to load and render a model in one of the most popular model formats ever: <br>
-
-* [.OBJ Model Loading Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_OBJModel_Loader.html)<br>
 
 Some pretty interesting shapes can be obtained by deforming objects and/or warping the ray space (position and direction).  This demo applies a twist warp to the spheres and mirror box and randomizes the object space of the top purple sphere, creating an acceptable representation of a cloud (for free - no extra processing time for volumetrics!)
 * [Ray/Object Warping Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_RayWarping.html)<br>
