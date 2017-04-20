@@ -1886,7 +1886,7 @@ vec3 CalculateRadiance( Ray r )
 			r = Ray( x, normalize(d) );
 			//r.origin += r.direction;
 			r.origin += nl;
-			//mask *= max(0.01, dot(r.direction, nl));
+			mask *= max(0.01, dot(r.direction, nl));
 			bounceIsSpecular = false;
 			continue;
 		}
