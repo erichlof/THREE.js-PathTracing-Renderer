@@ -506,61 +506,30 @@ vec3 computeTransmission(vec3 absorptionCoefficient, float distance)
 	return vec3( pow( vec3(E), (-absorptionCoefficient * distance) ) );	
 }
 
-vec3 calcDirectLightingSphere(vec3 mask, vec3 x, vec3 nl, Sphere light)
-{
-	vec3 dirLight = vec3(0.0);
-	Intersection shadowIntersec;
-	
-	// cast shadow ray from intersection point
-	vec3 ld = light.position + (normalize(randomSphereDirection()) * (light.radius*0.8));
-	vec3 srDir = normalize(ld - x);
-	float srDotNl = max(0.001, dot(srDir, nl));
-	//if( srDotNl < 0.01 )
-	//	return dirLight;
-		
-	Ray shadowRay = Ray(x, srDir);
-	shadowRay.origin += srDir * 2.0;
-	float st = SceneIntersect(shadowRay, shadowIntersec);
-	if ( shadowIntersec.type == LIGHT )
-	{
-		float r2 = light.radius * light.radius;
-		vec3 d = light.position - shadowRay.origin;
-		float d2 = dot(d,d);
-		float cos_a_max = sqrt(1. - clamp( r2 / d2, 0., 1.));
-		float weight = 2. * (1. - cos_a_max);
-		dirLight = mask * light.emission * weight * srDotNl;
-	}
-	
-	return dirLight;
-}
-
-
 vec3 calcDirectLightingQuad(vec3 mask, vec3 x, vec3 nl, Quad light)
 {
 	vec3 dirLight = vec3(0.0);
 	Intersection shadowIntersec;
-	
 	vec3 randPointOnLight;
 	randPointOnLight.x = mix(light.v0.x, light.v1.x, rand());
 	randPointOnLight.y = light.v0.y;
 	randPointOnLight.z = mix(light.v0.z, light.v3.z, rand());
 	vec3 srDir = normalize(randPointOnLight - x);
-	if( dot(srDir, nl) < 0.01 )
-		return dirLight;
-	
+	float nlDotSrDir = max(dot(nl, srDir), 0.01);
+		
 	// cast shadow ray from intersection point	
 	Ray shadowRay = Ray(x, srDir);
-	shadowRay.origin += nl * 2.0;
+	shadowRay.origin += nl * 2.0; // larger dimensions of this scene require greater offsets
 	float st = SceneIntersect(shadowRay, shadowIntersec);
 	if ( shadowIntersec.type == LIGHT )
 	{
 		float r2 = distance(light.v0, light.v1) * distance(light.v0, light.v3);
 		vec3 d = randPointOnLight - shadowRay.origin;
 		float d2 = dot(d, d);
-		float weight = max(0.01, dot(-shadowRay.direction, shadowIntersec.normal)) * r2 / d2;
-                dirLight = mask * light.emission * weight;
+		float weight = dot(-srDir, normalize(shadowIntersec.normal)) * r2 / d2;
+		dirLight = mask * light.emission * nlDotSrDir * clamp(weight, 0.0, 1.0);
 	}
-	
+
 	return dirLight;
 }
 
@@ -574,19 +543,10 @@ vec3 CalculateRadiance( Ray r )
 	//vec3 checkCol1 = vec3(0.5);
         Intersection intersec;
 	bool bounceIsSpecular = true;
-	int sampleDirLightBudget = 3;
+	int sampleDirLightBudget = 2;
 	
-	for (int depth = 0; depth < 5; depth++)
+	for (int depth = 0; depth < 4; depth++)
 	{
-		/*
-		// Russian Roulette
-		if(depth > 0)
-		{
-			if (rand() > 0.5)
-				break;
-			else mask *= 2.0;
-		}
-		*/
 		
 		float t = SceneIntersect(r, intersec);
 		
@@ -600,42 +560,33 @@ vec3 CalculateRadiance( Ray r )
 		{
 			if (bounceIsSpecular)
 			{
-				accumCol += mask * intersec.emission;
+				accumCol += mask * intersec.emission * 3.0;
 			}
 			
-			//break;
+			break;
 		}
-		
 		
 		// useful data 
 		vec3 n = intersec.normal;
 		vec3 nl = dot(n,r.direction) < 0.0 ? normalize(n) : normalize(n * -1.0);
 		vec3 x = r.origin + r.direction * t;
-		float rayDotNormal = max(0.0, dot(-r.direction, nl));
 		
 		
 		if (intersec.type == DIFF || intersec.type == CHECK) // Ideal DIFFUSE reflection
 		{
-			/*
-			if( intersec.type == CHECK )
-			{
-				float q = clamp( mod( dot( floor(x.xz * 0.04), vec2(1.0) ), 2.0 ) , 0.0, 1.0 );
-				intersec.color = checkCol0 * q + checkCol1 * (1.0 - q);	
-			}
-			*/
-			
 			mask *= intersec.color;
-			if (sampleDirLightBudget > 0)
-			{
-				accumCol += calcDirectLightingQuad(mask, x, nl, quads[5]);
-				sampleDirLightBudget -= 1;
-			}
-			
+			accumCol += calcDirectLightingQuad(mask, x, nl, quads[5]);
+			/*
+			// Russian Roulette
+			if (rand() > 0.5)
+				break;
+			else mask *= 2.0;
+			*/
 			
 			// choose random Diffuse sample vector
 			vec3 d = randomCosWeightedDirectionInHemisphere( nl );
 			r = Ray( x, normalize(d) );
-			r.origin += r.direction * 2.0;
+			r.origin += nl * 2.0;
 			mask *= max(0.01, dot(r.direction, nl));
 			bounceIsSpecular = false;
 			continue;
@@ -653,53 +604,43 @@ vec3 CalculateRadiance( Ray r )
 		
 		if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
-                
 			bool into = dot(n,nl) > 0.0;  // Ray from outside going in?
 			float nc = 1.0; // IOR of air
-			float nt = 1.5; // IOR of solid glass
+			float nt = 1.33; // IOR of water
 			if ( !into ) 
 			{
-				nc = 1.5;
+				nc = 1.33;
 				nt = 1.0;
 			}
 			
-		/*
+			float nnt = nc / nt;
+			vec3 tdir = refract(r.direction, nl, nnt);
+				
 			// Original Fresnel equations
 			float cosThetaInc = dot(nl, r.direction);
 			float cosThetaTra = dot(nl, tdir);
 			float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
 			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
 			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
-			//float Tr = 1.0 - Re;
-		*/			
-			// Schlick Fresnel approx.
-			float R0 = (nc - nt) / (nc + nt);
-			R0 *= R0;
-			float ddn = dot(-r.direction, nl);
-			float c = 1.0 - ddn;
-			float Re = R0 + (1.0 - R0) * c * c * c * c * c;
-			//Re *= 2.0; // bump up the reflectivity (just for looks)
-			float reflProbability = rand();
+			float Tr = 1.0 - Re;
+		
+			//float transmissionProbability = rand();
 			
-			if( reflProbability < Re )
+			if( Tr > Re ) // transmit ray through surface
+			{
+				mask *= intersec.color;
+				r = Ray(x, normalize(tdir));
+				r.origin -= nl * 2.0;
+				bounceIsSpecular = true;
+				continue;
+			}
+			else // reflect ray from surface
 			{
 				r = Ray( x, reflect(r.direction, nl) );
 			    	r.origin += nl * 2.0;
 				bounceIsSpecular = true;
-			    	continue;
+			    	continue;	
 			}
-			else
-			{
-				mask *= intersec.color;
-				
-				float nnt = nc / nt;
-				vec3 tdir = refract(r.direction, nl, nnt);
-				r = Ray(x, normalize(tdir));
-				r.origin += r.direction * 2.0;
-				bounceIsSpecular = true;
-				continue;
-			}
-		
 		}
 		
 		if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top (like car, or shiny pool ball)
@@ -857,7 +798,6 @@ vec3 CalculateRadiance( Ray r )
 	return accumCol;      
 }
 
-
 //-----------------------------------------------------------------------
 void SetupScene(void)
 //-----------------------------------------------------------------------
@@ -865,7 +805,6 @@ void SetupScene(void)
 	vec3 z  = vec3(0.0, 0.0, 0.0);// No color value, Black        
 	vec3 L1 = vec3(0.736507, 0.642866, 0.330431) * 15.0;// Bright Yellowish light
 		    // 0.736507, 0.642866, 0.210431  Original values
-	
 	
 	quads[0] = Quad( vec3( 0.0, 0.0, 1.0), vec3(  0.0,   0.0,-559.2), vec3(549.6,   0.0,-559.2), vec3(549.6, 548.8,-559.2), vec3(  0.0, 548.8,-559.2),  z, vec3(1.0, 1.0, 1.0 ),  DIFF);// Back Wall
 	quads[1] = Quad( vec3( 1.0, 0.0, 0.0), vec3(  0.0,   0.0,   0.0), vec3(  0.0,   0.0,-559.2), vec3(  0.0, 548.8,-559.2), vec3(  0.0, 548.8,   0.0),  z, vec3(0.7, 0.12,0.05),  DIFF);// Left Wall Red
@@ -932,8 +871,8 @@ void main( void )
 	}
 	else if ( uCameraIsMoving )
 	{
-		previousColor *= 0.6; // motion-blur trail amount (old image)
-		pixelColor *= (uSampleCounter) * 0.4; // brightness of new image (noisy)
+		previousColor *= 0.5; // motion-blur trail amount (old image)
+		pixelColor *= (uSampleCounter) * 0.5; // brightness of new image (noisy)
 	}
 		
 	gl_FragColor = vec4( pixelColor + previousColor, 1.0 );
@@ -1644,7 +1583,7 @@ void main( void )
 				// this gives us a vector in the direction that the camera is pointing,
 				// which will be useful for moving the camera 'forward' and shooting projectiles in that direction
 				controls.getDirection(cameraDirectionVector);
-				//cameraDirectionVector.normalize();
+				cameraDirectionVector.normalize();
 				controls.getUpVector(cameraUpVector);
 				controls.getRightVector(cameraRightVector);
 
