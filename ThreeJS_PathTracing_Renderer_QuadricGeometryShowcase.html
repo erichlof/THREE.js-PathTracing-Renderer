@@ -1557,11 +1557,6 @@ vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 	return vec3( cos(around) * over * u ) + ( sin(around) * over * v ) + (up * nl);		
 }
 
-vec3 computeTransmission(vec3 absorptionCoefficient, float distance) 
-{
-	return vec3( pow( vec3(E), (-absorptionCoefficient * distance) ) );	
-}
-
 vec3 calcDirectLighting(vec3 mask, vec3 x, vec3 nl, Sphere light)
 {
 	vec3 dirLight = vec3(0.0);
