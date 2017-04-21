@@ -1896,41 +1896,42 @@ vec3 CalculateRadiance( Ray r )
 		
 		if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
-			bool into = dot(n, nl) > 0.0;  // Ray from outside going in?
+			bool into = dot(n,nl) > 0.0;  // Ray from outside going in?
 			float nc = 1.0; // IOR of air
-			float nt = 1.5; // IOR of solid glass
+			float nt = 1.33; // IOR of water
 			if ( !into ) 
 			{
-				nc = 1.5;
+				nc = 1.33;
 				nt = 1.0;
 			}
-					
-			// Schlick Fresnel approx.
-			float R0 = (nc - nt) / (nc + nt);
-			R0 *= R0;
-			float ddn = dot(-r.direction, nl);
-			float c = 1.0 - ddn;
-			float Re = R0 + (1.0 - R0) * c * c * c * c * c;
-			float reflProbability = rand();
 			
-			if( reflProbability < Re )
+			float nnt = nc / nt;
+			vec3 tdir = refract(r.direction, nl, nnt);
+				
+			// Original Fresnel equations
+			float cosThetaInc = dot(nl, r.direction);
+			float cosThetaTra = dot(nl, tdir);
+			float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
+			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
+			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
+			//float Tr = 1.0 - Re;
+		
+			float transmissionProbability = rand();
+			
+			if( transmissionProbability > Re ) // transmit ray through surface
+			{
+				mask *= intersec.color;
+				r = Ray(x, normalize(tdir));
+				r.origin -= nl;
+				bounceIsSpecular = true;
+				continue;
+			}
+			else // reflect ray from surface
 			{
 				r = Ray( x, reflect(r.direction, nl) );
 			    	r.origin += nl;
 				bounceIsSpecular = true;
-			    	continue;
-			}
-			else
-			{
-				mask *= intersec.color;
-				
-				float nnt = nc / nt;
-				vec3 tdir = refract(r.direction, nl, nnt);
-				r = Ray(x, normalize(tdir));
-				//r.origin += r.direction;
-				r.origin -= nl;
-				bounceIsSpecular = true;
-				continue;
+			    	continue;	
 			}
 		}
 		
@@ -1983,7 +1984,7 @@ vec3 CalculateRadiance( Ray r )
 				r = Ray( x, normalize(d) );
 				//r.origin += r.direction;
 				r.origin += nl;
-				mask *= max(0.01, dot(r.direction, nl));
+				//mask *= max(0.01, dot(r.direction, nl));
 				bounceIsSpecular = false;
 				continue;
 			}
@@ -2180,8 +2181,8 @@ void main( void )
 	}
 	else if ( uCameraIsMoving )
 	{
-		previousColor *= 0.7; // motion-blur trail amount (old image)
-		pixelColor *= (uSampleCounter) * 0.3; // brightness of new image (noisy)
+		previousColor *= 0.5; // motion-blur trail amount (old image)
+		pixelColor *= (uSampleCounter) * 0.5; // brightness of new image (noisy)
 		
 	}
 		
@@ -2278,7 +2279,7 @@ void main( void )
 			
 			if ( 'createTouch' in document ) {
 				mouseControl = false;
-				pixelRatio = window.devicePixelRatio * 0.17;
+				pixelRatio = window.devicePixelRatio * 0.165;
 				
 				mobileJoystickControls = new MobileJoystickControls ({
 					//showJoystick: true,
