@@ -1088,43 +1088,43 @@ vec3 CalculateRadiance( Ray r )
 
                 if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
-                
 			bool into = dot(n,nl) > 0.0;  // Ray from outside going in?
 			float nc = 1.0; // IOR of air
-			float nt = 1.5; // IOR of solid glass
+			float nt = 1.33; // IOR of water
 			if ( !into ) 
 			{
-				nc = 1.5;
+				nc = 1.33;
 				nt = 1.0;
 			}
-					
-			// Schlick Fresnel approx.
-			float R0 = (nc - nt) / (nc + nt);
-			R0 *= R0;
-			float ddn = dot(-r.direction, nl);
-			float c = 1.0 - ddn;
-			float Re = R0 + (1.0 - R0) * c * c * c * c * c;
-			Re *= 2.0; // bump up the reflectivity (just for looks)
-			float reflProbability = rand();
 			
-			if( reflProbability < Re )
+			float nnt = nc / nt;
+			vec3 tdir = refract(r.direction, nl, nnt);
+				
+			// Original Fresnel equations
+			float cosThetaInc = dot(nl, r.direction);
+			float cosThetaTra = dot(nl, tdir);
+			float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
+			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
+			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
+			//float Tr = 1.0 - Re;
+		
+			float transmissionProbability = rand();
+			
+			if( transmissionProbability > Re ) // transmit ray through surface
+			{
+				mask *= intersec.color;
+				r = Ray(x, normalize(tdir));
+				r.origin -= nl * 2.0;
+				bounceIsSpecular = true;
+				continue;
+			}
+			else // reflect ray from surface
 			{
 				r = Ray( x, reflect(r.direction, nl) );
 			    	r.origin += nl * 2.0;
 				bounceIsSpecular = true;
-			    	continue;
+			    	continue;	
 			}
-			else
-			{
-			    	float nnt = nc / nt;
-			    	vec3 tdir = refract(r.direction, nl, nnt);
-			    	r = Ray(x, normalize(tdir));
-			    	r.origin -= nl * 2.0;
-			    	mask *= intersec.color;
-				bounceIsSpecular = true;
-			    	continue;
-			}
-		
 		}
 		
 		if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top (like car, or shiny pool ball)
@@ -1346,8 +1346,8 @@ void main( void )
 	}
 	else if ( uCameraIsMoving )
 	{
-		previousColor *= 0.6; // motion-blur trail amount (old image)
-		pixelColor *= (uSampleCounter) * 0.4; // brightness of new image (noisy)
+		previousColor *= 0.5; // motion-blur trail amount (old image)
+		pixelColor *= (uSampleCounter) * 0.5; // brightness of new image (noisy)
 	}
 		
 	gl_FragColor = vec4( pixelColor + previousColor, 1.0 );
