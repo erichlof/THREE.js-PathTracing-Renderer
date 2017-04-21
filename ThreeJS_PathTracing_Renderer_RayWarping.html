@@ -463,15 +463,43 @@ float SceneIntersect( Ray r, Ray cameraRay, inout Intersection intersec )
 	
 	for (int i = 0; i < N_BOXES; i++)
         {
-		
+		/*
+		// algo #1
+		//d = BoxIntersect( boxes[i].minCorner - 100.0, boxes[i].maxCorner + 100.0, r, n1 );
 		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, r, n1 );
 		if (d==INFINITY) continue;
 		intersectionPoint = r.origin + r.direction * d;
 		float angle = mod(intersectionPoint.y*0.05, TWO_PI);
 		mat4 m = makeRotateY(angle);
 		vec3 o = ( m * vec4(intersectionPoint, 1.0) ).xyz;
+		intersectionPoint = o;
+		//d = BoxIntersect( boxes[i].minCorner + (offset), boxes[i].maxCorner + (offset), r, n2 );
+		n2 = n1;
+		d = distance(r.origin, intersectionPoint);
+		*/
+		
+		/*
+		// algo #2
+		warpedRay = r;
+		float angle = mod(r.origin.y*0.005, TWO_PI);
+		mat4 m = makeRotateY(angle);
+		warpedRay.direction = normalize( m * vec4(r.origin, 0.0) ).xyz;
+		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, warpedRay, n2 );
+		n2 = n1;
+		*/
+		
+		// algo #3
+		warpedRay = r;
+		warpedRay.origin.x += 100.0;
+		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, warpedRay, n1 );
+		if (d == INFINITY) continue;
+		intersectionPoint = warpedRay.origin + warpedRay.direction * d;
+		float angle = mod(intersectionPoint.y*0.1, TWO_PI);
+		mat4 m = makeRotateY(angle);
+		vec3 o = ( m * vec4(intersectionPoint, 1.0) ).xyz;
 		offset = o * 0.1;
-		d = BoxIntersect( boxes[i].minCorner + (offset), boxes[i].maxCorner + (offset), r, n2 );
+		d = BoxIntersect( boxes[i].minCorner + offset, boxes[i].maxCorner + offset, warpedRay, n1 );
+		n2 = n1;
 		
 		if (d < t)
 		{
@@ -533,11 +561,6 @@ vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
     	return vec3( cos(around) * over * u ) + ( sin(around) * over * v ) + (up * nl);		
 }
 
-vec3 computeTransmission(vec3 absorptionCoefficient, float distance) 
-{
-	return vec3( pow( vec3(E), (-absorptionCoefficient * distance) ) );	
-}
-
 vec3 calcDirectLighting(vec3 mask, vec3 x, vec3 nl, Sphere light)
 {
 	vec3 dirLight = vec3(0.0);
@@ -546,8 +569,6 @@ vec3 calcDirectLighting(vec3 mask, vec3 x, vec3 nl, Sphere light)
 	// cast shadow ray from intersection point
 	vec3 ld = light.position + (randomSphereDirection() * light.radius);
 	vec3 srDir = normalize(ld - x);
-	if( dot(srDir, nl) < 0.01 )
-		return dirLight;
 		
 	Ray shadowRay = Ray(x, srDir);
 	shadowRay.origin += nl * 2.0;
@@ -559,7 +580,7 @@ vec3 calcDirectLighting(vec3 mask, vec3 x, vec3 nl, Sphere light)
 		float d2 = dot(d,d);
 		float cos_a_max = sqrt(1. - clamp( r2 / d2, 0., 1.));
                 float weight = 2. * (1. - cos_a_max);
-                dirLight = mask * light.emission * weight * max(0.01, dot(shadowRay.direction, nl));
+                dirLight = mask * light.emission * weight * max(0.01, dot(srDir, nl));
 	}
 	
 	return dirLight;
@@ -603,29 +624,25 @@ vec3 CalculateRadiance( Ray r )
 		vec3 n = intersec.normal;
                 vec3 nl = dot(n,r.direction) <= 0.0 ? normalize(n) : normalize(n * -1.0);
 		vec3 x = r.origin + r.direction * t;
-		float rayDotNormal = max(0.0, dot(-r.direction, nl));
 		
 		    
                 if (intersec.type == DIFF || intersec.type == CHECK) // Ideal DIFFUSE reflection
                 {
-			/*
-			if( intersec.type == CHECK )
+			mask *= intersec.color;
+			accumCol += calcDirectLighting(mask, x, nl, spheres[0]);
+                        
+			// Russian Roulette
 			{
-				if( (mod(x.x,60.0) < 30.0 && mod(x.z,60.0) < 30.0) || 
-					(mod(x.x,60.0) > 30.0 && mod(x.z,60.0) > 30.0) )
-				intersec.color *= 0.3;					
+				if (rand() > 0.5)
+					break;
+				else mask *= 2.0;
 			}
-			*/
 			
 			// choose random Diffuse sample vector
 			vec3 d = randomCosWeightedDirectionInHemisphere( nl );
-			//vec3 d = randomHemisphereDirection(nl);
-                	r = Ray( x, normalize(d) );
+			r = Ray( x, normalize(d) );
 			r.origin += nl * 2.0;
-			mask *= intersec.color;
-			
-			accumCol += calcDirectLighting(mask, x, nl, spheres[0]);
-			
+			mask *= max(0.01, dot(r.direction, nl));
 			bounceIsSpecular = false;
 			continue;	
                 }
@@ -641,43 +658,43 @@ vec3 CalculateRadiance( Ray r )
 
                 if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
-                
 			bool into = dot(n,nl) > 0.0;  // Ray from outside going in?
 			float nc = 1.0; // IOR of air
-			float nt = 1.5; // IOR of solid glass
+			float nt = 1.33; // IOR of water
 			if ( !into ) 
 			{
-				nc = 1.5;
+				nc = 1.33;
 				nt = 1.0;
 			}
-					
-			// Schlick Fresnel approx.
-			float R0 = (nc - nt) / (nc + nt);
-			R0 *= R0;
-			float ddn = dot(-r.direction, nl);
-			float c = 1.0 - ddn;
-			float Re = R0 + (1.0 - R0) * c * c * c * c * c;
-			Re *= 2.0; // bump up the reflectivity (just for looks)
-			float reflProbability = rand();
 			
-			if( reflProbability < Re )
+			float nnt = nc / nt;
+			vec3 tdir = refract(r.direction, nl, nnt);
+				
+			// Original Fresnel equations
+			float cosThetaInc = dot(nl, r.direction);
+			float cosThetaTra = dot(nl, tdir);
+			float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
+			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
+			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
+			//float Tr = 1.0 - Re;
+		
+			float transmissionProbability = rand();
+			
+			if( transmissionProbability > Re ) // transmit ray through surface
+			{
+				mask *= intersec.color;
+				r = Ray(x, normalize(tdir));
+				r.origin -= nl * 2.0;
+				bounceIsSpecular = true;
+				continue;
+			}
+			else // reflect ray from surface
 			{
 				r = Ray( x, reflect(r.direction, nl) );
 			    	r.origin += nl * 2.0;
 				bounceIsSpecular = true;
-			    	continue;
+			    	continue;	
 			}
-			else
-			{
-			    	float nnt = nc / nt;
-			    	vec3 tdir = refract(r.direction, nl, nnt);
-			    	r = Ray(x, normalize(tdir));
-			    	r.origin += r.direction * 2.0;
-			    	mask *= intersec.color;
-				bounceIsSpecular = true;
-			    	continue;
-			}
-		
 		}
 		
 		if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top (like car, or shiny pool ball)
@@ -712,7 +729,7 @@ vec3 CalculateRadiance( Ray r )
 				mask *= intersec.color;
 				
 				accumCol += calcDirectLighting(mask, x, nl, spheres[0]);
-				
+				//mask *= max(0.01, dot(r.direction, nl));
 				bounceIsSpecular = false;
 				continue;
 			}
@@ -720,40 +737,37 @@ vec3 CalculateRadiance( Ray r )
 		} //end if (intersec.type == COAT)
 		
 		if (intersec.type == TRANSLUCENT)  // Translucent Sub-Surface Scattering material
-                {
-			float translucentDensity = 0.25;//0.02
-			float scatteringDistance = -log( rand() ) / translucentDensity;
-			if (scatteringDistance < t) 
+		{
+			float translucentDensity = 0.3;
+			float scatteringDistance = -log(rand()) / translucentDensity;
+			vec3 absorptionCoefficient = vec3(0.0, 0.18, 0.25) * 1.3;
+			if (scatteringDistance > t) 
 			{
-				// Scatter the ray:
+				mask *= exp(-absorptionCoefficient * t); // transmission
 				x = x + r.direction * scatteringDistance;
-				vec3 d = randomSphereDirection(); // Isotropic scattering
-				//vec3 d = randomCosWeightedDirectionInHemisphere( n ); // weighted scattering (reflects light better)
-				r = Ray( x, normalize(d) );
-				r.origin += r.direction * 2.0;
-				// Compute how much light was absorbed along the ray before it was scattered:
-				mask *= computeTransmission(vec3(0.0, 0.18, 0.25), scatteringDistance);
-					
-				accumCol += calcDirectLighting(mask, x, nl, spheres[0]);
-				
-				bounceIsSpecular = false;
-				continue;
+				r = Ray( x, r.direction );
+				//bounceIsSpecular = false; // not set, in order to see lights through thin material
 			}
 			else
 			{
+				// Compute how much light was absorbed along the ray before it was scattered:
+				mask *= exp(-absorptionCoefficient * scatteringDistance); // scattering
 				x = x + r.direction * scatteringDistance;
-				r = Ray( x, r.direction ); //transmission
-				r.origin += r.direction * 2.0;
-				mask *= computeTransmission(vec3(0.0, 0.18, 0.25), t);
-				continue;
+				vec3 d = randomCosWeightedDirectionInHemisphere( nl );
+				r = Ray( x, normalize(d) );
+				bounceIsSpecular = false;	
 			}
 			
-                } // end if (intersec.type == TRANSLUCENT)
+			accumCol += calcDirectLighting(mask, x, nl, spheres[0]);
+			
+			continue;	
+			
+		} // end if (intersec.type == TRANSLUCENT)
 		
 		if (intersec.type == VOLUME)  // Volume filled with participating medium (i.e. smoke, fog, dust, etc.)
 		{
                 
-			float density = 0.7;
+			float density = 0.85;
 			if (rand() < density)
 			{
 				// scattering
@@ -764,7 +778,7 @@ vec3 CalculateRadiance( Ray r )
 				mask *= intersec.color;
 				
 				accumCol += calcDirectLighting(mask, x, nl, spheres[0]);
-				
+				mask *= max(0.01, dot(r.direction, nl));
 				bounceIsSpecular = false;
 				continue;
 			}
@@ -791,38 +805,36 @@ vec3 CalculateRadiance( Ray r )
 			float Re = R0 + (1.0 - R0) * c * c * c * c * c;
 			
 			// choose either specular reflection or translucent subsurface scattering/transmission
-			if( rand() < Re )
+			if( bounceIsSpecular && rand() < Re )
 			{
 				r = Ray( x, reflect(r.direction, nl) );
-				r.origin += nl;
+				r.origin += nl * 2.0;
 				bounceIsSpecular = true;
 				continue;
 			}
 			
-			vec3 transColorCoefficient = vec3(0.2, 0.0, 0.1);
-			float translucentDensity = 0.1;
+			vec3 absorptionCoefficient = vec3(0.4, 0.01, 0.07);
+			float translucentDensity = 0.05;
 			float scatteringDistance = -log(rand()) / translucentDensity;
+			vec3 d;
 			
 			if (scatteringDistance < t) 
 			{
-				// Compute how much light was absorbed along the ray before it was scattered:
-				mask *= computeTransmission(transColorCoefficient, scatteringDistance);
+				mask *= exp(-absorptionCoefficient * scatteringDistance); // scattering
+				d = randomSphereDirection(); // true Isotropic scattering
+				//d = randomCosWeightedDirectionInHemisphere( nl );
 			}
 			else
 			{
-				mask *= computeTransmission(transColorCoefficient, t); // transmission
+				mask *= exp(-absorptionCoefficient * t); // transmission
+				d = r.direction;
 			}
 			
 			accumCol += calcDirectLighting(mask, x, nl, spheres[0]);
-			
 			x = x + r.direction * scatteringDistance;
-			//vec3 d = randomSphereDirection(); // true Isotropic scattering
-			vec3 d = randomCosWeightedDirectionInHemisphere( nl );
 			r = Ray( x, normalize(d) );
-			r.origin += r.direction;
 			bounceIsSpecular = false;
-			continue;
-				
+			continue;			
 		} // end if (intersec.type == SPECSUB)
 		
 		
@@ -906,8 +918,8 @@ void main( void )
 	}
 	else if ( uCameraIsMoving )
 	{
-		previousColor *= 0.6; // motion-blur trail amount (old image)
-		pixelColor *= (uSampleCounter) * 0.4; // brightness of new image (noisy)
+		previousColor *= 0.5; // motion-blur trail amount (old image)
+		pixelColor *= (uSampleCounter) * 0.5; // brightness of new image (noisy)
 	}
 		
 	gl_FragColor = vec4( pixelColor + previousColor, 1.0 );
@@ -1071,24 +1083,6 @@ void main( void )
 
 			}
 			
-			/*
-			OBJ.downloadMeshes( {
-    				//'my_mesh': 'models/name.obj', // located in the models folder on the server
-    				'my_mesh': 'models/diamond.obj' // 8 tris
-				//'my_mesh': 'models/cube.obj' // 12 tris
-				//'my_mesh': 'models/crane.obj' // 36 tris
-				//'my_mesh': 'models/emerald.obj' // 140 tris
-				//'my_mesh': 'models/PC.obj' // 215 tris
-				//'my_mesh': 'models/VW.obj' // 284 tris
-				//'my_mesh': 'models/tree.obj' // 500 tris
-				//'my_mesh': 'models/shuttle.obj' // 616 tris
-				//'my_mesh': 'models/monkey.obj' // 968 tris
-				//'my_mesh': 'models/teapot.obj' // 1024 tris
-				//'my_mesh': 'models/bunny.obj'
-				
-  			}, init );
-			*/
-			
 			init();					
 		     // function init( meshes ) {
 			function init() {
@@ -1173,97 +1167,6 @@ void main( void )
 				} );
 				screenTextureRenderTarget.texture.generateMipmaps = false;
 			
-			/*
-				objMeshes = meshes;
-				total_number_of_triangles = objMeshes.my_mesh.faceIndices.length / 3;
-				console.log("Triangle count:" + total_number_of_triangles);
-				triangle_array = new Float32Array( 4096 );
-				
-				var modelScale = 1.0;
-				//var offsetVec = new THREE.Vector3(0,14,-100); // good for PC computer
-				var offsetVec = new THREE.Vector3(0,10,-50);
-				
-				var b_box_min = new THREE.Vector3(1000000, 1000000, 1000000);
-        			var b_box_max = new THREE.Vector3(-1000000, -1000000, -1000000);
-				
-				var triangleMatrix = new THREE.Matrix3();
-				var inverseMatrix = new THREE.Matrix3();
-				var v1subv0 = new THREE.Vector3(); 
-				var v2subv0 = new THREE.Vector3();
-				var normal = new THREE.Vector3();
-				var p0 = new THREE.Vector3();
-				
-				for (var i = 0, j = 0; i < objMeshes.my_mesh.faceIndices.length; i+=3, j++) {
-						
-					v0.set( objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+0] + 0 ],
-					        objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+0] + 1 ],
-					        objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+0] + 2 ]
-					      );
-					v1.set( objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+1] + 0 ],
-					        objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+1] + 1 ],
-				                objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+1] + 2 ] 
-					      );
-					v2.set( objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+2] + 0 ],
-					        objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+2] + 1 ],
-					        objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+2] + 2 ] 
-				              );
-					
-					b_box_min.copy( b_box_min.min(v0) );
-	        			b_box_max.copy( b_box_max.max(v0) );
-					b_box_min.copy( b_box_min.min(v1) );
-	        			b_box_max.copy( b_box_max.max(v1) );
-					b_box_min.copy( b_box_min.min(v2) );
-	        			b_box_max.copy( b_box_max.max(v2) );
-							
-					v0.multiplyScalar( modelScale );
-					v1.multiplyScalar( modelScale );
-					v2.multiplyScalar( modelScale );
-						
-					v0.add( offsetVec );
-					v1.add( offsetVec );
-					v2.add( offsetVec );
-					
-					p0.copy(v0);
-					
-					v1subv0.copy(v1).sub(v0);
-					v2subv0.copy(v2).sub(v0);
-					normal.crossVectors( v1subv0, v2subv0 ).normalize();
-					
-					triangleMatrix.set( v1subv0.x, v2subv0.x, normal.x,
-							    v1subv0.y, v2subv0.y, normal.y,
-							    v1subv0.z, v2subv0.z, normal.z  );
-						
-					inverseMatrix.getInverse(triangleMatrix);
-				
-					
-					// be sure of multiplier number 12 or 15!
-					triangle_array[15*j+0]  = inverseMatrix.elements[0]; triangle_array[15*j+1]  = inverseMatrix.elements[3]; triangle_array[15*j+2]  = inverseMatrix.elements[6];     
-					triangle_array[15*j+3]  = inverseMatrix.elements[1]; triangle_array[15*j+4]  = inverseMatrix.elements[4]; triangle_array[15*j+5]  = inverseMatrix.elements[7];
-					triangle_array[15*j+6]  = inverseMatrix.elements[2]; triangle_array[15*j+7]  = inverseMatrix.elements[5]; triangle_array[15*j+8]  = inverseMatrix.elements[8];
-					triangle_array[15*j+9]  = p0.x;                      triangle_array[15*j+10] = p0.y;                      triangle_array[15*j+11] = p0.z;
-					triangle_array[15*j+12] = normal.x;                  triangle_array[15*j+13] = normal.y;                  triangle_array[15*j+14] = normal.z;
-					
-					
-					
-					
-					
-				}
-				
-				objMeshes.my_mesh.bounding_box_min.copy(b_box_min);
-        			objMeshes.my_mesh.bounding_box_max.copy(b_box_max);
-				
-				objMeshes.my_mesh.bounding_box_min.multiplyScalar( modelScale );
-				objMeshes.my_mesh.bounding_box_max.multiplyScalar( modelScale );
-				
-				objMeshes.my_mesh.bounding_box_min.add( offsetVec );
-				objMeshes.my_mesh.bounding_box_max.add( offsetVec );
-				
-				triangleDataTexture = new THREE.DataTexture( triangle_array, 4096, 1, THREE.AlphaFormat, THREE.FloatType, THREE.Texture.DEFAULT_MAPPING, THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping, THREE.NearestFilter, THREE.NearestFilter, 1, THREE.LinearEncoding );
-				triangleDataTexture.needsUpdate = true;
-				triangleDataTexture.flipY = false;
-				triangleDataTexture.generateMipmaps = false;
-			*/
-				
 				
 				pathTracingGeometry = new THREE.PlaneBufferGeometry( 2, 2 );
 
