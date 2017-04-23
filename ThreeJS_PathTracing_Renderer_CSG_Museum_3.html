@@ -1815,11 +1815,13 @@ vec3 CalculateRadiance( Ray r )
 	
 		float t = SceneIntersect(r, intersec);
 		
+		/*
+		//not used in this scene because we are inside a huge sphere - no rays can escape
 		if (t == INFINITY)
 		{
                         break;
 		}
-		
+		*/
 		
 		// if we reached something bright, don't spawn any more rays
 		if (intersec.type == LIGHT)
@@ -1964,7 +1966,7 @@ vec3 CalculateRadiance( Ray r )
 				r = Ray( x, normalize(d) );
 				//r.origin += r.direction;
 				r.origin += nl;
-				//mask *= max(0.01, dot(r.direction, nl));
+				mask *= max(0.01, dot(r.direction, nl));
 				bounceIsSpecular = false;
 				continue;
 			}
@@ -1988,7 +1990,8 @@ vec3 CalculateRadiance( Ray r )
 				// Compute how much light was absorbed along the ray before it was scattered:
 				mask *= exp(-absorptionCoefficient * scatteringDistance); // scattering
 				x = x + r.direction * scatteringDistance;
-				vec3 d = randomCosWeightedDirectionInHemisphere( nl );
+				vec3 d = randomSphereDirection(); // true Isotropic scattering
+				//vec3 d = randomCosWeightedDirectionInHemisphere( nl );
 				r = Ray( x, normalize(d) );
 				bounceIsSpecular = false;	
 			}
