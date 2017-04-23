@@ -1159,7 +1159,7 @@ vec3 CalculateRadiance( Ray r )
 				mask *= intersec.color;
 				
 				accumCol += calcDirectLighting(mask, x, nl, spheres[0]);
-				//mask *= max(0.01, dot(r.direction, nl));
+				mask *= max(0.01, dot(r.direction, nl));
 				bounceIsSpecular = false;
 				continue;
 			}
@@ -1183,7 +1183,8 @@ vec3 CalculateRadiance( Ray r )
 				// Compute how much light was absorbed along the ray before it was scattered:
 				mask *= exp(-absorptionCoefficient * scatteringDistance); // scattering
 				x = x + r.direction * scatteringDistance;
-				vec3 d = randomCosWeightedDirectionInHemisphere( nl );
+				vec3 d = randomSphereDirection(); // true Isotropic scattering
+				//vec3 d = randomCosWeightedDirectionInHemisphere( nl );
 				r = Ray( x, normalize(d) );
 				bounceIsSpecular = false;	
 			}
