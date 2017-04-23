@@ -713,11 +713,11 @@ vec3 CalculateRadiance( Ray r )
 			camt = t;
 
 		// sample along intial ray from camera into the scene
-		sampleEquiAngular(u, camt, cameraRay, vec3(275.0, 510.0, -280.0), xx, pdf);
+		sampleEquiAngular(u, camt, cameraRay, vec3(275.0, 495.0, -280.0), xx, pdf);
 
 		// create a particle along cameraRay and cast a shadow ray towards light (similar to Direct Lighting)
 		particlePos = cameraRay.origin + xx * cameraRay.direction;
-		lightVec = vec3( 275.0, 510.0, -280.0 ) - particlePos;
+		lightVec = vec3( 275.0, 495.0, -280.0 ) - particlePos;
 		d = length(lightVec);
 		vray = Ray(particlePos, normalize(lightVec));
 		vt = SceneIntersect(vray, vintersec);
@@ -725,12 +725,11 @@ vec3 CalculateRadiance( Ray r )
 		// if the particle can see the light source, apply volumetric lighting calculation
 		if (vintersec.type == LIGHT)
 		{	
-			float sigma = 0.0001;
-			//float factor = (xx+d);
-			float factor = d;
-			float trans = exp( -sigma * factor );
+			float sigma = 0.5;
+			float distanceFactor = log(xx+d) * (rand()+0.1);
+			float trans = exp( -sigma * distanceFactor );
 			float geomTerm = 1.0 / dot(lightVec, lightVec);
-			accumCol += vec3(0,0,1.0)*vintersec.emission * geomTerm * trans / pdf;
+			accumCol += vec3(1.0) * vintersec.emission * geomTerm * trans / pdf;
 		}
 		// otherwise the particle will remain in shadow - this is what prduces the characteristic shafts of light vs. volume shadows
 		
@@ -762,14 +761,16 @@ vec3 CalculateRadiance( Ray r )
                 {
 			mask *= intersec.color;
 			if (depth < 3)
-					accumCol += calcDirectLighting(mask, x, nl, spheres[0], t);
+				accumCol += calcDirectLighting(mask, x, nl, spheres[0], t);
                         
+			/*
 			// Russian Roulette
 			{
 				if (rand() > 0.5)
 					break;
 				else mask *= 2.0;
 			}
+			*/
 			
 			// choose random Diffuse sample vector
 			vec3 d = randomCosWeightedDirectionInHemisphere( nl );
@@ -863,8 +864,11 @@ vec3 CalculateRadiance( Ray r )
 				mask *= intersec.color;
 				
 				if (depth < 3)
+				{
 					accumCol += calcDirectLighting(mask, x, nl, spheres[0], t);
-				//mask *= max(0.01, dot(r.direction, nl));
+					mask *= max(0.01, dot(r.direction, nl));
+				}
+				
 				bounceIsSpecular = false;
 				continue;
 			}
@@ -986,10 +990,10 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0.0, 0.0, 0.0);// No color value, Black        
-	vec3 L1 = vec3(1.0, 1.0, 1.0) * 10.0;// Bright light
+	vec3 L1 = vec3(1.0, 1.0, 1.0) * 8.0;// Bright light
 		    
-	spheres[0] = Sphere( 10.0, vec3(275.0, 510.0, -280.0), L1,                    z, LIGHT);// Light Sphere
-								//vec3(0.4, 0.9, 1.0)
+	spheres[0] = Sphere( 10.0, vec3(275.0, 495.0, -280.0), L1, z, LIGHT);// Light Sphere
+	
 	spheres[1] = Sphere(  90.0, vec3(150.0, 201.0, -200.0),  z, vec3(0.4, 0.9, 1.0),  REFR);// Glass Sphere Left
 	spheres[2] = Sphere(  90.0, vec3(370.0, 250.0, -270.0),  z, vec3(1.0, 1.0, 1.0),  COAT);// ClearCoat Sphere Right
 	
