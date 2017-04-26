@@ -1821,7 +1821,7 @@ vec3 CalculateRadiance( Ray r )
         vec3 mask = vec3(1.0);
         Intersection intersec;
 	bool bounceIsSpecular = true;
-	int sampleDiffuseBudget = 2;
+	int sampleDiffuseBudget = 3;
 	Quad lightChoice;
 	
 	float randChoose = rand();
@@ -1832,7 +1832,8 @@ vec3 CalculateRadiance( Ray r )
 	
         for (int depth = 0; depth < 4; depth++)
 	{
-	
+		sampleDiffuseBudget -= 1;
+		
 		float t = SceneIntersect(r, intersec);
 		
 		/*
@@ -1867,21 +1868,22 @@ vec3 CalculateRadiance( Ray r )
 			mask *= intersec.color;
 			accumCol += calcDirectLightingQuad(mask, x, nl, lightChoice);
                         
-			// Russian Roulette
+			if (uCameraIsMoving)
 			{
-				if (rand() > 0.3)
+				// Russian Roulette
+				if (rand() > 0.2)
 					break;
-				else mask *= 3.33;
+				else mask *= 5.0;
 			}
-                        
+			
 			sampleDiffuseBudget -= 1;
-			if (sampleDiffuseBudget < 1) break;
+			if (sampleDiffuseBudget < 0) break;
 			
 			// choose random Diffuse sample vector
 			vec3 d = randomCosWeightedDirectionInHemisphere( nl );
 			r = Ray( x, normalize(d) );
 			r.origin += nl;
-			mask *= max(0.01, dot(r.direction, nl));
+			//mask *= max(0.01, dot(r.direction, nl));
 			bounceIsSpecular = false;
 			continue;
 		}
@@ -1898,16 +1900,9 @@ vec3 CalculateRadiance( Ray r )
 		
 		if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
-			bool into = dot(n,nl) > 0.0;  // Ray from outside going in?
-			float nc = 1.0; // IOR of air
-			float nt = 1.33; // IOR of water
-			if ( !into ) 
-			{
-				nc = 1.33;
-				nt = 1.0;
-			}
-			
-			float nnt = nc / nt;
+			float nc = 1.0; // IOR of Air
+			float nt = 1.5; // IOR of common Glass
+			float nnt = dot(n,nl) > 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
 			vec3 tdir = refract(r.direction, nl, nnt);
 				
 			// Original Fresnel equations
@@ -1917,25 +1912,25 @@ vec3 CalculateRadiance( Ray r )
 			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
 			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
 			//float Tr = 1.0 - Re;
-		
-			float transmissionProbability = rand();
 			
-			if( transmissionProbability > Re ) // transmit ray through surface
-			{
-				mask *= intersec.color;
-				r = Ray(x, normalize(tdir));
-				r.origin -= nl;
-				bounceIsSpecular = true;
-				continue;
-			}
-			else // reflect ray from surface
+			if (rand() < Re) // reflect ray from surface
 			{
 				r = Ray( x, reflect(r.direction, nl) );
 			    	r.origin += nl;
 				bounceIsSpecular = true;
 			    	continue;	
 			}
-		}
+			else // transmit ray through surface
+			{
+				mask *= intersec.color;
+				r = Ray(x, normalize(tdir));
+				//r.origin += r.direction;
+				r.origin -= nl;
+				bounceIsSpecular = true;
+				continue;
+			}
+			
+		} // end if (intersec.type == REFR)
 		
 		if (intersec.type == COAT || intersec.type == CHECK)  // Diffuse object underneath with ClearCoat on top
 		{
@@ -1986,7 +1981,7 @@ vec3 CalculateRadiance( Ray r )
 				r = Ray( x, normalize(d) );
 				//r.origin += r.direction;
 				r.origin += nl;
-				mask *= max(0.01, dot(r.direction, nl));
+				//mask *= max(0.01, dot(r.direction, nl));
 				bounceIsSpecular = false;
 				continue;
 			}
@@ -2036,7 +2031,7 @@ vec3 CalculateRadiance( Ray r )
 				mask *= intersec.color;
 				
 				accumCol += calcDirectLightingQuad(mask, x, nl, lightChoice);
-				mask *= max(0.01, dot(r.direction, nl));
+				//mask *= max(0.01, dot(r.direction, nl));
 				bounceIsSpecular = false;
 				continue;
 			}
@@ -2079,23 +2074,18 @@ vec3 CalculateRadiance( Ray r )
 			if (scatteringDistance < t) 
 			{
 				mask *= exp(-absorptionCoefficient * scatteringDistance); // scattering
-				//d = randomSphereDirection(); // true Isotropic scattering
-				d = randomCosWeightedDirectionInHemisphere( nl );
+				d = randomSphereDirection(); // true Isotropic scattering
 				bounceIsSpecular = false;
 			}
 			else
 			{
 				mask *= exp(-absorptionCoefficient * t); // transmission
 				d = r.direction;
-				bounceIsSpecular = false; // not set on Translucent material
 			}
 			
 			accumCol += calcDirectLightingQuad(mask, x, nl, lightChoice);
-			if (scatteringDistance < t)
-				mask *= max(0.5, dot(r.direction, nl));
 			x = x + r.direction * scatteringDistance;
 			r = Ray( x, normalize(d) );
-			
 			continue;
 			
 		} // end if (intersec.type == SPECSUB)
@@ -2124,9 +2114,9 @@ void SetupScene(void)
 	boxes[0] = Box( vec3(263.0,0.0,-90.0), vec3(270.0,90.0,-140.0), z, vec3(0.2,0.9,0.7), REFR);//Glass Box
 	boxes[1] = Box( vec3(269.0,6.0,-96.0), vec3(264.0,84.0,-134.0), z, vec3(0.0,0.0,0.0), DIFF);//Diffuse Box
 	
-	planes[0] = Plane( vec4( 0,0,1,  300.0), z, vec3(0.5), DIFF);//Facing PositiveZ Wall
-	planes[1] = Plane( vec4( 0,0,-1, 300.0), z, vec3(0.5), DIFF);//Facing NegativeZ Wall
-	planes[2] = Plane( vec4(-1,0,0,  300.0), z, vec3(0.15,0.05,0.15), DIFF);//Right Purple Wall
+	planes[0] = Plane( vec4( 0,0,1,  300.0), z, vec3(0.6), DIFF);//Gray Wall in front of camera
+	planes[1] = Plane( vec4( 0,0,-1, 300.0), z, vec3(0.6), DIFF);//Gray Wall behind camera
+	planes[2] = Plane( vec4(-1,0,0,  300.0), z, vec3(0.15,0.05,0.15), DIFF);//Purple Wall on the right
 	planes[3] = Plane( vec4( 0,-1,0, 301.0), z, vec3(0.5), DIFF);//Ceiling
 	
 	disks[0] = Disk( 8.0, vec3(220, 20, 115), vec3(-1,0,0), z, vec3(0.2,0.5,1.0), COAT);
