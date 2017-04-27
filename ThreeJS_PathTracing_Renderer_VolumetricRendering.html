@@ -267,198 +267,6 @@ float SphereIntersect( float rad, vec3 pos, Ray r )
 	return INFINITY;	
 }
 
-//-----------------------------------------------------------------------
-float EllipsoidIntersect( vec3 radii, vec3 pos, Ray r )
-//-----------------------------------------------------------------------
-{
-	float eps = 0.0001;
-	vec3 oc = r.origin - pos;
-	vec3 oc2 = oc*oc;
-	vec3 ocrd = oc*r.direction;
-	vec3 rd2 = r.direction*r.direction;
-	vec3 invRad = 1.0/radii;
-	vec3 invRad2 = invRad*invRad;
-	
-	// quadratic equation coefficients
-	float a = dot(rd2, invRad2);
-	float b = 2.0*dot(ocrd, invRad2);
-	float c = dot(oc2, invRad2) - 1.0;
-	float det = b*b - 4.0*a*c;
-	if (det < 0.0) 
-		return INFINITY;
-		
-	det = sqrt(det);
-	float t1 = (-b - det) / (2.0 * a);
-	if( t1 > eps )
-		return t1;
-		
-	float t2 = (-b + det) / (2.0 * a);
-	if( t2 > eps )
-		return t2;
-	
-	return INFINITY;	
-}
-
-//-----------------------------------------------------------------------
-float CylinderIntersect( float radius, float height, vec3 pos, Ray r )
-//-----------------------------------------------------------------------
-{
-	float eps = 0.0001;
-	float ox = r.origin.x - pos.x;
-	float oy = r.origin.y - pos.y;
-	float oz = r.origin.z - pos.z;
-	float dx = r.direction.x;
-	float dy = r.direction.y;
-	float dz = r.direction.z;
-	float y0 = 0.0;
-	float y1 = height;
-
-	// quadratic equation coefficients
-	float a = dx * dx + dz * dz;  	
-	float b = 2.0 * (ox * dx + oz * dz);
-	float c = ox * ox + oz * oz - radius * radius;
-	float disc = b * b - 4.0 * a * c ;
-
-	if (disc < 0.0) 
-		return INFINITY;
-		
-	float e = sqrt(disc);
-	float denom = 2.0 * a;
-	float t = (-b - e) / denom;    // smaller root
-		
-	if (t > eps) 
-	{
-		float yhit = (oy + t * dy);
-			
-		if (yhit > y0 && yhit < y1) 
-		{	
-			return t;
-		}
-	} 
-		
-	t = (-b + e) / denom;    // larger root
-		
-	if (t > eps)
-	{
-		float yhit = (oy + t * dy);
-			
-		if (yhit > y0 && yhit < y1)
-		{
-			return t;
-		}
-	} 
-	
-	return INFINITY;		
-}
-
-vec4 iCylinder( vec3 ro, vec3 rd, vec3 pa, vec3 pb, float ra )
-{
-	vec3 cc = 0.5*(pa+pb);
-	float ch = length(pb-pa);
-	vec3 ca = (pb-pa)/ch;
-	ch *= 0.5;
-
-	vec3  oc = ro - cc;
-
-	float card = dot(ca,rd);
-	float caoc = dot(ca,oc);
-
-	float a = 1.0 - card*card;
-	float b = dot( oc, rd) - caoc*card;
-	float c = dot( oc, oc) - caoc*caoc - ra*ra;
-	float h = b*b - a*c;
-	if( h<0.0 ) 
-		return vec4(INFINITY);
-	h = sqrt(h);
-	float t1 = (-b-h)/a;
-	float t2 = (-b+h)/a;
-
-	float y = caoc + t1*card;
-
-	// body
-	if( abs(y)<ch ) 
-		return vec4( t1, oc+t1*rd - ca*y );
-
-	// caps
-	float sy = sign(y);
-	float tp = (sy*ch - caoc)/card;
-	if( tp>t1 && tp<t2 )
-	//if( abs(b+a*tp)<h )
-	{
-		return vec4( tp, ca*sy );
-	}
-
-	return vec4(INFINITY);
-}
-
-//-----------------------------------------------------------------------
-float ConeIntersect( float radius, float height, vec3 pos, Ray r )
-//-----------------------------------------------------------------------
-{
-	float eps = 0.0001;
-	float ox = r.origin.x;// - pos.x;
-	float oy = r.origin.y;// - pos.y;
-	float oz = r.origin.z;// - pos.z;
-	float dx = r.direction.x;
-	float dy = r.direction.y;
-	float dz = r.direction.z;
-	float y0 = 0.0;
-	float y1 = height;
-
-	// quadratic equation coefficients
-	float k = radius / height;
-	k = k*k;
-	
-	float a = dx * dx - k * dy * dy + dz * dz;
-	float b = 2.0 * (dx * ox - k * dy * (oy-height) + dz * oz );
-	float c = ox * ox - k * (oy - height) * (oy - height) + oz * oz ;
-	float disc = b * b - 4.0 * a * c ;
-
-	if (disc < 0.0) 
-		return INFINITY;
-		
-	float e = sqrt(disc);
-	float denom = 2.0 * a;
-	float t = (-b - e) / denom;    // smaller root
-		
-	if (t > eps) 
-	{
-		float yhit = (oy + t * dy);
-			
-		if (yhit > y0 && yhit < y1)
-		{	
-			return t;
-		}
-	} 
-		
-	t = (-b + e) / denom;    // larger root
-		
-	if (t > eps)
-	{
-		float yhit = (oy + t * dy);
-			
-		if (yhit > y0 && yhit < y1)
-		{
-			return t;
-		}
-	} 
-	
-	return INFINITY;		
-}
-
-//-----------------------------------------------------------------------
-float PlaneIntersect( vec4 pla, Ray r )
-//-----------------------------------------------------------------------
-{
-	vec3 n = normalize(-pla.xyz);
-	float denom = dot(n, r.direction);
-	if (denom <= 0.0)
-		return INFINITY;
-	
-        vec3 pOrO = (pla.w * n) - r.origin; 
-        return dot(pOrO, n) / denom; 
-}
-
 //----------------------------------------------------------------------------
 float QuadIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 v3, vec3 normal, Ray r )
 //----------------------------------------------------------------------------
@@ -535,31 +343,6 @@ float QuadIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 v3, vec3 normal, Ray r )
 	return INFINITY;
 }
 
-//----------------------------------------------------------------------------
-float BoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r )
-//----------------------------------------------------------------------------
-{
-	vec3 invDir = 1.0 / r.direction;
-	vec3 tmin = (minCorner - r.origin) * invDir;
-	vec3 tmax = (maxCorner - r.origin) * invDir;
-
-	vec3 real_min = min(tmin, tmax);
-   	vec3 real_max = max(tmin, tmax);
-   
-   	float minmax = min( min(real_max.x, real_max.y), real_max.z);
-   	float maxmin = max( max(real_min.x, real_min.y), real_min.z);
-
-	if (minmax > maxmin)
-	{	
-		if (maxmin > 0.0) // if we are outside the box
-			return maxmin;	
-		else if (minmax > 0.0) // else if we are inside the box
-			return minmax;	
-	}
-	
-	return INFINITY;
-}
-
 //-----------------------------------------------------------------------
 float SceneIntersect( Ray r, inout Intersection intersec )
 //-----------------------------------------------------------------------
@@ -604,6 +387,7 @@ vec3 randomSphereDirection()
 	return vec3(sin(r.x)*vec2(sin(r.y),cos(r.y)),cos(r.x));	
 }
 
+/*
 vec3 randomHemisphereDirection( const vec3 n )
 {
 	vec2 r = vec2(rand(),rand())*TWO_PI;
@@ -619,6 +403,7 @@ vec3 randomDirectionInSphere()
 
     return vec3( up, cos(around) * over, sin(around) * over );
 }
+*/
 
 vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 {
@@ -648,7 +433,7 @@ void sampleEquiAngular( float u, float maxDistance, Ray r, vec3 lightPos, out fl
 	pdf = D/((thetaB - thetaA)*(D*D + t*t));
 }
 
-vec3 calcDirectLighting(vec3 mask, vec3 x, vec3 nl, Sphere light, float t)
+vec3 calcDirectLighting(vec3 mask, vec3 x, vec3 nl, Sphere light)
 {
 	vec3 dirLight = vec3(0.0);
 	Intersection shadowIntersec;
@@ -688,7 +473,6 @@ vec3 CalculateRadiance( Ray r )
 	Ray cameraRay = r;
 	Ray vray;
 	
-	
         for (int depth = 0; depth < 6; depth++)
 	{
 		
@@ -699,7 +483,8 @@ vec3 CalculateRadiance( Ray r )
 		vec3 lightVec;
 		vec3 particlePos;
 		
-		// half way through max bounce depth(6), set tracing ray to the volume ray - this is what helps find volume caustics
+
+		// half way through max bounce depth(< 6), set tracing ray to the volume ray - this is what helps find volume caustics
 		if (depth == 3)
 		{
 			r = vray;
@@ -723,15 +508,15 @@ vec3 CalculateRadiance( Ray r )
 		vt = SceneIntersect(vray, vintersec);
 		
 		// if the particle can see the light source, apply volumetric lighting calculation
-		if (vintersec.type == LIGHT)
+		if (vintersec.type == LIGHT || vt == INFINITY)
 		{	
-			float sigma = 0.5;
-			float distanceFactor = log(xx+d) * (rand()+0.1);
+			float sigma = 0.1;
+			float distanceFactor = log(d + xx);
 			float trans = exp( -sigma * distanceFactor );
 			float geomTerm = 1.0 / dot(lightVec, lightVec);
 			accumCol += vec3(1.0) * vintersec.emission * geomTerm * trans / pdf;
 		}
-		// otherwise the particle will remain in shadow - this is what prduces the characteristic shafts of light vs. volume shadows
+		// otherwise the particle will remain in shadow - this is what produces the characteristic shafts of light vs. volume shadows
 		
 		// this is the normal ray tracing scene intersection result
 		if (intersec.type == LIGHT)
@@ -740,11 +525,13 @@ vec3 CalculateRadiance( Ray r )
 			if (prevIntersecType == REFR && depth > 3)
 			{
 				accumCol += mask * intersec.emission;
+				break;
 			}
 			// this is part of the normal path tracing algorithm
 			else if (depth < 3 && bounceIsSpecular)
 			{
 				accumCol += mask * intersec.emission;
+				continue;
 			}	
 		}
 		// reset previous material type
@@ -754,21 +541,21 @@ vec3 CalculateRadiance( Ray r )
 		vec3 n = intersec.normal;
                 vec3 nl = dot(n,r.direction) <= 0.0 ? normalize(n) : normalize(n * -1.0);
 		x = r.origin + r.direction * t;
-		float rayDotNormal = max(0.0, dot(-r.direction, nl));
 		
 		    
                 if (intersec.type == DIFF || intersec.type == CHECK) // Ideal DIFFUSE reflection
                 {
 			mask *= intersec.color;
-			if (depth < 3)
-				accumCol += calcDirectLighting(mask, x, nl, spheres[0], t);
+			//if (depth < 3)
+			accumCol += calcDirectLighting(mask, x, nl, spheres[0]);
                         
 			/*
 			// Russian Roulette
+			if (uCameraIsMoving)
 			{
-				if (rand() > 0.5)
+				if (rand() > 0.2)
 					break;
-				else mask *= 2.0;
+				else mask *= 5.0;
 			}
 			*/
 			
@@ -776,7 +563,7 @@ vec3 CalculateRadiance( Ray r )
 			vec3 d = randomCosWeightedDirectionInHemisphere( nl );
 			r = Ray( x, normalize(d) );
 			r.origin += nl * 2.0;
-			mask *= max(0.01, dot(r.direction, nl));
+			//mask *= max(0.01, dot(r.direction, nl));
 			bounceIsSpecular = false;
 			continue;	
                 }
@@ -792,16 +579,9 @@ vec3 CalculateRadiance( Ray r )
 
                 if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
-			bool into = dot(n,nl) > 0.0;  // Ray from outside going in?
-			float nc = 1.0; // IOR of air
-			float nt = 1.33; // IOR of water
-			if ( !into ) 
-			{
-				nc = 1.33;
-				nt = 1.0;
-			}
-			
-			float nnt = nc / nt;
+			float nc = 1.0; // IOR of Air
+			float nt = 1.5; // IOR of common Glass
+			float nnt = dot(n,nl) > 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
 			vec3 tdir = refract(r.direction, nl, nnt);
 				
 			// Original Fresnel equations
@@ -811,30 +591,28 @@ vec3 CalculateRadiance( Ray r )
 			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
 			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
 			//float Tr = 1.0 - Re;
-		
-			float transmissionProbability = rand();
 			
-			if( transmissionProbability > Re ) // transmit ray through surface
-			{
-				mask *= intersec.color;
-				r = Ray(x, normalize(tdir));
-				r.origin -= nl * 2.0;
-				bounceIsSpecular = true;
-				prevIntersecType = REFR;
-				continue;
-			}
-			else // reflect ray from surface
+			if (rand() < Re) // reflect ray from surface
 			{
 				r = Ray( x, reflect(r.direction, nl) );
 			    	r.origin += nl * 2.0;
 				bounceIsSpecular = true;
 			    	continue;	
 			}
-		}
+			else // transmit ray through surface
+			{
+				mask *= intersec.color;
+				r = Ray(x, normalize(tdir));
+				//r.origin += r.direction * 2.0;
+				r.origin -= nl * 2.0;
+				bounceIsSpecular = true;
+				prevIntersecType = REFR;
+				continue;
+			}
+		} // end if (intersec.type == REFR)
 		
 		if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top (like car, or shiny pool ball)
 		{
-			
 			// Schlick Fresnel approx.
 			float ddn = dot(-r.direction, nl);
 			float nc = 1.0; // IOR of air
@@ -863,18 +641,14 @@ vec3 CalculateRadiance( Ray r )
 				r.origin += nl * 2.0;
 				mask *= intersec.color;
 				
-				if (depth < 3)
-				{
-					accumCol += calcDirectLighting(mask, x, nl, spheres[0], t);
-					mask *= max(0.01, dot(r.direction, nl));
-				}
-				
+				accumCol += calcDirectLighting(mask, x, nl, spheres[0]);
+			
 				bounceIsSpecular = false;
 				continue;
 			}
 			
 		} //end if (intersec.type == COAT)
-		
+		/*
 		if (intersec.type == TRANSLUCENT)  // Translucent Sub-Surface Scattering material
 		{
 			float translucentDensity = 0.3;
@@ -897,8 +671,8 @@ vec3 CalculateRadiance( Ray r )
 				bounceIsSpecular = false;	
 			}
 			
-			if (depth < 3)
-					accumCol += calcDirectLighting(mask, x, nl, spheres[0], t);
+			
+			accumCol += calcDirectLighting(mask, x, nl, spheres[0]);
 			
 			continue;	
 			
@@ -917,9 +691,9 @@ vec3 CalculateRadiance( Ray r )
 				r.origin += nl * 2.0;
 				mask *= intersec.color;
 				
-				if (depth < 3)
-					accumCol += calcDirectLighting(mask, x, nl, spheres[0], t);
-				mask *= max(0.01, dot(r.direction, nl));
+			
+				accumCol += calcDirectLighting(mask, x, nl, spheres[0]);
+				//mask *= max(0.01, dot(r.direction, nl));
 				bounceIsSpecular = false;
 				continue;
 			}
@@ -971,14 +745,14 @@ vec3 CalculateRadiance( Ray r )
 				d = r.direction;
 			}
 			
-			if (depth < 3)
-					accumCol += calcDirectLighting(mask, x, nl, spheres[0], t);
+			
+			accumCol += calcDirectLighting(mask, x, nl, spheres[0]);
 			x = x + r.direction * scatteringDistance;
 			r = Ray( x, normalize(d) );
 			bounceIsSpecular = false;
 			continue;			
 		} // end if (intersec.type == SPECSUB)
-		
+		*/
 		
 	} // end for (int depth = 0; depth < 6; depth++)
 	
@@ -990,9 +764,9 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0.0, 0.0, 0.0);// No color value, Black        
-	vec3 L1 = vec3(1.0, 1.0, 1.0) * 8.0;// Bright light
+	vec3 L1 = vec3(1.0, 1.0, 1.0) * 2.0;// Bright light
 		    
-	spheres[0] = Sphere( 10.0, vec3(275.0, 495.0, -280.0), L1, z, LIGHT);// Light Sphere
+	spheres[0] = Sphere( 20.0, vec3(275.0, 495.0, -280.0), L1, z, LIGHT);// Light Sphere
 	
 	spheres[1] = Sphere(  90.0, vec3(150.0, 201.0, -200.0),  z, vec3(0.4, 0.9, 1.0),  REFR);// Glass Sphere Left
 	spheres[2] = Sphere(  90.0, vec3(370.0, 250.0, -270.0),  z, vec3(1.0, 1.0, 1.0),  COAT);// ClearCoat Sphere Right
@@ -1054,7 +828,6 @@ void main( void )
 	if ( uCameraJustStartedMoving )
 	{
 		previousColor = vec3(0.0); // clear rendering accumulation buffer
-		//pixelColor *= 1.1;
 	}
 	else if ( uCameraIsMoving )
 	{
