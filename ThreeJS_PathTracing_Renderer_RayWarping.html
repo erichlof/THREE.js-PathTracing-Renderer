@@ -593,12 +593,14 @@ vec3 CalculateRadiance( Ray r )
 	vec3 accumCol = vec3(0.0);
         vec3 mask = vec3(1.0);
         Intersection intersec;
+	int sampleDiffuseBudget = 4;
 	bool bounceIsSpecular = true;
 	
 	
         for (int depth = 0; depth < 4; depth++)
 	{
-	
+		sampleDiffuseBudget -= 1;
+		
 		float t = SceneIntersect(r, cameraRay, intersec);
 		
 		if (t == INFINITY)
@@ -631,18 +633,24 @@ vec3 CalculateRadiance( Ray r )
 			mask *= intersec.color;
 			accumCol += calcDirectLighting(mask, x, nl, spheres[0]);
                         
-			// Russian Roulette
-			{
+			if (uCameraIsMoving)
+			{	/*
+				// Russian Roulette
 				if (rand() > 0.5)
 					break;
 				else mask *= 2.0;
+				*/
+				sampleDiffuseBudget -= 1;
 			}
+			
+			
+			if (sampleDiffuseBudget < 0) break;
 			
 			// choose random Diffuse sample vector
 			vec3 d = randomCosWeightedDirectionInHemisphere( nl );
 			r = Ray( x, normalize(d) );
 			r.origin += nl * 2.0;
-			mask *= max(0.01, dot(r.direction, nl));
+			//mask *= max(0.01, dot(r.direction, nl));
 			bounceIsSpecular = false;
 			continue;	
                 }
@@ -658,16 +666,9 @@ vec3 CalculateRadiance( Ray r )
 
                 if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
-			bool into = dot(n,nl) > 0.0;  // Ray from outside going in?
-			float nc = 1.0; // IOR of air
-			float nt = 1.33; // IOR of water
-			if ( !into ) 
-			{
-				nc = 1.33;
-				nt = 1.0;
-			}
-			
-			float nnt = nc / nt;
+			float nc = 1.0; // IOR of Air
+			float nt = 1.5; // IOR of common Glass
+			float nnt = dot(n,nl) > 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
 			vec3 tdir = refract(r.direction, nl, nnt);
 				
 			// Original Fresnel equations
@@ -677,25 +678,25 @@ vec3 CalculateRadiance( Ray r )
 			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
 			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
 			//float Tr = 1.0 - Re;
-		
-			float transmissionProbability = rand();
 			
-			if( transmissionProbability > Re ) // transmit ray through surface
-			{
-				mask *= intersec.color;
-				r = Ray(x, normalize(tdir));
-				r.origin -= nl * 2.0;
-				bounceIsSpecular = true;
-				continue;
-			}
-			else // reflect ray from surface
+			if (rand() < Re) // reflect ray from surface
 			{
 				r = Ray( x, reflect(r.direction, nl) );
 			    	r.origin += nl * 2.0;
 				bounceIsSpecular = true;
 			    	continue;	
 			}
-		}
+			else // transmit ray through surface
+			{
+				mask *= intersec.color;
+				r = Ray(x, normalize(tdir));
+				//r.origin += r.direction * 2.0;
+				r.origin -= nl * 2.0;
+				bounceIsSpecular = true;
+				continue;
+			}
+			
+		} // end if (intersec.type == REFR)
 		
 		if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top (like car, or shiny pool ball)
 		{
@@ -740,7 +741,7 @@ vec3 CalculateRadiance( Ray r )
 		{
 			float translucentDensity = 0.3;
 			float scatteringDistance = -log(rand()) / translucentDensity;
-			vec3 absorptionCoefficient = vec3(0.0, 0.18, 0.25) * 1.3;
+			vec3 absorptionCoefficient = vec3(0.0, 0.17, 0.2);
 			if (scatteringDistance > t) 
 			{
 				mask *= exp(-absorptionCoefficient * t); // transmission
@@ -753,7 +754,8 @@ vec3 CalculateRadiance( Ray r )
 				// Compute how much light was absorbed along the ray before it was scattered:
 				mask *= exp(-absorptionCoefficient * scatteringDistance); // scattering
 				x = x + r.direction * scatteringDistance;
-				vec3 d = randomCosWeightedDirectionInHemisphere( nl );
+				vec3 d = randomSphereDirection(); // true Isotropic scattering
+				//vec3 d = randomCosWeightedDirectionInHemisphere( nl );
 				r = Ray( x, normalize(d) );
 				bounceIsSpecular = false;	
 			}
@@ -778,7 +780,7 @@ vec3 CalculateRadiance( Ray r )
 				mask *= intersec.color;
 				
 				accumCol += calcDirectLighting(mask, x, nl, spheres[0]);
-				mask *= max(0.01, dot(r.direction, nl));
+				//mask *= max(0.01, dot(r.direction, nl));
 				bounceIsSpecular = false;
 				continue;
 			}
@@ -813,8 +815,8 @@ vec3 CalculateRadiance( Ray r )
 				continue;
 			}
 			
-			vec3 absorptionCoefficient = vec3(0.4, 0.01, 0.07);
-			float translucentDensity = 0.05;
+			vec3 absorptionCoefficient = vec3(2.0, 0.0, 0.11);
+			float translucentDensity = 0.2;
 			float scatteringDistance = -log(rand()) / translucentDensity;
 			vec3 d;
 			
@@ -822,7 +824,7 @@ vec3 CalculateRadiance( Ray r )
 			{
 				mask *= exp(-absorptionCoefficient * scatteringDistance); // scattering
 				d = randomSphereDirection(); // true Isotropic scattering
-				//d = randomCosWeightedDirectionInHemisphere( nl );
+				bounceIsSpecular = false;
 			}
 			else
 			{
@@ -833,8 +835,8 @@ vec3 CalculateRadiance( Ray r )
 			accumCol += calcDirectLighting(mask, x, nl, spheres[0]);
 			x = x + r.direction * scatteringDistance;
 			r = Ray( x, normalize(d) );
-			bounceIsSpecular = false;
-			continue;			
+			continue;
+			
 		} // end if (intersec.type == SPECSUB)
 		
 		
@@ -848,7 +850,7 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0.0, 0.0, 0.0);// No color value, Black        
-	vec3 L1 = vec3(1.0, 1.0, 1.0) * 8.0;// Bright light
+	vec3 L1 = vec3(1.0, 1.0, 1.0) * 5.0;// Bright light
 		    
 	spheres[0] = Sphere( 100.0, vec3(275.0, 610.0, -280.0), L1,                   z, LIGHT);// Light Sphere
 	
@@ -914,7 +916,6 @@ void main( void )
 	if ( uCameraJustStartedMoving )
 	{
 		previousColor = vec3(0.0); // clear rendering accumulation buffer
-		//pixelColor *= 1.1;
 	}
 	else if ( uCameraIsMoving )
 	{
@@ -978,17 +979,6 @@ void main( void )
 			var pinchDeltaY = 0;
 			var camFlightSpeed = 300;
 			var fontAspect;
-			/*
-			var objMeshes = {};
-			var total_number_of_triangles = 0;
-			var triangle_array;
-			var triangleDataTexture;
-			var v0 = new THREE.Vector3();
-			var v1 = new THREE.Vector3();
-			var v2 = new THREE.Vector3();
-			var scene_aabbox_min = new THREE.Vector3();
-			var scene_aabbox_max = new THREE.Vector3();
-			*/
 			
 			// the following variables will be used to calculate rotations and directions from the camera
 			var cameraDirectionVector = new THREE.Vector3();//for moving where the camera is looking
