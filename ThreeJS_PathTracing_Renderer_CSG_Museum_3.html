@@ -400,105 +400,6 @@ float CSG_OpenCylinderIntersect( vec3 p0, vec3 p1, float rad, Ray r, out vec3 n1
 	return result;
 }
 
-/*
-//-----------------------------------------------------------------------------
-float CappedCylinderIntersect( vec3 p0, vec3 p1, float rad, Ray r, out vec3 n )
-//-----------------------------------------------------------------------------
-{
-	float r2=rad*rad;
-	
-	vec3 dp=p1-p0;
-	vec3 dpt=dp/dot(dp,dp);
-	
-	vec3 ao=r.origin-p0;
-	vec3 aoxab=cross(ao,dpt);
-	vec3 vxab=cross(r.direction,dpt);
-	float ab2=dot(dpt,dpt);
-	float a=2.0*dot(vxab,vxab);
-	float ra=1.0/a;
-	float b=2.0*dot(vxab,aoxab);
-	float c=dot(aoxab,aoxab)-r2*ab2;
-	
-	float det=b*b-2.0*a*c;
-	
-	if(det<0.0)
-		return INFINITY;
-	
-	det=sqrt(det);
-	
-	float t0=(-b-det)*ra;
-	float t1=(-b+det)*ra;
-	
-	vec3 ip;
-	vec3 lp;
-	float ct;
-	float result = INFINITY;
-	
-	// Cylinder caps
-	// disk0
-	vec3 diskNormal = normalize(dp);
-	float denom = dot(diskNormal, r.direction);
-	vec3 pOrO = p0 - r.origin;
-	float tDisk0 = dot(pOrO, diskNormal) / denom;
-	if (tDisk0 > 0.0)
-	{
-		vec3 intersectPos = r.origin + r.direction * tDisk0;
-		vec3 v = intersectPos - p0;
-		float d2 = dot(v,v);
-		if (d2 <= r2)
-		{
-			result = tDisk0;
-			n = diskNormal;
-		}
-	}
-	
-	// disk1
-	denom = dot(diskNormal, r.direction);
-	pOrO = p1 - r.origin;
-	float tDisk1 = dot(pOrO, diskNormal) / denom;
-	if (tDisk1 > 0.0)
-	{
-		vec3 intersectPos = r.origin + r.direction * tDisk1;
-		vec3 v = intersectPos - p1;
-		float d2 = dot(v,v);
-		if (d2 <= r2 && tDisk1 < result)
-		{
-			result = tDisk1;
-			n = diskNormal;
-		}
-	}
-		
-	// Cylinder body
-	if (t1 > 0.0)
-	{
-		ip=r.origin+r.direction*t1;
-		lp=ip-p0;
-		ct=dot(lp,dpt);
-		if(ct>0.0 && ct<1.0 && t1<result)
-		{
-			result = t1;
-		     	n=(p0+dp*ct)-ip;
-		}
-		
-	}
-	
-	if (t0 > 0.0)
-	{
-		ip=r.origin+r.direction*t0;
-		lp=ip-p0;
-		ct=dot(lp,dpt);
-		if(ct>0.0 && ct<1.0 && t0<result)
-		{
-			result = t0;
-			n=ip-(p0+dp*ct);
-		}
-		
-	}
-	
-	return result;
-}
-*/
-
 //-------------------------------------------------------------------------------------------------------------
 float CSG_ConeIntersect( vec3 p0, float r0, vec3 p1, float r1, Ray r, out vec3 n1, out vec3 n2, out float far )
 //-------------------------------------------------------------------------------------------------------------  
@@ -1423,14 +1324,6 @@ float operation_HollowA_Overlap_HollowB( float A_near, float A_far, float B_near
 	return result;
 }
 
-/*
-bool ClipAgainstPlane( vec3 intersectPoint, vec4 plane )
-{
-	vec3 n = normalize(plane.xyz);
-	return ( dot(n, intersectPoint) < plane.w );
-}
-*/
-
 //-----------------------------------------------------------------------
 float SceneIntersect( Ray r, inout Intersection intersec )
 //-----------------------------------------------------------------------
@@ -1612,7 +1505,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	*/
 	
 	// mirror ellipsoid-spheres along wall behind camera
-	A_near = CSG_EllipsoidIntersect( vec3(40, 10, 15), vec3(150, 11, 240), r, A_n1, A_n2, A_far);
+	A_near = CSG_EllipsoidIntersect( vec3(40, 10, 15), vec3(150, 10, 240), r, A_n1, A_n2, A_far);
 	B_near = CSG_SphereIntersect( 18.0, vec3(150, 21, 240), r, B_n1, B_n2, B_far);
 	d = operation_SolidA_Plus_SolidB( A_near, A_far, B_near, B_far, A_n1, A_n2, B_n1, B_n2, n );
 	if (d < t)
@@ -1862,8 +1755,7 @@ vec3 CalculateRadiance( Ray r )
 			// choose random Diffuse sample vector
 			vec3 d = randomCosWeightedDirectionInHemisphere( nl );
 			r = Ray( x, normalize(d) );
-			r.origin += nl;
-			//mask *= max(0.01, dot(r.direction, nl));
+			r.origin += r.direction;
 			bounceIsSpecular = false;
 			continue;
 		}
@@ -1873,7 +1765,7 @@ vec3 CalculateRadiance( Ray r )
 			mask *= intersec.color;
 			
 			r = Ray( x, reflect(r.direction, nl) );
-			r.origin += nl;
+			r.origin += r.direction;
 			bounceIsSpecular = true;
 			continue;
 		}
@@ -1896,16 +1788,15 @@ vec3 CalculateRadiance( Ray r )
 			if (rand() < Re) // reflect ray from surface
 			{
 				r = Ray( x, reflect(r.direction, nl) );
-			    	r.origin += nl;
+			    	r.origin += r.direction;
 				bounceIsSpecular = true;
 			    	continue;	
 			}
 			else // transmit ray through surface
 			{
 				mask *= intersec.color;
-				r = Ray(x, normalize(tdir));
-				//r.origin += r.direction;
-				r.origin -= nl;
+				r = Ray(x, tdir);
+				r.origin += r.direction;
 				bounceIsSpecular = true;
 				continue;
 			}
@@ -1948,7 +1839,7 @@ vec3 CalculateRadiance( Ray r )
 				vec3 reflectVec = reflect(r.direction, nl);
 				vec3 randVec = vec3(rand() * 2.0 - 1.0, rand() * 2.0 - 1.0, rand() * 2.0 - 1.0);
 				r = Ray( x, mix( reflectVec, normalize(nl + randVec), roughness) );
-				r.origin += nl;
+				r.origin += r.direction;
 				bounceIsSpecular = true;
 				continue;	
 			}
@@ -1959,9 +1850,7 @@ vec3 CalculateRadiance( Ray r )
 				// choose random sample vector for diffuse material underneath ClearCoat
 				vec3 d = randomCosWeightedDirectionInHemisphere( nl );
 				r = Ray( x, normalize(d) );
-				//r.origin += r.direction;
-				r.origin += nl;
-				//mask *= max(0.01, dot(r.direction, nl));
+				r.origin += r.direction;
 				bounceIsSpecular = false;
 				continue;
 			}
@@ -1986,7 +1875,6 @@ vec3 CalculateRadiance( Ray r )
 				mask *= exp(-absorptionCoefficient * scatteringDistance); // scattering
 				x = x + r.direction * scatteringDistance;
 				vec3 d = randomSphereDirection(); // true Isotropic scattering
-				//vec3 d = randomCosWeightedDirectionInHemisphere( nl );
 				r = Ray( x, normalize(d) );
 				bounceIsSpecular = false;	
 			}
@@ -2006,11 +1894,10 @@ vec3 CalculateRadiance( Ray r )
 				// choose cosWeighted random Diffuse reflection vector for participating medium
 				vec3 d = randomSphereDirection(); // true isotropic scattering
 				r = Ray( x, normalize(d) );
-				r.origin += nl;
+				r.origin += r.direction;
 				mask *= intersec.color;
 				
 				accumCol += calcDirectLightingQuad(mask, x, nl, lightChoice);
-				//mask *= max(0.01, dot(r.direction, nl));
 				bounceIsSpecular = false;
 				continue;
 			}
@@ -2040,7 +1927,7 @@ vec3 CalculateRadiance( Ray r )
 			if( bounceIsSpecular && rand() < Re )
 			{
 				r = Ray( x, reflect(r.direction, nl) );
-				r.origin += nl;
+				r.origin += r.direction;
 				bounceIsSpecular = true;
 				continue;
 			}
@@ -2156,7 +2043,6 @@ void main( void )
 	{
 		previousColor *= 0.5; // motion-blur trail amount (old image)
 		pixelColor *= (uSampleCounter) * 0.5; // brightness of new image (noisy)
-		
 	}
 		
 	gl_FragColor = vec4( pixelColor + previousColor, 1.0 );
@@ -2215,17 +2101,6 @@ void main( void )
 			var pinchDeltaY = 0;
 			var camFlightSpeed = 60;
 			var fontAspect;
-			/*
-			var objMeshes = {};
-			var total_number_of_triangles = 0;
-			var triangle_array;
-			var triangleDataTexture;
-			var v0 = new THREE.Vector3();
-			var v1 = new THREE.Vector3();
-			var v2 = new THREE.Vector3();
-			var scene_aabbox_min = new THREE.Vector3();
-			var scene_aabbox_max = new THREE.Vector3();
-			*/
 			
 			// the following variables will be used to calculate rotations and directions from the camera
 			var cameraDirectionVector = new THREE.Vector3();//for moving where the camera is looking
