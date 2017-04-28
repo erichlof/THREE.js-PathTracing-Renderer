@@ -150,9 +150,6 @@ uniform float uFocusDistance;
 
 uniform vec2 uResolution;
 
-//uniform vec3 uMeshBBox_min;
-//uniform vec3 uMeshBBox_max;
-
 uniform vec3 uRandomVector;
 
 uniform mat4 uCameraMatrix;
@@ -534,7 +531,7 @@ vec3 randomSphereDirection()
     	vec2 r = vec2(rand(),rand())*TWO_PI;
 	return vec3(sin(r.x)*vec2(sin(r.y),cos(r.y)),cos(r.x));	
 }
-
+/*
 vec3 randomHemisphereDirection( const vec3 n )
 {
 	vec2 r = vec2(rand(),rand())*TWO_PI;
@@ -550,7 +547,7 @@ vec3 randomDirectionInSphere()
 
     return vec3( up, cos(around) * over, sin(around) * over );
 }
-
+*/
 vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 {
 	float up = sqrt(rand()); // weighted cos(theta)
@@ -649,8 +646,7 @@ vec3 CalculateRadiance( Ray r )
 			// choose random Diffuse sample vector
 			vec3 d = randomCosWeightedDirectionInHemisphere( nl );
 			r = Ray( x, normalize(d) );
-			r.origin += nl * 2.0;
-			//mask *= max(0.01, dot(r.direction, nl));
+			r.origin += r.direction * 2.0;
 			bounceIsSpecular = false;
 			continue;	
                 }
@@ -658,7 +654,7 @@ vec3 CalculateRadiance( Ray r )
                 if (intersec.type == SPEC)  // Ideal SPECULAR reflection
                 {
 			r = Ray( x, reflect(r.direction, nl) );
-			r.origin += nl * 2.0;
+			r.origin += r.direction * 2.0;
 			mask *= intersec.color;
 			bounceIsSpecular = true;
                         continue;
@@ -682,16 +678,15 @@ vec3 CalculateRadiance( Ray r )
 			if (rand() < Re) // reflect ray from surface
 			{
 				r = Ray( x, reflect(r.direction, nl) );
-			    	r.origin += nl * 2.0;
+			    	r.origin += r.direction * 2.0;
 				bounceIsSpecular = true;
 			    	continue;	
 			}
 			else // transmit ray through surface
 			{
 				mask *= intersec.color;
-				r = Ray(x, normalize(tdir));
-				//r.origin += r.direction * 2.0;
-				r.origin -= nl * 2.0;
+				r = Ray(x, tdir);
+				r.origin += r.direction * 2.0;
 				bounceIsSpecular = true;
 				continue;
 			}
@@ -719,18 +714,17 @@ vec3 CalculateRadiance( Ray r )
 			if( rand() < Re )
 			{	
 				r = Ray( x, mix( normalize(d), reflect(r.direction, nl), shininess ) );
-				r.origin += nl * 2.0;
+				r.origin += r.direction * 2.0;
 				bounceIsSpecular = true;
 				continue;	
 			}
 			else
 			{
 				r = Ray( x, normalize(d) );
-				r.origin += nl * 2.0;
+				r.origin += r.direction * 2.0;
 				mask *= intersec.color;
 				
 				accumCol += calcDirectLighting(mask, x, nl, spheres[0]);
-				//mask *= max(0.01, dot(r.direction, nl));
 				bounceIsSpecular = false;
 				continue;
 			}
@@ -755,7 +749,6 @@ vec3 CalculateRadiance( Ray r )
 				mask *= exp(-absorptionCoefficient * scatteringDistance); // scattering
 				x = x + r.direction * scatteringDistance;
 				vec3 d = randomSphereDirection(); // true Isotropic scattering
-				//vec3 d = randomCosWeightedDirectionInHemisphere( nl );
 				r = Ray( x, normalize(d) );
 				bounceIsSpecular = false;	
 			}
@@ -776,11 +769,10 @@ vec3 CalculateRadiance( Ray r )
 				// choose cosWeighted random Diffuse reflection vector for participating medium
 				vec3 d = randomSphereDirection(); // true isotropic scattering
 				r = Ray( x, normalize(d) );
-				r.origin += nl * 2.0;
+				r.origin += r.direction * 2.0;
 				mask *= intersec.color;
 				
 				accumCol += calcDirectLighting(mask, x, nl, spheres[0]);
-				//mask *= max(0.01, dot(r.direction, nl));
 				bounceIsSpecular = false;
 				continue;
 			}
@@ -810,7 +802,7 @@ vec3 CalculateRadiance( Ray r )
 			if( bounceIsSpecular && rand() < Re )
 			{
 				r = Ray( x, reflect(r.direction, nl) );
-				r.origin += nl * 2.0;
+				r.origin += r.direction * 2.0;
 				bounceIsSpecular = true;
 				continue;
 			}
