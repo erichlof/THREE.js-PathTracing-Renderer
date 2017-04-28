@@ -217,30 +217,10 @@ float rand()
 
 struct Ray { vec3 origin; vec3 direction; };
 struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; int type; };
-/*
-struct Ellipsoid { vec3 radii; vec3 position; vec3 emission; vec3 color; int type; };
-struct Cylinder { float radius; float height; vec3 position; vec3 emission; vec3 color; int type; };
-struct ClosedCylinder { float radius; vec3 cap1pos; vec3 cap2pos; vec3 emission; vec3 color; int type; };
-struct Cone { float radius; float height; vec3 position; vec3 emission; vec3 color; int type; };
-struct Plane { vec4 pla; vec3 emission; vec3 color; int type; };
-struct Disk { float radiusSq; vec3 pos; vec3 normal; vec3 emission; vec3 color; int type; };
-struct Triangle { vec3 normal; vec3 v0; vec3 v1; vec3 v2; vec3 emission; vec3 color; int type; };
-struct Quad { vec3 normal; vec3 v0; vec3 v1; vec3 v2; vec3 v3; vec3 emission; vec3 color; int type; };
-*/
 struct Box { vec3 minCorner; vec3 maxCorner; vec3 emission; vec3 color; int type; };
 struct Intersection { vec3 normal; vec3 emission; vec3 color; int type; int id; };
 
 Sphere spheres[N_SPHERES];
-/*
-Ellipsoid ellipsoids[N_ELLIPSOIDS];
-Cylinder cylinders[N_CYLINDERS];
-ClosedCylinder closedCylinders[N_CLOSEDCYLINDERS];
-Cone cones[N_CONES];
-Plane planes[N_PLANES];
-Disk disks[N_DISKS];
-Triangle triangles[N_TRIANGLES];
-Quad quads[N_QUADS];
-*/
 Box boxes[N_BOXES];
 
 
@@ -336,8 +316,7 @@ bool BoundingBoxIntersect( vec3 minCorner, vec3 maxCorner, vec3 rayOrigin, vec3 
 	return minmax > max(maxmin, 0.0);
 }
 
-
-
+/*
 float data[64];
 float getData(int id)
 {
@@ -346,6 +325,7 @@ float getData(int id)
         if (i == id) return data[i];
     }
 }
+*/
 
 //-----------------------------------------------------------------------
 float SceneIntersect( Ray r, inout Intersection intersec )
@@ -597,8 +577,7 @@ vec3 CalculateRadiance( Ray r )
 			// choose random Diffuse sample vector
 			vec3 d = randomCosWeightedDirectionInHemisphere( nl );
 			r = Ray( x, normalize(d) );
-			r.origin += nl * 2.0;
-			mask *= max(0.01, dot(r.direction, nl));
+			r.origin += r.direction;
 			bounceIsSpecular = false;
 			continue;	
                 }
@@ -606,7 +585,7 @@ vec3 CalculateRadiance( Ray r )
                 if (intersec.type == SPEC)  // Ideal SPECULAR reflection
                 {
 			r = Ray( x, reflect(r.direction, nl) );
-			r.origin += nl * 2.0;
+			r.origin += r.direction;
 			mask *= intersec.color;
 			bounceIsSpecular = true;
                         continue;
@@ -639,15 +618,15 @@ vec3 CalculateRadiance( Ray r )
 			if( transmissionProbability > Re ) // transmit ray through surface
 			{
 				mask *= intersec.color;
-				r = Ray(x, normalize(tdir));
-				r.origin -= nl * 2.0;
+				r = Ray(x, tdir);
+				r.origin += r.direction;
 				bounceIsSpecular = true;
 				continue;
 			}
 			else // reflect ray from surface
 			{
 				r = Ray( x, reflect(r.direction, nl) );
-			    	r.origin += nl * 2.0;
+			    	r.origin += r.direction;
 				bounceIsSpecular = true;
 			    	continue;	
 			}
@@ -674,24 +653,23 @@ vec3 CalculateRadiance( Ray r )
 			if( rand() < Re )
 			{	
 				r = Ray( x, mix( normalize(d), reflect(r.direction, nl), shininess ) );
-				r.origin += nl * 2.0;
+				r.origin += r.direction;
 				bounceIsSpecular = true;
 				continue;	
 			}
 			else
 			{
 				r = Ray( x, normalize(d) );
-				r.origin += nl * 2.0;
+				r.origin += r.direction;
 				mask *= intersec.color;
 				
 				//accumCol += calcDirectLighting(mask, x, nl, spheres[0]);
-				//mask *= max(0.01, dot(r.direction, nl));
 				bounceIsSpecular = false;
 				continue;
 			}
 			
 		} //end if (intersec.type == COAT)
-		
+		/*
 		if (intersec.type == TRANSLUCENT)  // Translucent Sub-Surface Scattering material
 		{
 			float translucentDensity = 0.3;
@@ -730,11 +708,10 @@ vec3 CalculateRadiance( Ray r )
 				// choose cosWeighted random Diffuse reflection vector for participating medium
 				vec3 d = randomSphereDirection(); // true isotropic scattering
 				r = Ray( x, normalize(d) );
-				r.origin += nl * 2.0;
+				r.origin += r.direction;
 				mask *= intersec.color;
 				
 				//accumCol += calcDirectLighting(mask, x, nl, spheres[0]);
-				mask *= max(0.01, dot(r.direction, nl));
 				bounceIsSpecular = false;
 				continue;
 			}
@@ -742,7 +719,7 @@ vec3 CalculateRadiance( Ray r )
 			{
 				// transmission
 				r = Ray( x, r.direction );
-				r.origin += r.direction * 2.0;
+				r.origin += r.direction;
 				
 				continue;
 			}
@@ -764,7 +741,7 @@ vec3 CalculateRadiance( Ray r )
 			if( bounceIsSpecular && rand() < Re )
 			{
 				r = Ray( x, reflect(r.direction, nl) );
-				r.origin += nl * 2.0;
+				r.origin += r.direction;
 				bounceIsSpecular = true;
 				continue;
 			}
@@ -778,7 +755,6 @@ vec3 CalculateRadiance( Ray r )
 			{
 				mask *= exp(-absorptionCoefficient * scatteringDistance); // scattering
 				d = randomSphereDirection(); // true Isotropic scattering
-				//d = randomCosWeightedDirectionInHemisphere( nl );
 			}
 			else
 			{
@@ -792,7 +768,7 @@ vec3 CalculateRadiance( Ray r )
 			bounceIsSpecular = false;
 			continue;			
 		} // end if (intersec.type == SPECSUB)
-		
+		*/
 		
 	} // end for (int depth = 0; depth < 4; depth++)
 	
@@ -867,13 +843,12 @@ void main( void )
 	if ( uCameraJustStartedMoving )
 	{
 		previousColor = vec3(0.0); // clear rendering accumulation buffer
-		pixelColor *= 1.2;
+		//pixelColor *= 1.2;
 	}
 	else if ( uCameraIsMoving )
 	{
 		previousColor *= 0.5; // motion-blur trail amount (old image)
 		pixelColor *= (uSampleCounter) * 0.5; // brightness of new image (noisy)
-		
 	}
 		
 	gl_FragColor = vec4( pixelColor + previousColor, 1.0 );
