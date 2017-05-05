@@ -323,6 +323,42 @@ float BoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r, out vec3 normal )
 	return INFINITY;
 }
 
+//--------------------------------------------------------------------------------------------------------
+float DisplacementBoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r, out vec3 normal, out float inside )
+//--------------------------------------------------------------------------------------------------------
+{
+	vec3 invDir = 1.0 / r.direction;
+	vec3 tmin = (minCorner - r.origin) * invDir;
+	vec3 tmax = (maxCorner - r.origin) * invDir;
+	
+	vec3 real_min = min(tmin, tmax);
+	vec3 real_max = max(tmin, tmax);
+	
+	float minmax = min( min(real_max.x, real_max.y), real_max.z);
+	float maxmin = max( max(real_min.x, real_min.y), real_min.z);
+	
+	// early out
+	if (minmax < maxmin) return INFINITY;
+	
+	if (maxmin > 0.0) // if we are outside the box
+	{
+		inside = 2.0;
+		normal = -sign(r.direction) * step(real_min.yzx, real_min) * step(real_min.zxy, real_min);
+		normal = normalize(normal);
+		if (normal.y > 0.9)
+			return maxmin;	
+	}
+		
+	if (minmax > 0.0) // else if we are inside the box
+	{
+		inside = -2.0;
+		normal = -sign(r.direction) * step(real_max, real_max.yzx) * step(real_max, real_max.zxy);
+		return minmax;
+	}
+				
+	return INFINITY;
+}
+
 /*
 //-----------------------------------------------------------------------
 float PlaneIntersect( vec4 pla, Ray r )
@@ -332,16 +368,18 @@ float PlaneIntersect( vec4 pla, Ray r )
 }
 */
 
-float getDepth( vec3 pos )
+float getBoxWaterDepth( vec3 pos )
 {
-	float waveHeight = 10.0;
-	float waveFrequency = 0.01;
-	float waveSpeed = 3.0;
+	float waveHeight = sin(mod(pos.x * 0.01 + pos.z * 0.01 + (uTime * 10.0), TWO_PI)) * 10.0;
+	float waveFrequency = 0.05;
+	float waveSpeed = (uTime) * 2.0;
 	
-	float sampleAngle1 = abs(pos.x) * (waveFrequency) + (uTime * waveSpeed);
-	float sampleAngle2 = abs(pos.z) * (waveFrequency * 1.1) + (uTime * (waveSpeed + 1.0));
-	float offset = (sin(mod(sampleAngle1,TWO_PI)) * waveHeight) + (sin(mod(sampleAngle2,TWO_PI)) * waveHeight);
-	return pos.y + offset - (waveHeight * 1.0);
+	float sampleAngle1 = mod( abs(pos.x * waveFrequency * 0.1) + waveSpeed * 1.5, TWO_PI);
+	float sampleAngle2 = mod( abs(pos.z * waveFrequency * 0.3) + waveSpeed * 2.0, TWO_PI);
+        float sampleAngle3 = mod( abs(pos.x * waveFrequency * 0.9) + waveSpeed * 0.7, TWO_PI);
+	float sampleAngle4 = mod( abs(pos.z * waveFrequency * 1.1) + waveSpeed * 1.1, TWO_PI);
+	float offset = ( sin(sampleAngle1) + sin(sampleAngle2) + sin(sampleAngle3) + sin(sampleAngle4) ) * 0.25;
+	return pos.y - (waveHeight) - (offset * waveHeight);
 }
 
 //-----------------------------------------------------------------------
@@ -349,8 +387,10 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 //-----------------------------------------------------------------------
 {
 	Ray rObj;
-        float d,dObj;
+        float d, dw, dObj;
 	float t = INFINITY;
+        float eps = 0.01;
+	float waterWaveDepth;
 	vec3 hitObjectSpace;
 	vec3 hitWorldSpace;
 	vec3 normal, nw;
@@ -420,41 +460,31 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	// WATER BOX 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////
 	
-	d = BoxIntersect(boxes[2].minCorner, boxes[2].maxCorner, r, normal);
+	float inside;
+	d = DisplacementBoxIntersect(boxes[2].minCorner, boxes[2].maxCorner, r, normal, inside);
 	if (d == INFINITY) return t;
 	
 	hitWorldSpace = r.origin + r.direction * d;
 	if (hitWorldSpace.y < 90.0) return t;
 	
-	float waterWaveHeight = getDepth(hitWorldSpace);
+	waterWaveDepth = getBoxWaterDepth(hitWorldSpace);
 	vec3 boxMaxOffsetPos = boxes[2].maxCorner;
-	boxMaxOffsetPos.y = waterWaveHeight;
-	float dw = BoxIntersect(boxes[2].minCorner, boxMaxOffsetPos, r, nw);
+	boxMaxOffsetPos.y = waterWaveDepth;
+	dw = DisplacementBoxIntersect(boxes[2].minCorner, boxMaxOffsetPos, r, nw, inside);
 	
 	if (dw < t)
 	{
 		t = dw;
-		float eps = 0.01;
-		float dx = getDepth(hitWorldSpace + vec3(eps,0,0)) - getDepth(hitWorldSpace + vec3(-eps,0,0));
-		float dy = eps + eps; // (the water wave height is a function of x and z, not dependent on y)
-		float dz = getDepth(hitWorldSpace + vec3(0,0,eps)) - getDepth(hitWorldSpace + vec3(0,0,-eps));
+		float dx = getBoxWaterDepth(hitWorldSpace + vec3(eps,0,0)) - getBoxWaterDepth(hitWorldSpace + vec3(-eps,0,0));
+		float dy = eps * inside; // (the water wave height is a function of x and z, not dependent on y)
+		float dz = getBoxWaterDepth(hitWorldSpace + vec3(0,0,eps)) - getBoxWaterDepth(hitWorldSpace + vec3(0,0,-eps));
 		intersec.normal = normalize(vec3(dx,dy,dz));
 		intersec.emission = boxes[2].emission;
 		intersec.color = boxes[2].color;
 		intersec.type = boxes[2].type;
 		intersec.id = BOX_ID;
 	}
-	/*
-	else if (d < t)// && abs(normal.y) < 0.1)
-	{
-		t = d;
-		intersec.normal = normalize(normal);
-		intersec.emission = boxes[2].emission;
-		intersec.color = boxes[2].color;
-		intersec.type = boxes[2].type;
-		intersec.id = BOX_ID;
-	}
-	*/
+	
 	return t;
 }
 
