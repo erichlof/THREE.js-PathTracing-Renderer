@@ -476,6 +476,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	if (dw < t)
 	{
 		t = dw;
+		hitWorldSpace = r.origin + r.direction * dw;
 		float dx = getBoxWaterDepth(hitWorldSpace + vec3(eps,0,0)) - getBoxWaterDepth(hitWorldSpace + vec3(-eps,0,0));
 		float dy = eps * inside; // (the water wave height is a function of x and z, not dependent on y)
 		float dz = getBoxWaterDepth(hitWorldSpace + vec3(0,0,eps)) - getBoxWaterDepth(hitWorldSpace + vec3(0,0,-eps));
