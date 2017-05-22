@@ -141,6 +141,7 @@ precision highp sampler2D;
 uniform bool uCameraIsMoving;
 uniform bool uCameraJustStartedMoving;
 
+uniform float uCameraUnderWater;
 uniform float uTime;
 uniform float uSampleCounter;
 uniform float uULen;
@@ -168,7 +169,7 @@ uniform mat4 uTallBoxMatrix4x4;
 uniform mat3 uTallBoxNormalMatrix3x3;
 
 uniform sampler2D tPreviousTexture;
-//uniform sampler2D tTriangleTexture;
+uniform sampler2D tCloudTexture;
 
 varying vec2 vUv;
 
@@ -190,9 +191,9 @@ varying vec2 vUv;
 #define ELLIPSOID_ID 6
 #define OPENCYLINDER_ID 7
 
-
-#define N_QUADS 5
-#define N_BOXES 3
+#define N_ELLIPSOIDS 3
+#define N_QUADS 4
+#define N_BOXES 4
 #define N_OPENCYLINDERS 4
 
 #define LIGHT 0
@@ -205,7 +206,8 @@ varying vec2 vUv;
 #define TRANSLUCENT 7
 #define SPECSUB 8
 #define WOOD 9
-#define SEAFLOOR 10
+#define CLOUDS 10
+#define SEAFLOOR 11
 
 const float turbidity = 2.0;
 const float rayleighCoefficient = 4.0;
@@ -239,7 +241,7 @@ const float sunIntensity = 800.0;
 const float sunAngularDiameterCos = 0.99983194915; // 66 arc seconds -> degrees, and the cosine of that
 
 // earth shadow hack
-const float cutoffAngle = 1.65346981768;// (PI / 1.9)
+const float cutoffAngle = 1.66;// original value (PI / 1.9)
 
 
 float seed = 0.0;
@@ -254,15 +256,72 @@ float rand()
 //-----------------------------------------------------------------------
 
 struct Ray { vec3 origin; vec3 direction; };
+struct Ellipsoid { vec3 radii; vec3 position; vec3 emission; vec3 color; int type; };
 struct OpenCylinder { float radius; vec3 pos1; vec3 pos2; vec3 emission; vec3 color; int type; };
 struct Quad { vec3 v0; vec3 v1; vec3 v2; vec3 v3; vec3 emission; vec3 color; int type; };
 struct Box { vec3 minCorner; vec3 maxCorner; vec3 emission; vec3 color; int type; };
 struct Intersection { vec3 normal; vec3 emission; vec3 color; int type; int id; };
 
+Ellipsoid ellipsoids[N_ELLIPSOIDS];
 OpenCylinder openCylinders[N_OPENCYLINDERS];
 Quad quads[N_QUADS];
 Box boxes[N_BOXES];
 
+
+//-----------------------------------------------------------------------
+float SphereIntersect( float rad, vec3 pos, Ray r )
+//-----------------------------------------------------------------------
+{
+	vec3 op = pos - r.origin;
+	float b = dot(op, r.direction);
+	float det = b * b - dot(op,op) + rad * rad;
+	if (det < 0.0)
+		return INFINITY;
+        
+	det = sqrt(det);	
+	float t1 = b - det;
+	if( t1 > 0.0 )
+		return t1;
+		
+	float t2 = b + det;
+	if( t2 > 0.0 )
+		return t2;
+		
+	return INFINITY;	
+}
+
+//-----------------------------------------------------------------------
+float EllipsoidIntersect( vec3 radii, vec3 pos, Ray r )
+//-----------------------------------------------------------------------
+{
+	vec3 oc = r.origin - pos;
+	vec3 oc2 = oc*oc;
+	vec3 ocrd = oc*r.direction;
+	vec3 rd2 = r.direction*r.direction;
+	vec3 invRad = 1.0/radii;
+	vec3 invRad2 = invRad*invRad;
+	
+	// quadratic equation coefficients
+	float a = dot(rd2, invRad2);
+	float b = 2.0*dot(ocrd, invRad2);
+	float c = dot(oc2, invRad2) - 1.0;
+	float det = b*b - 4.0*a*c;
+	if (det < 0.0) 
+		return INFINITY;
+		
+	det = sqrt(det);
+	float t1 = (-b - det) / (2.0 * a);
+	float t2 = (-b + det) / (2.0 * a);
+	float result = INFINITY;
+	
+	if( t2 > 0.0 )
+		result = t2;
+	
+	if( t1 > 0.0 )
+		result = t1;
+	
+	return result;	
+}
 
 //---------------------------------------------------------------------------
 float OpenCylinderIntersect( float rad, vec3 p0, vec3 p1, Ray r, out vec3 n )
@@ -394,7 +453,7 @@ float BoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r, out vec3 normal )
 }
 
 //---------------------------------------------------------------------------------------------------------
-float DisplacementBoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r, out vec3 normal, out float outside )
+float DisplacementBoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r )
 //---------------------------------------------------------------------------------------------------------
 {
 	vec3 invDir = 1.0 / r.direction;
@@ -412,17 +471,11 @@ float DisplacementBoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r, out vec3 
 	
 	if (maxmin > 0.0) // if we are outside the box
 	{
-		outside = 2.0;
-		//normal = -sign(r.direction) * step(real_min.yzx, real_min) * step(real_min.zxy, real_min);
-		//normal = normalize(normal);
-		//if (normal.y > 0.9)
-			return maxmin;	
+		return maxmin;	
 	}
 		
 	if (minmax > 0.0) // else if we are inside the box
 	{
-		outside = -2.0;
-		//normal = -sign(r.direction) * step(real_max, real_max.yzx) * step(real_max, real_max.zxy);
 		return minmax;
 	}
 				
@@ -432,15 +485,14 @@ float DisplacementBoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r, out vec3 
 
 
 // sea
-const int ITER_FRAGMENT =   4; // # of fractal iterations
-const float SEA_HEIGHT = 50.0; // this is how many units down from the top of the ocean bounding box
-const float SEA_FREQ =   0.08; // amount of wave detail: lower = spread out, higher = close together
-const float SEA_CHOPPY =  2.0; // smaller beachfront-looking waves, they travel in parallel
-const float SEA_SPEED =   3.0; // how quickly time passes
-
+const int ITER_FRAGMENT =    4; // # of fractal iterations
+const float SEA_HEIGHT =  80.0; // this is how many units down from the top of the ocean bounding box
+const float SEA_FREQ =     0.1; // wave density: lower = spread out, higher = close together
+const float SEA_CHOPPY =   3.0; // smaller beachfront-type waves, they travel in parallel
+const float SEA_SPEED =    1.5; // how quickly time passes
 #define SEA_TIME (uTime * SEA_SPEED)
 const mat2 octave_m = mat2(1.6,1.2,-1.2,1.6);
-
+/*
 float hash( vec2 p )
 {
 	float h = dot(p,vec2(127.1,311.7));	
@@ -457,6 +509,26 @@ float noise( in vec2 p )
 		mix( hash( i + vec2(0.0,1.0) ), 
 		     hash( i + vec2(1.0,1.0) ), u.x), u.y);
 }
+*/
+
+float hash(vec2 p)  // replace this by something better
+{
+    p  = 50.0*fract( p*0.3183099 + vec2(0.71,0.113));
+    return -1.0+2.0*fract( p.x*p.y*(p.x+p.y) );
+}
+
+float noise( in vec2 p )
+{
+    vec2 i = floor( p );
+    vec2 f = fract( p );
+	
+	vec2 u = f*f*(3.0-2.0*f);
+
+    return mix( mix( hash( i + vec2(0.0,0.0) ), 
+                     hash( i + vec2(1.0,0.0) ), u.x),
+                mix( hash( i + vec2(0.0,1.0) ), 
+                     hash( i + vec2(1.0,1.0) ), u.x), u.y);
+}
 
 float sea_octave( vec2 uv, float choppy )
 {
@@ -469,13 +541,13 @@ float sea_octave( vec2 uv, float choppy )
 
 float getOceanWaterDepth( vec3 p )
 {
-	p.x *= 0.01; p.z *= 0.01;
+	p.x *= 0.01;
+	p.z *= 0.01;
 	float freq = SEA_FREQ;
 	float amp = SEA_HEIGHT;
 	float choppy = SEA_CHOPPY;
 	
 	vec2 uv = p.xz; uv.x *= 0.75;
-
 	float d, h = 0.0;    
 	for(int i = 0; i < ITER_FRAGMENT; i++)
 	{        
@@ -487,23 +559,90 @@ float getOceanWaterDepth( vec3 p )
 	}
 	return p.y - h;
 }
+/*
+float r(float n)
+{
+ 	return fract(cos(n*89.42)*343.42);
+}
+
+vec2 r(vec2 n)
+{
+ 	return vec2(r(n.x*23.62-300.0+n.y*34.35),r(n.x*45.13+256.0+n.y*38.89)); 
+}
+
+float worley(vec2 n,float s)
+{
+    n /= s;
+    float dis = 1.0;
+    for(int x = -1;x<=1;x++)
+    {
+        for(int y = -1;y<=1;y++)
+        {
+            vec2 p = floor(n)+vec2(x,y);
+            p = r(p)+vec2(x,y)-fract(n);
+            dis = min(dis, dot(p, p));
+            
+        }
+    }
+    return 1.0 - sqrt(dis);
+	
+}
+*/
+
+float getCloudSurfaceDepth( vec3 p )
+{
+	p.x *= 0.00005;
+	p.z *= 0.00005;
+	float windSpeed = uTime * 0.01;
+	float h = texture2D(tCloudTexture, windSpeed + p.xz).r;
+	float minHeight = max(0.1, abs(sin(uTime*0.04)) * 1.0);
+	if (h < minHeight) return INFINITY;
+	return p.y - (h * 300.0);
+}
 
 
-//----------------------------------------------------------------------
-float SceneIntersect( Ray r, inout Intersection intersec)
-//----------------------------------------------------------------------
+//------------------------------------------------------------------------
+float SceneIntersect( Ray r, inout Intersection intersec, bool checkOcean)
+//------------------------------------------------------------------------
 {
         Ray rObj;
 	vec3 hitObjectSpace;
 	vec3 hitWorldSpace;
-	vec3 normal, nw;
-        float d, dw, dObj;
+	vec3 normal;
+        float d, dw, dc;
 	float t = INFINITY;
-        float eps = 0.01;
-	float waterWaveDepth;
-	float outside;
+        float eps = 0.1;
+	float waterWaveDepth, cloudSurfaceDepth;
 	
-		
+	
+	/*
+	for (int i = 0; i < N_ELLIPSOIDS; i++)
+        {	
+		randomVec = 10.0 * (vec3(rand() * 2.0 - 1.0, rand() * 2.0 - 1.0, rand() * 2.0 - 1.0));
+		d = EllipsoidIntersect( ellipsoids[i].radii, ellipsoids[i].position + randomVec, r );
+		if (d < t)
+		{
+			t = d;
+			intersec.normal = normalize( ((r.origin + r.direction * t) - ellipsoids[i].position) / (ellipsoids[i].radii * ellipsoids[i].radii) );
+			intersec.emission = ellipsoids[i].emission;
+			intersec.color = ellipsoids[i].color;
+			intersec.type = ellipsoids[i].type;
+			intersec.id = ELLIPSOID_ID;
+		}
+	}
+	*/
+	
+	d = SphereIntersect(9000000.0, vec3(0, -9001000.0, 0), r);
+	if (d < t)
+	{
+		t = d;
+		intersec.normal = vec3(0,1,0);//normalize( (r.origin + r.direction * t) - vec3(0,-60000,0) );
+		intersec.emission = vec3(0);
+		intersec.color = vec3(0.0,0.05,0.05);
+		intersec.type = SEAFLOOR;
+		intersec.id = SPHERE_ID;
+	}
+	
 	for (int i = 0; i < N_QUADS; i++)
         {
 		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, r );
@@ -570,26 +709,52 @@ float SceneIntersect( Ray r, inout Intersection intersec)
 	}
 	
 	///////////////////////////////////////////////////////////////////////////////////////////////////////
+	// CLOUD BOX 
+	///////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	d = SphereIntersect(800000.0, vec3(0,-798000,0), r);
+	hitWorldSpace = r.origin + r.direction * d;
+	if (hitWorldSpace.y > 500.0)
+	{
+		cloudSurfaceDepth = getCloudSurfaceDepth(hitWorldSpace);
+		///////boxes[3].minCorner.y -= cloudSurfaceDepth; // can't change the original Box value!
+		dc = DisplacementBoxIntersect(vec3(boxes[3].minCorner.x, cloudSurfaceDepth, boxes[3].minCorner.z), boxes[3].maxCorner, r);
+		//dc = SphereIntersect(cloudSurfaceDepth, hitWorldSpace, r);
+		vec3 cloudHit = r.origin + r.direction * dc;
+		if ( dc < t && cloudHit.y < boxes[3].minCorner.y)
+		{
+			t = dc;
+			float dx = getCloudSurfaceDepth(hitWorldSpace + vec3(eps,0,0)) - getCloudSurfaceDepth(hitWorldSpace + vec3(-eps,0,0));
+			float dy = eps * 2.0; // (the cloud surface height is a function of x and z, not dependent on y)
+			//float dy = getCloudSurfaceDepth(hitWorldSpace + vec3(0,eps,0)) - getCloudSurfaceDepth(hitWorldSpace + vec3(0,-eps,0));
+			float dz = getCloudSurfaceDepth(hitWorldSpace + vec3(0,0,eps)) - getCloudSurfaceDepth(hitWorldSpace + vec3(0,0,-eps));
+			intersec.normal = normalize(vec3(dx,dy,dz));
+			intersec.emission = boxes[3].emission;
+			intersec.color = boxes[3].color;
+			intersec.type = boxes[3].type;
+			intersec.id = BOX_ID;
+		}
+		
+	}
+		
+	
+	///////////////////////////////////////////////////////////////////////////////////////////////////////
 	// OCEAN BOX 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////
 	
-	
-	d = BoxIntersect(boxes[2].minCorner, boxes[2].maxCorner, r, normal);
-	if (d == INFINITY) return t;
-	
+	d = SphereIntersect(8000000.0, vec3(0, -7999900.0, 0), r);
+	if ( !checkOcean || d >= INFINITY ) return t;
 	hitWorldSpace = r.origin + r.direction * d;
 	waterWaveDepth = getOceanWaterDepth(hitWorldSpace);
-	boxes[2].maxCorner.y = waterWaveDepth;
-	
-	dw = DisplacementBoxIntersect(boxes[2].minCorner, boxes[2].maxCorner, r, nw, outside);
+	////////boxes[2].maxCorner.y = waterWaveDepth; // can't change the original Box value!
+	dw = DisplacementBoxIntersect(boxes[2].minCorner, vec3(boxes[2].maxCorner.x, waterWaveDepth, boxes[2].maxCorner.z), r);
 	
 	if (dw < t)
 	{
 		t = dw;
-		hitWorldSpace = r.origin + r.direction * dw;
+		//hitWorldSpace = r.origin + r.direction * dw;
 		float dx = getOceanWaterDepth(hitWorldSpace + vec3(eps,0,0)) - getOceanWaterDepth(hitWorldSpace + vec3(-eps,0,0));
-		//float dy = eps + eps; // (the water wave height is a function of x and z, not dependent on y)
-		float dy = getOceanWaterDepth(hitWorldSpace + vec3(0,eps,0)) - getOceanWaterDepth(hitWorldSpace + vec3(0,-eps,0));
+		float dy = eps * 2.0; // (the water wave height is a function of x and z, not dependent on y)
 		float dz = getOceanWaterDepth(hitWorldSpace + vec3(0,0,eps)) - getOceanWaterDepth(hitWorldSpace + vec3(0,0,-eps));
 		intersec.normal = normalize(vec3(dx,dy,dz));
 		intersec.emission = boxes[2].emission;
@@ -597,6 +762,7 @@ float SceneIntersect( Ray r, inout Intersection intersec)
 		intersec.type = boxes[2].type;
 		intersec.id = BOX_ID;
 	}
+	
 	
 	return t;
 }
@@ -669,9 +835,9 @@ vec3 Get_Sky_Color(Ray r, vec3 sunDirection)
 	/* most of the following code is borrowed from the three.js shader file: SkyShader.js */
 
     	// Cosine angles
-	float cosViewSunAngle = dot(viewDir, sunDirection);
+	float cosViewSunAngle = max(0.0, dot(viewDir, sunDirection));
     	float cosSunUpAngle = dot(sunDirection, up); // allowed to be negative: + is daytime, - is nighttime
-    	float cosUpViewAngle = max(0.01, dot(up, viewDir)); // cannot be 0, used as divisor
+    	float cosUpViewAngle = max(0.001, dot(up, viewDir)); // cannot be 0, used as divisor
 	
         // Get sun intensity based on how high in the sky it is
     	float sunE = SunIntensity(cosSunUpAngle);
@@ -694,7 +860,7 @@ vec3 Get_Sky_Color(Ray r, vec3 sunDirection)
 
 	// in scattering
 	vec3 rayleighXtoEye = rayleighAtX * RayleighPhase(cosViewSunAngle);
-	vec3 mieXtoEye = mieAtX *  hgPhase(cosViewSunAngle, mieDirectionalG);
+	vec3 mieXtoEye = mieAtX * hgPhase(cosViewSunAngle, mieDirectionalG);
      
     	vec3 totalLightAtX = rayleighAtX + mieAtX;
     	vec3 lightFromXtoEye = rayleighXtoEye + mieXtoEye; 
@@ -716,14 +882,16 @@ vec3 Get_Sky_Color(Ray r, vec3 sunDirection)
 
 vec3 calcDirectLightingSun(vec3 mask, vec3 x, vec3 nl, vec3 sunDirection)
 {
-	vec3 dirLight = vec3(0.0);
+	vec3 dirLight = vec3(0);
 	Intersection shadowIntersec;
 	
 	// cast shadow ray from intersection point
 	Ray shadowRay = Ray( x, normalize( sunDirection + 
 		(vec3(rand() * 2.0 - 1.0, rand() * 2.0 - 1.0, rand() * 2.0 - 1.0) * 0.01) ) );
 	shadowRay.origin += nl * 2.0;
-	float st = SceneIntersect(shadowRay, shadowIntersec);
+	float srDotSun = dot(shadowRay.direction, nl);
+	if (srDotSun < 0.0) return vec3(0);
+	float st = SceneIntersect(shadowRay, shadowIntersec, false);
 	if ( st == INFINITY )
 	{
 		//float r2 = light.radius * light.radius;
@@ -732,7 +900,7 @@ vec3 calcDirectLightingSun(vec3 mask, vec3 x, vec3 nl, vec3 sunDirection)
 		//float cos_a_max = sqrt(1. - clamp( r2 / d2, 0., 1.));
                 //float weight = 2. * (1. - cos_a_max);
 		vec3 sunEmission = Get_Sky_Color(shadowRay, shadowRay.direction);
-                dirLight = mask * sunEmission * max(0.01, dot(shadowRay.direction, nl));
+                dirLight = mask * sunEmission * srDotSun;
 	}
 	
 	return dirLight;
@@ -746,37 +914,42 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection )
 	Ray cameraRay = r;
 	vec3 accumCol = vec3(0.0);
         vec3 mask = vec3(1.0);
+	vec3 n, nl, x, firstX;
         Intersection intersec;
 	bool bounceIsSpecular = true;
+	bool checkOcean = true;
 	
         for (int depth = 0; depth < 4; depth++)
 	{
+		if (depth == 0 || intersec.type == SPEC)
+			checkOcean = true;
+		else checkOcean = false;
 		
-		float t = SceneIntersect(r, intersec);
+		float t = SceneIntersect(r, intersec, checkOcean);
+		
+		
+		
 		
 		if (intersec.type == SEAFLOOR)
 		{
 			float waterDotSun = max(0.0, dot(vec3(0,1,0), sunDirection));
-			accumCol = mask * intersec.color * waterDotSun;
+			float waterDotCamera = max(0.0, dot(vec3(0,1,0), -cameraRay.direction));
+			accumCol = mask * intersec.color * waterDotSun * waterDotCamera;
 				//* (1.0 / log(distance(cameraRay.origin, cameraRay.origin + cameraRay.direction * t )));
                         break;
 		}
 		
-		if (t == INFINITY)
+		// useful data 
+		n = intersec.normal;
+                nl = dot(n,r.direction) <= 0.0 ? normalize(n) : normalize(n * -1.0);
+		x = r.origin + r.direction * t;
+		if (depth == 0) firstX = x;
+		
+		if (t >= INFINITY)
 		{
-			if (bounceIsSpecular)
-			{
-				accumCol += mask * Get_Sky_Color(r, sunDirection);
-			}
-			
+			accumCol += mask * Get_Sky_Color(r, sunDirection);
                         break;
 		}
-		
-		// useful data 
-		vec3 n = intersec.normal;
-                vec3 nl = dot(n,r.direction) <= 0.0 ? normalize(n) : normalize(n * -1.0);
-		vec3 x = r.origin + r.direction * t;
-		
 		
                 if (intersec.type == DIFF) // Ideal DIFFUSE reflection
                 {
@@ -826,36 +999,12 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection )
 			
 			else // transmit ray through surface
 			{
-				mask *= intersec.color;
+				//mask *= intersec.color;
 				r = Ray(x, tdir);
 				r.origin += r.direction * 2.0;
 				bounceIsSpecular = true;
 				continue;
 			}
-			
-			/*
-			vec3 absorptionCoefficient = vec3(2.0, 0.01, 0.1);
-			float translucentDensity = 0.0001;
-			float scatteringDistance = -log(rand()) / translucentDensity;
-			
-			if (scatteringDistance < t) 
-			{
-				mask *= exp(-absorptionCoefficient * scatteringDistance); // scattering
-				r.direction = normalize(randomSphereDirection()); // true Isotropic scattering
-				bounceIsSpecular = true;
-			}
-			else
-			{
-				mask *= exp(-absorptionCoefficient * t); // transmission
-				r.direction = tdir;
-				bounceIsSpecular = true;
-			}
-			
-			//accumCol += calcDirectLighting(mask, x, nl, spheres[0]);
-			x = x + (r.direction * 2.0) * scatteringDistance;
-			r = Ray( x, r.direction );
-			continue;
-			*/
 		} // end if (intersec.type == REFR)
 		
 		if (intersec.type == WOOD || intersec.type == COAT)  // Diffuse object underneath with thin Water on top
@@ -903,8 +1052,32 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection )
 			
 		} //end if (intersec.type == WOOD || intersec.type == COAT)
 		
+		if (intersec.type == CLOUDS)  // 
+		{
+			vec3 cloudColor,randVec;
+			float density;
+			bool densityFlag;
+			if (depth == 0)
+			{
+				density = max(0.1, abs(sin(uTime*0.04)) * 1.0);
+				cloudColor = vec3(density);
+				mask = cloudColor;
+				randVec = vec3(rand()*2.0-1.0) * 0.5;
+				accumCol = cloudColor * Get_Sky_Color(Ray(x, normalize(sunDirection + randVec)), sunDirection);
+				
+			} //end if (depth == 0)
+			
+			accumCol += calcDirectLightingSun(mask, x, normalize(-nl + randVec), sunDirection);
+			r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(normalize(-nl + randVec) ) ) );
+			r.origin += r.direction * 2.0;
+			
+			continue;
+		}
+		
 	} // end for (int depth = 0; depth < 4; depth++)
 	
+	float hitDistance = distance(cameraRay.origin, firstX) * uCameraUnderWater;
+	accumCol = mix(accumCol, vec3(0.0,0.05,0.05), 1.0 - exp( -0.001 * hitDistance )); // underwater fog effect
 	return accumCol;      
 }
 
@@ -915,14 +1088,15 @@ void SetupScene(void)
 	vec3 z  = vec3(0.0, 0.0, 0.0);// No color value, Black        
 	float oceanFloorDepth = -1000.0;
 	
+	//ellipsoids[0] = Ellipsoid(  vec3(300,100,400), vec3(200,10000,-300), z, vec3(1), TRANSLUCENT);//cloud ellipsoid
+	//ellipsoids[1] = Ellipsoid(  vec3(300,100,400), vec3(-100,11000,-200), z, vec3(1), TRANSLUCENT);//cloud ellipsoid
+	//ellipsoids[2] = Ellipsoid(  vec3(300,100,400), vec3(0,12000,-100), z, vec3(1), TRANSLUCENT);//cloud ellipsoid
+	
 	quads[0] = Quad( vec3(  0.0, 0.0,-559.2), vec3(549.6, 0.0,-559.2), vec3(549.6, 548.8,-559.2), vec3(  0.0, 548.8,-559.2),    z, vec3(1.0),  DIFF);// Back Wall
 	quads[1] = Quad( vec3(  0.0, 0.0,   0.0), vec3(  0.0, 0.0,-559.2), vec3(  0.0, 548.8,-559.2), vec3(  0.0, 548.8,   0.0),    z, vec3(0.7, 0.12,0.05),  DIFF);// Left Wall Red
 	quads[2] = Quad( vec3(549.6, 0.0,-559.2), vec3(549.6, 0.0,   0.0), vec3(549.6, 548.8,   0.0), vec3(549.6, 548.8,-559.2),    z, vec3(0.2, 0.4, 0.36),  DIFF);// Right Wall Green
 	//quads[3] = Quad( vec3(  0.0, 548.8,-559.2), vec3(549.6, 548.8,-559.2), vec3(549.6, 548.8,   0.0), vec3(  0.0, 548.8,   0.0),    z, vec3(1.0),  DIFF);// Ceiling
-	quads[3] = Quad( vec3(  0.0, 0.0,   0.0), vec3(549.6, 0.0,   0.0), vec3(549.6, 0.0,-559.2), vec3(  0.0, 0.0,-559.2),    z, vec3(1.0), DIFF);// Floor
-	
-	quads[4] = Quad( vec3( -1000000, oceanFloorDepth, 1000000), vec3(1000000, oceanFloorDepth, 1000000), vec3(1000000, oceanFloorDepth, -1000000), vec3( -1000000, oceanFloorDepth, -1000000), 
-		z, vec3(0.0, 0.01, 0.008), SEAFLOOR);// Ocean Floor 
+	quads[3] = Quad( vec3(  0.0, 0.0,   0.0), vec3(549.6, 0.0,   0.0), vec3(549.6, 0.0,-559.2), vec3(  0.0, 0.0,-559.2),    z, vec3(1.0), COAT);// Floor
 	
 	openCylinders[0] = OpenCylinder( 50.0, vec3(50 , 0, -50), vec3(50 ,-1000, -50), z, vec3(0.1, 0.005, 0.0), WOOD);// wooden support OpenCylinder
 	openCylinders[1] = OpenCylinder( 50.0, vec3(500, 0, -50), vec3(500,-1000, -50), z, vec3(0.1, 0.005, 0.0), WOOD);// wooden support OpenCylinder
@@ -932,7 +1106,8 @@ void SetupScene(void)
 	boxes[0] = Box( vec3( -82.0,-170.0, -80.0), vec3(  82.0, 170.0,   80.0), z, vec3(0.9), SPEC);// Tall Mirror Box Left
 	boxes[1] = Box( vec3( -86.0, -85.0, -80.0), vec3(  86.0,  85.0,   80.0), z, vec3(1.0), DIFF);// Short Diffuse Box Right
 	
-	boxes[2] = Box( vec3(-1000000, 2.0 * oceanFloorDepth, -1000000), vec3(1000000, 50.0, 1000000), z, vec3(0.65, 0.7, 0.68), REFR);// Ocean Box
+	boxes[2] = Box( vec3(-1000000, 2.0 * oceanFloorDepth, -1000000), vec3(1000000, 100.0, 1000000), z, vec3(0.7, 0.8, 0.8), REFR);// Ocean Box
+	boxes[3] = Box( vec3(-1000000, 10000, -1000000), vec3(1000000, INFINITY, 1000000), z, vec3(1), CLOUDS);// Cloud Box
 }
 
 
@@ -1017,6 +1192,7 @@ void main( void )
 			var controls;
 			var pathTracingScene, screenTextureScene, screenOutputScene;
 			var pathTracingUniforms, screenTextureUniforms, screenOutputUniforms;
+			var cloudTexture;
 			var pathTracingDefines;
 			var pathTracingGeometry, pathTracingMaterial, pathTracingMesh;
 			var screenTextureGeometry, screenTextureMaterial, screenTextureMesh;
@@ -1044,6 +1220,7 @@ void main( void )
 			var cameraIsMoving = false;
 			var cameraJustStartedMoving = false;
 			var cameraRecentlyMoving = false;
+			var cameraUnderWater = false;
 			var isPaused = true;
 			var oldYawRotation, oldPitchRotation;
 			var mobileJoystickControls = null;
@@ -1238,15 +1415,21 @@ void main( void )
 				screenTextureRenderTarget.texture.generateMipmaps = false;
 				
 				
+				cloudTexture = new THREE.TextureLoader().load( 'textures/CloudTexture.jpg' );
+				cloudTexture.wrapS = THREE.RepeatWrapping;
+				cloudTexture.wrapT = THREE.RepeatWrapping;
+					
 				pathTracingGeometry = new THREE.PlaneBufferGeometry( 2, 2 );
 
 				pathTracingUniforms = {
 					
 					tPreviousTexture: { type: "t", value: screenTextureRenderTarget.texture },
-					//tTriangleTexture: { type: "t", value: triangleDataTexture },
+					tCloudTexture: { type: "t", value: cloudTexture },
 					
 					uCameraIsMoving: { type: "b1", value: false },
 					uCameraJustStartedMoving: { type: "b1", value: false },
+					
+					uCameraUnderWater: { type: "f", value: 0.0 },
 					uTime: { type: "f", value: 0.0 },
 					uSampleCounter: { type: "f", value: 0.0 },
 					uULen: { type: "f", value: 1.0 },
@@ -1718,12 +1901,17 @@ void main( void )
 					cameraRecentlyMoving = false;
 					
 				}
-					
+				
+				screenOutputUniforms.uOneOverSampleCounter.value = 1.0 / sampleCounter;
+				
+				if (cameraControlsObject.position.y < 0.0)
+					cameraUnderWater = 1.0;
+				else cameraUnderWater = 0.0;
+				pathTracingUniforms.uCameraUnderWater.value = cameraUnderWater;
 				pathTracingUniforms.uTime.value = elapsedTime;
 				pathTracingUniforms.uCameraIsMoving.value = cameraIsMoving;
 				pathTracingUniforms.uCameraJustStartedMoving.value = cameraJustStartedMoving;
 				pathTracingUniforms.uSampleCounter.value = sampleCounter;
-				screenOutputUniforms.uOneOverSampleCounter.value = 1.0 / sampleCounter;
 				pathTracingUniforms.uRandomVector.value = randomVector.set( Math.random(), Math.random(), Math.random() );
 				// CAMERA
 				cameraControlsObject.updateMatrixWorld(true);			
