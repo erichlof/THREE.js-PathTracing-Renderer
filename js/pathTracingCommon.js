@@ -307,6 +307,35 @@ vec3 randomCosWeightedDirectionInHemisphere( vec3 nl, inout float seed )
 
 `;
 
+THREE.ShaderChunk[ 'pathtracing_direct_lighting_sphere' ] = `
+
+vec3 calcDirectLightingSphere(vec3 mask, vec3 x, vec3 nl, Sphere light, inout float seed)
+{
+	vec3 dirLight = vec3(0.0);
+	Intersection shadowIntersec;
+	
+	// cast shadow ray from intersection point
+	vec3 ld = light.position + (randomSphereDirection(seed) * light.radius);
+	vec3 srDir = normalize(ld - x);
+		
+	Ray shadowRay = Ray(x, srDir);
+	shadowRay.origin += nl * 2.0;
+	float st = SceneIntersect(shadowRay, shadowIntersec);
+	if ( shadowIntersec.type == LIGHT )
+	{
+		float r2 = light.radius * light.radius;
+		vec3 d = light.position - shadowRay.origin;
+		float d2 = dot(d,d);
+		float cos_a_max = sqrt(1. - clamp( r2 / d2, 0., 1.));
+                float weight = 2. * (1. - cos_a_max);
+                dirLight = mask * light.emission * weight * max(0.01, dot(srDir, nl));
+	}
+	
+	return dirLight;
+}
+
+`;
+
 THREE.ShaderChunk[ 'pathtracing_direct_lighting_quad' ] = `
 
 vec3 calcDirectLightingQuad(vec3 mask, vec3 x, vec3 nl, Quad light, inout float seed)
