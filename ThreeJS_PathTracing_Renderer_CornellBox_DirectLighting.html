@@ -67,15 +67,10 @@ precision highp float;
 precision highp int;
 precision highp sampler2D;
 
-uniform mat4 uTallBoxMeshMatrix;
-uniform mat4 uTallBoxMeshInvMatrix;
-uniform mat4 uShortBoxMeshMatrix;
-uniform mat4 uShortBoxMeshInvMatrix;
-
-uniform mat4 uShortBoxMatrix4x4;
-uniform mat3 uShortBoxNormalMatrix3x3;
-uniform mat4 uTallBoxMatrix4x4;
-uniform mat3 uTallBoxNormalMatrix3x3;
+uniform mat4 uShortBoxInvMatrix;
+uniform mat3 uShortBoxNormalMatrix;
+uniform mat4 uTallBoxInvMatrix;
+uniform mat3 uTallBoxNormalMatrix;
 
 #include <pathtracing_uniforms_and_defines>
 
@@ -123,8 +118,8 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	// TALL MIRROR BOX
 	Ray rObj;
 	// transform ray into Tall Box's object space
-	rObj.origin = vec3( uTallBoxMatrix4x4 * vec4(r.origin, 1.0) );
-	rObj.direction = vec3( uTallBoxMatrix4x4 * vec4(r.direction, 0.0) );
+	rObj.origin = vec3( uTallBoxInvMatrix * vec4(r.origin, 1.0) );
+	rObj.direction = vec3( uTallBoxInvMatrix * vec4(r.direction, 0.0) );
 	d = BoxIntersect( boxes[0].minCorner, boxes[0].maxCorner, rObj, normal );
 	
 	if (d < t)
@@ -132,7 +127,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		t = d;
 		
 		// transfom normal back into world space
-		normal = vec3(uTallBoxNormalMatrix3x3 * normal);
+		normal = vec3(uTallBoxNormalMatrix * normal);
 		
 		intersec.normal = normalize(normal);
 		intersec.emission = boxes[0].emission;
@@ -143,8 +138,8 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	
 	// SHORT DIFFUSE WHITE BOX
 	// transform ray into Short Box's object space
-	rObj.origin = vec3( uShortBoxMatrix4x4 * vec4(r.origin, 1.0) );
-	rObj.direction = vec3( uShortBoxMatrix4x4 * vec4(r.direction, 0.0) );
+	rObj.origin = vec3( uShortBoxInvMatrix * vec4(r.origin, 1.0) );
+	rObj.direction = vec3( uShortBoxInvMatrix * vec4(r.direction, 0.0) );
 	d = BoxIntersect( boxes[1].minCorner, boxes[1].maxCorner, rObj, normal );
 	
 	if (d < t)
@@ -152,7 +147,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		t = d;
 		
 		// transfom normal back into world space
-		normal = vec3(uShortBoxNormalMatrix3x3 * normal);
+		normal = vec3(uShortBoxNormalMatrix * normal);
 		
 		intersec.normal = normalize(normal);
 		intersec.emission = boxes[1].emission;
@@ -646,15 +641,11 @@ void SetupScene(void)
 				
 					uCameraMatrix: { type: "m4", value: new THREE.Matrix4() },
 					
-					uTallBoxMeshMatrix: { type: "m4", value: new THREE.Matrix4() },
-					uTallBoxMeshInvMatrix: { type: "m4", value: new THREE.Matrix4() },
-					uShortBoxMeshMatrix: { type: "m4", value: new THREE.Matrix4() },
-					uShortBoxMeshInvMatrix: { type: "m4", value: new THREE.Matrix4() },
+					uShortBoxInvMatrix: { type: "m4", value: new THREE.Matrix4() },
+					uShortBoxNormalMatrix: { type: "m3", value: new THREE.Matrix3() },
 					
-					uShortBoxMatrix4x4: { type: "m4", value: new THREE.Matrix4() },
-					uShortBoxNormalMatrix3x3: { type: "m3", value: new THREE.Matrix3() },
-					uTallBoxMatrix4x4: { type: "m4", value: new THREE.Matrix4() },
-					uTallBoxNormalMatrix3x3: { type: "m3", value: new THREE.Matrix3() }
+					uTallBoxInvMatrix: { type: "m4", value: new THREE.Matrix4() },
+					uTallBoxNormalMatrix: { type: "m3", value: new THREE.Matrix3() }
 	
 				};
 				
@@ -733,11 +724,9 @@ void SetupScene(void)
 				tallBoxMesh.rotation.set(0, Math.PI * 0.1, 0);
 				tallBoxMesh.position.set(180, 170, -350);
 				tallBoxMesh.updateMatrixWorld(true); // 'true' forces immediate matrix update
-				pathTracingUniforms.uTallBoxMeshMatrix.value.copy( tallBoxMesh.matrixWorld );
-				pathTracingUniforms.uTallBoxMeshInvMatrix.value.getInverse( tallBoxMesh.matrixWorld );
 				
-				pathTracingUniforms.uTallBoxMatrix4x4.value.getInverse( tallBoxMesh.matrixWorld );
-				pathTracingUniforms.uTallBoxNormalMatrix3x3.value.getNormalMatrix( tallBoxMesh.matrixWorld );
+				pathTracingUniforms.uTallBoxInvMatrix.value.getInverse( tallBoxMesh.matrixWorld );
+				pathTracingUniforms.uTallBoxNormalMatrix.value.getNormalMatrix( tallBoxMesh.matrixWorld );
 				
 				shortBoxGeometry = new THREE.BoxGeometry(1,1,1);
 				shortBoxMaterial = new THREE.MeshPhysicalMaterial( {
@@ -751,11 +740,9 @@ void SetupScene(void)
 				shortBoxMesh.rotation.set(0, -Math.PI * 0.09, 0);
 				shortBoxMesh.position.set(370, 85, -170);
 				shortBoxMesh.updateMatrixWorld(true); // 'true' forces immediate matrix update
-				pathTracingUniforms.uShortBoxMeshMatrix.value.copy( shortBoxMesh.matrixWorld );
-				pathTracingUniforms.uShortBoxMeshInvMatrix.value.getInverse( shortBoxMesh.matrixWorld );
 				
-				pathTracingUniforms.uShortBoxMatrix4x4.value.getInverse( shortBoxMesh.matrixWorld );
-				pathTracingUniforms.uShortBoxNormalMatrix3x3.value.getNormalMatrix( shortBoxMesh.matrixWorld );
+				pathTracingUniforms.uShortBoxInvMatrix.value.getInverse( shortBoxMesh.matrixWorld );
+				pathTracingUniforms.uShortBoxNormalMatrix.value.getNormalMatrix( shortBoxMesh.matrixWorld );
 
 				/*
 				// Fullscreen API
