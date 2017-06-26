@@ -36,81 +36,15 @@
 		Samples: 0
 		</div>
 
-		<script src="js/three-r85.min.js"> </script>
+		<script src="js/three-r86.min.js"> </script>
+		<script src="js/pathTracingCommon.js"> </script>
 		<script src="js/threex.keyboardstate.js"> </script>
 		<script src="js/FirstPersonCameraControls.js"> </script>
 		<script src="js/MobileJoystickControls.js"> </script>
 		<script src="js/webgl-obj-loader.js"> </script>
-		<script src="js/Detector.js"> </script>
+		<script src="js/BVH_Acceleration_Structure.js"> </script>
 		<script src="js/stats.min.js"> </script>
 		
-		
-		<script id="screenTextureVertexShader" type="x-shader/x-vertex">
-		
-precision highp float;
-precision highp int;
-
-varying vec2 vUv;
-
-void main()
-{
-	vUv = uv;
-	gl_Position = vec4( position, 1.0 );
-
-}
-
-		</script>
-		
-		<script id="screenTextureFragmentShader" type="x-shader/x-fragment">
-
-precision highp float;
-precision highp int;
-precision highp sampler2D;
-
-varying vec2 vUv;
-uniform sampler2D tTexture0;
-
-
-void main()
-{	
-	gl_FragColor = texture2D(tTexture0, vUv);	
-}
-		
-		</script>
-		
-		<script id="screenOutputVertexShader" type="x-shader/x-vertex">
-
-precision highp float;
-precision highp int;
-
-varying vec2 vUv;
-
-void main() 
-{
-	vUv = uv;
-	gl_Position = vec4( position, 1.0 );
-}
-
-		</script>
-		
-		<script id="screenOutputFragmentShader" type="x-shader/x-fragment">
-
-precision highp float;
-precision highp int;
-precision highp sampler2D;
-
-varying vec2 vUv;
-uniform float uOneOverSampleCounter;
-uniform sampler2D tTexture0;
-
-void main()
-{
-	vec4 pixelColor = texture2D(tTexture0, vUv) * uOneOverSampleCounter;
-	
-	gl_FragColor = sqrt(pixelColor);	
-}
-		
-		</script>
 		
 		<script id="pathTracingVertexShader" type="x-shader/x-vertex">
 		
@@ -135,186 +69,37 @@ precision highp float;
 precision highp int;
 precision highp sampler2D;
 
-uniform bool uCameraIsMoving;
-uniform bool uCameraJustStartedMoving;
-
-uniform float uTime;
-uniform float uSampleCounter;
-uniform float uULen;
-uniform float uVLen;
-uniform float uApertureSize;
-uniform float uFocusDistance;
-
-uniform vec2 uResolution;
-
-uniform vec3 uMeshBBox_min;
-uniform vec3 uMeshBBox_max;
-uniform vec3 uRandomVector;
-
-uniform mat4 uCameraMatrix;
-//uniform mat4 uSphereMeshesMatrix[4];
-
-uniform sampler2D tPreviousTexture;
 uniform sampler2D tTriangleTexture;
 uniform sampler2D tAABBTexture;
 
-varying vec2 vUv;
+#include <pathtracing_uniforms_and_defines>
 
-#define PI               3.14159265358979323
-#define ONE_OVER_PI      0.31830988618379067
-#define TWO_PI           6.28318530717958648
-#define FOUR_PI          12.5663706143591729
-#define ONE_OVER_FOUR_PI 0.07957747154594767
-#define PI_OVER_TWO      1.57079632679489662
-#define E                2.71828182845904524
-#define INFINITY         1000000.0
-
-#define SPHERE_ID 0
-#define PLANE_ID 1
-#define DISK_ID 2
-#define TRIANGLE_ID 3
-#define QUAD_ID 4
-#define BOX_ID 5
-#define ELLIPSOID_ID 6
-#define CYLINDER_ID 7
-#define CLOSEDCYLINDER_ID 8
-#define CONE_ID 9
-#define OBJ_TRIANGLE_ID 10
 
 #define N_SPHERES 5
-#define N_ELLIPSOIDS 1
-#define N_PLANES 1
-#define N_DISKS 1
-#define N_TRIANGLES 1
-#define N_QUADS 1
 #define N_BOXES 2
-#define N_CYLINDERS 1
-#define N_CLOSEDCYLINDERS 1
-#define N_CONES 1
-
-#define LIGHT 0
-#define DIFF 1
-#define REFR 2
-#define SPEC 3
-#define CHECK 4
-#define COAT 5
-#define VOLUME 6
-#define TRANSLUCENT 7
-#define SPECSUB 8
-
-vec3 debugSpherePos;
-vec3 light0Pos;
-
-float seed = 0.0;
-
-float rand()
-{ 
-	return fract( sin( seed++ ) * 43758.5453123 );
-}
-
 
 //-----------------------------------------------------------------------
 
 struct Ray { vec3 origin; vec3 direction; };
 struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; int type; };
 struct Box { vec3 minCorner; vec3 maxCorner; vec3 emission; vec3 color; int type; };
-struct Intersection { vec3 normal; vec3 emission; vec3 color; int type; int id; };
+struct Intersection { vec3 normal; vec3 emission; vec3 color; int type; };
 
 Sphere spheres[N_SPHERES];
 Box boxes[N_BOXES];
 
 
+#include <pathtracing_random_functions>
 
-//-----------------------------------------------------------------------
-float SphereIntersect( float rad, vec3 pos, Ray r )
-//-----------------------------------------------------------------------
-{
-	vec3 op = pos - r.origin;
-	float b = dot(op, r.direction);
-	float det = b * b - dot(op,op) + rad * rad;
-       	if (det < 0.0)
-		return INFINITY;
-        
-	det = sqrt(det);	
-	float t1 = b - det;
-	if( t1 > 0.0 )
-		return t1;
-		
-	float t2 = b + det;
-	if( t2 > 0.0 )
-		return t2;
+#include <pathtracing_sphere_intersect>
 
-	return INFINITY;	
-}
+#include <pathtracing_box_intersect>
 
-//---------------------------------------------------------
-float TriangleIntersect( vec3 v0, vec3 v1, vec3 v2, Ray r )
-//---------------------------------------------------------
-{
-	vec3 edge1 = v1 - v0;
-	vec3 edge2 = v2 - v0;
-	vec3 tvec = r.origin - v0;
-	vec3 pvec = cross(r.direction, edge2);
-	float det = 1.0 / dot(edge1, pvec);
-	float u = dot(tvec, pvec) * det;
+#include <pathtracing_boundingbox_intersect>
 
-	if (u < 0.0 || u > 1.0)
-		return INFINITY;
+#include <pathtracing_triangle_intersect>
 
-	vec3 qvec = cross(tvec, edge1);
 
-	float v = dot(r.direction, qvec) * det;
-
-	if (v < 0.0 || u + v > 1.0)
-		return INFINITY;
-
-	return dot(edge2, qvec) * det;
-}
-
-//----------------------------------------------------------------------------
-float BoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r, out vec3 normal )
-//----------------------------------------------------------------------------
-{
-	vec3 invDir = 1.0 / r.direction;
-	vec3 tmin = (minCorner - r.origin) * invDir;
-	vec3 tmax = (maxCorner - r.origin) * invDir;
-
-	vec3 real_min = min(tmin, tmax);
-   	vec3 real_max = max(tmin, tmax);
-   
-   	float minmax = min( min(real_max.x, real_max.y), real_max.z);
-   	float maxmin = max( max(real_min.x, real_min.y), real_min.z);
-	
-	if (minmax < maxmin || minmax < 0.0) return INFINITY;
-	
-	if (maxmin > 0.0) // if we are outside the box
-	{
-		normal = -sign(r.direction) * step(real_min.yzx, real_min) * step(real_min.zxy, real_min);
-		return maxmin;	
-	}	
-	else // else we are inside the box
-	{
-		normal = -sign(r.direction) * step(real_max, real_max.yzx) * step(real_max, real_max.zxy);
-		return minmax;
-	}	
-}
-
-//--------------------------------------------------------------------------------------
-bool BoundingBoxIntersect( vec3 minCorner, vec3 maxCorner, vec3 rayOrigin, vec3 invDir )
-//--------------------------------------------------------------------------------------
-{
-	vec3 tmin = (minCorner - rayOrigin) * invDir;
-	vec3 tmax = (maxCorner - rayOrigin) * invDir;
-
-	vec3 real_min = min(tmin, tmax);
-   	vec3 real_max = max(tmin, tmax);
-   
-   	float minmax = min( min(real_max.x, real_max.y), real_max.z);
-   	float maxmin = max( max(real_min.x, real_min.y), real_min.z);
-
-	//return minmax > maxmin;
-	return minmax > max(maxmin, 0.0);
-}
 
 /*
 float data[64];
@@ -328,7 +113,7 @@ float getData(int id)
 */
 
 //-----------------------------------------------------------------------
-float SceneIntersect( Ray r, inout Intersection intersec )
+float SceneIntersect( Ray r, inout Intersection intersec, inout float seed )
 //-----------------------------------------------------------------------
 {
 	vec3 n;
@@ -345,7 +130,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.emission = spheres[i].emission;
 			intersec.color = spheres[i].color;
 			intersec.type = spheres[i].type;
-			intersec.id = SPHERE_ID;
 		}
         }
 	
@@ -359,7 +143,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.emission = boxes[i].emission;
 			intersec.color = boxes[i].color;
 			intersec.type = boxes[i].type;
-			intersec.id = BOX_ID;
 		}
         }
 		
@@ -372,10 +155,8 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	vec3 v0, v1, v2;
 	float closer = 0.0;
 	float farther = 0.0;
-	float forkForLater = 0.0;
 	float ni = 0.0;
 	int stackptr = 1;
-	float randFork = rand();
 	
         // mimics 'while' loop with break condition
 	for (int i = 0; i < 1; i += 0) // infinite loop
@@ -384,14 +165,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		// check for break condition
 		if (stackptr < 0)
 		{
-			if (forkForLater > 0.0)
-			{
-				ni = forkForLater;
-				forkForLater = 0.0;
-				//stackptr ++;
-			}	
-			else
-				break;
+			break;
 		}
 		
 		iX3 = ni * 3.0;
@@ -414,7 +188,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			// Did we hit both nodes?
 			if (hitc0 && hitc1)
 			{
-				if (rand() < 0.5)
+				if (rand(seed) < 0.5)
 				{
 					closer = ni + 1.0;
 					farther = ni + aabbNodeData.r;
@@ -429,25 +203,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 				stackptr ++;
 				continue;
       			}
-			/*
-			// Did we hit both nodes?
-			if (hitc0 && hitc1)
-			{
-				// assume the left child is a closer hit...
-				closer = ni + 1.0;
-				farther = ni + aabbNodeData.r;
-				
-				// only set this once
-				if (forkForLater == 0.0)
-				{
-					forkForLater = farther;
-				}
-				
-				ni = closer;
-				stackptr ++;
-				continue;
-      			}
-			*/
 			else if (hitc0)
 			{
 				ni = ni + 1.0;
@@ -478,7 +233,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 					intersec.emission = vec3(0);
 					intersec.color = vec3(1,1,1);
 					intersec.type = DIFF;
-					intersec.id = OBJ_TRIANGLE_ID;
 				}
 				
 				if (p == aabbNodeData.g)
@@ -497,24 +251,9 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	
 } // end float SceneIntersect( Ray r, inout Intersection intersec )
 
-vec3 randomSphereDirection()
-{
-	vec2 r = vec2(rand(),rand())*TWO_PI;
-	return vec3(sin(r.x)*vec2(sin(r.y),cos(r.y)),cos(r.x));	
-}
-
-vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
-{
-	float up = sqrt(rand()); // weighted cos(theta)
-    	float over = sqrt(1.0 - up * up); // sin(theta)
-    	float around = rand() * TWO_PI;
-	vec3 u = normalize( cross( abs(nl.x) > 0.1 ? vec3(0, 1, 0) : vec3(1, 0, 0), nl ) );
-	vec3 v = normalize( cross(nl, u) );
-    	return vec3( cos(around) * over * u ) + ( sin(around) * over * v ) + (up * nl);		
-}
 
 //-----------------------------------------------------------------------
-vec3 CalculateRadiance( Ray r )
+vec3 CalculateRadiance( Ray r, inout float seed )
 //-----------------------------------------------------------------------
 {
 	vec3 accumCol = vec3(0.0);
@@ -528,7 +267,7 @@ vec3 CalculateRadiance( Ray r )
         for (int depth = 0; depth < 4; depth++)
 	{
 	
-		float t = SceneIntersect(r, intersec);
+		float t = SceneIntersect(r, intersec, seed);
 		
 		if (t == INFINITY)
 		{
@@ -564,10 +303,10 @@ vec3 CalculateRadiance( Ray r )
 			}
 			
 			mask *= intersec.color;
-			//accumCol += calcDirectLighting(mask, x, nl, spheres[0]);
+			//accumCol += calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
                         
 			// Russian Roulette
-			if (rand() > 0.5)
+			if (rand(seed) > 0.5)
 				break;
 			else mask *= 2.0;
 			
@@ -575,7 +314,7 @@ vec3 CalculateRadiance( Ray r )
 			if (sampleDiffuseBudget < 0) break;
 			
 			// choose random Diffuse sample vector
-			vec3 d = randomCosWeightedDirectionInHemisphere( nl );
+			vec3 d = randomCosWeightedDirectionInHemisphere( nl, seed );
 			r = Ray( x, normalize(d) );
 			r.origin += r.direction;
 			bounceIsSpecular = false;
@@ -613,7 +352,7 @@ vec3 CalculateRadiance( Ray r )
 			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
 			//float Tr = 1.0 - Re;
 		
-			float transmissionProbability = rand();
+			float transmissionProbability = rand(seed);
 			
 			if( transmissionProbability > Re ) // transmit ray through surface
 			{
@@ -647,10 +386,10 @@ vec3 CalculateRadiance( Ray r )
 			float shininess = 1.0;
 			
 			// choose random sample vector for diffuse material underneath ClearCoat
-			vec3 d = randomCosWeightedDirectionInHemisphere( nl );
+			vec3 d = randomCosWeightedDirectionInHemisphere( nl, seed );
 			
 			// choose either specular reflection or diffuse
-			if( rand() < Re )
+			if( rand(seed) < Re )
 			{	
 				r = Ray( x, mix( normalize(d), reflect(r.direction, nl), shininess ) );
 				r.origin += r.direction;
@@ -663,112 +402,13 @@ vec3 CalculateRadiance( Ray r )
 				r.origin += r.direction;
 				mask *= intersec.color;
 				
-				//accumCol += calcDirectLighting(mask, x, nl, spheres[0]);
+				//accumCol += calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
 				bounceIsSpecular = false;
 				continue;
 			}
 			
 		} //end if (intersec.type == COAT)
-		/*
-		if (intersec.type == TRANSLUCENT)  // Translucent Sub-Surface Scattering material
-		{
-			float translucentDensity = 0.3;
-			float scatteringDistance = -log(rand()) / translucentDensity;
-			vec3 absorptionCoefficient = vec3(0.0, 0.18, 0.25) * 1.3;
-			if (scatteringDistance > t) 
-			{
-				mask *= exp(-absorptionCoefficient * t); // transmission
-				x = x + r.direction * scatteringDistance;
-				r = Ray( x, r.direction );
-				//bounceIsSpecular = false; // not set, in order to see lights through thin material
-			}
-			else
-			{
-				// Compute how much light was absorbed along the ray before it was scattered:
-				mask *= exp(-absorptionCoefficient * scatteringDistance); // scattering
-				x = x + r.direction * scatteringDistance;
-				vec3 d = randomCosWeightedDirectionInHemisphere( nl );
-				r = Ray( x, normalize(d) );
-				bounceIsSpecular = false;	
-			}
-			
-			//accumCol += calcDirectLighting(mask, x, nl, spheres[0]);
-			
-			continue;	
-			
-		} // end if (intersec.type == TRANSLUCENT)
 		
-		if (intersec.type == VOLUME)  // Volume filled with participating medium (i.e. smoke, fog, dust, etc.)
-		{
-                
-			float density = 0.85;
-			if (rand() < density)
-			{
-				// scattering
-				// choose cosWeighted random Diffuse reflection vector for participating medium
-				vec3 d = randomSphereDirection(); // true isotropic scattering
-				r = Ray( x, normalize(d) );
-				r.origin += r.direction;
-				mask *= intersec.color;
-				
-				//accumCol += calcDirectLighting(mask, x, nl, spheres[0]);
-				bounceIsSpecular = false;
-				continue;
-			}
-			else
-			{
-				// transmission
-				r = Ray( x, r.direction );
-				r.origin += r.direction;
-				
-				continue;
-			}
-				
-		} // end if (intersec.type == VOLUME)
-		
-		if (intersec.type == SPECSUB)  // Shiny(specular) coating over Sub-Surface Scattering material
-		{
-			// Schlick Fresnel approx.
-			float ddn = dot(-r.direction, nl);
-			float nc = 1.0; // IOR of air
-			float nt = 1.3; // IOR of coating (for polished jade)
-			float R0 = (nc - nt) / (nc + nt);
-			R0 *= R0;
-			float c = 1.0 - ddn;
-			float Re = R0 + (1.0 - R0) * c * c * c * c * c;
-			
-			// choose either specular reflection or translucent subsurface scattering/transmission
-			if( bounceIsSpecular && rand() < Re )
-			{
-				r = Ray( x, reflect(r.direction, nl) );
-				r.origin += r.direction;
-				bounceIsSpecular = true;
-				continue;
-			}
-			
-			vec3 absorptionCoefficient = vec3(0.4, 0.01, 0.07);
-			float translucentDensity = 0.05;
-			float scatteringDistance = -log(rand()) / translucentDensity;
-			vec3 d;
-			
-			if (scatteringDistance < t) 
-			{
-				mask *= exp(-absorptionCoefficient * scatteringDistance); // scattering
-				d = randomSphereDirection(); // true Isotropic scattering
-			}
-			else
-			{
-				mask *= exp(-absorptionCoefficient * t); // transmission
-				d = r.direction;
-			}
-			
-			//accumCol += calcDirectLighting(mask, x, nl, spheres[0]);
-			x = x + r.direction * scatteringDistance;
-			r = Ray( x, normalize(d) );
-			bounceIsSpecular = false;
-			continue;			
-		} // end if (intersec.type == SPECSUB)
-		*/
 		
 	} // end for (int depth = 0; depth < 4; depth++)
 	
@@ -796,71 +436,14 @@ void SetupScene(void)
 }
 
 
+#include <pathtracing_main>
 
-void main( void )
-{
-
-	vec3 camPos     = vec3( uCameraMatrix[3][0],  uCameraMatrix[3][1],  uCameraMatrix[3][2]);
-	vec3 camRight   = vec3( uCameraMatrix[0][0],  uCameraMatrix[0][1],  uCameraMatrix[0][2]);
-	vec3 camUp      = vec3( uCameraMatrix[1][0],  uCameraMatrix[1][1],  uCameraMatrix[1][2]);
-	vec3 camForward = vec3(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]);
-	
-	// seed for rand() function
-	seed = mod(uSampleCounter,1000.0) * uRandomVector.x - uRandomVector.y + uResolution.y * gl_FragCoord.x / uResolution.x + uResolution.x * gl_FragCoord.y / uResolution.y;
-	
-	float r1 = 2.0 * rand();
-	float r2 = 2.0 * rand();
-	
-	vec2 d = vec2(0.0);
-	if ( !uCameraIsMoving ) 
-	{
-		d.x = r1 < 1.0 ? sqrt(r1) - 1.0 : 1.0 - sqrt(2.0 - r1);
-		d.y = r2 < 1.0 ? sqrt(r2) - 1.0 : 1.0 - sqrt(2.0 - r2);
-	}
-	
-	d *= (1.0 / (uResolution * 0.5));
-	d += 2.0 * vUv - 1.0;
-	
-	vec3 rayDir = normalize( d.x * camRight * uULen + d.y * camUp * uVLen + camForward );
-	
-	// depth of field
-	vec3 focalPoint = uFocusDistance * rayDir;
-	float randomAngle = rand() * TWO_PI; // pick random point on aperture
-	float randomRadius = rand() * uApertureSize;
-	vec3  randomAperturePos = ( cos(randomAngle) * camRight + sin(randomAngle) * camUp ) * randomRadius;
-	// point on aperture to focal point
-	vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
-	
-	Ray ray = Ray( camPos + randomAperturePos , finalRayDir );
-	
-	SetupScene();
-	
-	// perform path tracing and get resulting pixel color
-	vec3 pixelColor = CalculateRadiance( ray );
-	
-	vec3 previousColor = texture2D(tPreviousTexture, vUv).rgb;
-	
-	if ( uCameraJustStartedMoving )
-	{
-		previousColor = vec3(0.0); // clear rendering accumulation buffer
-		//pixelColor *= 1.2;
-	}
-	else if ( uCameraIsMoving )
-	{
-		previousColor *= 0.5; // motion-blur trail amount (old image)
-		pixelColor *= (uSampleCounter) * 0.5; // brightness of new image (noisy)
-	}
-		
-	gl_FragColor = vec4( pixelColor + previousColor, 1.0 );
-	
-}
 
 		</script>
 		
 		
+		
 		<script>
-
-			if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
 
 			var SCREEN_WIDTH = window.innerWidth;
 			var SCREEN_HEIGHT = window.innerHeight;
@@ -941,59 +524,6 @@ void main( void )
 			cameraInfoElement.style.MozUserSelect = "none";
 			
 			var mouseControl = true;
-
-			if ( 'createTouch' in document ) {
-				mouseControl = false;
-				pixelRatio = window.devicePixelRatio * 0.18;
-				
-				mobileJoystickControls = new MobileJoystickControls ({
-					//showJoystick: true,
-					enableMultiTouch: true
-				});	
-			}
-
-			// if on mobile device, unpause the app because there is no ESC key and no mouse capture to do
-			if ( !mouseControl )
-				isPaused = false;
-			
-			if (mouseControl) {
-
-				window.addEventListener( 'wheel', onMouseWheel, false );
-				
-				document.body.addEventListener("click", function() {
-					this.requestPointerLock = this.requestPointerLock || this.mozRequestPointerLock;
-					this.requestPointerLock();
-				}, false);
-
-				window.addEventListener("click", function(event) {
-					event.preventDefault();	
-				}, false);
-				window.addEventListener("dblclick", function(event) {
-					event.preventDefault();	
-				}, false);
-
-
-				var pointerlockChange = function ( event ) {
-
-					if ( document.pointerLockElement === document.body || 
-					    document.mozPointerLockElement === document.body || document.webkitPointerLockElement === document.body ) {
-
-						isPaused = false;
-
-					} else {
-
-						isPaused = true;
-
-					}
-
-				};
-
-				// Hook pointer lock state change events
-				document.addEventListener( 'pointerlockchange', pointerlockChange, false );
-				document.addEventListener( 'mozpointerlockchange', pointerlockChange, false );
-				document.addEventListener( 'webkitpointerlockchange', pointerlockChange, false );
-
-			}
 			
 			function onMouseWheel( event ) {
 
@@ -1011,6 +541,87 @@ void main( void )
 				}
 
 			}
+			
+			
+			
+			function onWindowResize( event ) {
+				
+				SCREEN_WIDTH = window.innerWidth;
+				SCREEN_HEIGHT = window.innerHeight;
+				
+				renderer.setPixelRatio(pixelRatio);
+				renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT );
+				
+				fontAspect = (SCREEN_WIDTH / 175) * (SCREEN_HEIGHT / 200);
+				if (fontAspect > 25) fontAspect = 25;
+				if (fontAspect < 4) fontAspect = 4;
+				fontAspect *= 2;
+				
+				pathTracingUniforms.uResolution.value.x = SCREEN_WIDTH * pixelRatio;
+				pathTracingUniforms.uResolution.value.y = SCREEN_HEIGHT * pixelRatio;
+				
+				pathTracingRenderTarget.setSize( SCREEN_WIDTH * pixelRatio, SCREEN_HEIGHT * pixelRatio );
+				screenTextureRenderTarget.setSize( SCREEN_WIDTH * pixelRatio, SCREEN_HEIGHT * pixelRatio );
+				
+				worldCamera.aspect = SCREEN_WIDTH / SCREEN_HEIGHT;
+				worldCamera.updateProjectionMatrix();
+				
+				// the following scales all scene objects by the worldCamera's field of view,
+				// taking into account the screen aspect ratio and multiplying the uniform uULen,
+				// the x-coordinate, by this ratio
+				fovScale = worldCamera.fov * 0.5 * (Math.PI / 180.0);
+				pathTracingUniforms.uVLen.value = Math.tan(fovScale);
+				pathTracingUniforms.uULen.value = pathTracingUniforms.uVLen.value * worldCamera.aspect;
+				
+				if ( !mouseControl ) {
+					
+					button1Element.style.display = "";
+					button2Element.style.display = "";
+					button3Element.style.display = "";
+					button4Element.style.display = "";
+					button5Element.style.display = "";
+					button6Element.style.display = "";
+					// check if mobile device is in portrait or landscape mode and position buttons accordingly
+					if (SCREEN_WIDTH < SCREEN_HEIGHT) {
+						
+						button1Element.style.right = 36 + "%";
+						button2Element.style.right = 2 + "%";
+						button3Element.style.right = 16 + "%";
+						button4Element.style.right = 16 + "%";
+						button5Element.style.right = 3 + "%";
+						button6Element.style.right = 3 + "%";
+
+						button1Element.style.bottom = 5 + "%";
+						button2Element.style.bottom = 5 + "%";
+						button3Element.style.bottom = 13 + "%";
+						button4Element.style.bottom = 2 + "%";
+						button5Element.style.bottom = 25 + "%";
+						button6Element.style.bottom = 18 + "%";
+						
+					}
+					else {
+						
+						button1Element.style.right = 22 + "%";
+						button2Element.style.right = 3 + "%";
+						button3Element.style.right = 11 + "%";
+						button4Element.style.right = 11 + "%";
+						button5Element.style.right = 3 + "%";
+						button6Element.style.right = 3 + "%";
+
+						button1Element.style.bottom = 10 + "%";
+						button2Element.style.bottom = 10 + "%";
+						button3Element.style.bottom = 26 + "%";
+						button4Element.style.bottom = 4 + "%";
+						button5Element.style.bottom = 48 + "%";
+						button6Element.style.bottom = 34 + "%";
+						
+					}
+					
+				} // end if ( !mouseControl ) {
+				
+			} // end function onWindowResize( event )
+			
+			
 
 			OBJ.downloadMeshes( {
     				//'my_mesh': 'models/name.obj', // located in the models folder on the server
@@ -1030,331 +641,62 @@ void main( void )
   			}, init );
 			
 			
-/* BVH (Bounding Volume Hierarchy) Builder */
-/*
-Original author: Brandon Pelfrey (brandonpelfrey@gmail.com) (brandonpelfrey on GitHub)
-https://github.com/brandonpelfrey/Fast-BVH
-
-Edited and Ported from C++ to Javascript by: Erich Loftis (erichlof on GitHub)
-https://github.com/erichlof/THREE.js-PathTracing-Renderer
-*/
-var nNodes = 0;
-var nLeafs = 0;
-var leafSize = 4;
-var flatTree = [];
-
-function BBox(_min, _max) {
-	
-	this.minCorner = new THREE.Vector3(Infinity,Infinity,Infinity);
-	if (_min) this.minCorner.copy(_min);
-	this.maxCorner = new THREE.Vector3(-Infinity,-Infinity,-Infinity);
-	if (_max) this.maxCorner.copy(_max);
-	
-	this.extentVec = new THREE.Vector3();
-
-	this.expandToIncludePoint = function(p) {
-		this.minCorner.min(p);
-		this.maxCorner.max(p);
-		this.extentVec.subVectors(this.maxCorner, this.minCorner);
-	};
-
-	this.expandToIncludeBox = function(b) {
-		this.minCorner.min(b.minCorner);
-		this.maxCorner.max(b.maxCorner);
-		this.extentVec.subVectors(this.maxCorner, this.minCorner);
-	};
-
-	this.maxDimension = function() {
-		var result = 0;
-		if (this.extentVec.y > this.extentVec.x) {
-			result = 1;
-			if (this.extentVec.z > this.extentVec.y) 
-				result = 2;
-		} 
-		else if (this.extentVec.z > this.extentVec.x) result = 2;
-
-		return result;
-	}
-
-	this.surfaceArea = function() {
-		return 2 * ( this.extentVec.x * this.extentVec.z +
-			     this.extentVec.x * this.extentVec.y + 
-			     this.extentVec.y * this.extentVec.z );
-	}
-
-} // end function BBox(_min, _max) {
-
-function BVH_BuildEntry() {
-	// If non-zero then this is the index of the parent. (used in offsets)
-	this.parent = 0;
-	// The range of objects in the object list covered by this node.
-	this.start = 0;
-	this.end = 0;
-}
-
-function BVH_FlatNode() {
-	this.rightOffset = 0;
-	this.nPrims = 0;
-	this.start = 0;
-	this.bbox = new BBox();
-}
-
-/*! Build the BVH, given an input data set
- *  - Handling our own stack is quite a bit faster than the recursive style.
- *  - Each build stack entry's parent field eventually stores the offset
- *    to the parent of that node. Before that is finally computed, it will
- *    equal exactly three other values. (These are the magic values Untouched,
- *    Untouched-1, and TouchedTwice).
- *  - The partition here was also slightly faster than std::partition.
- */	
-function BVH_Build() {
-	
-	var todo = [];
-	var buildnodes = [];
-	var stackptr = 0;
-	var Untouched = 0xffffffff;
-	var TouchedTwice = 0xfffffffd;
-	
-	var testBox = new BBox();
-	var testPoint = new THREE.Vector3();
-	var tempMin = new THREE.Vector3();
-	var tempMax = new THREE.Vector3();
-	var tempCen = new THREE.Vector3();
-	var tempV1 = new THREE.Vector3();
-	var tempV2 = new THREE.Vector3();
-	var tempV3 = new THREE.Vector3();
-
-	for (var i = 0; i < 128; i++) {
-		todo[i] = new BVH_BuildEntry();
-	}
-	// Push the root
-	todo[stackptr].start = 0;
-	todo[stackptr].end = total_number_of_triangles;
-	todo[stackptr].parent = 0xfffffffc;
-	stackptr++;
-
-	while (stackptr > 0) {
-		
-		nNodes++;
-		
-		// Pop the next item off of the stack
-		stackptr--;
-		var split_dim = 0;	
-		var split_coord = 0;
-		var bnode = todo[stackptr];
-		var start = bnode.start;
-		var mid = 0;
-		var end = bnode.end;
-		var nPrims = end - start;
-		
-		var node = new BVH_FlatNode();
-		node.start = start;
-		node.nPrims = nPrims;
-		node.rightOffset = Untouched;
-		
-		// Calculate the bounding box for this node
-		var bb = new BBox();
-		var bc = new BBox();
-		
-		bb.minCorner.set( aabb_array[9*start+0], aabb_array[9*start+1], aabb_array[9*start+2] );
-		bb.maxCorner.set( aabb_array[9*start+3], aabb_array[9*start+4], aabb_array[9*start+5] );
-		bc.minCorner.set( aabb_array[9*start+6], aabb_array[9*start+7], aabb_array[9*start+8] );
-		//bc.maxCorner.set(-Infinity,-Infinity,-Infinity);
-		for (var p = start + 1; p < end; ++p) {
-			testBox.minCorner.set( aabb_array[9*p+0], aabb_array[9*p+1], aabb_array[9*p+2] );
-			testBox.maxCorner.set( aabb_array[9*p+3], aabb_array[9*p+4], aabb_array[9*p+5] );
-			bb.expandToIncludeBox(testBox);
-			testPoint.set( aabb_array[9*p+6], aabb_array[9*p+7], aabb_array[9*p+8] );
-			bc.expandToIncludePoint(testPoint);
-		}
-		node.bbox = bb;
-
-		// If the number of primitives at this point is less than the leaf
-		// size, then this will become a leaf. (Signified by rightOffset == 0)
-		if (nPrims <= leafSize) {
-			node.rightOffset = 0;
-			nLeafs++;
-		}
-
-		buildnodes.push(node);
-
-		// Child touches parent...
-		// Special case: Don't do this for the root (root is 0xfffffffc).
-		if (bnode.parent != 0xfffffffc) {
-			buildnodes[bnode.parent].rightOffset--;
-
-			// When this is the second touch, this is the right child.
-			// The right child sets up the offset for the flat tree.
-			if (buildnodes[bnode.parent].rightOffset == TouchedTwice) {
-				buildnodes[bnode.parent].rightOffset = nNodes - 1 - bnode.parent;
-			}
-		}
-
-		// If this is a leaf, no need to subdivide.
-		if (node.rightOffset == 0)
-			continue;
-
-		// Set the split dimensions
-		split_dim = bc.maxDimension();
-			
-		// Split on the center of the longest axis, then
-		// Partition the list of objects on this split
-		mid = start;
-		if (split_dim == 0) {
-			// Split on the center of the X axis
-			split_coord = 0.5 * (bc.minCorner.x + bc.maxCorner.x);
-								
-			for (var i = start; i < end; ++i) {
-				if (aabb_array[9*i+6] < split_coord) {
-					//swap [i] and [mid] bbox data
-					tempMin.set( aabb_array[9*i+0], aabb_array[9*i+1], aabb_array[9*i+2] );
-					tempMax.set( aabb_array[9*i+3], aabb_array[9*i+4], aabb_array[9*i+5] ); 
-					tempCen.set( aabb_array[9*i+6], aabb_array[9*i+7], aabb_array[9*i+8] ); 
-					
-					aabb_array[9*i+0] = aabb_array[9*mid+0]; aabb_array[9*i+1] = aabb_array[9*mid+1]; aabb_array[9*i+2] = aabb_array[9*mid+2];
-					aabb_array[9*i+3] = aabb_array[9*mid+3]; aabb_array[9*i+4] = aabb_array[9*mid+4]; aabb_array[9*i+5] = aabb_array[9*mid+5];
-					aabb_array[9*i+6] = aabb_array[9*mid+6]; aabb_array[9*i+7] = aabb_array[9*mid+7]; aabb_array[9*i+8] = aabb_array[9*mid+8];
-					
-					aabb_array[9*mid+0] = tempMin.x; aabb_array[9*mid+1] = tempMin.y; aabb_array[9*mid+2] = tempMin.z;
-					aabb_array[9*mid+3] = tempMax.x; aabb_array[9*mid+4] = tempMax.y; aabb_array[9*mid+5] = tempMax.z;
-					aabb_array[9*mid+6] = tempCen.x; aabb_array[9*mid+7] = tempCen.y; aabb_array[9*mid+8] = tempCen.z;
-					
-					//swap [i] and [mid] triangle data
-					tempV1.set( triangle_array[9*i+0], triangle_array[9*i+1], triangle_array[9*i+2] );
-					tempV2.set( triangle_array[9*i+3], triangle_array[9*i+4], triangle_array[9*i+5] ); 
-					tempV3.set( triangle_array[9*i+6], triangle_array[9*i+7], triangle_array[9*i+8] ); 
-					
-					triangle_array[9*i+0] = triangle_array[9*mid+0]; triangle_array[9*i+1] = triangle_array[9*mid+1]; triangle_array[9*i+2] = triangle_array[9*mid+2];
-					triangle_array[9*i+3] = triangle_array[9*mid+3]; triangle_array[9*i+4] = triangle_array[9*mid+4]; triangle_array[9*i+5] = triangle_array[9*mid+5];
-					triangle_array[9*i+6] = triangle_array[9*mid+6]; triangle_array[9*i+7] = triangle_array[9*mid+7]; triangle_array[9*i+8] = triangle_array[9*mid+8];
-					
-					triangle_array[9*mid+0] = tempV1.x; triangle_array[9*mid+1] = tempV1.y; triangle_array[9*mid+2] = tempV1.z;
-					triangle_array[9*mid+3] = tempV2.x; triangle_array[9*mid+4] = tempV2.y; triangle_array[9*mid+5] = tempV2.z;
-					triangle_array[9*mid+6] = tempV3.x; triangle_array[9*mid+7] = tempV3.y; triangle_array[9*mid+8] = tempV3.z;
-					
-					++mid;
-				}
-			}
-		} // end if (split_dim == 0) {
-		else if (split_dim == 1) {
-			// Split on the center of the Y axis
-			split_coord = 0.5 * (bc.minCorner.y + bc.maxCorner.y);
-			
-			for (var i = start; i < end; ++i) {
-				if (aabb_array[9*i+7] < split_coord) {
-					//swap [i] and [mid] bbox data
-					tempMin.set( aabb_array[9*i+0], aabb_array[9*i+1], aabb_array[9*i+2] );
-					tempMax.set( aabb_array[9*i+3], aabb_array[9*i+4], aabb_array[9*i+5] ); 
-					tempCen.set( aabb_array[9*i+6], aabb_array[9*i+7], aabb_array[9*i+8] ); 
-					
-					aabb_array[9*i+0] = aabb_array[9*mid+0]; aabb_array[9*i+1] = aabb_array[9*mid+1]; aabb_array[9*i+2] = aabb_array[9*mid+2];
-					aabb_array[9*i+3] = aabb_array[9*mid+3]; aabb_array[9*i+4] = aabb_array[9*mid+4]; aabb_array[9*i+5] = aabb_array[9*mid+5];
-					aabb_array[9*i+6] = aabb_array[9*mid+6]; aabb_array[9*i+7] = aabb_array[9*mid+7]; aabb_array[9*i+8] = aabb_array[9*mid+8];
-					
-					aabb_array[9*mid+0] = tempMin.x; aabb_array[9*mid+1] = tempMin.y; aabb_array[9*mid+2] = tempMin.z;
-					aabb_array[9*mid+3] = tempMax.x; aabb_array[9*mid+4] = tempMax.y; aabb_array[9*mid+5] = tempMax.z;
-					aabb_array[9*mid+6] = tempCen.x; aabb_array[9*mid+7] = tempCen.y; aabb_array[9*mid+8] = tempCen.z;
-					
-					//swap [i] and [mid] triangle data
-					tempV1.set( triangle_array[9*i+0], triangle_array[9*i+1], triangle_array[9*i+2] );
-					tempV2.set( triangle_array[9*i+3], triangle_array[9*i+4], triangle_array[9*i+5] ); 
-					tempV3.set( triangle_array[9*i+6], triangle_array[9*i+7], triangle_array[9*i+8] ); 
-					
-					triangle_array[9*i+0] = triangle_array[9*mid+0]; triangle_array[9*i+1] = triangle_array[9*mid+1]; triangle_array[9*i+2] = triangle_array[9*mid+2];
-					triangle_array[9*i+3] = triangle_array[9*mid+3]; triangle_array[9*i+4] = triangle_array[9*mid+4]; triangle_array[9*i+5] = triangle_array[9*mid+5];
-					triangle_array[9*i+6] = triangle_array[9*mid+6]; triangle_array[9*i+7] = triangle_array[9*mid+7]; triangle_array[9*i+8] = triangle_array[9*mid+8];
-					
-					triangle_array[9*mid+0] = tempV1.x; triangle_array[9*mid+1] = tempV1.y; triangle_array[9*mid+2] = tempV1.z;
-					triangle_array[9*mid+3] = tempV2.x; triangle_array[9*mid+4] = tempV2.y; triangle_array[9*mid+5] = tempV2.z;
-					triangle_array[9*mid+6] = tempV3.x; triangle_array[9*mid+7] = tempV3.y; triangle_array[9*mid+8] = tempV3.z;
-					
-					++mid;
-				}
-			}
-		} // end else if (split_dim == 1) {
-		else if (split_dim == 2) {
-			// Split on the center of the Z axis
-			split_coord = 0.5 * (bc.minCorner.z + bc.maxCorner.z);
-			
-			for (var i = start; i < end; ++i) {
-				if (aabb_array[9*i+8] < split_coord) {
-					//swap [i] and [mid] bbox data
-					tempMin.set( aabb_array[9*i+0], aabb_array[9*i+1], aabb_array[9*i+2] );
-					tempMax.set( aabb_array[9*i+3], aabb_array[9*i+4], aabb_array[9*i+5] ); 
-					tempCen.set( aabb_array[9*i+6], aabb_array[9*i+7], aabb_array[9*i+8] ); 
-					
-					aabb_array[9*i+0] = aabb_array[9*mid+0]; aabb_array[9*i+1] = aabb_array[9*mid+1]; aabb_array[9*i+2] = aabb_array[9*mid+2];
-					aabb_array[9*i+3] = aabb_array[9*mid+3]; aabb_array[9*i+4] = aabb_array[9*mid+4]; aabb_array[9*i+5] = aabb_array[9*mid+5];
-					aabb_array[9*i+6] = aabb_array[9*mid+6]; aabb_array[9*i+7] = aabb_array[9*mid+7]; aabb_array[9*i+8] = aabb_array[9*mid+8];
-					
-					aabb_array[9*mid+0] = tempMin.x; aabb_array[9*mid+1] = tempMin.y; aabb_array[9*mid+2] = tempMin.z;
-					aabb_array[9*mid+3] = tempMax.x; aabb_array[9*mid+4] = tempMax.y; aabb_array[9*mid+5] = tempMax.z;
-					aabb_array[9*mid+6] = tempCen.x; aabb_array[9*mid+7] = tempCen.y; aabb_array[9*mid+8] = tempCen.z;
-					
-					//swap [i] and [mid] triangle data
-					tempV1.set( triangle_array[9*i+0], triangle_array[9*i+1], triangle_array[9*i+2] );
-					tempV2.set( triangle_array[9*i+3], triangle_array[9*i+4], triangle_array[9*i+5] ); 
-					tempV3.set( triangle_array[9*i+6], triangle_array[9*i+7], triangle_array[9*i+8] ); 
-					
-					triangle_array[9*i+0] = triangle_array[9*mid+0]; triangle_array[9*i+1] = triangle_array[9*mid+1]; triangle_array[9*i+2] = triangle_array[9*mid+2];
-					triangle_array[9*i+3] = triangle_array[9*mid+3]; triangle_array[9*i+4] = triangle_array[9*mid+4]; triangle_array[9*i+5] = triangle_array[9*mid+5];
-					triangle_array[9*i+6] = triangle_array[9*mid+6]; triangle_array[9*i+7] = triangle_array[9*mid+7]; triangle_array[9*i+8] = triangle_array[9*mid+8];
-					
-					triangle_array[9*mid+0] = tempV1.x; triangle_array[9*mid+1] = tempV1.y; triangle_array[9*mid+2] = tempV1.z;
-					triangle_array[9*mid+3] = tempV2.x; triangle_array[9*mid+4] = tempV2.y; triangle_array[9*mid+5] = tempV2.z;
-					triangle_array[9*mid+6] = tempV3.x; triangle_array[9*mid+7] = tempV3.y; triangle_array[9*mid+8] = tempV3.z;
-					
-					++mid;
-				}
-			}
-		} // end else if (split_dim == 2) {
-		
-		// If we get a bad split, just choose the center...
-		if (mid == start || mid == end) {
-			mid = start + (end - start) * 0.5;
-		}
-
-		// Push right child
-		todo[stackptr].start = mid;
-		todo[stackptr].end = end;
-		todo[stackptr].parent = nNodes - 1;
-		stackptr++;
-
-		// Push left child
-		todo[stackptr].start = start;
-		todo[stackptr].end = mid;
-		todo[stackptr].parent = nNodes - 1;
-		stackptr++;
-		
-	} // end while (stackptr > 0) {
-
-	// Copy the temp node data to the flat array
-	for (var n = 0; n < nNodes; ++n) {
-		flatTree[n] = buildnodes[n];	
-	}
-	
-	// Copy the flat array to the aabb_array
-	for (var n = 0; n < nNodes; ++n) {
-		
-		aabb_array[9 * n + 0] = flatTree[n].rightOffset;
-		aabb_array[9 * n + 1] = flatTree[n].nPrims;
-		aabb_array[9 * n + 2] = flatTree[n].start;
-		
-		aabb_array[9 * n + 3] = flatTree[n].bbox.minCorner.x;
-		aabb_array[9 * n + 4] = flatTree[n].bbox.minCorner.y;
-		aabb_array[9 * n + 5] = flatTree[n].bbox.minCorner.z;
-		
-		aabb_array[9 * n + 6] = flatTree[n].bbox.maxCorner.x;
-		aabb_array[9 * n + 7] = flatTree[n].bbox.maxCorner.y;
-		aabb_array[9 * n + 8] = flatTree[n].bbox.maxCorner.z;
-		
-	}
-
-} // end function BVH_Build() {	
-					
   							
 			function init( meshes ) {
 
+				if ( 'createTouch' in document ) {
+					mouseControl = false;
+					pixelRatio = window.devicePixelRatio * 0.15;
+
+					mobileJoystickControls = new MobileJoystickControls ({
+						//showJoystick: true,
+						enableMultiTouch: true
+					});	
+				}
+
+				// if on mobile device, unpause the app because there is no ESC key and no mouse capture to do
+				if ( !mouseControl )
+					isPaused = false;
+
+				if (mouseControl) {
+
+					window.addEventListener( 'wheel', onMouseWheel, false );
+
+					document.body.addEventListener("click", function() {
+						this.requestPointerLock = this.requestPointerLock || this.mozRequestPointerLock;
+						this.requestPointerLock();
+					}, false);
+
+					window.addEventListener("click", function(event) {
+						event.preventDefault();	
+					}, false);
+					window.addEventListener("dblclick", function(event) {
+						event.preventDefault();	
+					}, false);
+
+
+					var pointerlockChange = function ( event ) {
+
+						if ( document.pointerLockElement === document.body || 
+						    document.mozPointerLockElement === document.body || document.webkitPointerLockElement === document.body ) {
+
+							isPaused = false;
+
+						} else {
+
+							isPaused = true;
+
+						}
+
+					};
+
+					// Hook pointer lock state change events
+					document.addEventListener( 'pointerlockchange', pointerlockChange, false );
+					document.addEventListener( 'mozpointerlockchange', pointerlockChange, false );
+					document.addEventListener( 'webkitpointerlockchange', pointerlockChange, false );
+
+				}
+				
 				renderer = new THREE.WebGLRenderer();
 				renderer.autoClear = false;
 				// 1 is full resolution, 0.5 is half, 0.25 is quarter, etc. (must be > than 0.0)
@@ -1586,8 +928,6 @@ function BVH_Build() {
 					
 					uResolution: { type: "v2", value: new THREE.Vector2() },
 					
-					uMeshBBox_min: { type: "v3", value: objMeshes.my_mesh.bounding_box_min },
-					uMeshBBox_max: { type: "v3", value: objMeshes.my_mesh.bounding_box_max },
 					uRandomVector: { type: "v3", value: new THREE.Vector3() },
 				
 					uCameraMatrix: { type: "m4", value: new THREE.Matrix4() },
@@ -1612,6 +952,37 @@ function BVH_Build() {
 				pathTracingMesh = new THREE.Mesh( pathTracingGeometry, pathTracingMaterial );
 				pathTracingScene.add( pathTracingMesh );
 				
+				screenTextureGeometry = new THREE.PlaneBufferGeometry( 2, 2 );
+				
+				screenTextureMaterial = new THREE.ShaderMaterial( {
+					uniforms: screenTextureShader.uniforms,
+					vertexShader: screenTextureShader.vertexShader,
+					fragmentShader: screenTextureShader.fragmentShader,
+					depthWrite: false,
+					depthTest: false
+				} );
+				
+				screenTextureMaterial.uniforms.tTexture0.value = pathTracingRenderTarget.texture;
+				
+				screenTextureMesh = new THREE.Mesh(screenTextureGeometry, screenTextureMaterial);
+				screenTextureScene.add(screenTextureMesh);
+				
+				
+				
+				screenOutputGeometry = new THREE.PlaneBufferGeometry( 2, 2 );
+				
+				screenOutputMaterial = new THREE.ShaderMaterial( {
+					uniforms: screenOutputShader.uniforms,
+					vertexShader: screenOutputShader.vertexShader,
+					fragmentShader: screenOutputShader.fragmentShader,
+					depthWrite: false,
+					depthTest: false
+				} );
+				
+				screenOutputMaterial.uniforms.tTexture0.value = pathTracingRenderTarget.texture;
+				
+				screenOutputMesh = new THREE.Mesh(screenOutputGeometry, screenOutputMaterial);
+				screenOutputScene.add(screenOutputMesh);
 				
 				
 				// the following keeps the large scene ShaderMaterial quad right in front 
@@ -1619,45 +990,6 @@ function BVH_Build() {
 				//   quad will fall out of view and get clipped when the camera rotates past 180 degrees.
 				worldCamera.add( pathTracingMesh );
 				
-				
-				
-				screenTextureGeometry = new THREE.PlaneBufferGeometry( 2, 2 );
-				
-				screenTextureUniforms = {
-					tTexture0: { type: "t", value: pathTracingRenderTarget.texture }
-				}
-				
-				screenTextureMaterial = new THREE.ShaderMaterial( {
-					uniforms: screenTextureUniforms,
-					vertexShader: document.getElementById( 'screenTextureVertexShader' ).textContent,
-					fragmentShader: document.getElementById( 'screenTextureFragmentShader' ).textContent,
-					depthWrite: false,
-					depthTest: false
-				} );
-				
-				screenTextureMesh = new THREE.Mesh(screenTextureGeometry, screenTextureMaterial);
-				screenTextureScene.add(screenTextureMesh);
-				
-				
-				
-			
-				screenOutputGeometry = new THREE.PlaneBufferGeometry( 2, 2 );
-				
-				screenOutputUniforms = {
-					uOneOverSampleCounter: { type: "f", value: 0.0 },
-					tTexture0: { type: "t", value: pathTracingRenderTarget.texture }
-				}
-				
-				screenOutputMaterial = new THREE.ShaderMaterial( {
-					uniforms: screenOutputUniforms,
-					vertexShader: document.getElementById( 'screenOutputVertexShader' ).textContent,
-					fragmentShader: document.getElementById( 'screenOutputFragmentShader' ).textContent,
-					depthWrite: false,
-					depthTest: false
-				} );
-				
-				screenOutputMesh = new THREE.Mesh(screenOutputGeometry, screenOutputMaterial);
-				screenOutputScene.add(screenOutputMesh);
 
 				/*
 				// Fullscreen API
@@ -1689,85 +1021,7 @@ function BVH_Build() {
 			} // end function init()
 			
 			
-
-			function onWindowResize( event ) {
-				
-				SCREEN_WIDTH = window.innerWidth;
-				SCREEN_HEIGHT = window.innerHeight;
-				
-				renderer.setPixelRatio(pixelRatio);
-				renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT );
-				
-				fontAspect = (SCREEN_WIDTH / 175) * (SCREEN_HEIGHT / 200);
-				if (fontAspect > 25) fontAspect = 25;
-				if (fontAspect < 4) fontAspect = 4;
-				fontAspect *= 2;
-				
-				pathTracingUniforms.uResolution.value.x = SCREEN_WIDTH * pixelRatio;
-				pathTracingUniforms.uResolution.value.y = SCREEN_HEIGHT * pixelRatio;
-				
-				pathTracingRenderTarget.setSize( SCREEN_WIDTH * pixelRatio, SCREEN_HEIGHT * pixelRatio );
-				screenTextureRenderTarget.setSize( SCREEN_WIDTH * pixelRatio, SCREEN_HEIGHT * pixelRatio );
-				
-				worldCamera.aspect = SCREEN_WIDTH / SCREEN_HEIGHT;
-				worldCamera.updateProjectionMatrix();
-				
-				// the following scales all scene objects by the worldCamera's field of view,
-				// taking into account the screen aspect ratio and multiplying the uniform uULen,
-				// the x-coordinate, by this ratio
-				fovScale = worldCamera.fov * 0.5 * (Math.PI / 180.0);
-				pathTracingUniforms.uVLen.value = Math.tan(fovScale);
-				pathTracingUniforms.uULen.value = pathTracingUniforms.uVLen.value * worldCamera.aspect;
-				
-				if ( !mouseControl ) {
-					
-					button1Element.style.display = "";
-					button2Element.style.display = "";
-					button3Element.style.display = "";
-					button4Element.style.display = "";
-					button5Element.style.display = "";
-					button6Element.style.display = "";
-					// check if mobile device is in portrait or landscape mode and position buttons accordingly
-					if (SCREEN_WIDTH < SCREEN_HEIGHT) {
-						
-						button1Element.style.right = 36 + "%";
-						button2Element.style.right = 2 + "%";
-						button3Element.style.right = 16 + "%";
-						button4Element.style.right = 16 + "%";
-						button5Element.style.right = 3 + "%";
-						button6Element.style.right = 3 + "%";
-
-						button1Element.style.bottom = 5 + "%";
-						button2Element.style.bottom = 5 + "%";
-						button3Element.style.bottom = 13 + "%";
-						button4Element.style.bottom = 2 + "%";
-						button5Element.style.bottom = 25 + "%";
-						button6Element.style.bottom = 18 + "%";
-						
-					}
-					else {
-						
-						button1Element.style.right = 22 + "%";
-						button2Element.style.right = 3 + "%";
-						button3Element.style.right = 11 + "%";
-						button4Element.style.right = 11 + "%";
-						button5Element.style.right = 3 + "%";
-						button6Element.style.right = 3 + "%";
-
-						button1Element.style.bottom = 10 + "%";
-						button2Element.style.bottom = 10 + "%";
-						button3Element.style.bottom = 26 + "%";
-						button4Element.style.bottom = 4 + "%";
-						button5Element.style.bottom = 48 + "%";
-						button6Element.style.bottom = 34 + "%";
-						
-					}
-					
-				} // end if ( !mouseControl ) {
-				
-			} // end function onWindowResize( event )
 			
-
 
 			function animate() {
 				
@@ -1775,7 +1029,7 @@ function BVH_Build() {
 				
 				frameTime = clock.getDelta();
 				
-				elapsedTime = clock.getElapsedTime() % 1000;
+				//elapsedTime = clock.getElapsedTime() % 1000;
 				
 				// reset flags
 				cameraIsMoving = false;
@@ -1949,30 +1203,30 @@ function BVH_Build() {
 				}
 				
 				if (increaseFocusDist) {
-					focusDistance ++;
+					focusDistance += 2;
 					pathTracingUniforms.uFocusDistance.value = focusDistance;
 					cameraIsMoving = true;
 					increaseFocusDist = false;
 				}
 				if (decreaseFocusDist) {
-					focusDistance --;
-					if (focusDistance < 1)
-						focusDistance = 1;
+					focusDistance -= 2;
+					if (focusDistance < 2)
+						focusDistance = 2;
 					pathTracingUniforms.uFocusDistance.value = focusDistance;
 					cameraIsMoving = true;
 					decreaseFocusDist = false;
 				}
 				
 				if (increaseAperture) {
-					apertureSize += 0.1;
-					if (apertureSize > 20.0)
-						apertureSize = 20.0;
+					apertureSize += 1.0;
+					if (apertureSize > 200.0)
+						apertureSize = 200.0;
 					pathTracingUniforms.uApertureSize.value = apertureSize;
 					cameraIsMoving = true;
 					increaseAperture = false;
 				}
 				if (decreaseAperture) {
-					apertureSize -= 0.1;
+					apertureSize -= 1.0;
 					if (apertureSize < 0.0)
 						apertureSize = 0.0;
 					pathTracingUniforms.uApertureSize.value = apertureSize;
@@ -2003,11 +1257,11 @@ function BVH_Build() {
 				pathTracingUniforms.uCameraIsMoving.value = cameraIsMoving;
 				pathTracingUniforms.uCameraJustStartedMoving.value = cameraJustStartedMoving;
 				pathTracingUniforms.uSampleCounter.value = sampleCounter;
-				screenOutputUniforms.uOneOverSampleCounter.value = 1.0 / sampleCounter;
 				pathTracingUniforms.uRandomVector.value = randomVector.set( Math.random(), Math.random(), Math.random() );
 				// CAMERA
 				cameraControlsObject.updateMatrixWorld(true);			
 				pathTracingUniforms.uCameraMatrix.value.copy( worldCamera.matrixWorld );
+				screenOutputMaterial.uniforms.uOneOverSampleCounter.value = 1.0 / sampleCounter;
 				
 				cameraInfoElement.innerHTML = "FOV: " + worldCamera.fov + " / Aperture: " + apertureSize.toFixed(2) + " / FocusDistance: " + focusDistance + "<br>" + "Samples: " + sampleCounter;
 				
@@ -2032,9 +1286,9 @@ function BVH_Build() {
 				
 				stats.update();
 					
-			
+				
 			} // end function animate()
-			
+
 		</script>
 
 	</body>
