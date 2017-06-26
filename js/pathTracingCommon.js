@@ -280,6 +280,54 @@ float BoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r, out vec3 normal )
 
 `;
 
+THREE.ShaderChunk[ 'pathtracing_boundingbox_intersect' ] = `
+
+//--------------------------------------------------------------------------------------
+bool BoundingBoxIntersect( vec3 minCorner, vec3 maxCorner, vec3 rayOrigin, vec3 invDir )
+//--------------------------------------------------------------------------------------
+{
+	vec3 tmin = (minCorner - rayOrigin) * invDir;
+	vec3 tmax = (maxCorner - rayOrigin) * invDir;
+
+	vec3 real_min = min(tmin, tmax);
+   	vec3 real_max = max(tmin, tmax);
+   
+   	float minmax = min( min(real_max.x, real_max.y), real_max.z);
+   	float maxmin = max( max(real_min.x, real_min.y), real_min.z);
+
+	//return minmax > maxmin;
+	return minmax > max(maxmin, 0.0);
+}
+
+`;
+
+THREE.ShaderChunk[ 'pathtracing_triangle_intersect' ] = `
+
+//---------------------------------------------------------
+float TriangleIntersect( vec3 v0, vec3 v1, vec3 v2, Ray r )
+//---------------------------------------------------------
+{
+	vec3 edge1 = v1 - v0;
+	vec3 edge2 = v2 - v0;
+	vec3 tvec = r.origin - v0;
+	vec3 pvec = cross(r.direction, edge2);
+	float det = 1.0 / dot(edge1, pvec);
+	float u = dot(tvec, pvec) * det;
+
+	if (u < 0.0 || u > 1.0)
+		return INFINITY;
+
+	vec3 qvec = cross(tvec, edge1);
+
+	float v = dot(r.direction, qvec) * det;
+
+	if (v < 0.0 || u + v > 1.0)
+		return INFINITY;
+
+	return dot(edge2, qvec) * det;
+}
+
+`;
 
 THREE.ShaderChunk[ 'pathtracing_random_functions' ] = `
 
