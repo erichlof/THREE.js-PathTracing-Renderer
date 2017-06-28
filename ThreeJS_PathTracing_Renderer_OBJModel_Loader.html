@@ -1614,13 +1614,13 @@ void main( void )
 				}
 				
 				if (increaseFocusDist) {
-					focusDistance ++;
+					focusDistance += 1;
 					pathTracingUniforms.uFocusDistance.value = focusDistance;
 					cameraIsMoving = true;
 					increaseFocusDist = false;
 				}
 				if (decreaseFocusDist) {
-					focusDistance --;
+					focusDistance -= 1;
 					if (focusDistance < 1)
 						focusDistance = 1;
 					pathTracingUniforms.uFocusDistance.value = focusDistance;
