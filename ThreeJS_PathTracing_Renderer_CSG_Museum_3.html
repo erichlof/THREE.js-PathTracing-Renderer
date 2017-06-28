@@ -1709,7 +1709,7 @@ void SetupScene(void)
 			var apertureSize = 0.0;
 			var increaseAperture = false;
 			var decreaseAperture = false;
-			var focusDistance = 1180.0;
+			var focusDistance = 132.0;
 			var increaseFocusDist = false;
 			var decreaseFocusDist = false;
 			var pixelRatio = window.devicePixelRatio * 0.5;
@@ -2294,30 +2294,30 @@ void SetupScene(void)
 				}
 				
 				if (increaseFocusDist) {
-					focusDistance += 2;
+					focusDistance += 1;
 					pathTracingUniforms.uFocusDistance.value = focusDistance;
 					cameraIsMoving = true;
 					increaseFocusDist = false;
 				}
 				if (decreaseFocusDist) {
-					focusDistance -= 2;
-					if (focusDistance < 2)
-						focusDistance = 2;
+					focusDistance -= 1;
+					if (focusDistance < 1)
+						focusDistance = 1;
 					pathTracingUniforms.uFocusDistance.value = focusDistance;
 					cameraIsMoving = true;
 					decreaseFocusDist = false;
 				}
 				
 				if (increaseAperture) {
-					apertureSize += 1.0;
-					if (apertureSize > 200.0)
-						apertureSize = 200.0;
+					apertureSize += 0.1;
+					if (apertureSize > 20.0)
+						apertureSize = 20.0;
 					pathTracingUniforms.uApertureSize.value = apertureSize;
 					cameraIsMoving = true;
 					increaseAperture = false;
 				}
 				if (decreaseAperture) {
-					apertureSize -= 1.0;
+					apertureSize -= 0.1;
 					if (apertureSize < 0.0)
 						apertureSize = 0.0;
 					pathTracingUniforms.uApertureSize.value = apertureSize;
