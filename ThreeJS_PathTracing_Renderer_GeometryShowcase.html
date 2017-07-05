@@ -236,7 +236,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
         {
 		rTrans = r;
 		rTrans.origin += vec3(60.0,-3.0,-50.0);
-		d = TorusIntersect( torii[i].pos, torii[i].radius0, torii[i].radius1, rTrans );
+		d = TorusIntersect( torii[i].radius0, torii[i].radius1, torii[i].pos, rTrans );
 		if (d < t)
 		{
 			t = d;
