@@ -209,19 +209,14 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			mask *= intersec.color;
 			accumCol += calcDirectLightingQuad(mask, x, nl, quads[5], seed);
 			
-                       	if (uCameraIsMoving)
-			{
-				// not needed in this small-populated scene
-				/*
-				// Russian Roulette
-				if (rand(seed) > 0.3)
-					break;
-				else mask *= 3.33;
-				*/
-				
+                       	/*
+			if (uCameraIsMoving)
+			{	
 				sampleDiffuseBudget -= 1;
 			}
+			*/
 			
+			sampleDiffuseBudget -= 1;
 			if (sampleDiffuseBudget < 0) break;
 			
 			// choose random Diffuse sample vector
