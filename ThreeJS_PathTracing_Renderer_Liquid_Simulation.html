@@ -37,84 +37,14 @@
 			Samples: 0
 		</div>
 
-		<script src="js/three-r85.min.js"> </script>
+		<script src="js/three-r86.min.js"> </script>
+		<script src="js/pathTracingCommon.js"> </script>
 		<script src="js/threex.keyboardstate.js"> </script>
 		<script src="js/FirstPersonCameraControls.js"> </script>
 		<script src="js/MobileJoystickControls.js"> </script>
-		<!-- <script src="js/webgl-obj-loader.js"> </script> -->
-		<script src="js/Detector.js"> </script>
 		<script src="js/stats.min.js"> </script>
 		
 		
-		<script id="screenTextureVertexShader" type="x-shader/x-vertex">
-
-precision highp float;
-precision highp int;
-
-varying vec2 vUv;
-
-void main()
-{
-	vUv = uv;
-	gl_Position = vec4( position, 1.0 );
-
-}
-
-		</script>
-		
-		<script id="screenTextureFragmentShader" type="x-shader/x-fragment">
-
-precision highp float;
-precision highp int;
-precision highp sampler2D;
-
-varying vec2 vUv;
-uniform sampler2D tTexture0;
-
-
-void main()
-{	
-	gl_FragColor = texture2D(tTexture0, vUv);	
-}
-		
-		</script>
-		
-		<script id="screenOutputVertexShader" type="x-shader/x-vertex">
-
-precision highp float;
-precision highp int;
-
-varying vec2 vUv;
-
-void main() 
-{
-	vUv = uv;
-	gl_Position = vec4( position, 1.0 );
-}
-
-		</script>
-		
-		<script id="screenOutputFragmentShader" type="x-shader/x-fragment">
-
-precision highp float;
-precision highp int;
-precision highp sampler2D;
-
-varying vec2 vUv;
-uniform float uOneOverSampleCounter;
-uniform sampler2D tTexture0;
-
-void main()
-{
-	vec4 pixelColor = texture2D(tTexture0, vUv) * uOneOverSampleCounter;
-	
-	gl_FragColor = sqrt(pixelColor);	
-}
-		
-		</script>
-		
-
-
 		<script id="pathTracingVertexShader" type="x-shader/x-vertex">
 		
 precision highp float;
@@ -139,83 +69,13 @@ precision highp int;
 precision highp sampler2D;
 
 
-uniform bool uCameraIsMoving;
-uniform bool uCameraJustStartedMoving;
-
-uniform float uTime;
-uniform float uSampleCounter;
-uniform float uULen;
-uniform float uVLen;
-uniform float uApertureSize;
-uniform float uFocusDistance;
-
-uniform vec2 uResolution;
-
-uniform vec3 uRandomVector;
-
-uniform mat4 uCameraMatrix;
-
-uniform mat4 uTallBoxWorldMatrix;
-uniform mat4 uTallBoxInvMatrix;
-uniform mat3 uTallBoxNormalMatrix;
-
-uniform mat4 uShortBoxWorldMatrix;
-uniform mat4 uShortBoxInvMatrix;
-uniform mat3 uShortBoxNormalMatrix;
-
-//uniform mat4 uWaterBoxWorldMatrix;
-//uniform mat4 uWaterBoxInvMatrix;
-//uniform mat3 uWaterBoxNormalMatrix;
-
-uniform sampler2D tPreviousTexture;
-
-varying vec2 vUv;
-
-#define PI               3.14159265358979323
-#define ONE_OVER_PI      0.31830988618379067
-#define ONE_OVER_THREE   0.33333333333333333
-#define TWO_PI           6.28318530717958648
-#define FOUR_PI          12.5663706143591729
-#define ONE_OVER_FOUR_PI 0.07957747154594767
-#define PI_OVER_TWO      1.57079632679489662
-#define INFINITY         1000000.0
-
-#define SPHERE_ID 0
-#define PLANE_ID 1
-#define DISK_ID 2
-#define TRIANGLE_ID 3
-#define QUAD_ID 4
-#define BOX_ID 5
-#define ELLIPSOID_ID 6
-#define OPENCYLINDER_ID 7
-#define CAPPEDCYLINDER_ID 8
-#define TORUS_ID 9
+#include <pathtracing_uniforms_and_defines>
 
 #define N_SPHERES 1
 #define N_QUADS 6
 #define N_BOXES 3
 #define N_OPENCYLINDERS 1
 #define N_CAPPEDCYLINDERS 1
-
-#define LIGHT 0
-#define DIFF 1
-#define REFR 2
-#define SPEC 3
-#define CHECK 4
-#define COAT 5
-#define VOLUME 6
-#define TRANSLUCENT 7
-#define SPECSUB 8
-#define WATER 9
-
-
-float seed = 0.0;
-
-float rand()
-{ 
-	seed -= uRandomVector.x * uRandomVector.y;
-	return fract( sin( seed ) * 43758.5453123 );
-}
 
 
 //-----------------------------------------------------------------------
@@ -227,7 +87,7 @@ struct CappedCylinder { float radius; vec3 cap1pos; vec3 cap2pos; vec3 emission;
 struct Torus { float radius0; float radius1; vec3 pos; vec3 emission; vec3 color; int type; };
 struct Quad { vec3 v0; vec3 v1; vec3 v2; vec3 v3; vec3 emission; vec3 color; int type; };
 struct Box { vec3 minCorner; vec3 maxCorner; vec3 emission; vec3 color; int type; };
-struct Intersection { vec3 normal; vec3 emission; vec3 color; int type; int id; };
+struct Intersection { vec3 normal; vec3 emission; vec3 color; int type; };
 
 Sphere spheres[N_SPHERES];
 OpenCylinder openCylinders[N_OPENCYLINDERS];
@@ -235,306 +95,18 @@ CappedCylinder cappedCylinders[N_CAPPEDCYLINDERS];
 Quad quads[N_QUADS];
 Box boxes[N_BOXES];
 
+#include <pathtracing_random_functions>
 
-//-----------------------------------------------------------------------
-float EllipsoidIntersect( vec3 radii, vec3 pos, Ray r )
-//-----------------------------------------------------------------------
-{
-	vec3 oc = r.origin - pos;
-	vec3 oc2 = oc*oc;
-	vec3 ocrd = oc*r.direction;
-	vec3 rd2 = r.direction*r.direction;
-	vec3 invRad = 1.0/radii;
-	vec3 invRad2 = invRad*invRad;
-	
-	// quadratic equation coefficients
-	float a = dot(rd2, invRad2);
-	float b = 2.0*dot(ocrd, invRad2);
-	float c = dot(oc2, invRad2) - 1.0;
-	float det = b*b - 4.0*a*c;
-	if (det < 0.0) 
-		return INFINITY;
-		
-	det = sqrt(det);
-	float result = INFINITY;
-	float t1 = (-b - det) / (2.0 * a);
-	float t2 = (-b + det) / (2.0 * a);
-	if( t2 > 0.0 )
-		result = t2;
-	
-	if( t1 > 0.0 )
-		result = t1;
-	
-	return result;	
-}
+#include <pathtracing_ellipsoid_intersect>
 
-//---------------------------------------------------------------------------
-float OpenCylinderIntersect( float rad, vec3 p0, vec3 p1, Ray r, out vec3 n )
-//---------------------------------------------------------------------------
-{
-	float r2=rad*rad;
-	
-	vec3 dp=p1-p0;
-	vec3 dpt=dp/dot(dp,dp);
-	
-	vec3 ao=r.origin-p0;
-	vec3 aoxab=cross(ao,dpt);
-	vec3 vxab=cross(r.direction,dpt);
-	float ab2=dot(dpt,dpt);
-	float a=2.0*dot(vxab,vxab);
-	float ra=1.0/a;
-	float b=2.0*dot(vxab,aoxab);
-	float c=dot(aoxab,aoxab)-r2*ab2;
-	
-	float det=b*b-2.0*a*c;
-	
-	if(det<0.0)
-	return INFINITY;
-	
-	det=sqrt(det);
-	
-	float t = INFINITY;
-	
-	float t0=(-b-det)*ra;
-	float t1=(-b+det)*ra;
-	
-	vec3 ip;
-	vec3 lp;
-	float ct;
-	
-	if (t1 > 0.0)
-	{
-		ip=r.origin+r.direction*t1;
-		lp=ip-p0;
-		ct=dot(lp,dpt);
-		if((ct>0.0)&&(ct<1.0))
-		{
-			t = t1;
-		     	n=(p0+dp*ct)-ip;
-		}
-		
-	}
-	
-	if (t0 > 0.0)
-	{
-		ip=r.origin+r.direction*t0;
-		lp=ip-p0;
-		ct=dot(lp,dpt);
-		if((ct>0.0)&&(ct<1.0))
-		{
-			t = t0;
-			n=ip-(p0+dp*ct);
-		}
-		
-	}
-	
-	return t;
-}
+#include <pathtracing_opencylinder_intersect>
 
-//-----------------------------------------------------------------------------
-float CappedCylinderIntersect( float rad, vec3 p0, vec3 p1, Ray r, out vec3 n )
-//-----------------------------------------------------------------------------
-{
-	float r2=rad*rad;
-	
-	vec3 dp=p1-p0;
-	vec3 dpt=dp/dot(dp,dp);
-	
-	vec3 ao=r.origin-p0;
-	vec3 aoxab=cross(ao,dpt);
-	vec3 vxab=cross(r.direction,dpt);
-	float ab2=dot(dpt,dpt);
-	float a=2.0*dot(vxab,vxab);
-	float ra=1.0/a;
-	float b=2.0*dot(vxab,aoxab);
-	float c=dot(aoxab,aoxab)-r2*ab2;
-	
-	float det=b*b-2.0*a*c;
-	
-	if(det<0.0)
-		return INFINITY;
-	
-	det=sqrt(det);
-	
-	float t0=(-b-det)*ra;
-	float t1=(-b+det)*ra;
-	
-	vec3 ip;
-	vec3 lp;
-	float ct;
-	float result = INFINITY;
-	
-	// Cylinder caps
-	// disk0
-	vec3 diskNormal = normalize(dp);
-	float denom = dot(diskNormal, r.direction);
-	vec3 pOrO = p0 - r.origin;
-	float tDisk0 = dot(pOrO, diskNormal) / denom;
-	if (tDisk0 > 0.0)
-	{
-		vec3 intersectPos = r.origin + r.direction * tDisk0;
-		vec3 v = intersectPos - p0;
-		float d2 = dot(v,v);
-		if (d2 <= r2)
-		{
-			result = tDisk0;
-			n = diskNormal;
-		}
-	}
-	
-	// disk1
-	denom = dot(diskNormal, r.direction);
-	pOrO = p1 - r.origin;
-	float tDisk1 = dot(pOrO, diskNormal) / denom;
-	if (tDisk1 > 0.0)
-	{
-		vec3 intersectPos = r.origin + r.direction * tDisk1;
-		vec3 v = intersectPos - p1;
-		float d2 = dot(v,v);
-		if (d2 <= r2 && tDisk1 < result)
-		{
-			result = tDisk1;
-			n = diskNormal;
-		}
-	}
-	
-	// Cylinder body
-	if (t1 > 0.0)
-	{
-		ip=r.origin+r.direction*t1;
-		lp=ip-p0;
-		ct=dot(lp,dpt);
-		if(ct>0.0 && ct<1.0 && t1<result)
-		{
-			result = t1;
-		     	n=(p0+dp*ct)-ip;
-		}
-		
-	}
-	
-	if (t0 > 0.0)
-	{
-		ip=r.origin+r.direction*t0;
-		lp=ip-p0;
-		ct=dot(lp,dpt);
-		if(ct>0.0 && ct<1.0 && t0<result)
-		{
-			result = t0;
-			n=ip-(p0+dp*ct);
-		}
-		
-	}
-	
-	return result;
-}
+#include <pathtracing_cappedcylinder_intersect>
 
-//-----------------------------------------------------------------------
-float TorusIntersect( float rad0, float rad1, vec3 pos, Ray ray )
-//-----------------------------------------------------------------------
-{
-	vec3 rO = ray.origin - pos;
-	vec3 rD = ray.direction;
-	
-	float Ra2 = rad0*rad0;
-	float ra2 = rad1*rad1;
-	
-	float m = dot(rO,rO);
-	float n = dot(rO,rD);
-		
-	float k = (m - ra2 - Ra2) * 0.5;
-	float a = n;
-	float b = n*n + Ra2*rD.z*rD.z + k;
-	float c = k*n + Ra2*rO.z*rD.z;
-	float d = k*k + Ra2*rO.z*rO.z - Ra2*ra2;
-	
-	float a2 = a * a;
-	float p = -3.0*a2     + 2.0*b;
-	float q =  2.0*a2*a   - 2.0*a*b   + 2.0*c;
-	float r = -3.0*a2*a2 + 4.0*a2*b - 8.0*a*c + 4.0*d;
-	p *= ONE_OVER_THREE;
-	r *= ONE_OVER_THREE;
-	float p2 = p * p;
-	float Q = p2 + r;
-	float R = 3.0*r*p - p2*p - q*q;
-	
-	float h = R*R - Q*Q*Q;
-	float z = 0.0;
-	if( h < 0.0 )
-	{
-		float sQ = sqrt(Q);
-		z = 2.0*sQ*cos( acos(R/(sQ*Q)) * ONE_OVER_THREE );
-	}
-	else
-	{
-		float sQ = pow( sqrt(h) + abs(R), ONE_OVER_THREE );
-		z = sign(R)*abs( sQ + Q/sQ );
-	}
-	
-	z = p - z;
-		
-	float d1 = z   - 3.0*p;
-	float d2 = z*z - 3.0*r;
+#include <pathtracing_torus_intersect>
 
-	if( abs(d1)<0.0001 )
-	{
-		if( d2<0.0 ) return INFINITY;
-		d2 = sqrt(d2);
-	}
-	else
-	{
-		if( d1<0.0 ) return INFINITY;
-		d1 = sqrt( d1*0.5 );
-		d2 = q/d1;
-	}
-	
-	float result = INFINITY;
-	float d1SqMinusZ = d1*d1 - z;
-	h = d1SqMinusZ + d2;
-	if( h>0.0 )
-	{
-		h = sqrt(h);
-		float t1 = -d1 - h - a;
-		float t2 = -d1 + h - a;
-		if( t1>0.0 ) result=t1;
-		else if( t2>0.0 ) result=t2;
-	}
+#include <pathtracing_triangle_intersect>
 
-	h = d1SqMinusZ - d2;
-	if( h>0.0 )
-	{
-		h = sqrt(h);
-		float t1 = d1 - h - a;
-		float t2 = d1 + h - a;
-		if( t1>0.0 ) result=min(result,t1);
-		else if( t2>0.0 ) result=min(result,t2);
-	}
-
-	return result;
-}
-
-//---------------------------------------------------------
-float TriangleIntersect( vec3 v0, vec3 v1, vec3 v2, Ray r )
-//---------------------------------------------------------
-{
-	vec3 edge1 = v1 - v0;
-	vec3 edge2 = v2 - v0;
-	vec3 tvec = r.origin - v0;
-	vec3 pvec = cross(r.direction, edge2);
-	float det = 1.0 / dot(edge1, pvec);
-	float u = dot(tvec, pvec) * det;
-
-	if (u < 0.0 || u > 1.0)
-		return INFINITY;
-
-	vec3 qvec = cross(tvec, edge1);
-
-	float v = dot(r.direction, qvec) * det;
-
-	if (v < 0.0 || u + v > 1.0)
-		return INFINITY;
-
-	return dot(edge2, qvec) * det;
-}
 
 //----------------------------------------------------------------------------
 float QuadIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 v3, Ray r )
@@ -581,14 +153,6 @@ float DisplacementBoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r, out vec3 
 	return INFINITY;
 }
 
-/*
-//-----------------------------------------------------------------------
-float PlaneIntersect( vec4 pla, Ray r )
-//-----------------------------------------------------------------------
-{
-	return -(dot(r.origin, pla.xyz) - pla.w) / dot(r.direction, pla.xyz);
-}
-*/
 
 float getBoxWaterDepth( vec3 pos )
 {
@@ -643,11 +207,10 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.emission = quads[i].emission;
 			intersec.color = quads[i].color;
 			intersec.type = quads[i].type;
-			intersec.id = QUAD_ID;
 		}
         }
 	
-	d = OpenCylinderIntersect( openCylinders[0].radius, openCylinders[0].pos1, openCylinders[0].pos2, r, normal );
+	d = OpenCylinderIntersect( openCylinders[0].pos1, openCylinders[0].pos2, openCylinders[0].radius, r, normal );
 	if (d < t)
 	{
 		t = d;
@@ -655,10 +218,9 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		intersec.emission = openCylinders[0].emission;
 		intersec.color = openCylinders[0].color;
 		intersec.type = openCylinders[0].type;
-		intersec.id = OPENCYLINDER_ID;
 	}
         
-	d = CappedCylinderIntersect( cappedCylinders[0].radius, cappedCylinders[0].cap1pos, cappedCylinders[0].cap2pos, r, normal );
+	d = CappedCylinderIntersect( cappedCylinders[0].cap1pos, cappedCylinders[0].cap2pos, cappedCylinders[0].radius, r, normal );
 	if (d < t)
 	{
 		t = d;
@@ -666,7 +228,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		intersec.emission = cappedCylinders[0].emission;
 		intersec.color = cappedCylinders[0].color;
 		intersec.type = cappedCylinders[0].type;
-		intersec.id = CAPPEDCYLINDER_ID;
 	}
 	
 	///////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -676,12 +237,12 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	float waterCylinderRad = 39.0;
 	vec3 waterCylinderPos1 = vec3(445,304,-300);
 	vec3 waterCylinderPos2 = vec3(600,304,-300);
-	d = OpenCylinderIntersect(waterCylinderRad, waterCylinderPos1, waterCylinderPos2, r, normal);
+	d = OpenCylinderIntersect( waterCylinderPos1, waterCylinderPos2, waterCylinderRad, r, normal );
 	if (d < INFINITY)
 	{
 		hitWorldSpace = r.origin + r.direction * d;
 		waterWaveDepth = getCylinderWaterDepth(hitWorldSpace);
-		dw = OpenCylinderIntersect(waterCylinderRad - waterWaveDepth, waterCylinderPos1, waterCylinderPos2, r, normal);
+		dw = OpenCylinderIntersect( waterCylinderPos1, waterCylinderPos2, waterCylinderRad - waterWaveDepth, r, normal );
 		if (dw < t)
 		{
 			t = dw;
@@ -693,19 +254,18 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.emission = vec3(0);
 			intersec.color = boxes[2].color;
 			intersec.type = WATER;
-			intersec.id = OPENCYLINDER_ID;
 		}
 	}
 	
 	waterCylinderRad = 38.0;
 	waterCylinderPos1 = vec3(291,197,-300);
 	waterCylinderPos2 = vec3(261, 84,-300);
-	d = OpenCylinderIntersect(waterCylinderRad, waterCylinderPos1, waterCylinderPos2, r, normal);
+	d = OpenCylinderIntersect( waterCylinderPos1, waterCylinderPos2, waterCylinderRad, r, normal );
 	if (d < INFINITY)
 	{
 		hitWorldSpace = r.origin + r.direction * d;
 		waterWaveDepth = getCylinderWaterDepth(hitWorldSpace);
-		dw = OpenCylinderIntersect(waterCylinderRad - waterWaveDepth, waterCylinderPos1, waterCylinderPos2, r, normal);
+		dw = OpenCylinderIntersect( waterCylinderPos1, waterCylinderPos2, waterCylinderRad - waterWaveDepth, r, normal );
 		if (dw < t)
 		{
 			t = dw;
@@ -717,7 +277,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.emission = vec3(0);
 			intersec.color = boxes[2].color;
 			intersec.type = WATER;
-			intersec.id = OPENCYLINDER_ID;
 		}
 	}
 	
@@ -741,7 +300,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.emission = vec3(0);
 			intersec.color = boxes[2].color;
 			intersec.type = WATER;
-			intersec.id = ELLIPSOID_ID;
 		}
 	}
 	
@@ -767,7 +325,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 				intersec.emission = vec3(0);
 				intersec.color = boxes[2].color;
 				intersec.type = WATER;
-				intersec.id = TORUS_ID;
 			}
 		}
 	}
@@ -799,63 +356,22 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		intersec.emission = boxes[2].emission;
 		intersec.color = boxes[2].color;
 		intersec.type = boxes[2].type;
-		intersec.id = BOX_ID;
 	}
 	
 	return t;
 }
 
-vec3 randomSphereDirection()
-{
-    	vec2 r = vec2(rand(),rand())*TWO_PI;
-	return vec3(sin(r.x)*vec2(sin(r.y),cos(r.y)),cos(r.x));	
-}
 
-vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
-{
-	float up = sqrt(rand()); // weighted cos(theta)
-    	float over = sqrt(1.0 - up * up); // sin(theta)
-    	float around = rand() * TWO_PI;
-	vec3 u = normalize( cross( abs(nl.x) > 0.1 ? vec3(0, 1, 0) : vec3(1, 0, 0), nl ) );
-	vec3 v = normalize( cross(nl, u) );
-    	return vec3( cos(around) * over * u ) + ( sin(around) * over * v ) + (up * nl);		
-}
-
-vec3 calcDirectLightingQuad(vec3 mask, vec3 x, vec3 nl, Quad light)
-{
-	vec3 dirLight = vec3(0.0);
-	Intersection shadowIntersec;
-	vec3 randPointOnLight;
-	randPointOnLight.x = mix(light.v0.x, light.v1.x, rand());
-	randPointOnLight.y = light.v0.y;
-	randPointOnLight.z = mix(light.v0.z, light.v3.z, rand());
-	vec3 srDir = normalize(randPointOnLight - x);
-	float nlDotSrDir = max(dot(nl, srDir), 0.01);
-		
-	// cast shadow ray from intersection point	
-	Ray shadowRay = Ray(x, srDir);
-	shadowRay.origin += nl * 2.0; // larger dimensions of this scene require greater offsets
-	float st = SceneIntersect(shadowRay, shadowIntersec);
-	if ( shadowIntersec.type == LIGHT )
-	{
-		float r2 = distance(light.v0, light.v1) * distance(light.v0, light.v3);
-		vec3 d = randPointOnLight - shadowRay.origin;
-		float d2 = dot(d, d);
-		float weight = dot(-srDir, normalize(shadowIntersec.normal)) * r2 / d2;
-		dirLight = mask * light.emission * nlDotSrDir * clamp(weight, 0.0, 1.0);
-	}
-
-	return dirLight;
-}
+#include <pathtracing_direct_lighting_quad>
 
 //-----------------------------------------------------------------------
-vec3 CalculateRadiance( Ray r )
+vec3 CalculateRadiance( Ray r, inout float seed )
 //-----------------------------------------------------------------------
 {
 	vec3 accumCol = vec3(0.0);
         vec3 mask = vec3(1.0);
         Intersection intersec;
-	int sampleDiffuseBudget = 3;
+	int sampleDiffuseBudget = 2;
 	bool bounceIsSpecular = true;
 	
 	
@@ -887,27 +403,23 @@ vec3 CalculateRadiance( Ray r )
 		vec3 x = r.origin + r.direction * t;
 		
 		    
-                if (intersec.type == DIFF || intersec.type == CHECK) // Ideal DIFFUSE reflection
+                if (intersec.type == DIFF) // Ideal DIFFUSE reflection
                 {
 			mask *= intersec.color;
-			accumCol += calcDirectLightingQuad(mask, x, nl, quads[5]);
+			accumCol += calcDirectLightingQuad(mask, x, nl, quads[5], seed);
 			
+			/*
                        	if (uCameraIsMoving)
 			{
-				/*
-				// Russian Roulette
-				if (rand() > 0.2)
-					break;
-				else mask *= 5.0;
-				*/
 				sampleDiffuseBudget -= 1;
 			}
+			*/
 			
 			sampleDiffuseBudget -= 1;
 			if (sampleDiffuseBudget < 0) break;
 			
 			// choose random Diffuse sample vector
-			vec3 d = randomCosWeightedDirectionInHemisphere( nl );
+			vec3 d = randomCosWeightedDirectionInHemisphere( nl, seed );
 			r = Ray( x, normalize(d) );
 			r.origin += r.direction * 2.0;
 			//r.origin += nl * 2.0;
@@ -940,7 +452,7 @@ vec3 CalculateRadiance( Ray r )
 			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
 			//float Tr = 1.0 - Re;
 			
-			if (rand() < Re) // reflect ray from surface
+			if (rand(seed) < Re) // reflect ray from surface
 			{
 				r = Ray( x, reflect(r.direction, nl) );
 				r.origin += r.direction * 2.0;
@@ -973,10 +485,10 @@ vec3 CalculateRadiance( Ray r )
 			float Re = R0 + (1.0 - R0) * c * c * c * c * c;
 			
 			// choose either specular reflection or diffuse
-			if( rand() < Re )
+			if( rand(seed) < Re )
 			{	
 				vec3 reflectVec = reflect(r.direction, nl);
-				vec3 randVec = vec3(rand() * 2.0 - 1.0, rand() * 2.0 - 1.0, rand() * 2.0 - 1.0);
+				vec3 randVec = vec3(rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0);
 				r = Ray( x, mix( reflectVec, normalize(nl + randVec), roughness) );
 				r.origin += r.direction * 2.0;
 				bounceIsSpecular = true;
@@ -985,9 +497,9 @@ vec3 CalculateRadiance( Ray r )
 			else
 			{
 				mask *= intersec.color;
-				accumCol += calcDirectLightingQuad(mask, x, nl, quads[5]);
+				accumCol += calcDirectLightingQuad(mask, x, nl, quads[5],seed);
 				// choose random sample vector for diffuse material underneath ClearCoat
-				vec3 d = randomCosWeightedDirectionInHemisphere( nl );
+				vec3 d = randomCosWeightedDirectionInHemisphere( nl, seed );
 				r = Ray( x, normalize(d) );
 				r.origin += r.direction * 2.0;
 				bounceIsSpecular = false;
@@ -1026,72 +538,14 @@ void SetupScene(void)
 }
 
 
-void main( void )
-{
+#include <pathtracing_main>
 
-	vec3 camPos     = vec3( uCameraMatrix[3][0],  uCameraMatrix[3][1],  uCameraMatrix[3][2]);
-	
-    	vec3 camRight   = vec3( uCameraMatrix[0][0],  uCameraMatrix[0][1],  uCameraMatrix[0][2]);
-    	vec3 camUp      = vec3( uCameraMatrix[1][0],  uCameraMatrix[1][1],  uCameraMatrix[1][2]);
-	vec3 camForward = vec3(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]);
-	
-	// seed for rand() function
-	seed = mod(uSampleCounter,1000.0) * uRandomVector.x - uRandomVector.y + uResolution.y * gl_FragCoord.x / uResolution.x + uResolution.x * gl_FragCoord.y / uResolution.y;
-	
-	float r1 = 2.0 * rand();
-	float r2 = 2.0 * rand();
-	
-	vec2 d = vec2(1.0);
-	if ( !uCameraIsMoving ) 
-	{
-		d.x = r1 < 1.0 ? sqrt(r1) - 1.0 : 1.0 - sqrt(2.0 - r1);
-        	d.y = r2 < 1.0 ? sqrt(r2) - 1.0 : 1.0 - sqrt(2.0 - r2);
-	}
-	
-	// TODO save this as a uniform to avoid division
-	d /= (uResolution * 0.5);
-	d += (2.0 * vUv - 1.0);
-	
-	vec3 rayDir = normalize( d.x * camRight * uULen + d.y * camUp * uVLen + camForward );
-	
-	// depth of field
-	vec3 focalPoint = uFocusDistance * rayDir;
-	float randomAngle = rand() * TWO_PI; // pick random point on aperture
-	float randomRadius = rand() * uApertureSize;
-	vec3  randomAperturePos = ( cos(randomAngle) * camRight + sin(randomAngle) * camUp ) * randomRadius;
-	// point on aperture to focal point
-	vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
-	
-	Ray ray = Ray( camPos + randomAperturePos , finalRayDir );
-
-	SetupScene();
-	     		
-	// perform path tracing and get resulting pixel color
-	vec3 pixelColor = CalculateRadiance( ray );
-	
-	vec3 previousColor = texture2D(tPreviousTexture, vUv).rgb;
-	
-	if ( uCameraJustStartedMoving )
-	{
-		previousColor = vec3(0.0); // clear rendering accumulation buffer
-	}
-	else if ( uCameraIsMoving )
-	{
-		previousColor *= 0.5; // motion-blur trail amount (old image)
-		pixelColor *= (uSampleCounter) * 0.5; // brightness of new image (noisy)
-	}
-		
-	gl_FragColor = vec4( pixelColor + previousColor, 1.0 );
-	
-}
 
 		</script>
 		
 		
 		<script>
-
-			if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
-
+			
 			var SCREEN_WIDTH = window.innerWidth;
 			var SCREEN_HEIGHT = window.innerHeight;
 			var container, stats;
@@ -1104,7 +558,6 @@ void main( void )
 			var screenOutputGeometry, screenOutputMaterial, screenOutputMesh;
 			var tallBoxGeometry, tallBoxMaterial, tallBoxMesh;
 			var shortBoxGeometry, shortBoxMaterial, shortBoxMesh;
-			var waterBoxGeometry, waterBoxMaterial, waterBoxMesh;
 			var pathTracingRenderTarget, screenOutputRenderTarget;
 			var quadCamera, worldCamera;
 			var renderer, clock;
@@ -1163,59 +616,7 @@ void main( void )
 			cameraInfoElement.style.MozUserSelect = "none";
 			
 			var mouseControl = true;
-
-			if ( 'createTouch' in document ) {
-				mouseControl = false;
-				pixelRatio = window.devicePixelRatio * 0.15;
-				
-				mobileJoystickControls = new MobileJoystickControls ({
-					//showJoystick: true,
-					enableMultiTouch: true
-				});	
-			}
 			
-			// if on mobile device, unpause the app because there is no ESC key and no mouse capture to do
-			if ( !mouseControl )
-				isPaused = false;
-			
-			if (mouseControl) {
-
-				window.addEventListener( 'wheel', onMouseWheel, false );
-				
-				document.body.addEventListener("click", function() {
-					this.requestPointerLock = this.requestPointerLock || this.mozRequestPointerLock;
-					this.requestPointerLock();
-				}, false);
-
-				window.addEventListener("click", function(event) {
-					event.preventDefault();	
-				}, false);
-				window.addEventListener("dblclick", function(event) {
-					event.preventDefault();	
-				}, false);
-
-
-				var pointerlockChange = function ( event ) {
-
-					if ( document.pointerLockElement === document.body || 
-					    document.mozPointerLockElement === document.body || document.webkitPointerLockElement === document.body ) {
-
-						isPaused = false;
-
-					} else {
-
-						isPaused = true;
-
-					}
-
-				};
-
-				// Hook pointer lock state change events
-				document.addEventListener( 'pointerlockchange', pointerlockChange, false );
-				document.addEventListener( 'mozpointerlockchange', pointerlockChange, false );
-				document.addEventListener( 'webkitpointerlockchange', pointerlockChange, false );
-
-			}
 			
 			function onMouseWheel( event ) {
 
@@ -1234,272 +635,6 @@ void main( void )
 
 			}
 			
-			
-			init();					
-		     // function init( meshes ) {
-			function init() {
-				
-				renderer = new THREE.WebGLRenderer();
-				renderer.autoClear = false;
-				// 1 is full resolution, 0.5 is half, 0.25 is quarter, etc. (must be > than 0.0)
-				renderer.setPixelRatio(pixelRatio);
-				renderer.setSize( window.innerWidth, window.innerHeight );
-				renderer.context.getExtension('OES_texture_float');
-				
-				container = document.getElementById( 'container' );
-				container.appendChild( renderer.domElement );
-		      
-				stats = new Stats();
-				stats.domElement.style.position = 'absolute';
-				stats.domElement.style.top = '0px';
-				stats.domElement.style.cursor = "default";
-				stats.domElement.style.webkitUserSelect = "none";
-				stats.domElement.style.MozUserSelect = "none";
-				container.appendChild( stats.domElement );
-				
-				window.addEventListener( 'resize', onWindowResize, false );
-				
-				clock = new THREE.Clock();
-				
-				pathTracingScene = new THREE.Scene();
-				screenTextureScene = new THREE.Scene();
-				screenOutputScene = new THREE.Scene();
-				
-				// quadCamera is simply the camera to help render the full screen quad (2 triangles),
-				// hence the name.  It is an Orthographic camera that sits facing the view plane, which serves as
-				// the window into our 3d world. This camera will not move or rotate for the duration of the app.
-				quadCamera = new THREE.OrthographicCamera( -1, 1, 1, -1, 0, 1 );
-				screenTextureScene.add(quadCamera);
-				screenOutputScene.add(quadCamera);
-				
-				// worldCamera is the dynamic camera 3d object that will be positioned, oriented and 
-				// constantly updated inside the 3d scene.  Its view will ultimately get passed back to the 
-				// stationary quadCamera, which renders the scene to a fullscreen quad (made up of 2 large triangles).
-				worldCamera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000);
-				pathTracingScene.add(worldCamera);
-				
-				controls = new FirstPersonCameraControls( worldCamera );
-							
-				cameraControlsObject = controls.getObject();
-				cameraControlsYawObject = controls.getYawObject();
-				cameraControlsPitchObject = controls.getPitchObject();
-				
-				pathTracingScene.add( cameraControlsObject );
-
-				// for flyCam
-				cameraControlsObject.position.set(278, 350, 400);
-				///cameraControlsYawObject.rotation.y = 0.0;
-				// look slightly downward
-				//cameraControlsPitchObject.rotation.x = -0.4;
-				
-				oldYawRotation = cameraControlsYawObject.rotation.y;
-				oldPitchRotation = cameraControlsPitchObject.rotation.x;
-				
-				// now that we moved and rotated the camera, the following line force-updates the camera's matrix,
-				//  and prevents rendering the very first frame in the old default camera position/orientation
-				cameraControlsObject.updateMatrixWorld(true);
-				
-				pathTracingRenderTarget = new THREE.WebGLRenderTarget( (window.innerWidth * pixelRatio), (window.innerHeight * pixelRatio), {
-					minFilter: THREE.NearestFilter,
-					magFilter: THREE.NearestFilter,
-					format: THREE.RGBAFormat,
-					type: THREE.FloatType,
-					depthBuffer: false,
-					stencilBuffer: false
-				} );
-				pathTracingRenderTarget.texture.generateMipmaps = false;
-				
-				screenTextureRenderTarget = new THREE.WebGLRenderTarget( (window.innerWidth * pixelRatio), (window.innerHeight * pixelRatio), {
-					minFilter: THREE.NearestFilter, 
-					magFilter: THREE.NearestFilter,
-					format: THREE.RGBAFormat,
-					type: THREE.FloatType,
-					depthBuffer: false,
-					stencilBuffer: false
-				} );
-				screenTextureRenderTarget.texture.generateMipmaps = false;
-				
-				
-				pathTracingGeometry = new THREE.PlaneBufferGeometry( 2, 2 );
-
-				pathTracingUniforms = {
-					
-					tPreviousTexture: { type: "t", value: screenTextureRenderTarget.texture },
-					
-					uCameraIsMoving: { type: "b1", value: false },
-					uCameraJustStartedMoving: { type: "b1", value: false },
-					
-					uTime: { type: "f", value: 0.0 },
-					uSampleCounter: { type: "f", value: 0.0 },
-					uULen: { type: "f", value: 1.0 },
-					uVLen: { type: "f", value: 1.0 },
-					uApertureSize: { type: "f", value: 0.0 },
-					uFocusDistance: { type: "f", value: 1180.0 },
-					
-					uResolution: { type: "v2", value: new THREE.Vector2() },
-					
-					uRandomVector: { type: "v3", value: new THREE.Vector3() },
-				
-					uCameraMatrix: { type: "m4", value: new THREE.Matrix4() },
-					
-					uTallBoxInvMatrix: { type: "m4", value: new THREE.Matrix4() },
-					uTallBoxWorldMatrix: { type: "m4", value: new THREE.Matrix4() },
-					uTallBoxNormalMatrix: { type: "m3", value: new THREE.Matrix3() },
-					
-					uShortBoxInvMatrix: { type: "m4", value: new THREE.Matrix4() },
-					uShortBoxWorldMatrix: { type: "m4", value: new THREE.Matrix4() },
-					uShortBoxNormalMatrix: { type: "m3", value: new THREE.Matrix3() },
-					
-					//uWaterBoxInvMatrix: { type: "m4", value: new THREE.Matrix4() },
-					//uWaterBoxWorldMatrix: { type: "m4", value: new THREE.Matrix4() },
-					//uWaterBoxNormalMatrix: { type: "m3", value: new THREE.Matrix3() }
-					
-				};
-				
-			
-				pathTracingMaterial = new THREE.ShaderMaterial( {
-					uniforms: pathTracingUniforms,
-					//defines: pathTracingDefines,
-					vertexShader: document.getElementById( 'pathTracingVertexShader' ).textContent,
-					fragmentShader: document.getElementById( 'pathTracingFragmentShader' ).textContent,
-				        depthTest: false,
-                                        depthWrite: false
-                                } );
-
-				pathTracingMesh = new THREE.Mesh( pathTracingGeometry, pathTracingMaterial );
-				pathTracingScene.add( pathTracingMesh );
-				
-				
-				
-				// the following keeps the large scene ShaderMaterial quad right in front 
-				//   of the camera at all times. This is necessary because without it, the scene 
-				//   quad will fall out of view and get clipped when the camera rotates past 180 degrees.
-				worldCamera.add( pathTracingMesh );
-				
-				
-				
-				screenTextureGeometry = new THREE.PlaneBufferGeometry( 2, 2 );
-				
-				screenTextureUniforms = {
-					tTexture0: { type: "t", value: pathTracingRenderTarget.texture }
-				}
-				
-				screenTextureMaterial = new THREE.ShaderMaterial( {
-					uniforms: screenTextureUniforms,
-					vertexShader: document.getElementById( 'screenTextureVertexShader' ).textContent,
-					fragmentShader: document.getElementById( 'screenTextureFragmentShader' ).textContent,
-					depthWrite: false,
-					depthTest: false
-				} );
-				
-				screenTextureMesh = new THREE.Mesh(screenTextureGeometry, screenTextureMaterial);
-				screenTextureScene.add(screenTextureMesh);
-				
-				
-				
-				screenOutputGeometry = new THREE.PlaneBufferGeometry( 2, 2 );
-				
-				screenOutputUniforms = {
-					uOneOverSampleCounter: { type: "f", value: 0.0 },
-					tTexture0: { type: "t", value: pathTracingRenderTarget.texture }
-				}
-				
-				screenOutputMaterial = new THREE.ShaderMaterial( {
-					uniforms: screenOutputUniforms,
-					vertexShader: document.getElementById( 'screenOutputVertexShader' ).textContent,
-					fragmentShader: document.getElementById( 'screenOutputFragmentShader' ).textContent,
-					depthWrite: false,
-					depthTest: false
-				} );
-				
-				screenOutputMesh = new THREE.Mesh(screenOutputGeometry, screenOutputMaterial);
-				screenOutputScene.add(screenOutputMesh);
-				
-				// Boxes
-				tallBoxGeometry = new THREE.BoxGeometry(1,1,1);
-				tallBoxMaterial = new THREE.MeshPhysicalMaterial( {
-					color: new THREE.Color(0.95, 0.95, 0.95), //RGB, ranging from 0.0 - 1.0
-					roughness: 1.0 // ideal Diffuse material	
-				} );
-				tallBoxMesh = new THREE.Mesh(tallBoxGeometry, tallBoxMaterial);
-				pathTracingScene.add(tallBoxMesh);
-				tallBoxMesh.visible = false; // disable normal Three.js rendering updates of this object: 
-				// it is just a data placeholder as well as an Object3D that can be transformed/manipulated by 
-				// using familiar Three.js library commands. It is then fed into the GPU path tracing renderer
-				// through its 'matrixWorld' matrix. See below:
-				tallBoxMesh.rotation.set(0, Math.PI * 0.1, 0);
-				tallBoxMesh.position.set(180, 170, -350);
-				tallBoxMesh.updateMatrixWorld(true); // 'true' forces immediate matrix update
-				
-				pathTracingUniforms.uTallBoxWorldMatrix.value.copy( tallBoxMesh.matrixWorld );
-				pathTracingUniforms.uTallBoxInvMatrix.value.getInverse( tallBoxMesh.matrixWorld );
-				pathTracingUniforms.uTallBoxNormalMatrix.value.getNormalMatrix( tallBoxMesh.matrixWorld );
-				
-				
-				shortBoxGeometry = new THREE.BoxGeometry(1,1,1);
-				shortBoxMaterial = new THREE.MeshPhysicalMaterial( {
-					color: new THREE.Color(0.95, 0.95, 0.95), //RGB, ranging from 0.0 - 1.0
-					roughness: 1.0 // ideal Diffuse material	
-				} );
-				shortBoxMesh = new THREE.Mesh(shortBoxGeometry, shortBoxMaterial);
-				pathTracingScene.add(shortBoxMesh);
-				shortBoxMesh.visible = false;
-				shortBoxMesh.rotation.set(0, -Math.PI * 0.09, 0);
-				shortBoxMesh.position.set(370, 85, -170);
-				shortBoxMesh.updateMatrixWorld(true); // 'true' forces immediate matrix update
-				
-				pathTracingUniforms.uShortBoxWorldMatrix.value.copy( shortBoxMesh.matrixWorld );
-				pathTracingUniforms.uShortBoxInvMatrix.value.getInverse( shortBoxMesh.matrixWorld );
-				pathTracingUniforms.uShortBoxNormalMatrix.value.getNormalMatrix( shortBoxMesh.matrixWorld );
-				
-				/*
-				waterBoxGeometry = new THREE.BoxGeometry(1,1,1);
-				waterBoxMaterial = new THREE.MeshPhysicalMaterial( {
-					color: new THREE.Color(0.1, 0.95, 1.0), //RGB, ranging from 0.0 - 1.0
-					roughness: 0.0 // ideal Specular material	
-				} );
-				waterBoxMesh = new THREE.Mesh(waterBoxGeometry, waterBoxMaterial);
-				pathTracingScene.add(waterBoxMesh);
-				waterBoxMesh.visible = false;
-				//waterBoxMesh.rotation.set(-Math.PI, 0, 0);
-				//waterBoxMesh.position.set(274.8, 0.0, -279.6);
-				waterBoxMesh.updateMatrixWorld(true); // 'true' forces immediate matrix update
-				pathTracingUniforms.uWaterBoxWorldMatrix.value.copy( waterBoxMesh.matrixWorld );
-				pathTracingUniforms.uWaterBoxInvMatrix.value.getInverse( waterBoxMesh.matrixWorld );
-				pathTracingUniforms.uWaterBoxNormalMatrix.value.getNormalMatrix( waterBoxMesh.matrixWorld );
-				*/
-				
-				/*
-				// Fullscreen API
-				document.addEventListener("click", function() {
-					
-					if ( !document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement ) {
-
-						if (document.documentElement.requestFullscreen) {
-							document.documentElement.requestFullscreen();
-							
-						} else if (document.documentElement.mozRequestFullScreen) {
-							document.documentElement.mozRequestFullScreen();
-						
-						} else if (document.documentElement.webkitRequestFullscreen) {
-							document.documentElement.webkitRequestFullscreen();
-						
-						}
-
-					}
-				});
-				*/
-				
-				// onWindowResize() must be at the end of the init() function
-				onWindowResize();
-				
-				// everything is set up, now we can start animating
-				animate();
-				
-			} // end function init()
-			
-			
-
 			function onWindowResize( event ) {
 				
 				SCREEN_WIDTH = window.innerWidth;
@@ -1577,8 +712,307 @@ void main( void )
 				
 			} // end function onWindowResize( event )
 			
+			
+			init();
+			
+			
+		     // function init( meshes ) {
+			function init() {
+				
+				if ( 'createTouch' in document ) {
+					mouseControl = false;
+					pixelRatio = window.devicePixelRatio * 0.15;
+
+					mobileJoystickControls = new MobileJoystickControls ({
+						//showJoystick: true,
+						enableMultiTouch: true
+					});	
+				}
+
+				// if on mobile device, unpause the app because there is no ESC key and no mouse capture to do
+				if ( !mouseControl )
+					isPaused = false;
+
+				if (mouseControl) {
+
+					window.addEventListener( 'wheel', onMouseWheel, false );
+
+					document.body.addEventListener("click", function() {
+						this.requestPointerLock = this.requestPointerLock || this.mozRequestPointerLock;
+						this.requestPointerLock();
+					}, false);
+
+					window.addEventListener("click", function(event) {
+						event.preventDefault();	
+					}, false);
+					window.addEventListener("dblclick", function(event) {
+						event.preventDefault();	
+					}, false);
 
 
+					var pointerlockChange = function ( event ) {
+
+						if ( document.pointerLockElement === document.body || 
+						    document.mozPointerLockElement === document.body || document.webkitPointerLockElement === document.body ) {
+
+							isPaused = false;
+
+						} else {
+
+							isPaused = true;
+
+						}
+
+					};
+
+					// Hook pointer lock state change events
+					document.addEventListener( 'pointerlockchange', pointerlockChange, false );
+					document.addEventListener( 'mozpointerlockchange', pointerlockChange, false );
+					document.addEventListener( 'webkitpointerlockchange', pointerlockChange, false );
+
+				}
+				
+				renderer = new THREE.WebGLRenderer();
+				renderer.autoClear = false;
+				// 1 is full resolution, 0.5 is half, 0.25 is quarter, etc. (must be > than 0.0)
+				renderer.setPixelRatio(pixelRatio);
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				renderer.context.getExtension('OES_texture_float');
+				
+				container = document.getElementById( 'container' );
+				container.appendChild( renderer.domElement );
+				
+				stats = new Stats();
+				stats.domElement.style.position = 'absolute';
+				stats.domElement.style.top = '0px';
+				stats.domElement.style.cursor = "default";
+				stats.domElement.style.webkitUserSelect = "none";
+				stats.domElement.style.MozUserSelect = "none";
+				container.appendChild( stats.domElement );
+				
+				window.addEventListener( 'resize', onWindowResize, false );
+				
+				clock = new THREE.Clock();
+				
+				pathTracingScene = new THREE.Scene();
+				screenTextureScene = new THREE.Scene();
+				screenOutputScene = new THREE.Scene();
+				
+				// quadCamera is simply the camera to help render the full screen quad (2 triangles),
+				// hence the name.  It is an Orthographic camera that sits facing the view plane, which serves as
+				// the window into our 3d world. This camera will not move or rotate for the duration of the app.
+				quadCamera = new THREE.OrthographicCamera( -1, 1, 1, -1, 0, 1 );
+				screenTextureScene.add(quadCamera);
+				screenOutputScene.add(quadCamera);
+				
+				// worldCamera is the dynamic camera 3d object that will be positioned, oriented and 
+				// constantly updated inside the 3d scene.  Its view will ultimately get passed back to the 
+				// stationary quadCamera, which renders the scene to a fullscreen quad (made up of 2 large triangles).
+				worldCamera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000);
+				pathTracingScene.add(worldCamera);
+				
+				controls = new FirstPersonCameraControls( worldCamera );
+							
+				cameraControlsObject = controls.getObject();
+				cameraControlsYawObject = controls.getYawObject();
+				cameraControlsPitchObject = controls.getPitchObject();
+				
+				pathTracingScene.add( cameraControlsObject );
+
+				// for flyCam
+				cameraControlsObject.position.set(278, 350, 400);
+				///cameraControlsYawObject.rotation.y = 0.0;
+				// look slightly downward
+				//cameraControlsPitchObject.rotation.x = -0.4;
+				
+				oldYawRotation = cameraControlsYawObject.rotation.y;
+				oldPitchRotation = cameraControlsPitchObject.rotation.x;
+				
+				// now that we moved and rotated the camera, the following line force-updates the camera's matrix,
+				//  and prevents rendering the very first frame in the old default camera position/orientation
+				cameraControlsObject.updateMatrixWorld(true);
+				
+				pathTracingRenderTarget = new THREE.WebGLRenderTarget( (window.innerWidth * pixelRatio), (window.innerHeight * pixelRatio), {
+					minFilter: THREE.NearestFilter,
+					magFilter: THREE.NearestFilter,
+					format: THREE.RGBAFormat,
+					type: THREE.FloatType,
+					depthBuffer: false,
+					stencilBuffer: false
+				} );
+				pathTracingRenderTarget.texture.generateMipmaps = false;
+				
+				screenTextureRenderTarget = new THREE.WebGLRenderTarget( (window.innerWidth * pixelRatio), (window.innerHeight * pixelRatio), {
+					minFilter: THREE.NearestFilter, 
+					magFilter: THREE.NearestFilter,
+					format: THREE.RGBAFormat,
+					type: THREE.FloatType,
+					depthBuffer: false,
+					stencilBuffer: false
+				} );
+				screenTextureRenderTarget.texture.generateMipmaps = false;
+				
+				
+				pathTracingGeometry = new THREE.PlaneBufferGeometry( 2, 2 );
+
+				pathTracingUniforms = {
+					
+					tPreviousTexture: { type: "t", value: screenTextureRenderTarget.texture },
+					//tTriangleTexture: { type: "t", value: triangleDataTexture },
+					
+					uCameraIsMoving: { type: "b1", value: false },
+					uCameraJustStartedMoving: { type: "b1", value: false },
+					uTime: { type: "f", value: 0.0 },
+					uSampleCounter: { type: "f", value: 0.0 },
+					uULen: { type: "f", value: 1.0 },
+					uVLen: { type: "f", value: 1.0 },
+					uApertureSize: { type: "f", value: 0.0 },
+					uFocusDistance: { type: "f", value: 1180.0 },
+					
+					uResolution: { type: "v2", value: new THREE.Vector2() },
+					
+					//uMeshBBox_min: { type: "v3", value: objMeshes.my_mesh.bounding_box_min },
+					//uMeshBBox_max: { type: "v3", value: objMeshes.my_mesh.bounding_box_max },
+					uRandomVector: { type: "v3", value: new THREE.Vector3() },
+				
+					uCameraMatrix: { type: "m4", value: new THREE.Matrix4() },
+					
+					uShortBoxInvMatrix: { type: "m4", value: new THREE.Matrix4() },
+					uShortBoxNormalMatrix: { type: "m3", value: new THREE.Matrix3() },
+					
+					uTallBoxInvMatrix: { type: "m4", value: new THREE.Matrix4() },
+					uTallBoxNormalMatrix: { type: "m3", value: new THREE.Matrix3() }
+	
+				};
+				
+				/*
+				pathTracingDefines = {
+					NUMBER_OF_TRIANGLES: total_number_of_triangles
+				};
+				*/
+			
+				pathTracingMaterial = new THREE.ShaderMaterial( {
+					uniforms: pathTracingUniforms,
+					//defines: pathTracingDefines,
+					vertexShader: document.getElementById( 'pathTracingVertexShader' ).textContent,
+					fragmentShader: document.getElementById( 'pathTracingFragmentShader' ).textContent,
+				        depthTest: false,
+                                        depthWrite: false
+                                } );
+
+				pathTracingMesh = new THREE.Mesh( pathTracingGeometry, pathTracingMaterial );
+				pathTracingScene.add( pathTracingMesh );
+				
+				
+				
+				// the following keeps the large scene ShaderMaterial quad right in front 
+				//   of the camera at all times. This is necessary because without it, the scene 
+				//   quad will fall out of view and get clipped when the camera rotates past 180 degrees.
+				worldCamera.add( pathTracingMesh );
+				
+				
+				
+				screenTextureGeometry = new THREE.PlaneBufferGeometry( 2, 2 );
+				
+				screenTextureMaterial = new THREE.ShaderMaterial( {
+					uniforms: screenTextureShader.uniforms,
+					vertexShader: screenTextureShader.vertexShader,
+					fragmentShader: screenTextureShader.fragmentShader,
+					depthWrite: false,
+					depthTest: false
+				} );
+				
+				screenTextureMaterial.uniforms.tTexture0.value = pathTracingRenderTarget.texture;
+				
+				screenTextureMesh = new THREE.Mesh(screenTextureGeometry, screenTextureMaterial);
+				screenTextureScene.add(screenTextureMesh);
+				
+				
+				
+				screenOutputGeometry = new THREE.PlaneBufferGeometry( 2, 2 );
+				
+				screenOutputMaterial = new THREE.ShaderMaterial( {
+					uniforms: screenOutputShader.uniforms,
+					vertexShader: screenOutputShader.vertexShader,
+					fragmentShader: screenOutputShader.fragmentShader,
+					depthWrite: false,
+					depthTest: false
+				} );
+				
+				screenOutputMaterial.uniforms.tTexture0.value = pathTracingRenderTarget.texture;
+				
+				screenOutputMesh = new THREE.Mesh(screenOutputGeometry, screenOutputMaterial);
+				screenOutputScene.add(screenOutputMesh);
+				
+				// Boxes
+				tallBoxGeometry = new THREE.BoxGeometry(1,1,1);
+				tallBoxMaterial = new THREE.MeshPhysicalMaterial( {
+					color: new THREE.Color(0.95, 0.95, 0.95), //RGB, ranging from 0.0 - 1.0
+					roughness: 1.0 // ideal Diffuse material	
+				} );
+				
+				tallBoxMesh = new THREE.Mesh(tallBoxGeometry, tallBoxMaterial);
+				pathTracingScene.add(tallBoxMesh);
+				tallBoxMesh.visible = false; // disable normal Three.js rendering updates of this object: 
+				// it is just a data placeholder as well as an Object3D that can be transformed/manipulated by 
+				// using familiar Three.js library commands. It is then fed into the GPU path tracing renderer
+				// through its 'matrixWorld' matrix. See below:
+				tallBoxMesh.rotation.set(0, Math.PI * 0.1, 0);
+				tallBoxMesh.position.set(180, 170, -350);
+				tallBoxMesh.updateMatrixWorld(true); // 'true' forces immediate matrix update
+				
+				pathTracingUniforms.uTallBoxInvMatrix.value.getInverse( tallBoxMesh.matrixWorld );
+				pathTracingUniforms.uTallBoxNormalMatrix.value.getNormalMatrix( tallBoxMesh.matrixWorld );
+				
+				shortBoxGeometry = new THREE.BoxGeometry(1,1,1);
+				shortBoxMaterial = new THREE.MeshPhysicalMaterial( {
+					color: new THREE.Color(0.95, 0.95, 0.95), //RGB, ranging from 0.0 - 1.0
+					roughness: 1.0 // ideal Diffuse material	
+				} );
+				
+				shortBoxMesh = new THREE.Mesh(shortBoxGeometry, shortBoxMaterial);
+				pathTracingScene.add(shortBoxMesh);
+				shortBoxMesh.visible = false;
+				shortBoxMesh.rotation.set(0, -Math.PI * 0.09, 0);
+				shortBoxMesh.position.set(370, 85, -170);
+				shortBoxMesh.updateMatrixWorld(true); // 'true' forces immediate matrix update
+				
+				pathTracingUniforms.uShortBoxInvMatrix.value.getInverse( shortBoxMesh.matrixWorld );
+				pathTracingUniforms.uShortBoxNormalMatrix.value.getNormalMatrix( shortBoxMesh.matrixWorld );
+
+				/*
+				// Fullscreen API
+				document.addEventListener("click", function() {
+					
+					if ( !document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement ) {
+
+						if (document.documentElement.requestFullscreen) {
+							document.documentElement.requestFullscreen();
+							
+						} else if (document.documentElement.mozRequestFullScreen) {
+							document.documentElement.mozRequestFullScreen();
+						
+						} else if (document.documentElement.webkitRequestFullscreen) {
+							document.documentElement.webkitRequestFullscreen();
+						
+						}
+
+					}
+				});
+				*/
+				
+				// onWindowResize() must be at the end of the init() function
+				onWindowResize();
+				
+				// everything is set up, now we can start animating
+				animate();
+				
+			} // end function init()
+			
+			
+			
+			
+			
 			function animate() {
 				
 				requestAnimationFrame( animate );
@@ -1812,18 +1246,18 @@ void main( void )
 					cameraRecentlyMoving = false;
 					
 				}
-				
+					
 				if(cameraIsMoving)	
 					pathTracingUniforms.uTime.value = elapsedTime;
 				pathTracingUniforms.uCameraIsMoving.value = cameraIsMoving;
 				pathTracingUniforms.uCameraJustStartedMoving.value = cameraJustStartedMoving;
-				pathTracingUniforms.uRandomVector.value = randomVector.set( Math.random(), Math.random(), Math.random() );
 				pathTracingUniforms.uSampleCounter.value = sampleCounter;
-				screenOutputUniforms.uOneOverSampleCounter.value = 1.0 / sampleCounter;
-				
+				pathTracingUniforms.uRandomVector.value = randomVector.set( Math.random(), Math.random(), Math.random() );
 				// CAMERA
 				cameraControlsObject.updateMatrixWorld(true);			
 				pathTracingUniforms.uCameraMatrix.value.copy( worldCamera.matrixWorld );
+				screenOutputMaterial.uniforms.uOneOverSampleCounter.value = 1.0 / sampleCounter;
+				
 				
 				cameraInfoElement.innerHTML = "Press 'SpaceBar' to run Water simulation" + "<br>" + "FOV: " + worldCamera.fov + " / Aperture: " + apertureSize.toFixed(2) + " / FocusDistance: " + focusDistance + "<br>" + "Samples: " + sampleCounter;
 				
