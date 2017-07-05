@@ -332,7 +332,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			}
 			mask *= intersec.color;
 			accumCol += calcDirectLightingSphere(mask, x, nl, lightChoice, seed);
-                        
+                        /*
 			if (uCameraIsMoving)
 			{
 				// Russian Roulette
@@ -341,7 +341,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 				else mask *= 5.0;
 				
 			}
-			
+			*/
 			sampleDiffuseBudget -= 1;
 			if (sampleDiffuseBudget < 0) break;
 			
