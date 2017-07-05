@@ -135,6 +135,7 @@ varying vec2 vUv;
 #define VOLUME 6
 #define TRANSLUCENT 7
 #define SPECSUB 8
+#define WATER 9
 
 `;
 
@@ -567,10 +568,10 @@ float ParaboloidIntersect( float rad, float height, vec3 pos, Ray r, out vec3 n 
 THREE.ShaderChunk[ 'pathtracing_torus_intersect' ] = `
 
 //-----------------------------------------------------------------------
-float TorusIntersect( vec3 pos, float rad0, float rad1, Ray ray )
+float TorusIntersect( float rad0, float rad1, vec3 pos, Ray ray )
 //-----------------------------------------------------------------------
 {
-	vec3 rO = ray.origin;
+	vec3 rO = ray.origin - pos;
 	vec3 rD = ray.direction;
 	
 	float Ra2 = rad0*rad0;
@@ -612,7 +613,6 @@ float TorusIntersect( vec3 pos, float rad0, float rad1, Ray ray )
 		
 	float d1 = z   - 3.0*p;
 	float d2 = z*z - 3.0*r;
-
 	if( abs(d1)<0.0001 )
 	{
 		if( d2<0.0 ) return INFINITY;
@@ -636,7 +636,6 @@ float TorusIntersect( vec3 pos, float rad0, float rad1, Ray ray )
 		if( t1>0.0 ) result=t1;
 		else if( t2>0.0 ) result=t2;
 	}
-
 	h = d1SqMinusZ - d2;
 	if( h>0.0 )
 	{
@@ -646,7 +645,6 @@ float TorusIntersect( vec3 pos, float rad0, float rad1, Ray ray )
 		if( t1>0.0 ) result=min(result,t1);
 		else if( t2>0.0 ) result=min(result,t2);
 	}
-
 	return result;
 }
 
