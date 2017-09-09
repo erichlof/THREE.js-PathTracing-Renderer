@@ -685,7 +685,22 @@ float TorusIntersect( float rad0, float rad1, vec3 pos, Ray ray )
 
 `;
 
+THREE.ShaderChunk[ 'pathtracing_plane_intersect' ] = `
 
+//-----------------------------------------------------------------------
+float PlaneIntersect( vec4 pla, Ray r )
+//-----------------------------------------------------------------------
+{
+	vec3 n = normalize(-pla.xyz);
+	float denom = dot(n, r.direction);
+	if (denom <= 0.0)
+		return INFINITY;
+	
+        vec3 pOrO = (pla.w * n) - r.origin; 
+        return dot(pOrO, n) / denom; 
+}
+
+`;
 
 THREE.ShaderChunk[ 'pathtracing_quad_intersect' ] = `
 
