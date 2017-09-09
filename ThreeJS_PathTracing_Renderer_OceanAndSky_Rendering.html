@@ -213,7 +213,7 @@ float getOceanWaterDepth( vec3 p )
 // CLOUDS
 /* Credit: some of the following cloud code is borrowed from https://www.shadertoy.com/view/XtBXDw posted by user 'valentingalea' */
 
-#define THICKNESS      20.0
+#define THICKNESS      30.0
 #define ABSORPTION     0.5
 #define N_MARCH_STEPS  16
 #define N_LIGHT_STEPS  3
@@ -235,8 +235,8 @@ float fbm( vec3 p )
 {
 	float t;
 	t  = 0.5 * noise3D(p);   p = m * p * 2.9;
-	t += 0.25 * noise3D(p);  p = m * p * 2.9;
-	t += 0.125 * noise3D(p); p = m * p * 2.9;
+	t += 0.25 * noise3D(p);  p = m * p * 3.0;
+	t += 0.125 * noise3D(p); p = m * p * 3.1;
 	t += 0.0625 * noise3D(p);
 	
 	return t;
@@ -271,12 +271,12 @@ float cloud_light( vec3 pos, vec3 dir_step, float cov )
 vec4 render_clouds( Ray eye, vec3 p, vec3 sunDirection )
 {
 	float march_step = THICKNESS / float(N_MARCH_STEPS);
-	vec3 pos = p + vec3(uTime * -3.0, uTime * -1.0, uTime * -2.0);
+	vec3 pos = p + vec3(uTime * -3.0, uTime * -0.5, uTime * -2.0);
 	vec3 dir_step = eye.direction / clamp(eye.direction.y, 0.0, 1.0) * march_step;
 	vec3 light_step = sunDirection / clamp(eye.direction.y, 0.0, 1.0);
 	
-	float cov = abs(cos(uTime * 0.05));
-	cov = mix(0.35, 0.7, cov);
+	float cov = abs(sin((uTime) * 0.05));
+	cov = mix(0.35, 0.75, cov);
 	float T = 1.0; // transmitance
 	vec3 C = vec3(0); // color
 	float alpha = 0.0;
@@ -523,7 +523,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout float seed )
 	vec3 skyColor = Get_Sky_Color(r, sunDirection);
 	vec3 randVec = vec3(rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0);
 	Ray eyeRay = Ray(r.origin * 0.01, r.direction);
-	float dc = clamp(PlaneIntersect( vec4(0, -1, 0, 100.0), eyeRay ), 0.0, 7000.0);
+	float dc = clamp(PlaneIntersect( vec4(0, -1, 0, 150.0 + (rand(seed) * 2.0)), eyeRay ), 0.0, 10000.0);
 	vec3 cloudPos = eyeRay.origin + eyeRay.direction * dc;
 	vec4 cld = render_clouds(eyeRay, cloudPos, sunDirection);
 	
@@ -866,7 +866,7 @@ void main( void )
 			var focusDistance = 1180.0;
 			var increaseFocusDist = false;
 			var decreaseFocusDist = false;
-			var pixelRatio = window.devicePixelRatio * 0.5;
+			var pixelRatio = window.devicePixelRatio * 0.45;
 			var TWO_PI = Math.PI * 2;
 			var randomVector = new THREE.Vector3();
 			var sampleCounter = 1.0;
