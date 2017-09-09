@@ -13,7 +13,7 @@ For comparison, here is a real photograph of the original Cornell Box vs. a rend
 
 * [Water Rendering Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_Water_Rendering.html) Renders photo-realistic water and simulates waves at 60 FPS. No triangle meshes are needed, as opposed to other traditional engines/renderers. In fact, not a single triangle was harmed during the making of this water volume! It is done through object/ray warping. Total cost: 1 ray-box intersection test!  
 
-* [Ocean and Sky Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_Ocean_Rendering.html) which models an enormous calm ocean underneath a realistic physical sky. Now has path-traced procedural clouds! (clouds are still a W.I.P.)
+* [Ocean and Sky Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_OceanAndSky_Rendering.html) which models an enormous calm ocean underneath a realistic physical sky. Now has more photo-realistic procedural clouds!
 
 * [Quadric Geometry Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_QuadricGeometryShowcase.html) showing different quadric (mathematical) shapes (Warning: this may take 7-10 seconds to load/compile!)
 
