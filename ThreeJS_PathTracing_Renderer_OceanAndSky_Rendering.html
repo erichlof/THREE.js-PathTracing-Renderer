@@ -519,19 +519,22 @@ vec3 calcDirectLightingSun( vec3 mask, vec3 x, vec3 nl, vec3 sunDirection, Ray r
 vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout float seed )
 //-----------------------------------------------------------------------
 {
-	Ray cameraRay = r;
-	vec3 skyColor = Get_Sky_Color(r, sunDirection);
 	vec3 randVec = vec3(rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0);
-	Ray eyeRay = Ray(r.origin * 0.01, r.direction);
-	float dc = clamp(PlaneIntersect( vec4(0, -1, 0, 150.0 + (rand(seed) * 2.0)), eyeRay ), 0.0, 10000.0);
-	vec3 cloudPos = eyeRay.origin + eyeRay.direction * dc;
-	vec4 cld = render_clouds(eyeRay, cloudPos, sunDirection);
+	Ray cameraRay = r;
+	Ray skyRay = Ray(r.origin, vec3(r.direction.x, abs(r.direction.y), r.direction.z) );
+	vec3 skyColor = Get_Sky_Color(skyRay, sunDirection);
 	
+	Ray cloudRay = Ray(r.origin * 0.01, vec3(r.direction.x, abs(r.direction.y), r.direction.z) );
+	float dc = clamp(PlaneIntersect( vec4(0, -1, 0, 150.0 + (rand(seed) * 2.0)), cloudRay ), 0.0, 10000.0);
+	vec3 cloudPos = cloudRay.origin + cloudRay.direction * dc;
+	vec4 cld = render_clouds(cloudRay, cloudPos, sunDirection);
+	cld.rgb *= clamp( Get_Sky_Color( Ray(cloudPos, normalize(sunDirection + (randVec * 0.1))), sunDirection ), 0.0, 1.0 );
+	
+	Intersection intersec;
 	vec3 accumCol = vec3(0.0);
         vec3 mask = vec3(1.0);
 	vec3 n, nl, x, firstX;
-        Intersection intersec;
-	
+        
 	float t = INFINITY;
 	int previousIntersecType = -1;
 	bool checkOcean = true;
@@ -553,26 +556,22 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout float seed )
 		t = SceneIntersect(r, intersec, checkOcean);
 		
 		// ray hits sky first
-		if (t == INFINITY && depth == 0)
+		if (t == INFINITY && depth == 0 )
 		{
 			cloudHit = true;
 			firstX = cloudPos;
-			cld.rgb *= clamp( Get_Sky_Color( Ray(cloudPos, normalize(sunDirection + (randVec * 0.1))), sunDirection ), 0.0, 1.0 );
-			
-			if ( cld.a > (0.5 + (rand(seed) * 0.3)) )
-				accumCol += cld.rgb / (cld.a + 0.000001);
-			else
-				accumCol += mix(skyColor, cld.rgb / (cld.a + 0.000001), cld.a);
 			
 			break;	
 		}
 		
 		// if ray bounced off of water and hits sky
-		if (t == INFINITY && previousIntersecType == REFR)
+		if ( t == INFINITY && previousIntersecType == REFR )
 		{
 			skyColor = Get_Sky_Color(r, sunDirection);
-			accumCol += mask * skyColor;
-			break;
+			accumCol = mask * skyColor;
+			cloudHit = true; // uncomment for clouds reflection in water
+			
+			break;	
 		}
 		
 		// if ray bounced off of mirror box and hits sky
@@ -583,13 +582,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout float seed )
 			if (depth == 1)
 			{
 				firstX = cloudPos;
-				cld.rgb *= clamp( Get_Sky_Color( Ray(cloudPos, normalize(sunDirection + (randVec * 0.2))), sunDirection ), 0.0, 1.0 );
-
-
-				if ( cld.a > (0.5 + (rand(seed) * 0.3)) )
-					accumCol += cld.rgb / (cld.a + 0.000001);
-				else
-					accumCol += mix(skyColor, cld.rgb / (cld.a + 0.000001), cld.a);
+				cloudHit = true;
 			}
 			else
 			{
@@ -731,6 +724,11 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout float seed )
 	
 	if (cloudHit)
 	{
+		if ( cld.a > (0.5 + (rand(seed) * 0.3)) )
+			accumCol += cld.rgb / (cld.a + 0.000001);
+		else
+			accumCol += mix(skyColor, cld.rgb / (cld.a + 0.000001), cld.a);
+			
 		hitDistance = distance(cameraRay.origin * 0.01, cloudPos);
 		accumCol = mix( skyColor, accumCol, clamp( exp( -log(hitDistance * 0.002) ) , 0.0, 1.0 ) );
 	}
@@ -1116,7 +1114,7 @@ void main( void )
 				pathTracingScene.add( cameraControlsObject );
 
 				// for flyCam
-				cameraControlsObject.position.set(278, 270, 1050);
+				cameraControlsObject.position.set(278, 220, 1050);
 				///cameraControlsYawObject.rotation.y = 0.0;
 				// look slightly upward
 				cameraControlsPitchObject.rotation.x = 0.005;
@@ -1147,6 +1145,7 @@ void main( void )
 					stencilBuffer: false
 				} );
 				screenTextureRenderTarget.texture.generateMipmaps = false;
+				
 				
 				noiseMediumTexture = new THREE.TextureLoader().load( 'textures/rgbNoise256.png' );
 				noiseMediumTexture.wrapS = THREE.RepeatWrapping;
