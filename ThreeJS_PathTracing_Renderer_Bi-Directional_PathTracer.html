@@ -208,11 +208,26 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 	
 		float t = SceneIntersect(lightRay, lightIntersec);
 		
-		if (t == INFINITY || lightIntersec.type == LIGHT)
+		if (t == INFINITY && depth == 5)
 		{
-			//accumCol = vec3(0);
-			//skip = true;
+			accumCol = vec3(0);
+			skip = true;
 			break;
+		}
+		
+		if (t == INFINITY && depth < 5)
+		{
+			// try again
+			randPointOnLight.x = mix(quads[5].v0.x, quads[5].v1.x, rand(seed));
+			randPointOnLight.y = quads[5].v0.y;
+			randPointOnLight.z = mix(quads[5].v0.z, quads[5].v3.z, rand(seed));
+			randLightDir = randomCosWeightedDirectionInHemisphere(quads[5].normal, seed);
+			randLightDir = normalize(randLightDir);
+			lightRay = Ray( randPointOnLight, randLightDir );
+			lightRay.origin += lightRay.direction * 2.0;
+			lightX = lightRay.origin;
+			nlLightPath = quads[5].normal;
+			maskLightPath = quads[5].emission * max(0.0, dot(lightRay.direction, nlLightPath));
 		}
 		
 		// useful data 
@@ -251,7 +266,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			continue;
 		}
 		
-	} // end for (int depth = 0; depth < 5; depth++)
+	} // end for (int depth = 0; depth < 6; depth++)
 	
 	
 	// Eye path tracing (from Camera) /////////////////////////////////////////////////////////////////
@@ -310,7 +325,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			continue;
 		}
 			
-	} // end for (int depth = 0; depth < 5; depth++)
+	} // end for (int depth = 0; depth < 4; depth++)
 	
 		
 	// Connect Camera path and Light path ////////////////////////////////////////////////////////////
