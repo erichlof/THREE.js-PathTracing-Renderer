@@ -74,8 +74,8 @@ uniform mat3 uTallBoxNormalMatrix;
 
 #include <pathtracing_uniforms_and_defines>
 
-#define N_QUADS 8
-#define N_BOXES 2
+#define N_QUADS 6
+#define N_BOXES 3
 
 struct Ray { vec3 origin; vec3 direction; };
 struct Quad { vec3 normal; vec3 v0; vec3 v1; vec3 v2; vec3 v3; vec3 emission; vec3 color; int type; };
@@ -100,19 +100,30 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	vec3 normal;
         float d;
 	float t = INFINITY;
-		
+	
 	for (int i = 0; i < N_QUADS; i++)
         {
 		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, quads[i].normal, r );
 		if (d < t)
 		{
 			t = d;
-			intersec.normal = (quads[i].normal);
+			intersec.normal = quads[i].normal;
 			intersec.emission = quads[i].emission;
 			intersec.color = quads[i].color;
 			intersec.type = quads[i].type;
 		}
         }
+	
+	// LIGHT BLOCKER BOX
+	d = BoxIntersect( boxes[2].minCorner, boxes[2].maxCorner, r, normal );
+	if (d < t)
+	{
+		t = d;
+		intersec.normal = normalize(normal);
+		intersec.emission = boxes[2].emission;
+		intersec.color = boxes[2].color;
+		intersec.type = boxes[2].type;
+	}
 	
 	
 	// TALL MIRROR BOX
@@ -164,185 +175,158 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 vec3 CalculateRadiance( Ray r, inout float seed )
 //-----------------------------------------------------------------------
 {
-	Intersection intersec;
-	vec3 accumCol = vec3(0.0);
-	vec3 maskEyePath = vec3(1.0);
+	Intersection intersec, eyeIntersec, lightIntersec;
+	vec3 accumCol = vec3(0);
+	vec3 maskEyePath = vec3(1);
 	vec3 maskLightPath = quads[5].emission;
 	vec3 eyeX = vec3(0);
 	vec3 lightX = vec3(0);
 	vec3 nlEyePath;
 	vec3 nlLightPath;
-	float eyePathWeight = 1.0;
-	float lightPathWeight = 1.0;
-	int numDiffuseBouncesEye = 0;
-	int numDiffuseBouncesLight = 0;
-	bool bounceIsSpecularEye = true;
-	bool bounceIsSpecularLight = true;
-	
-	// Eye path tracing (from Camera) ////////////////////////////////////
-	
-	for (int depth = 0; depth < 10; depth++)
-	{
-		
-		float t = SceneIntersect(r, intersec);
-		
-		if (t == INFINITY)
-		{
-			return vec3(0);
-		}
-		
-		// if we reached something bright, don't spawn any more rays
-		if (intersec.type == LIGHT)
-		{
-			if (depth<2)
-			{
-				accumCol = maskEyePath * quads[5].emission;
-				return accumCol;
-			}
-			else
-			{
-				break;
-				
-			}
-		}
-		
-		// useful data 
-		vec3 n = intersec.normal;
-		nlEyePath = dot(n,r.direction) < 0.0 ? normalize(n) : normalize(n * -1.0);
-		vec3 x = r.origin + r.direction * t;
-		
-		
-		if (intersec.type == DIFF) // Ideal DIFFUSE reflection
-		{
-			
-			maskEyePath *= intersec.color;
-			
-			//accumCol += calcDirectLightingQuad(maskEyePath, x, nlEyePath, quads[5]);
-			
-			if (numDiffuseBouncesEye == 2)
-			{
-				eyeX = x;
-				eyeX += nlEyePath * 2.0;
-				break;
-			}
-			else
-			{
-				// choose random Diffuse sample vector
-				vec3 d = randomCosWeightedDirectionInHemisphere( nlEyePath, seed );
-				r = Ray( x, normalize(d) );
-				r.origin += r.direction * 2.0;
-				eyeX = r.origin;
-
-				eyePathWeight = max(0.001, dot(r.direction, nlEyePath));
-				maskEyePath *= eyePathWeight;
-				bounceIsSpecularEye = false;
-				numDiffuseBouncesEye ++;
-
-				continue;
-			}
-		}
-		
-		if (intersec.type == SPEC)  // Ideal SPECULAR reflection
-		{
-			maskEyePath *= intersec.color;
-			
-			r = Ray( x, reflect(r.direction, nlEyePath) );
-			r.origin += nlEyePath * 2.0;
-			eyeX = r.origin;
-			bounceIsSpecularEye = true;
-			continue;
-		}
-		
-		
-	} // end for (int depth = 0; depth < 10; depth++)
-	
-	
-	// Light path tracing (from Light source) ///////////////////////////////////
+	bool bounceIsSpecularEye = false;
+	bool bounceIsSpecularLight = false;
+	bool skip = false;
 
 	
+	// Light path tracing (from Light source) /////////////////////////////////////////////////////////
+
 	vec3 randPointOnLight;
 	randPointOnLight.x = mix(quads[5].v0.x, quads[5].v1.x, rand(seed));
 	randPointOnLight.y = quads[5].v0.y;
 	randPointOnLight.z = mix(quads[5].v0.z, quads[5].v3.z, rand(seed));
 	
-			// TODO make sure randDir follows light plane normal
-	vec3 randDir = vec3(rand(seed) * 2.0 - 1.0, rand(seed) - 1.1, rand(seed) * 2.0 - 1.0);
-	//vec3 randDir = vec3(0.0,-1.0,0.0);
-	Ray lightRay = Ray( randPointOnLight, normalize(randDir) );
+	vec3 randLightDir = randomCosWeightedDirectionInHemisphere(quads[5].normal, seed);
+	randLightDir = normalize(randLightDir);
+	Ray lightRay = Ray( randPointOnLight, randLightDir );
 	lightRay.origin += lightRay.direction * 2.0;
 	lightX = lightRay.origin;
+	nlLightPath = quads[5].normal;
+	maskLightPath *= max(0.0, dot(lightRay.direction, nlLightPath));
 	
-	
-	for (int depth = 0; depth < 10; depth++)
+	for (int depth = 0; depth < 6; depth++)
 	{
+	
+		float t = SceneIntersect(lightRay, lightIntersec);
 		
-		float t = SceneIntersect(lightRay, intersec);
-		
-		if (intersec.type == LIGHT || t == INFINITY )
+		if (t == INFINITY || lightIntersec.type == LIGHT)
 		{
-			lightX = randPointOnLight;
-			lightX += quads[5].normal * 2.0;
-			maskLightPath = quads[5].emission;
-			nlLightPath = quads[5].normal;
+			//accumCol = vec3(0);
+			//skip = true;
 			break;
 		}
 		
 		// useful data 
-		vec3 n = intersec.normal;
-		nlLightPath = dot(n,lightRay.direction) < 0.0 ? normalize(n) : normalize(n * -1.0);
+		vec3 n = normalize(lightIntersec.normal);
+		nlLightPath = dot(n, lightRay.direction) < 0.0 ? normalize(n) : normalize(n * -1.0);
 		vec3 x = lightRay.origin + lightRay.direction * t;
-
-
-		if (intersec.type == DIFF) // Ideal DIFFUSE reflection
+		
+		
+		if (lightIntersec.type == DIFF) // Ideal DIFFUSE reflection
 		{
+			maskLightPath *= max(0.0, dot(-lightRay.direction, nlLightPath));
+			maskLightPath *= lightIntersec.color;
 			
-			maskLightPath *= intersec.color;
-			maskLightPath *= max(0.001, dot(-lightRay.direction, nlLightPath));
+			// choose random Diffuse sample vector
+			vec3 d = randomCosWeightedDirectionInHemisphere( nlLightPath, seed );
+			lightRay = Ray( x, normalize(d) );
+			lightRay.origin += lightRay.direction * 2.0;
+			lightX = lightRay.origin;
+			bounceIsSpecularLight = false;
 			
-			if (numDiffuseBouncesLight == 2)
-			{
-				lightX = x;
-				lightX += nlLightPath * 2.0;
+			if (depth > 4 && rand(seed) < 0.5) 
 				break;
-			}	
-			else
-			{	
-				// choose random Diffuse sample vector
-				vec3 d = randomCosWeightedDirectionInHemisphere( nlLightPath, seed );
-				lightRay = Ray( x, normalize(d) );
-				lightRay.origin += lightRay.direction * 2.0;
-				lightX = lightRay.origin;
-
-				bounceIsSpecularLight = false;
-				numDiffuseBouncesLight ++;
-				continue;
-			}
+			
+			continue;
 		}
 		
-		if (intersec.type == SPEC)  // Ideal SPECULAR reflection
+		if (lightIntersec.type == SPEC)  // Ideal SPECULAR reflection
 		{
-			maskLightPath *= intersec.color;
+			maskLightPath *= lightIntersec.color;
 			
 			lightRay = Ray( x, reflect(lightRay.direction, nlLightPath) );
 			lightRay.origin += nlLightPath * 2.0;
 			lightX = lightRay.origin;
 			bounceIsSpecularLight = true;
+			
 			continue;
 		}
 		
-	} // end for (int depth = 0; depth < 10; depth++)
+	} // end for (int depth = 0; depth < 5; depth++)
 	
 	
-	Ray connectRay = Ray(lightX, normalize(eyeX-lightX));
+	// Eye path tracing (from Camera) /////////////////////////////////////////////////////////////////
+	
+	for (int depth = 0; depth < 4; depth++)
+	{
+			
+		float t = SceneIntersect(r, eyeIntersec);
+		
+		if (t == INFINITY)
+		{
+			accumCol = vec3(0);
+			skip = true;
+			break;
+		}
+		
+		if (eyeIntersec.type == LIGHT)
+		{
+			accumCol = maskEyePath * quads[5].emission;
+			skip = true;
+			break;
+		}
+		
+		// useful data 
+		vec3 n = normalize(eyeIntersec.normal);
+		nlEyePath = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(n * -1.0);
+		vec3 x = r.origin + r.direction * t;
+		
+		
+		if (eyeIntersec.type == DIFF) // Ideal DIFFUSE reflection
+		{
+			maskEyePath *= eyeIntersec.color;
+			
+			// choose random Diffuse sample vector
+			vec3 d = randomCosWeightedDirectionInHemisphere( nlEyePath, seed );
+			r = Ray( x, normalize(d) );
+			r.origin += r.direction * 2.0;
+			eyeX = r.origin;
+			bounceIsSpecularEye = false;
+			
+			if (rand(seed) < 0.5) 
+				break;
+			
+			maskEyePath *= max(0.0, dot(r.direction, nlEyePath));
+			continue;		
+		}
+		
+		if (eyeIntersec.type == SPEC)  // Ideal SPECULAR reflection
+		{
+			maskEyePath *= eyeIntersec.color;
+			
+			r = Ray( x, reflect(r.direction, nlEyePath) );
+			r.origin += nlEyePath * 2.0;
+			bounceIsSpecularEye = true;
+			
+			continue;
+		}
+			
+	} // end for (int depth = 0; depth < 5; depth++)
+	
+		
+	// Connect Camera path and Light path ////////////////////////////////////////////////////////////
+	
+	Ray connectRay = Ray(eyeX, normalize(lightX - eyeX));
 	float connectDist = distance(eyeX, lightX);
 	
-	float c = SceneIntersect(connectRay, intersec);
-	if (c > connectDist) 
+	if ( !skip ) 
 	{
-		maskEyePath *= max(0.01, dot(-connectRay.direction, nlEyePath));
+		float c = SceneIntersect(connectRay, intersec);
+		if (c >= connectDist)
+		{
+			maskEyePath *= max(0.0, dot(connectRay.direction, nlEyePath));
 		
-		maskLightPath *= max(0.01, dot(connectRay.direction, nlLightPath));
-				accumCol = maskLightPath * maskEyePath * quads[5].emission * 0.2;	
+			accumCol = maskLightPath * maskEyePath * rand(seed);
+		}
 	}
 
 	return accumCol;      
@@ -353,27 +337,28 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 void SetupScene(void)
 //-----------------------------------------------------------------------
 {
-	vec3 z  = vec3(0.0, 0.0, 0.0);// No color value, Black        
+	vec3 z  = vec3(0);// No color value, Black        
 	vec3 L1 = vec3(0.936507, 0.642866, 0.310431) * 50.0;// Bright Yellowish light
 	
 	quads[0] = Quad( vec3( 0.0, 0.0, 1.0), vec3(  0.0,   0.0,-559.2), vec3(549.6,   0.0,-559.2), vec3(549.6, 548.8,-559.2), vec3(  0.0, 548.8,-559.2),  z, vec3(1),  DIFF);// Back Wall
-	quads[1] = Quad( vec3( 1.0, 0.0, 0.0), vec3(  0.0,   0.0,   0.0), vec3(  0.0,   0.0,-559.2), vec3(  0.0, 548.8,-559.2), vec3(  0.0, 548.8,   0.0),  z, vec3(0.7, 0.12,0.05),  DIFF);// Left Wall Red
-	quads[2] = Quad( vec3(-1.0, 0.0, 0.0), vec3(549.6,   0.0,-559.2), vec3(549.6,   0.0,   0.0), vec3(549.6, 548.8,   0.0), vec3(549.6, 548.8,-559.2),  z, vec3(0.2, 0.4, 0.36),  DIFF);// Right Wall Green
+	quads[1] = Quad( vec3( 1.0, 0.0, 0.0), vec3(  0.0,   0.0,   0.0), vec3(  0.0,   0.0,-559.2), vec3(  0.0, 548.8,-559.2), vec3(  0.0, 548.8,   0.0),  z, vec3(0.7, 0.12,0.05), DIFF);// Left Wall Red
+	quads[2] = Quad( vec3(-1.0, 0.0, 0.0), vec3(549.6,   0.0,-559.2), vec3(549.6,   0.0,   0.0), vec3(549.6, 548.8,   0.0), vec3(549.6, 548.8,-559.2),  z, vec3(0.2, 0.4, 0.36), DIFF);// Right Wall Green
 	quads[3] = Quad( vec3( 0.0,-1.0, 0.0), vec3(  0.0, 548.8,-559.2), vec3(549.6, 548.8,-559.2), vec3(549.6, 548.8,   0.0), vec3(  0.0, 548.8,   0.0),  z, vec3(1),  DIFF);// Ceiling
 	quads[4] = Quad( vec3( 0.0, 1.0, 0.0), vec3(  0.0,   0.0,   0.0), vec3(549.6,   0.0,   0.0), vec3(549.6,   0.0,-559.2), vec3(  0.0,   0.0,-559.2),  z, vec3(1),  DIFF);// Floor
-	quads[5] = Quad( vec3( 0.0,-1.0, 0.0), vec3(213.0, 548.0,-332.0), vec3(343.0, 548.0,-332.0), vec3(343.0, 548.0,-227.0), vec3(213.0, 548.0,-227.0), L1,                    z, LIGHT);// Area Light Box in ceiling
+	quads[5] = Quad( vec3( 0.0,-1.0, 0.0), vec3(213.0, 548.0,-332.0), vec3(343.0, 548.0,-332.0), vec3(343.0, 548.0,-227.0), vec3(213.0, 548.0,-227.0), L1,       z, LIGHT);// Area Light Rectangle in ceiling
 	
-	quads[6] = Quad( vec3( 0.0,1.0, 0.0), vec3(143.0, 540.0,-402.0), vec3(413.0, 540.0,-402.0), vec3(413.0, 540.0,-157.0), vec3(143.0, 540.0,-157.0),  z, vec3(1),  DIFF);// Light Blocker facing up
-	quads[7] = Quad( vec3( 0.0,-1.0, 0.0), vec3(143.0, 535.0,-402.0), vec3(413.0, 535.0,-402.0), vec3(413.0, 535.0,-157.0), vec3(143.0, 535.0,-157.0),  z, vec3(1),  DIFF);// Light Blocker facing down
+	boxes[0] = Box( vec3(-82.0,-170.0, -80.0), vec3(82.0,170.0, 80.0), z, vec3(1), SPEC);// Tall Mirror Box Left
+	boxes[1] = Box( vec3(-86.0, -85.0, -80.0), vec3(86.0, 85.0, 80.0), z, vec3(1), DIFF);// Short Diffuse Box Right
 	
-	boxes[0]  = Box( vec3(-82.0,-170.0, -80.0), vec3(82.0,170.0, 80.0), z, vec3(1), SPEC);// Tall Mirror Box Left
-	boxes[1]  = Box( vec3(-86.0, -85.0, -80.0), vec3(86.0, 85.0, 80.0), z, vec3(1), DIFF);// Short Diffuse Box Right
-	
+	boxes[2] = Box( vec3(183.0, 534.0, -362.0), vec3(373.0, 535.0, -197.0), z, vec3(1), DIFF);// Light Blocker Box
 }
+
 
 #include <pathtracing_main>
 
+
 		</script>
+		
 		
 		
 		<script>
