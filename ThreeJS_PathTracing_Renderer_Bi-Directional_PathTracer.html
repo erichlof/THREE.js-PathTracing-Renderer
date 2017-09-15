@@ -210,26 +210,9 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 		
 		if ( t == INFINITY || lightIntersec.type == LIGHT )
 		{
-			if (depth < 5)
-			{
-				// try again
-				randPointOnLight.x = mix(quads[5].v0.x, quads[5].v1.x, rand(seed));
-				randPointOnLight.y = quads[5].v0.y;
-				randPointOnLight.z = mix(quads[5].v0.z, quads[5].v3.z, rand(seed));
-				randLightDir = randomCosWeightedDirectionInHemisphere(quads[5].normal, seed);
-				randLightDir = normalize(randLightDir);
-				lightRay = Ray( randPointOnLight, randLightDir );
-				lightRay.origin += lightRay.direction * 2.0;
-				lightX = lightRay.origin;
-				nlLightPath = quads[5].normal;
-				maskLightPath = quads[5].emission * max(0.0, dot(lightRay.direction, nlLightPath));
-			}
-			else
-			{
-				accumCol = vec3(0);
-				skip = true;
-				break;
-			}
+			accumCol = vec3(0);
+			skip = true;
+			break;
 		}
 		
 		
@@ -310,8 +293,8 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			eyeX = r.origin;
 			bounceIsSpecularEye = false;
 			
-			if (rand(seed) < 0.5) 
-				break;
+			//if (rand(seed) < 0.5) 
+			//	break;
 			
 			maskEyePath *= max(0.0, dot(r.direction, nlEyePath));
 			continue;		
