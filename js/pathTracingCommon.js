@@ -883,6 +883,13 @@ vec3 randomSphereDirection( inout float seed )
 	return vec3( sin(r.x) * vec2(sin(r.y), cos(r.y)), cos(r.x) );	
 }
 
+vec3 randomDirectionInHemisphere( vec3 n, inout float seed )
+{
+	vec2 r = vec2(rand(seed), rand(seed)) * TWO_PI;
+	vec3 dr = vec3( sin(r.x) * vec2(sin(r.y), cos(r.y)), cos(r.x) );	
+	return dot(dr,n) * dr;
+}
+
 vec3 randomCosWeightedDirectionInHemisphere( vec3 nl, inout float seed )
 {
 	float up = sqrt(rand(seed)); // weighted cos(theta)
@@ -1008,7 +1015,7 @@ void main( void )
 	else if ( uCameraIsMoving )
 	{
 		previousColor *= 0.5; // motion-blur trail amount (old image)
-		pixelColor *= (uSampleCounter) * 0.5; // brightness of new image (noisy)
+		pixelColor *= 0.5; // brightness of new image (noisy)
 	}
 		
 	gl_FragColor = vec4( pixelColor + previousColor, 1.0 );
