@@ -175,7 +175,8 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 vec3 CalculateRadiance( Ray r, inout float seed )
 //-----------------------------------------------------------------------
 {
-	Intersection intersec, eyeIntersec, lightIntersec;
+	Intersection eyeIntersec, lightIntersec;
+	Ray eyeRay = r;
 	vec3 accumCol = vec3(0);
 	vec3 maskEyePath = vec3(1);
 	vec3 maskLightPath = quads[5].emission;
@@ -195,26 +196,24 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 	randPointOnLight.y = quads[5].v0.y;
 	randPointOnLight.z = mix(quads[5].v0.z, quads[5].v3.z, rand(seed));
 	
-	vec3 randLightDir = randomCosWeightedDirectionInHemisphere(quads[5].normal, seed);
+	vec3 randLightDir = randomDirectionInHemisphere(quads[5].normal, seed);
 	randLightDir = normalize(randLightDir);
 	Ray lightRay = Ray( randPointOnLight, randLightDir );
 	lightRay.origin += lightRay.direction * 2.0;
 	lightX = lightRay.origin;
 	nlLightPath = quads[5].normal;
-	maskLightPath *= max(0.0, dot(lightRay.direction, nlLightPath));
+	//maskLightPath *= max(0.0, dot(lightRay.direction, nlLightPath));
 	
-	for (int depth = 0; depth < 6; depth++)
+	for (int depth = 0; depth < 5; depth++)
 	{
-	
+		
 		float t = SceneIntersect(lightRay, lightIntersec);
 		
-		if ( t == INFINITY || lightIntersec.type == LIGHT )
+		if (t == INFINITY || lightIntersec.type == LIGHT)
 		{
-			accumCol = vec3(0);
 			skip = true;
 			break;
 		}
-		
 		
 		// useful data 
 		vec3 n = normalize(lightIntersec.normal);
@@ -232,10 +231,8 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			lightRay = Ray( x, normalize(d) );
 			lightRay.origin += lightRay.direction * 2.0;
 			lightX = lightRay.origin;
-			bounceIsSpecularLight = false;
 			
-			if (depth > 4 && rand(seed) < 0.5) 
-				break;
+			bounceIsSpecularLight = false;
 			
 			continue;
 		}
@@ -246,25 +243,23 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			
 			lightRay = Ray( x, reflect(lightRay.direction, nlLightPath) );
 			lightRay.origin += nlLightPath * 2.0;
-			lightX = lightRay.origin;
 			bounceIsSpecularLight = true;
 			
 			continue;
 		}
 		
-	} // end for (int depth = 0; depth < 6; depth++)
+	} // end for (int depth = 0; depth < 5; depth++)
 	
 	
 	// Eye path tracing (from Camera) /////////////////////////////////////////////////////////////////
 	
-	for (int depth = 0; depth < 4; depth++)
+	for (int depth = 0; depth < 5; depth++)
 	{
-			
-		float t = SceneIntersect(r, eyeIntersec);
+	
+		float t = SceneIntersect(eyeRay, eyeIntersec);
 		
 		if (t == INFINITY)
 		{
-			accumCol = vec3(0);
 			skip = true;
 			break;
 		}
@@ -278,8 +273,8 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 		
 		// useful data 
 		vec3 n = normalize(eyeIntersec.normal);
-		nlEyePath = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(n * -1.0);
-		vec3 x = r.origin + r.direction * t;
+		nlEyePath = dot(n, eyeRay.direction) < 0.0 ? normalize(n) : normalize(n * -1.0);
+		vec3 x = eyeRay.origin + eyeRay.direction * t;
 		
 		
 		if (eyeIntersec.type == DIFF) // Ideal DIFFUSE reflection
@@ -288,30 +283,26 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			
 			// choose random Diffuse sample vector
 			vec3 d = randomCosWeightedDirectionInHemisphere( nlEyePath, seed );
-			r = Ray( x, normalize(d) );
-			r.origin += r.direction * 2.0;
-			eyeX = r.origin;
+			eyeRay = Ray( x, normalize(d) );
+			eyeRay.origin += eyeRay.direction * 2.0;
+			eyeX = eyeRay.origin;
 			bounceIsSpecularEye = false;
 			
-			//if (rand(seed) < 0.5) 
-			//	break;
-			
-			maskEyePath *= max(0.0, dot(r.direction, nlEyePath));
-			continue;		
+			continue;
 		}
 		
 		if (eyeIntersec.type == SPEC)  // Ideal SPECULAR reflection
 		{
 			maskEyePath *= eyeIntersec.color;
 			
-			r = Ray( x, reflect(r.direction, nlEyePath) );
-			r.origin += nlEyePath * 2.0;
+			eyeRay = Ray( x, reflect(eyeRay.direction, nlEyePath) );
+			eyeRay.origin += nlEyePath * 2.0;
 			bounceIsSpecularEye = true;
 			
 			continue;
 		}
 			
-	} // end for (int depth = 0; depth < 4; depth++)
+	} // end for (int depth = 0; depth < 5; depth++)
 	
 		
 	// Connect Camera path and Light path ////////////////////////////////////////////////////////////
@@ -321,11 +312,11 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 	
 	if ( !skip ) 
 	{
+		Intersection intersec;
 		float c = SceneIntersect(connectRay, intersec);
 		if (c >= connectDist)
 		{
 			maskEyePath *= max(0.0, dot(connectRay.direction, nlEyePath));
-		
 			accumCol = maskLightPath * maskEyePath * rand(seed);
 		}
 	}
