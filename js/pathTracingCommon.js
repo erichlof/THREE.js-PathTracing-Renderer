@@ -117,9 +117,10 @@ varying vec2 vUv;
 
 
 #define PI               3.14159265358979323
-#define ONE_OVER_PI      0.31830988618379067
 #define TWO_PI           6.28318530717958648
 #define FOUR_PI          12.5663706143591729
+#define ONE_OVER_PI      0.31830988618379067
+#define ONE_OVER_TWO_PI  0.15915494309
 #define ONE_OVER_FOUR_PI 0.07957747154594767
 #define PI_OVER_TWO      1.57079632679489662
 #define ONE_OVER_THREE   0.33333333333333333
@@ -171,6 +172,52 @@ THREE.ShaderChunk[ 'pathtracing_skymodel_defines' ] = `
 #define SUN_INTENSITY 20.0 //800.0 if Uncharted2ToneMap is used
 #define SUN_ANGULAR_DIAMETER_COS 0.99983194915 // 66 arc seconds -> degrees, and the cosine of that
 #define CUTOFF_ANGLE 1.66 // original value (PI / 1.9) 
+
+`;
+
+
+THREE.ShaderChunk[ 'pathtracing_plane_intersect' ] = `
+
+//-----------------------------------------------------------------------
+float PlaneIntersect( vec4 pla, Ray r )
+//-----------------------------------------------------------------------
+{
+	vec3 n = normalize(-pla.xyz);
+	float denom = dot(n, r.direction);
+	if (denom <= 0.0)
+		return INFINITY;
+	
+        vec3 pOrO = (pla.w * n) - r.origin; 
+        return dot(pOrO, n) / denom; 
+}
+
+`;
+
+THREE.ShaderChunk[ 'pathtracing_disk_intersect' ] = `
+
+//-----------------------------------------------------------------------
+float DiskIntersect( vec3 diskPos, vec3 normal, float radius, Ray r )
+//-----------------------------------------------------------------------
+{
+	vec3 n = normalize(-normal);
+	vec3 pOrO = diskPos - r.origin;
+	float denom = dot(n, r.direction);
+	// use the following for one-sided disk
+	//if (denom <= 0.0)
+	//	return INFINITY;
+	
+        float result = dot(pOrO, n) / denom;
+	if (result < 0.0)
+		return INFINITY;
+        vec3 intersectPos = r.origin + r.direction * result;
+	vec3 v = intersectPos - diskPos;
+	float d2 = dot(v,v);
+	float radiusSq = radius * radius;
+	if (d2 > radiusSq)
+		return INFINITY;
+		
+	return result;
+}
 
 `;
 
@@ -681,23 +728,6 @@ float TorusIntersect( float rad0, float rad1, vec3 pos, Ray ray )
 		else if( t2>0.0 ) result=min(result,t2);
 	}
 	return result;
-}
-
-`;
-
-THREE.ShaderChunk[ 'pathtracing_plane_intersect' ] = `
-
-//-----------------------------------------------------------------------
-float PlaneIntersect( vec4 pla, Ray r )
-//-----------------------------------------------------------------------
-{
-	vec3 n = normalize(-pla.xyz);
-	float denom = dot(n, r.direction);
-	if (denom <= 0.0)
-		return INFINITY;
-	
-        vec3 pOrO = (pla.w * n) - r.origin; 
-        return dot(pOrO, n) / denom; 
 }
 
 `;
