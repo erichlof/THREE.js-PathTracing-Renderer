@@ -270,7 +270,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 	
 	// Eye path tracing (from Camera) ///////////////////////////////////////////////////////////////////////////
 	
-	for (int depth = 0; depth < 5; depth++)
+	for (int depth = 0; depth < 6; depth++)
 	{
 	
 		t = SceneIntersect(r, intersec);
@@ -355,7 +355,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			}	
 		} // end if (intersec.type == REFR)
 		
-	} // end for (int depth = 0; depth < 5; depth++)
+	} // end for (int depth = 0; depth < 6; depth++)
 	
 	if (skipConnectionEyePath)
 		return accumCol;
@@ -368,8 +368,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 	vec3 randPointOnLight;
 	
 	// Choose a random light source for this loop
-	// the 0.6 value makes it more likely to sample the large floor lamp in the corner
-	if (rand(seed) < 0.6)
+	if (rand(seed) < 0.7)
 	{
 		// Floor Lamp
 		vec3 floorLampDir = vec3(0,1,0);
@@ -484,7 +483,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 	float c = SceneIntersect(connectRay, intersec);
 	if (c >= connectDist)
 	{
-		maskLightPath *= max(0.3, dot(connectRay.direction, nlEyePath));
+		maskLightPath *= max(0.1, dot(connectRay.direction, nlEyePath));
 		accumCol = maskEyePath * maskLightPath;
 	}
 	
@@ -497,7 +496,7 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0);// No color value, Black        
-	vec3 L1 = vec3(1.0, 1.0, 1.0) * 1.0;// Bright White light
+	vec3 L1 = vec3(1.0, 1.0, 1.0) * 10.0;// Bright White light
 	vec3 L2 = vec3(0.936507, 0.642866, 0.310431) * 100.0;// Bright Yellowish light
 	vec3 wallColor = vec3(1.0, 0.98, 1.0) * 0.5;
 	vec3 tableColor = vec3(1.0, 0.7, 0.4) * 0.6;
