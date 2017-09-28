@@ -11,10 +11,12 @@ For comparison, here is a real photograph of the original Cornell Box vs. a rend
 
 ![](readme-Images/measured.jpg) ![](readme-Images/CornellBox-Render0.png)
 
-* [Bi-Directional PathTracing Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Bi-Directional_PathTracing_ClassicTestScene.html) Nearly 20 years ago (Dec 1997) Eric Veach wrote a seminal PhD thesis paper on methods for light transport [Link to Paper](http://graphics.stanford.edu/papers/veach_thesis/).  In Chapter 10, entitled Bi-Directional Path Tracing, Veach outlines a novel way to deal with difficult path tracing scenarios such as blocked light sources (i.e. cove lighting, recessed lighting, spotlights, window lighting on a cloudy day, etc.).  Although his method is difficult to implement on GPUs because of memory storage requirements, I took the basic idea and applied it to real-time path tracing of a scene with hidden light sources.  Here is a rendering made by Veach for his paper:
+* <h4>Bi-Directional Path Tracing</h4> Nearly 20 years ago (Dec 1997), Eric Veach wrote a seminal PhD thesis paper on methods for light transport [Link to Paper](http://graphics.stanford.edu/papers/veach_thesis/).  In Chapter 10, entitled Bi-Directional Path Tracing, Veach outlines a novel way to deal with difficult path tracing scenarios such as blocked light sources (i.e. cove lighting, recessed lighting, spotlights, window lighting on a cloudy day, etc.).  Although his method is difficult to implement on GPUs because of memory storage requirements, I took the basic idea and applied it to real-time path tracing of a scene with hidden light sources.  Here is a rendering made by Veach for his paper:
 
 ![](readme-Images/figure9b.jpg)
 
+And here is the same room rendered in real time: <br>
+[Bi-Directional PathTracing Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Bi-Directional_PathTracing_ClassicTestScene.html) <br>
 I only had this image to go on - there are no scene dimensions specifications that I am aware of.  However, I feel that I have captured the essence and purpose of his demo room.  I think Veach would be interested to know that this scene, which probably took several minutes if not hours to render back in the 1990's, is now rendering real-time at 60 FPS on a web browser! :-D
 
 * [Ocean and Sky Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Ocean_and_Sky_Rendering.html) which models an enormous calm ocean underneath a realistic physical sky. Now has more photo-realistic procedural clouds!
