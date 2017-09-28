@@ -3,38 +3,38 @@ Real-time PathTracing with global illumination and progressive rendering, all on
 
 <h2>LIVE DEMOS</h2>
 
-* [Geometry Showcase Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_GeometryShowcase.html) demonstrating some primitive shapes for ray tracing.
+* [Geometry Showcase Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Geometry_Showcase.html) demonstrating some primitive shapes for ray tracing.
 
-* [Cornell Box Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_CornellBox_DirectLighting.html) which renders the famous Cornell Box, but at ~60 fps!
+* [Cornell Box Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/CornellBox_DirectLighting.html) which renders the famous Cornell Box, but at ~60 fps!
 
 For comparison, here is a real photograph of the original Cornell Box vs. a rendering with the three.js PathTracer:
 
 ![](readme-Images/measured.jpg) ![](readme-Images/CornellBox-Render0.png)
 
-* [Water Rendering Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_Water_Rendering.html) Renders photo-realistic water and simulates waves at 60 FPS. No triangle meshes are needed, as opposed to other traditional engines/renderers. In fact, not a single triangle was harmed during the making of this water volume! It is done through object/ray warping. Total cost: 1 ray-box intersection test!  
+* [Water Rendering Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Water_Rendering.html) Renders photo-realistic water and simulates waves at 60 FPS. No triangle meshes are needed, as opposed to other traditional engines/renderers. In fact, not a single triangle was harmed during the making of this water volume! It is done through object/ray warping. Total cost: 1 ray-box intersection test!  
 
-* [Ocean and Sky Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_OceanAndSky_Rendering.html) which models an enormous calm ocean underneath a realistic physical sky. Now has more photo-realistic procedural clouds!
+* [Ocean and Sky Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Ocean_and_Sky_Rendering.html) which models an enormous calm ocean underneath a realistic physical sky. Now has more photo-realistic procedural clouds!
 
-* [Quadric Geometry Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_QuadricGeometryShowcase.html) showing different quadric (mathematical) shapes (Warning: this may take 7-10 seconds to load/compile!)
+* [Quadric Geometry Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Quadric_Geometry_Showcase.html) showing different quadric (mathematical) shapes (Warning: this may take 7-10 seconds to load/compile!)
 
 <h3>Constructive Solid Geometry(CSG) Museum Demos</h3>
 
 The following demos showcase different techniques in Constructive Solid Geometry - taking one 3D shape and either adding, removing, or overlapping a second shape. (Warning: these demos may take 10 seconds to load/compile!) <br>
 All 4 demos feature a large dark glass sculpture in the center of the room, which shows Ellipsoid vs. Sphere CSG. <br>
-Along the back wall, a study in Box vs. Sphere CSG: [CSG_Museum Demo #1](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_CSG_Museum_1.html) <br>
-Along the right wall, a glass-encased monolith, and a study in Sphere vs. Cylinder CSG: [CSG_Museum Demo #2](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_CSG_Museum_2.html) <br>
-Along the wall behind the camera, a study in Ellipsoid vs. Sphere CSG: [CSG_Museum Demo #3](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_CSG_Museum_3.html) <br>
-Along the left wall, a study in Box vs. Cone CSG: [CSG_Museum Demo #4](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_CSG_Museum_4.html) <br>
+Along the back wall, a study in Box vs. Sphere CSG: [CSG_Museum Demo #1](https://erichlof.github.io/THREE.js-PathTracing-Renderer/CSG_Museum_1.html) <br>
+Along the right wall, a glass-encased monolith, and a study in Sphere vs. Cylinder CSG: [CSG_Museum Demo #2](https://erichlof.github.io/THREE.js-PathTracing-Renderer/CSG_Museum_2.html) <br>
+Along the wall behind the camera, a study in Ellipsoid vs. Sphere CSG: [CSG_Museum Demo #3](https://erichlof.github.io/THREE.js-PathTracing-Renderer/CSG_Museum_3.html) <br>
+Along the left wall, a study in Box vs. Cone CSG: [CSG_Museum Demo #4](https://erichlof.github.io/THREE.js-PathTracing-Renderer/CSG_Museum_4.html) <br>
 
 Important note! - There is a hidden Easter Egg in one of the 4 Museum demo rooms.  Happy hunting!
 
 <h3>Materials Demos</h3>
 
 These demos showcase different materials possibilities: <br>
-[Materials Demo #1](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_MaterialsShowcase_1.html) Refractive (glass/water) and ClearCoat (billiard ball/car paint) materials <br>
-[Materials Demo #2](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_MaterialsShowcase_2.html) Cheap Volumetric (smoke/fog/gas) and Specular (aluminum mirror) materials <br>
-[Materials Demo #3](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_MaterialsShowcase_3.html) Diffuse (matte wall paint/chalk) and Translucent (skin/balloons,etc.) materials <br>
-[Materials Demo #4](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_MaterialsShowcase_4.html) Metallic (Gold) and shiny SubSurface scattering (polished Jade/wax candles) materials <br>
+[Materials Demo #1](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Materials_Showcase_1.html) Refractive (glass/water) and ClearCoat (billiard ball/car paint) materials <br>
+[Materials Demo #2](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Materials_Showcase_2.html) Cheap Volumetric (smoke/fog/gas) and Specular (aluminum mirror) materials <br>
+[Materials Demo #3](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Materials_Showcase_3.html) Diffuse (matte wall paint/chalk) and Translucent (skin/balloons,etc.) materials <br>
+[Materials Demo #4](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Materials_Showcase_4.html) Metallic (Gold) and shiny SubSurface scattering (polished Jade/wax candles) materials <br>
 
 ![](readme-Images/threejsPathTracing.png)
 
@@ -61,29 +61,29 @@ The following demos show what I have been experimenting with most recently.  The
 
 Rendering spheres, boxes and mathematical shapes is nice, but most modern graphics models are built out of triangles.  The following demo uses an .obj loader to load a model in .obj format (list of triangles) from disk and then places it in a scene to be path traced.  As of now, it runs too slow for my taste.  It still needs a BVH acceleration structure to speed things up greatly (I am currently investigating different approaches on the GPU). I am showing this because I wanted to demonstrate the ability of the three.js PathTracing renderer to load and render a model in one of the most popular model formats ever: <br>
 
-* [.OBJ Model Loading Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_OBJModel_Loader.html)<br>
+* [.OBJ Model Loading Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/OBJ_Model_Loader.html)<br>
 
 I now have a working BVH (Bounding Volume Hierarchy) builder.  It builds a nested set of bounding boxes to avoid having to test every single triangle in the scene. Scenes which used to render at 10 FPS are now rendering at 50-60 FPS! For BVH test purposes, I randomize the branch that the ray takes when it is traversing the array of Bounding Boxes.  Hence the following demo, which renders the triangle model (a vintage desktop DOS PC - ha ha) as more of a 'point cloud' than a solid object. This is because the rays are taking random branches since in WebGL 1.0, I can't keep a stack with dynamic indexing like Boxes[x].data where x is the correct branch. But at least the model is loading and rendering very quickly. I just have to figure out how to access the arrays of boxes somehow so that the ray always takes the correct branch, and backs up and takes the other fork if it fails.  In the meantime, enjoy this 'artistic' rendering, where it seems to ask, "What is real? Does the computer create the scene, or does the ray-tracing scene create the computer?"  I know, I know - programmer art! :D <br>
 
-* [BVH Debugging Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_BVH_Debugging.html)<br>
+* [BVH Debugging Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/WIP_BVH_Debugging.html)<br>
 
 This Demo renders objects inside a volume of gas/dust/fog/clouds(etc.).  Notice the cool volumetric caustics from the glass sphere on the left!: <br>
 
-* [Volumetric Rendering Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_VolumetricRendering.html) <br>
+* [Volumetric Rendering Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Volumetric_Rendering.html) <br>
 
 This Demo deliberately creates a very hard scene to render because the light source is almost 100% blocked.  Normal naive path tracing will be very dark and noisy because the rays from the camera can't find the light source unless they are very lucky: <br>
 
-* [Naive Path Tracing Hidden-Light comparison Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_CompareUni-Directional.html) <br>
+* [Naive Path Tracing Hidden-Light comparison Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Compare_Uni-Directional.html) <br>
 
 Enter Bi-Directional Path Tracing to the rescue!  Not only do we trace rays from the camera, we trace rays from the light source as well, and then at the last moment, connect them.  The result is still a little noisy, but much better (we can actually see something!)<br>
 
-* [Bi-Directional Path Tracing Hidden-Light comparison Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_Bi-Directional_PathTracer.html) <br>
+* [Bi-Directional Path Tracing Hidden-Light comparison Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Compare_Bi-Directional_PathTracing.html) <br>
 
 Some pretty interesting shapes can be obtained by deforming objects and/or warping the ray space (position and direction).  This demo applies a twist warp to the spheres and mirror box and randomizes the object space of the top purple sphere, creating an acceptable representation of a cloud (for free - no extra processing time for volumetrics!)
-* [Ray/Object Warping Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_RayWarping.html)<br>
+* [Ray/Object Warping Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Ray_Warping.html)<br>
 
 Taking this object warping idea further, I have been experimenting with rendering deformable surfaces such as liquids. Each ray (1 of millions) gets its own personalized map of where the deformable surface is located in 3D space, depending on where the ray hits the original non-deformed bounding box / bounding shape.  I am quite pleased with the initial results - pixel-accurate smooth surfaces, no cracks, seams or facets as you sometimes get with traditional triangulated patches/meshes.  And best of all, the total computation cost is 1 initial bounding shape and 1 deformed/displaced shape of the same type!  This can be executed on GPU in parallel, achieving real time realistic looking water movement at 60 FPS on desktop and 30 FPS on a smartphone!  Later I will experiment with rendering terrain such as hills and mountains, maybe borrowing some popular fractal fBm noise functions on sites like glslSandbox and ShaderToy.
-* [Liquid Simulation Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/ThreeJS_PathTracing_Renderer_Liquid_Simulation.html)<br>
+* [Liquid Simulation Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Liquid_Simulation.html)<br>
 
 <h2>Updates</h2>
 
