@@ -11,9 +11,15 @@ For comparison, here is a real photograph of the original Cornell Box vs. a rend
 
 ![](readme-Images/measured.jpg) ![](readme-Images/CornellBox-Render0.png)
 
-* [Water Rendering Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Water_Rendering.html) Renders photo-realistic water and simulates waves at 60 FPS. No triangle meshes are needed, as opposed to other traditional engines/renderers. In fact, not a single triangle was harmed during the making of this water volume! It is done through object/ray warping. Total cost: 1 ray-box intersection test!  
+* [Bi-Directional PathTracing Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Bi-Directional_PathTracing_ClassicTestScene.html) Nearly 20 years ago (Dec 1997) Eric Veach wrote a seminal PhD thesis paper on methods for light transport [Link to Paper](http://graphics.stanford.edu/papers/veach_thesis/).  In Chapter 10, entitled Bi-Directional Path Tracing, Veach outlines a novel way to deal with difficult path tracing scenarios such as blocked light sources (i.e. cove lighting, recessed lighting, spotlights, window lighting on a cloudy day, etc.).  Although his method is difficult to implement on GPUs because of memory storage requirements, I took the basic idea and applied it to real-time path tracing of a scene with hidden light sources.  Here is a rendering made by Veach for his paper:
+
+![](readme-Images/figure9b.jpg)
+
+I only had this image to go on - there are no scene dimensions specifications that I am aware of.  However, I feel that I have captured the essence and purpose of his demo room.  I think Veach would be interested to know that this scene, which probably took several minutes if not hours to render back in the 1990's, is now rendering real-time at 60 FPS on a web browser! :-D
 
 * [Ocean and Sky Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Ocean_and_Sky_Rendering.html) which models an enormous calm ocean underneath a realistic physical sky. Now has more photo-realistic procedural clouds!
+
+* [Water Rendering Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Water_Rendering.html) Renders photo-realistic water and simulates waves at 60 FPS. No triangle meshes are needed, as opposed to other traditional engines/renderers. In fact, not a single triangle was harmed during the making of this water volume! It is done through object/ray warping. Total cost: 1 ray-box intersection test!
 
 * [Quadric Geometry Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Quadric_Geometry_Showcase.html) showing different quadric (mathematical) shapes (Warning: this may take 7-10 seconds to load/compile!)
 
