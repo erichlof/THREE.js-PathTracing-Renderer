@@ -11,7 +11,7 @@ For comparison, here is a real photograph of the original Cornell Box vs. a rend
 
 ![](readme-Images/measured.jpg) ![](readme-Images/CornellBox-Render0.png)
 
-* <h4>Bi-Directional Path Tracing</h4> Nearly 20 years ago (Dec 1997), Eric Veach wrote a seminal PhD thesis paper on methods for light transport [Link to Paper](http://graphics.stanford.edu/papers/veach_thesis/).  In Chapter 10, entitled Bi-Directional Path Tracing, Veach outlines a novel way to deal with difficult path tracing scenarios such as blocked light sources (i.e. cove lighting, recessed lighting, spotlights, window lighting on a cloudy day, etc.).  Although his method is difficult to implement on GPUs because of memory storage requirements, I took the basic idea and applied it to real-time path tracing of a scene with hidden light sources.  Here is a rendering made by Veach for his paper:
+* <h4>Bi-Directional Path Tracing</h4> Nearly 20 years ago (Dec 1997), Eric Veach wrote a seminal PhD thesis paper on methods for light transport http://graphics.stanford.edu/papers/veach_thesis/  In Chapter 10, entitled Bi-Directional Path Tracing, Veach outlines a novel way to deal with difficult path tracing scenarios such as blocked light sources (i.e. cove lighting, recessed lighting, spotlights, window lighting on a cloudy day, etc.).  Although his method is difficult to implement on GPUs because of memory storage requirements, I took the basic idea and applied it to real-time path tracing of a scene with hidden light sources.  Here is a rendering made by Veach for his paper:
 
 ![](readme-Images/figure9b.jpg)
 
