@@ -569,7 +569,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout float seed )
 		{
 			skyColor = Get_Sky_Color(r, sunDirection);
 			accumCol = mask * skyColor;
-			cloudHit = true; // uncomment for clouds reflection in water
+			//cloudHit = true; // uncomment for clouds reflection in water
 			
 			break;	
 		}
