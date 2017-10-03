@@ -19,7 +19,7 @@ And here is the same room rendered in real-time by the three.js path tracer: <br
 * [Bi-Directional PathTracing Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Bi-Directional_PathTracing_ClassicTestScene.html) <br>
 I had the above image only to go on - there are no scene dimensions specifications that I am aware of.  However, I feel that I have captured the essence and purpose of his demo room.  I think Veach would be interested to know that his scene, which probably took several minutes if not hours to render back in the 1990's, is now rendering real-time at 60 FPS on a web browser! :-D
 
-For a more intuition and a direct comparison between regular path tracing and bi-directional path tracing, here is the old Cornell Box scene but this time there is a blocker panel that blocks most of the light source in the ceiling.  The naive approach is just to hope that the camera rays will be lucky enough to find a light source:
+For more intuition and a direct comparison between regular path tracing and bi-directional path tracing, here is the old Cornell Box scene but this time there is a blocker panel that blocks most of the light source in the ceiling.  The naive approach is just to hope that the camera rays will be lucky enough to find a light source:
 * [Naive Approach to Blocked Light Source](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Compare_Uni-Directional.html) As we can painfully see, we will have to wait a long time to get a decent image!
 Enter Bi-Directional path tracing to the rescue!:
 * [Bi-Directional Approach to Blocked Light Source](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Compare_Bi-Directional_PathTracing.html) Like magic, the difficult scene comes into focus - in real-time!
