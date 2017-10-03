@@ -195,7 +195,6 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 	vec3 nlEyePath = vec3(0);
 	vec3 nlLightPath = vec3(0);
 	float t = INFINITY;
-	bool bounceIsSpecular = true;
 	//set following flag to true - we haven't found a diffuse surface yet and can exit early (keeps frame rate high)
 	bool skipConnectionEyePath = true;
 
@@ -214,8 +213,8 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 		
 		if (intersec.type == LIGHT)
 		{
-			//if (bounceIsSpecular)
-				accumCol = maskEyePath * intersec.emission;
+		
+			accumCol = maskEyePath * intersec.emission;
 			break;
 		}
 		
@@ -228,7 +227,6 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 		if (intersec.type == DIFF) // Ideal DIFFUSE reflection
 		{
 			maskEyePath *= intersec.color;
-			bounceIsSpecular = false;
 			eyeX = x + nl * 2.0;
 			nlEyePath = nl;
 			skipConnectionEyePath = false;
@@ -250,7 +248,6 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 		if (intersec.type == SPEC)  // Ideal SPECULAR reflection
 		{
 			maskEyePath *= intersec.color;
-			bounceIsSpecular = true;
 			vec3 reflectVec = reflect(r.direction, nl);
 			vec3 randVec = normalize(randomDirectionInHemisphere(nl, seed));
 			r = Ray( x, mix(reflectVec, randVec, 0.0) );
@@ -262,8 +259,6 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 		
 		if (intersec.type == REFR)  // Ideal dielectric refraction
 		{	
-			bounceIsSpecular = true;
-			
 			float nc = 1.0; // IOR of Air
 			float nt = 1.5; // IOR of Common Glass
 			if (dot(n, nl) < 0.0) 
@@ -319,7 +314,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 	lightX = r.origin;
 	maskLightPath = quads[5].emission * ONE_OVER_TWO_PI;
 	nlLightPath = quads[5].normal;
-	bounceIsSpecular = true;
+	
 	
 	for (int depth = 0; depth < LIGHTPATH_LENGTH; depth++)
 	{
@@ -327,15 +322,14 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 		// This allows the light source to be the only node on the light path, about 50% of the time
 		if (rand(seed) < 0.5)
 		{
-			bounceIsSpecular = true;
 			break;
 		}
 		
 		t = SceneIntersect(r, intersec);
 		
+		
 		if ( t == INFINITY || intersec.type == LIGHT)
 		{
-			bounceIsSpecular = true;
 			break;
 		}
 		
@@ -349,7 +343,6 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 		{
 			maskLightPath *= max(0.0, dot(-r.direction, nl));
 			maskLightPath *= intersec.color;
-			bounceIsSpecular = false;
 			lightX = x + nl * 2.0;
 			nlLightPath = nl;
 			
@@ -366,7 +359,6 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 		if (intersec.type == SPEC)  // Ideal SPECULAR reflection
 		{
 			maskLightPath *= intersec.color;
-			//bounceIsSpecular = true;
 			vec3 reflectVec = reflect(r.direction, nl);
 			vec3 randVec = normalize(randomDirectionInHemisphere(nl, seed));
 			r = Ray( x, mix(reflectVec, randVec, 0.0) );
@@ -377,7 +369,6 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 		
 		if (intersec.type == REFR)  // Ideal dielectric refraction
 		{
-			//bounceIsSpecular = true;
 			float nc = 1.0; // IOR of Air
 			float nt = 1.5; // IOR of Common Glass
 			if (dot(n, nl) < 0.0) 
@@ -422,8 +413,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 	float c = SceneIntersect(connectRay, intersec);
 	if (c >= connectDist)
 	{
-		//if (!bounceIsSpecular)
-			maskLightPath *= max(0.0, dot(-connectRay.direction, nlLightPath));
+		maskLightPath *= max(0.0, dot(-connectRay.direction, nlLightPath));
 			
 		maskEyePath *= max(0.0, dot(connectRay.direction, nlEyePath));
 		
