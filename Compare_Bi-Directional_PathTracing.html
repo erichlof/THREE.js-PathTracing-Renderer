@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 	<head>
-		<title>three.js PathTracing Renderer - Blocked Light Source, Bi-Directional Approach</title>
+		<title>three.js PathTracing Renderer - Blocked Light Source, Quasi Bi-Directional Approach</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1">
 		<style>
@@ -29,7 +29,7 @@
 	<body>
 
 		<div id="container"> </div>
-		<div id="info">three.js PathTracing Renderer - Blocked Light Source, Bi-Directional Approach</div>
+		<div id="info">three.js PathTracing Renderer - Blocked Light Source, Quasi Bi-Directional Approach</div>
 		
 		<div id="cameraInfo" style="position:fixed; left:3%; bottom:2%; font-family:arial; font-type:bold; color:rgb(255,255,255);">
 		FOV: 31 / Aperture: 0.00 / FocusDistance: 1180 <br> 
@@ -101,6 +101,13 @@ float SceneIntersect( Ray r, inout Intersection intersec )
         float d;
 	float t = INFINITY;
 	
+	// clear fields out
+	intersec.normal = vec3(0);
+	intersec.emission = vec3(0);
+	intersec.color = vec3(0);
+	intersec.type = -1;
+	
+	
 	for (int i = 0; i < N_QUADS; i++)
         {
 		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, quads[i].normal, r );
@@ -171,158 +178,249 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 }
 
 
+#define LIGHTPATH_LENGTH  2
+#define EYEPATH_LENGTH    5
+
 //-----------------------------------------------------------------------
 vec3 CalculateRadiance( Ray r, inout float seed )
 //-----------------------------------------------------------------------
 {
-	Intersection eyeIntersec, lightIntersec;
-	Ray eyeRay = r;
+	Intersection intersec;
 	vec3 accumCol = vec3(0);
 	vec3 maskEyePath = vec3(1);
-	vec3 maskLightPath = quads[5].emission;
+	vec3 maskLightPath = vec3(1);
 	vec3 eyeX = vec3(0);
 	vec3 lightX = vec3(0);
-	vec3 nlEyePath;
-	vec3 nlLightPath;
-	bool bounceIsSpecularEye = false;
-	bool bounceIsSpecularLight = false;
-	bool skip = false;
+	vec3 nl, n, x;
+	vec3 nlEyePath = vec3(0);
+	vec3 nlLightPath = vec3(0);
+	float t = INFINITY;
+	
+	//set following flag to true - we haven't found a diffuse surface yet and can exit early (keeps frame rate high)
+	bool skipConnectionEyePath = true;
 
 	
-	// Light path tracing (from Light source) /////////////////////////////////////////////////////////
+	// Eye path tracing (from Camera) ///////////////////////////////////////////////////////////////////////////
+	
+	for (int depth = 0; depth < EYEPATH_LENGTH; depth++)
+	{
+	
+		t = SceneIntersect(r, intersec);
+		
+		if (t == INFINITY)
+		{
+			break;
+		}
+		
+		if (intersec.type == LIGHT)
+		{
+			accumCol = maskEyePath * intersec.emission;
+			break;
+		}
+		
+		// useful data 
+		n = normalize(intersec.normal);
+		nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(n * -1.0);
+		x = r.origin + r.direction * t;
+		
+		
+		if (intersec.type == DIFF) // Ideal DIFFUSE reflection
+		{
+			maskEyePath *= intersec.color;
+			eyeX = x + nl * 2.0;
+			nlEyePath = nl;
+			skipConnectionEyePath = false;
+			
+			if (rand(seed) < 0.5)
+				break;
+			
+			// choose random Diffuse sample vector
+			//vec3 d = randomDirectionInHemisphere( nl, seed );
+			vec3 d = randomCosWeightedDirectionInHemisphere( nl, seed );
+			r = Ray( x, normalize(d) );
+			r.origin += r.direction * 2.0;
+			eyeX = r.origin;
+			maskEyePath *= max(0.0, dot(r.direction, nl));
+			
+			continue;
+		}
+		
+		if (intersec.type == SPEC)  // Ideal SPECULAR reflection
+		{
+			maskEyePath *= intersec.color;
+			vec3 reflectVec = reflect(r.direction, nl);
+			vec3 randVec = normalize(randomDirectionInHemisphere(nl, seed));
+			r = Ray( x, mix(reflectVec, randVec, 0.0) );
+			r.origin += r.direction * 2.0;
+			
+			continue;
+		}
+		
+		
+		if (intersec.type == REFR)  // Ideal dielectric refraction
+		{	
+			float nc = 1.0; // IOR of Air
+			float nt = 1.5; // IOR of Common Glass
+			if (dot(n, nl) < 0.0) 
+			{
+				nc = nt;
+				nt = 1.0;
+			}
+			float nnt = nc / nt;
+			vec3 tdir = refract(r.direction, nl, nnt);
+				
+			// Original Fresnel equations
+			float cosThetaInc = dot(nl, r.direction);
+			float cosThetaTra = dot(nl, tdir);
+			float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
+			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
+			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
+			
+			if (rand(seed) < Re) // reflect ray from surface
+			{
+				r = Ray( x, reflect(r.direction, nl) );
+				r.origin += r.direction * 2.0;
+				
+				continue;	
+			}
+			else // transmit ray through surface
+			{
+				maskEyePath *= intersec.color;
+				r = Ray(x, tdir);
+				r.origin += r.direction * 2.0;
+				
+				continue;
+			}	
+		} // end if (intersec.type == REFR)
+		
+	} // end for (int depth = 0; depth < EYEPATH_LENGTH; depth++)
+	
+	
+	if (skipConnectionEyePath)
+		return accumCol;
+	
+	
+	// Light path tracing (from Light sources) ////////////////////////////////////////////////////////////////////
 
 	vec3 randPointOnLight;
 	randPointOnLight.x = mix(quads[5].v0.x, quads[5].v1.x, rand(seed));
 	randPointOnLight.y = quads[5].v0.y;
 	randPointOnLight.z = mix(quads[5].v0.z, quads[5].v3.z, rand(seed));
-	
-	vec3 randLightDir = randomDirectionInHemisphere(quads[5].normal, seed);
+	//vec3 randLightDir = randomDirectionInHemisphere(quads[5].normal, seed);
+	vec3 randLightDir = randomCosWeightedDirectionInHemisphere(quads[5].normal, seed);
 	randLightDir = normalize(randLightDir);
-	Ray lightRay = Ray( randPointOnLight, randLightDir );
-	lightRay.origin += lightRay.direction * 2.0;
-	lightX = lightRay.origin;
+	r = Ray( randPointOnLight, randLightDir );
+	r.origin += r.direction * 2.0;
+	lightX = r.origin;
+	maskLightPath = quads[5].emission * ONE_OVER_TWO_PI;
 	nlLightPath = quads[5].normal;
-	//maskLightPath *= max(0.0, dot(lightRay.direction, nlLightPath));
 	
-	for (int depth = 0; depth < 5; depth++)
+	for (int depth = 0; depth < LIGHTPATH_LENGTH; depth++)
 	{
 		
-		float t = SceneIntersect(lightRay, lightIntersec);
-		
-		if (t == INFINITY || lightIntersec.type == LIGHT)
+		// This allows the light source to be the only node on the light path, about 50% of the time
+		if (rand(seed) < 0.5)
 		{
-			skip = true;
+			break;
+		}
+		
+		t = SceneIntersect(r, intersec);
+		
+		if ( t == INFINITY || intersec.type == LIGHT)
+		{
 			break;
 		}
 		
 		// useful data 
-		vec3 n = normalize(lightIntersec.normal);
-		nlLightPath = dot(n, lightRay.direction) < 0.0 ? normalize(n) : normalize(n * -1.0);
-		vec3 x = lightRay.origin + lightRay.direction * t;
+		n = normalize(intersec.normal);
+		nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(n * -1.0);
+		x = r.origin + r.direction * t;
 		
 		
-		if (lightIntersec.type == DIFF) // Ideal DIFFUSE reflection
+		if (intersec.type == DIFF) // Ideal DIFFUSE reflection
 		{
-			maskLightPath *= max(0.0, dot(-lightRay.direction, nlLightPath));
-			maskLightPath *= lightIntersec.color;
+			maskLightPath *= max(0.0, dot(-r.direction, nl));
+			maskLightPath *= intersec.color;
+			lightX = x + nl * 2.0;
+			nlLightPath = nl;
 			
 			// choose random Diffuse sample vector
-			vec3 d = randomCosWeightedDirectionInHemisphere( nlLightPath, seed );
-			lightRay = Ray( x, normalize(d) );
-			lightRay.origin += lightRay.direction * 2.0;
-			lightX = lightRay.origin;
-			
-			bounceIsSpecularLight = false;
-			
-			continue;
-		}
-		
-		if (lightIntersec.type == SPEC)  // Ideal SPECULAR reflection
-		{
-			maskLightPath *= lightIntersec.color;
-			
-			lightRay = Ray( x, reflect(lightRay.direction, nlLightPath) );
-			lightRay.origin += nlLightPath * 2.0;
-			bounceIsSpecularLight = true;
+			vec3 d = randomDirectionInHemisphere( nl, seed );
+			//vec3 d = randomCosWeightedDirectionInHemisphere( nl, seed );
+			r = Ray( x, normalize(d) );
+			r.origin += r.direction * 2.0;
+			lightX = r.origin;
 			
 			continue;
 		}
 		
-	} // end for (int depth = 0; depth < 5; depth++)
-	
-	
-	// Eye path tracing (from Camera) /////////////////////////////////////////////////////////////////
-	
-	for (int depth = 0; depth < 5; depth++)
-	{
-	
-		float t = SceneIntersect(eyeRay, eyeIntersec);
-		
-		if (t == INFINITY)
+		if (intersec.type == SPEC)  // Ideal SPECULAR reflection
 		{
-			skip = true;
-			break;
-		}
-		
-		if (eyeIntersec.type == LIGHT)
-		{
-			accumCol = maskEyePath * quads[5].emission;
-			skip = true;
-			break;
-		}
-		
-		// useful data 
-		vec3 n = normalize(eyeIntersec.normal);
-		nlEyePath = dot(n, eyeRay.direction) < 0.0 ? normalize(n) : normalize(n * -1.0);
-		vec3 x = eyeRay.origin + eyeRay.direction * t;
-		
-		
-		if (eyeIntersec.type == DIFF) // Ideal DIFFUSE reflection
-		{
-			maskEyePath *= eyeIntersec.color;
-			
-			// choose random Diffuse sample vector
-			vec3 d = randomCosWeightedDirectionInHemisphere( nlEyePath, seed );
-			eyeRay = Ray( x, normalize(d) );
-			eyeRay.origin += eyeRay.direction * 2.0;
-			eyeX = eyeRay.origin;
-			bounceIsSpecularEye = false;
+			maskLightPath *= intersec.color;
+			vec3 reflectVec = reflect(r.direction, nl);
+			vec3 randVec = normalize(randomDirectionInHemisphere(nl, seed));
+			r = Ray( x, mix(reflectVec, randVec, 0.0) );
+			r.origin += r.direction * 2.0;
 			
 			continue;
 		}
 		
-		if (eyeIntersec.type == SPEC)  // Ideal SPECULAR reflection
+		if (intersec.type == REFR)  // Ideal dielectric refraction
 		{
-			maskEyePath *= eyeIntersec.color;
+			float nc = 1.0; // IOR of Air
+			float nt = 1.5; // IOR of Common Glass
+			if (dot(n, nl) < 0.0) 
+			{
+				nc = nt;
+				nt = 1.0;
+			}
+			float nnt = nc / nt;
+			vec3 tdir = refract(r.direction, nl, nnt);
+				
+			// Original Fresnel equations
+			float cosThetaInc = dot(nl, r.direction);
+			float cosThetaTra = dot(nl, tdir);
+			float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
+			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
+			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
 			
-			eyeRay = Ray( x, reflect(eyeRay.direction, nlEyePath) );
-			eyeRay.origin += nlEyePath * 2.0;
-			bounceIsSpecularEye = true;
-			
-			continue;
-		}
-			
-	} // end for (int depth = 0; depth < 5; depth++)
-	
+			if (rand(seed) < Re) // reflect ray from surface
+			{
+				r = Ray( x, reflect(r.direction, nl) );
+				r.origin += r.direction * 2.0;
+				
+				continue;	
+			}
+			else // transmit ray through surface
+			{
+				maskLightPath *= intersec.color;
+				r = Ray(x, tdir);
+				r.origin += r.direction * 2.0;
+				
+				continue;
+			}	
+		} // end if (intersec.type == REFR)
 		
+	} // end for (int depth = 0; depth < LIGHTPATH_LENGTH; depth++)
+	
+	
 	// Connect Camera path and Light path ////////////////////////////////////////////////////////////
 	
 	Ray connectRay = Ray(eyeX, normalize(lightX - eyeX));
 	float connectDist = distance(eyeX, lightX);
-	
-	if ( !skip ) 
+	float c = SceneIntersect(connectRay, intersec);
+	if (c >= connectDist)
 	{
-		Intersection intersec;
-		float c = SceneIntersect(connectRay, intersec);
-		if (c >= connectDist)
-		{
-			maskEyePath *= max(0.0, dot(connectRay.direction, nlEyePath));
-			accumCol = maskLightPath * maskEyePath * rand(seed);
-		}
+		maskLightPath *= max(0.0, dot(-connectRay.direction, nlLightPath));
+			
+		maskEyePath *= max(0.0, dot(connectRay.direction, nlEyePath));
+		
+		accumCol += (maskEyePath * maskLightPath);
 	}
-
+	
 	return accumCol;      
 }
+
 
 
 //-----------------------------------------------------------------------
