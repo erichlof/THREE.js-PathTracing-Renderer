@@ -134,13 +134,11 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 	vec3 accumCol = vec3(0.0);
         vec3 mask = vec3(1.0);
         Intersection intersec;
-	int sampleDiffuseBudget = 4;
 	bool bounceIsSpecular = true;
 	
 	
         for (int depth = 0; depth < 4; depth++)
 	{
-		sampleDiffuseBudget -= 1;
 		
 		float t = SceneIntersect(r, intersec);
 		
@@ -172,22 +170,13 @@ vec3 CalculateRadiance( Ray r, inout float seed )
                 {
 			mask *= intersec.color;
 			accumCol += calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
-                        
-			/*
-			if (uCameraIsMoving)
-			{	
-				sampleDiffuseBudget -= 1;
-			}
-			*/
-			
-			sampleDiffuseBudget -= 1;
-			if (sampleDiffuseBudget < 0) break;
+                        bounceIsSpecular = false;
 			
 			// choose random Diffuse sample vector
 			vec3 d = randomCosWeightedDirectionInHemisphere( nl, seed );
 			r = Ray( x, normalize(d) );
 			r.origin += r.direction * 2.0;
-			bounceIsSpecular = false;
+			mask *= max(0.0, dot(r.direction, nl));
 			continue;	
                 }
 		
@@ -264,6 +253,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 				mask *= intersec.color;
 				
 				accumCol += calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
+				mask *= max(0.0, dot(r.direction, nl));
 				bounceIsSpecular = false;
 				continue;
 			}
@@ -275,25 +265,24 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			float translucentDensity = 0.25;
 			float scatteringDistance = -log(rand(seed)) / translucentDensity;
 			vec3 absorptionCoefficient = vec3(0.0, 0.18, 0.2);
+			vec3 d;
 			if (scatteringDistance > t) 
 			{
 				mask *= exp(-absorptionCoefficient * t); // transmission
-				x = x + r.direction * scatteringDistance;
-				r = Ray( x, r.direction );
+				d = r.direction;
 				//bounceIsSpecular = false; // not set, in order to see lights through thin material
 			}
 			else
 			{
 				// Compute how much light was absorbed along the ray before it was scattered:
 				mask *= exp(-absorptionCoefficient * scatteringDistance); // scattering
-				x = x + r.direction * scatteringDistance;
-				vec3 d = randomSphereDirection(seed); // true Isotropic scattering
-				r = Ray( x, normalize(d) );
+				d = normalize(randomSphereDirection(seed)); // true Isotropic scattering
 				bounceIsSpecular = false;	
 			}
 			
 			accumCol += calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
-			
+			x = x + d * scatteringDistance;
+			r = Ray( x, d );
 			continue;	
 			
 		} // end if (intersec.type == TRANSLUCENT)
@@ -310,8 +299,9 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 				r = Ray( x, normalize(d) );
 				r.origin += r.direction * 2.0;
 				mask *= intersec.color;
-				
 				accumCol += calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
+				
+				mask *= max(0.0, dot(r.direction, nl));
 				bounceIsSpecular = false;
 				continue;
 			}
@@ -346,8 +336,8 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 				continue;
 			}
 			
-			vec3 absorptionCoefficient = vec3(2.0, 0.01, 0.3);
-			float translucentDensity = 0.2;
+			vec3 absorptionCoefficient = vec3(2.0, 0.01, 0.2);
+			float translucentDensity = 0.1;
 			float scatteringDistance = -log(rand(seed)) / translucentDensity;
 			vec3 d;
 			
@@ -361,11 +351,13 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			{
 				mask *= exp(-absorptionCoefficient * t); // transmission
 				d = r.direction;
+				bounceIsSpecular = false;
 			}
 			
 			accumCol += calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
 			x = x + r.direction * scatteringDistance;
 			r = Ray( x, normalize(d) );
+			
 			continue;
 			
 		} // end if (intersec.type == SPECSUB)
@@ -381,7 +373,7 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0.0, 0.0, 0.0);// No color value, Black        
-	vec3 L1 = vec3(1.0, 1.0, 1.0) * 5.0;// Bright light
+	vec3 L1 = vec3(1.0, 1.0, 1.0) * 10.0;// Bright light
 		    
 	spheres[0] = Sphere( 100.0, vec3(275.0, 610.0, -280.0), L1,                                  z,  LIGHT);// Light Sphere
 	spheres[1] = Sphere(  90.0, vec3(150.0,  91.0, -200.0),  z, vec3(     0.5,      0.5,      0.5), VOLUME);// Smoke Volume Sphere Left
