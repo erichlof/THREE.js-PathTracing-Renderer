@@ -310,7 +310,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 
 			if (bounceIsSpecular)
 			{
-				accumCol += mask * intersec.emission;
+				accumCol = mask * intersec.emission;
 			}
 			
 			break;
@@ -332,16 +332,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			}
 			mask *= intersec.color;
 			accumCol += calcDirectLightingSphere(mask, x, nl, lightChoice, seed);
-                        /*
-			if (uCameraIsMoving)
-			{
-				// Russian Roulette
-				if (rand(seed) > 0.2)
-					break;
-				else mask *= 5.0;
-				
-			}
-			*/
+                        
 			sampleDiffuseBudget -= 1;
 			if (sampleDiffuseBudget < 0) break;
 			
@@ -349,6 +340,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			vec3 d = randomCosWeightedDirectionInHemisphere( nl, seed );
 			r = Ray( x, normalize(d) );
 			r.origin += r.direction;
+			mask *= max(0.0, dot(r.direction, nl));
 			bounceIsSpecular = false;
 			continue;
 		}
@@ -430,6 +422,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 				vec3 d = randomCosWeightedDirectionInHemisphere( nl, seed );
 				r = Ray( x, normalize(d) );
 				r.origin += r.direction;
+				mask *= max(0.0, dot(r.direction, nl));
 				bounceIsSpecular = false;
 				continue;
 			}
