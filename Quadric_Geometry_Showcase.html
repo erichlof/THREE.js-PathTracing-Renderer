@@ -476,7 +476,8 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			}
 			mask *= intersec.color;
 			accumCol += calcDirectLightingSphere(mask, x, nl, lightChoice, seed);
-                        
+                        bounceIsSpecular = false;
+			
 			sampleDiffuseBudget -= 1;
 			if (sampleDiffuseBudget < 0) break;
 			
@@ -485,7 +486,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			r = Ray( x, normalize(d) );
 			r.origin += r.direction;
 			mask *= max(0.0, dot(r.direction, nl));
-			bounceIsSpecular = false;
+			
 			continue;
 		}
 		
