@@ -101,6 +101,12 @@ float SceneIntersect( Ray r, inout Intersection intersec )
         float d;
 	float t = INFINITY;
 	
+	// clear fields out
+	intersec.normal = vec3(0);
+	intersec.emission = vec3(0);
+	intersec.color = vec3(0);
+	intersec.type = -1;
+	
 	for (int i = 0; i < N_QUADS; i++)
         {
 		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, quads[i].normal, r );
@@ -175,60 +181,69 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 vec3 CalculateRadiance( Ray r, inout float seed )
 //-----------------------------------------------------------------------
 {
-	vec3 accumCol = vec3(0.0);
-        vec3 mask = vec3(1.0);
-        Intersection intersec;
+	Intersection intersec;
+	vec3 accumCol = vec3(0);
+	vec3 maskEyePath = vec3(1);
+	vec3 nl, n, x;
+	float t = INFINITY;
+	int diffuseSampleCount = 0;
 	
+	// Eye path tracing (from Camera) ///////////////////////////////////////////////////////////////////////////
 	
-        for (int depth = 0; depth < 8; depth++)
+	for (int depth = 0; depth < 5; depth++)
 	{
-                
-		float t = SceneIntersect(r, intersec);
+	
+		t = SceneIntersect(r, intersec);
+		
 		if (t == INFINITY)
 		{
-                        break;
-		}
-		
-		// if we reached something bright, don't spawn any more rays
-		if (intersec.type == LIGHT )
-		{
-		        accumCol = mask * intersec.emission;
 			break;
 		}
 		
-		vec3 n = normalize(intersec.normal);
-                vec3 nl = dot(n,r.direction) <= 0.0 ? normalize(n) : normalize(n * -1.0);
-		vec3 x = r.origin + r.direction * t;
+		if (intersec.type == LIGHT)
+		{
+			accumCol = maskEyePath * intersec.emission;
+			break;
+		}
 		
-		    
-                if (intersec.type == DIFF) // Ideal DIFFUSE reflection
-                {
-			mask *= intersec.color;
+		// useful data 
+		n = normalize(intersec.normal);
+		nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(n * -1.0);
+		x = r.origin + r.direction * t;
+		
+		
+		if (intersec.type == DIFF) // Ideal DIFFUSE reflection
+		{
+			maskEyePath *= intersec.color;
+			
+			if (rand(seed) < 0.5)
+				break;	
 			// choose random Diffuse sample vector
 			vec3 d = randomCosWeightedDirectionInHemisphere( nl, seed );
-                	r = Ray( x, normalize(d) );
-			r.origin += nl * 2.0;
-			if (rand(seed) < 0.5) 
-				break;
-			
-			mask *= dot(r.direction, nl);
-                	continue;
-                }
+			r = Ray( x, normalize(d) );
+			r.origin += r.direction * 2.0;
+			maskEyePath *= max(0.0, dot(r.direction, nl));
+			continue;
+		}
 		
-                if (intersec.type == SPEC)  // Ideal SPECULAR reflection
-                {
-			mask *= intersec.color;
-			r = Ray( x, reflect(r.direction, nl) );
+		if (intersec.type == SPEC)  // Ideal SPECULAR reflection
+		{
+			maskEyePath *= intersec.color;
+			vec3 reflectVec = reflect(r.direction, nl);
+			vec3 randVec = normalize(randomDirectionInHemisphere(nl, seed));
+			r = Ray( x, mix(reflectVec, randVec, 0.0) );
 			r.origin += r.direction * 2.0;
 			
-                        continue;
-                }
+			continue;
+		}
 		
-	
+		
 	} // end for (int depth = 0; depth < 5; depth++)
+	
 	
 	return accumCol;      
 }
+
 
 //-----------------------------------------------------------------------
 void SetupScene(void)
