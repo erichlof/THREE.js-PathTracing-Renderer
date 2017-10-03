@@ -189,7 +189,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 		{	
 			if (bounceIsSpecular)
 			{
-				accumCol += mask * intersec.emission;
+				accumCol = mask * intersec.emission;
 			}
 			
 			break;
