@@ -170,13 +170,11 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 	vec3 accumCol = vec3(0.0);
         vec3 mask = vec3(1.0);
         Intersection intersec;
-	int sampleDiffuseBudget = 4;
 	bool bounceIsSpecular = true;
 	
 	
-        for (int depth = 0; depth < 4; depth++)
+        for (int depth = 0; depth < 5; depth++)
 	{
-		sampleDiffuseBudget -= 1;
 		
 		float t = SceneIntersect(r, intersec);
 		
@@ -191,10 +189,10 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 		{	
 			if (bounceIsSpecular)
 			{
-				accumCol += mask * intersec.emission * 1.0;
+				accumCol += mask * intersec.emission;
 			}
 			
-			//break;
+			break;
 		}
 		
 		
@@ -204,35 +202,29 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 		vec3 x = r.origin + r.direction * t;
 		
 		    
-                if (intersec.type == DIFF || intersec.type == CHECK) // Ideal DIFFUSE reflection
+                if (intersec.type == DIFF) // Ideal DIFFUSE reflection
                 {
 			mask *= intersec.color;
-			accumCol += calcDirectLightingQuad(mask, x, nl, quads[5], seed);
-			
-                       	/*
-			if (uCameraIsMoving)
-			{	
-				sampleDiffuseBudget -= 1;
-			}
-			*/
-			
-			sampleDiffuseBudget -= 1;
-			if (sampleDiffuseBudget < 0) break;
+			bounceIsSpecular = false;
+			accumCol += calcDirectLightingQuad(mask, x, nl, quads[5], seed) * 0.3;
 			
 			// choose random Diffuse sample vector
 			vec3 d = randomCosWeightedDirectionInHemisphere( nl, seed );
 			r = Ray( x, normalize(d) );
 			r.origin += r.direction * 2.0;
-			bounceIsSpecular = false;
+			mask *= max(0.0, dot(r.direction, nl));
+			
 			continue;	
                 }
 		
                 if (intersec.type == SPEC)  // Ideal SPECULAR reflection
                 {
+			mask *= intersec.color;
+			bounceIsSpecular = true;
 			r = Ray( x, reflect(r.direction, nl) );
 			r.origin += r.direction * 2.0;
 			mask *= intersec.color;
-			bounceIsSpecular = true;
+			
                         continue;
                 }
 
@@ -249,28 +241,29 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
 			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
 			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
-			//float Tr = 1.0 - Re;
 			
 			if (rand(seed) < Re) // reflect ray from surface
 			{
+				bounceIsSpecular = true;
 				r = Ray( x, reflect(r.direction, nl) );
 			    	r.origin += r.direction * 2.0;
-				bounceIsSpecular = true;
+				
 			    	continue;	
 			}
 			else // transmit ray through surface
 			{
 				mask *= intersec.color;
+				bounceIsSpecular = true;
 				r = Ray(x, tdir);
 				r.origin += r.direction * 2.0;
-				bounceIsSpecular = true;
+				
 				continue;
 			}
 			
 		} // end if (intersec.type == REFR)
 		
 		
-	} // end for (int depth = 0; depth < 4; depth++)
+	} // end for (int depth = 0; depth < 5; depth++)
 	
 	return accumCol;      
 }
@@ -281,8 +274,7 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0.0, 0.0, 0.0);// No color value, Black        
-	vec3 L1 = vec3(0.736507, 0.642866, 0.330431) * 15.0;// Bright Yellowish light
-		    // 0.736507, 0.642866, 0.210431  Original values
+	vec3 L1 = vec3(1.0, 0.75, 0.4) * 40.0;// Bright Yellowish light
 	
 	quads[0] = Quad( vec3( 0.0, 0.0, 1.0), vec3(  0.0,   0.0,-559.2), vec3(549.6,   0.0,-559.2), vec3(549.6, 548.8,-559.2), vec3(  0.0, 548.8,-559.2),  z, vec3(1.0, 1.0, 1.0 ),  DIFF);// Back Wall
 	quads[1] = Quad( vec3( 1.0, 0.0, 0.0), vec3(  0.0,   0.0,   0.0), vec3(  0.0,   0.0,-559.2), vec3(  0.0, 548.8,-559.2), vec3(  0.0, 548.8,   0.0),  z, vec3(0.7, 0.12,0.05),  DIFF);// Left Wall Red
@@ -293,7 +285,6 @@ void SetupScene(void)
 	
 	boxes[0]  = Box( vec3(-82.0,-170.0, -80.0), vec3(82.0,170.0, 80.0), z, vec3(1.0, 1.0, 1.0), SPEC);// Tall Mirror Box Left
 	boxes[1]  = Box( vec3(-86.0, -85.0, -80.0), vec3(86.0, 85.0, 80.0), z, vec3(1.0, 1.0, 1.0), DIFF);// Short Diffuse Box Right
-	
 }
 
 #include <pathtracing_main>
