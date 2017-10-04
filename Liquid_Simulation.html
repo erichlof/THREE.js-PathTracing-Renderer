@@ -375,7 +375,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 	bool bounceIsSpecular = true;
 	
 	
-        for (int depth = 0; depth < 6; depth++)
+        for (int depth = 0; depth < 5; depth++)
 	{
 		
 		float t = SceneIntersect(r, intersec);
@@ -388,10 +388,9 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 		// if we reached something bright, don't spawn any more rays
 		if (intersec.type == LIGHT)
 		{	
-
 			if (bounceIsSpecular)
 			{
-				accumCol += mask * intersec.emission;
+				accumCol = mask * intersec.emission;
 			}
 			
 			break;
@@ -406,14 +405,8 @@ vec3 CalculateRadiance( Ray r, inout float seed )
                 if (intersec.type == DIFF) // Ideal DIFFUSE reflection
                 {
 			mask *= intersec.color;
+			bounceIsSpecular = false;
 			accumCol += calcDirectLightingQuad(mask, x, nl, quads[5], seed);
-			
-			/*
-                       	if (uCameraIsMoving)
-			{
-				sampleDiffuseBudget -= 1;
-			}
-			*/
 			
 			sampleDiffuseBudget -= 1;
 			if (sampleDiffuseBudget < 0) break;
@@ -422,8 +415,8 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			vec3 d = randomCosWeightedDirectionInHemisphere( nl, seed );
 			r = Ray( x, normalize(d) );
 			r.origin += r.direction * 2.0;
-			//r.origin += nl * 2.0;
-			bounceIsSpecular = false;
+			mask *= max(0.0, dot(r.direction, nl));
+			
 			continue;	
                 }
 		
@@ -450,7 +443,6 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
 			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
 			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
-			//float Tr = 1.0 - Re;
 			
 			if (rand(seed) < Re) // reflect ray from surface
 			{
@@ -487,9 +479,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			// choose either specular reflection or diffuse
 			if( rand(seed) < Re )
 			{	
-				vec3 reflectVec = reflect(r.direction, nl);
-				vec3 randVec = vec3(rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0);
-				r = Ray( x, mix( reflectVec, normalize(nl + randVec), roughness) );
+				r = Ray( x, reflect(r.direction, nl) );
 				r.origin += r.direction * 2.0;
 				bounceIsSpecular = true;
 				continue;	
@@ -502,13 +492,14 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 				vec3 d = randomCosWeightedDirectionInHemisphere( nl, seed );
 				r = Ray( x, normalize(d) );
 				r.origin += r.direction * 2.0;
+				mask *= max(0.0, dot(r.direction, nl));
 				bounceIsSpecular = false;
 				continue;
 			}
 			
 		} //end if (intersec.type == COAT)
 		
-	} // end for (int depth = 0; depth < 6; depth++)
+	} // end for (int depth = 0; depth < 5; depth++)
 	
 	return accumCol;      
 }
