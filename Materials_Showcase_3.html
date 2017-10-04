@@ -188,6 +188,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			bounceIsSpecular = true;
                         continue;
                 }
+		
                 if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
 			float nc = 1.0; // IOR of Air
@@ -221,45 +222,6 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			
 		} // end if (intersec.type == REFR)
 		
-		if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top (like car, or shiny pool ball)
-		{
-			
-			// Schlick Fresnel approx.
-			float ddn = dot(-r.direction, nl);
-			float nc = 1.0; // IOR of air
-			float nt = 1.4; // IOR of ClearCoat 
-			float R0 = (nc - nt) / (nc + nt);
-			R0 *= R0;
-			float c = 1.0 - ddn;
-			float Re = R0 + (1.0 - R0) * c * c * c * c * c;
-			
-			float shininess = 1.0;
-			
-			// choose random sample vector for diffuse material underneath ClearCoat
-			vec3 d = randomCosWeightedDirectionInHemisphere( nl, seed );
-			
-			// choose either specular reflection or diffuse
-			if( rand(seed) < Re )
-			{	
-				r = Ray( x, mix( normalize(d), reflect(r.direction, nl), shininess ) );
-				r.origin += r.direction * 2.0;
-				bounceIsSpecular = true;
-				continue;	
-			}
-			else
-			{
-				r = Ray( x, normalize(d) );
-				r.origin += r.direction * 2.0;
-				mask *= intersec.color;
-				
-				accumCol += calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
-				mask *= max(0.0, dot(r.direction, nl));
-				bounceIsSpecular = false;
-				continue;
-			}
-			
-		} //end if (intersec.type == COAT)
-		
 		if (intersec.type == TRANSLUCENT)  // Translucent Sub-Surface Scattering material
 		{
 			float translucentDensity = 0.25;
@@ -280,90 +242,15 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 				bounceIsSpecular = false;	
 			}
 			
-			accumCol += calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
 			x = x + d * scatteringDistance;
+			accumCol += calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
 			r = Ray( x, d );
 			continue;	
 			
 		} // end if (intersec.type == TRANSLUCENT)
 		
-		if (intersec.type == VOLUME)  // Volume filled with participating medium (i.e. smoke, fog, dust, etc.)
-		{
-                
-			float density = 0.75;
-			if (rand(seed) < density)
-			{
-				// scattering
-				// choose random Diffuse reflection vector for participating medium
-				vec3 d = randomSphereDirection(seed); // true isotropic scattering
-				r = Ray( x, normalize(d) );
-				r.origin += r.direction * 2.0;
-				mask *= intersec.color;
-				accumCol += calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
-				
-				mask *= max(0.0, dot(r.direction, nl));
-				bounceIsSpecular = false;
-				continue;
-			}
-			else
-			{
-				// transmission
-				r = Ray( x, r.direction );
-				r.origin += r.direction * 2.0;
-				
-				continue;
-			}
-				
-		} // end if (intersec.type == VOLUME)
-		
-		if (intersec.type == SPECSUB)  // Shiny(specular) coating over Sub-Surface Scattering material
-		{
-			// Schlick Fresnel approx.
-			float ddn = dot(-r.direction, nl);
-			float nc = 1.0; // IOR of air
-			float nt = 1.3; // IOR of coating (for polished jade)
-			float R0 = (nc - nt) / (nc + nt);
-			R0 *= R0;
-			float c = 1.0 - ddn;
-			float Re = R0 + (1.0 - R0) * c * c * c * c * c;
-			
-			// choose either specular reflection or translucent subsurface scattering/transmission
-			if( bounceIsSpecular && rand(seed) < Re )
-			{
-				r = Ray( x, reflect(r.direction, nl) );
-				r.origin += r.direction * 2.0;
-				bounceIsSpecular = true;
-				continue;
-			}
-			
-			vec3 absorptionCoefficient = vec3(2.0, 0.01, 0.2);
-			float translucentDensity = 0.1;
-			float scatteringDistance = -log(rand(seed)) / translucentDensity;
-			vec3 d;
-			
-			if (scatteringDistance < t) 
-			{
-				mask *= exp(-absorptionCoefficient * scatteringDistance); // scattering
-				d = randomSphereDirection(seed); // true Isotropic scattering
-				bounceIsSpecular = false;
-			}
-			else
-			{
-				mask *= exp(-absorptionCoefficient * t); // transmission
-				d = r.direction;
-				bounceIsSpecular = false;
-			}
-			
-			accumCol += calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
-			x = x + r.direction * scatteringDistance;
-			r = Ray( x, normalize(d) );
-			
-			continue;
-			
-		} // end if (intersec.type == SPECSUB)
-		
-		
 	} // end for (int depth = 0; depth < 4; depth++)
+	
 	
 	return accumCol;      
 }
