@@ -281,7 +281,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 
 			//if (bounceIsSpecular)
 			{
-				accumCol += mask * intersec.emission;
+				accumCol = mask * intersec.emission;
 			}
 			
 			break;
@@ -304,11 +304,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			
 			mask *= intersec.color;
 			//accumCol += calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
-                        
-			// Russian Roulette
-			if (rand(seed) > 0.5)
-				break;
-			else mask *= 2.0;
+                        bounceIsSpecular = false;
 			
 			sampleDiffuseBudget -= 1;
 			if (sampleDiffuseBudget < 0) break;
@@ -317,7 +313,8 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			vec3 d = randomCosWeightedDirectionInHemisphere( nl, seed );
 			r = Ray( x, normalize(d) );
 			r.origin += r.direction;
-			bounceIsSpecular = false;
+			mask *= max(0.0, dot(r.direction, nl));
+			
 			continue;	
                 }
 		
@@ -332,16 +329,9 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 
                 if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
-			bool into = dot(n,nl) > 0.0;  // Ray from outside going in?
-			float nc = 1.0; // IOR of air
-			float nt = 1.33; // IOR of water
-			if ( !into ) 
-			{
-				nc = 1.33;
-				nt = 1.0;
-			}
-			
-			float nnt = nc / nt;
+			float nc = 1.0; // IOR of Air
+			float nt = 1.5; // IOR of common Glass
+			float nnt = dot(n,nl) > 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
 			vec3 tdir = refract(r.direction, nl, nnt);
 				
 			// Original Fresnel equations
@@ -350,30 +340,28 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
 			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
 			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
-			//float Tr = 1.0 - Re;
-		
-			float transmissionProbability = rand(seed);
+			float Tr = 1.0 - Re;
 			
-			if( transmissionProbability > Re ) // transmit ray through surface
-			{
-				mask *= intersec.color;
-				r = Ray(x, tdir);
-				r.origin += r.direction;
-				bounceIsSpecular = true;
-				continue;
-			}
-			else // reflect ray from surface
+			if (rand(seed) < Re) // reflect ray from surface
 			{
 				r = Ray( x, reflect(r.direction, nl) );
-			    	r.origin += r.direction;
+			    	r.origin += r.direction * 2.0;
 				bounceIsSpecular = true;
 			    	continue;	
 			}
-		}
+			else // transmit ray through surface
+			{
+				mask *= intersec.color;
+				r = Ray(x, tdir);
+				r.origin += r.direction * 2.0;
+				bounceIsSpecular = true;
+				continue;
+			}
+			
+		} // end if (intersec.type == REFR)
 		
 		if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top (like car, or shiny pool ball)
 		{
-			
 			// Schlick Fresnel approx.
 			float ddn = dot(-r.direction, nl);
 			float nc = 1.0; // IOR of air
@@ -403,6 +391,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 				mask *= intersec.color;
 				
 				//accumCol += calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
+				mask *= max(0.0, dot(r.direction, nl));
 				bounceIsSpecular = false;
 				continue;
 			}
