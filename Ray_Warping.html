@@ -260,6 +260,8 @@ float SceneIntersect( Ray r, inout Intersection intersec, inout float seed )
 	return t;
 }
 
+// can't #include the following because it passes rand seed variable to SceneIntersect
+//
 vec3 calcDirectLightingSphere(vec3 mask, vec3 x, vec3 nl, Sphere light, inout float seed)
 {
 	vec3 dirLight = vec3(0.0);
@@ -308,14 +310,13 @@ vec3 CalculateRadiance( Ray r, inout float seed )
                         break;
 		}
 		
-		
 		// if we reached something bright, don't spawn any more rays
 		if (intersec.type == LIGHT)
 		{	
 
 			if (bounceIsSpecular)
 			{
-				accumCol += mask * intersec.emission;
+				accumCol = mask * intersec.emission;
 			}
 			
 			break;
@@ -332,13 +333,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
                 {
 			mask *= intersec.color;
 			accumCol += calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
-                        
-			/*
-			if (uCameraIsMoving)
-			{	
-				sampleDiffuseBudget -= 1;
-			}
-			*/
+			bounceIsSpecular = false;
 			
 			sampleDiffuseBudget -= 1;
 			if (sampleDiffuseBudget < 0) break;
@@ -347,7 +342,8 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			vec3 d = randomCosWeightedDirectionInHemisphere( nl, seed );
 			r = Ray( x, normalize(d) );
 			r.origin += r.direction * 2.0;
-			bounceIsSpecular = false;
+			mask *= max(0.0, dot(r.direction, nl));
+			
 			continue;	
                 }
 		
@@ -393,9 +389,8 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			
 		} // end if (intersec.type == REFR)
 		
-		if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top
+		if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top (like car, or shiny pool ball)
 		{
-			
 			// Schlick Fresnel approx.
 			float ddn = dot(-r.direction, nl);
 			float nc = 1.0; // IOR of air
@@ -425,6 +420,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 				mask *= intersec.color;
 				
 				accumCol += calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
+				mask *= max(0.0, dot(r.direction, nl));
 				bounceIsSpecular = false;
 				continue;
 			}
@@ -441,7 +437,7 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0.0, 0.0, 0.0);// No color value, Black        
-	vec3 L1 = vec3(1.0, 1.0, 1.0) * 5.0;// Bright light
+	vec3 L1 = vec3(1.0, 1.0, 1.0) * 10.0;// Bright light
 		    
 	spheres[0] = Sphere( 100.0, vec3(275.0, 610.0, -280.0), L1,                   z, LIGHT);// Light Sphere
 	
