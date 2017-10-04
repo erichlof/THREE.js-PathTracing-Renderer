@@ -96,6 +96,7 @@ Box boxes[N_BOXES];
 
 #include <pathtracing_box_intersect>
 
+
 //----------------------------------------------------------------------------
 float QuadIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 v3, Ray r )
 //----------------------------------------------------------------------------
@@ -104,6 +105,7 @@ float QuadIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 v3, Ray r )
 	float tTri2 = TriangleIntersect( v0, v2, v3, r );
 	return min(tTri1, tTri2);
 }
+
 
 //--------------------------------------------------------------------------------------------------------
 float DisplacementBoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r, out vec3 normal, out float inside )
@@ -257,7 +259,8 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool directLightFlag )
 	return t;
 }
 
-
+// can't #include the following because it passes bool directLightFlag to SceneIntersect
+//
 vec3 calcDirectLightingQuad(vec3 mask, vec3 x, vec3 nl, Quad light, inout float seed)
 {
 	vec3 dirLight = vec3(0.0);
@@ -296,7 +299,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 	bool bounceIsSpecular = true;
 	bool directLightFlag = false;
 	
-        for (int depth = 0; depth < 6; depth++)
+        for (int depth = 0; depth < 5; depth++)
 	{
 		
 		float t = SceneIntersect(r, intersec, directLightFlag);
@@ -313,7 +316,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 
 			if (bounceIsSpecular)
 			{
-				accumCol += mask * intersec.emission;
+				accumCol = mask * intersec.emission;
 			}
 			
 			break;
@@ -329,12 +332,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
                 {
 			mask *= intersec.color;
 			accumCol += calcDirectLightingQuad(mask, x, nl, quads[5], seed);
-			/*
-                       	if (uCameraIsMoving)
-			{
-				sampleDiffuseBudget -= 1;
-			}
-			*/
+			bounceIsSpecular = false;
 			
 			sampleDiffuseBudget -= 1;
 			if (sampleDiffuseBudget < 0) break;
@@ -343,8 +341,8 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			vec3 d = randomCosWeightedDirectionInHemisphere( nl, seed );
 			r = Ray( x, normalize(d) );
 			r.origin += r.direction * 2.0;
-			//r.origin += nl * 2.0;
-			bounceIsSpecular = false;
+			mask *= max(0.0, dot(r.direction, nl));
+			
 			continue;	
                 }
 		
@@ -370,7 +368,6 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
 			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
 			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
-			//float Tr = 1.0 - Re;
 			
 			if (rand(seed) < Re) // reflect ray from surface
 			{
@@ -392,7 +389,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			
 		} // end if (intersec.type == REFR)
 		
-	} // end for (int depth = 0; depth < 6; depth++)
+	} // end for (int depth = 0; depth < 5; depth++)
 	
 	return accumCol;      
 }
