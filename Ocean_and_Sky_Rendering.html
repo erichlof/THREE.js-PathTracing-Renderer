@@ -628,6 +628,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout float seed )
 			vec3 d = randomCosWeightedDirectionInHemisphere( nl, seed );
                 	r = Ray( x, normalize(d) );
 			r.origin += r.direction * 2.0;
+			mask *= max(0.0, dot(r.direction, nl));
 			previousIntersecType = DIFF;
 			continue;
                 }
@@ -654,7 +655,6 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout float seed )
 			float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
 			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
 			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
-			//float Tr = 1.0 - Re;
 			
 			if (rand(seed) < Re) // reflect ray from surface
 			{
@@ -663,7 +663,6 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout float seed )
 				previousIntersecType = REFR;
 				continue;	
 			}
-			
 			else // transmit ray through surface
 			{
 				//mask *= intersec.color;
@@ -674,7 +673,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout float seed )
 			}
 		} // end if (intersec.type == REFR)
 		
-		if (intersec.type == WOOD)  // Diffuse object underneath with thin Water on top
+		if (intersec.type == WOOD)  // Diffuse object underneath with thin layer of Water on top
 		{
 			float roughness = 0.2;
 			float iOR = 1.01;
@@ -699,7 +698,6 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout float seed )
 			}
 			else
 			{
-				
 				float pattern = abs(noise(vec2( (x.x * 0.5 * x.z * 0.5 + sin(x.y*0.005)) )));
 				float woodPattern = 1.0 / max(1.0, pattern * 100.0);
 				intersec.color *= vec3(woodPattern);
@@ -710,6 +708,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout float seed )
 				vec3 d = randomCosWeightedDirectionInHemisphere( nl, seed );
 				r = Ray( x, normalize(d) );
 				r.origin += r.direction * 2.0;
+				mask *= max(0.0, dot(r.direction, nl));
 				previousIntersecType = DIFF;
 				continue;
 			}
