@@ -99,6 +99,8 @@ Box boxes[N_BOXES];
 
 #include <pathtracing_random_functions>
 
+#include <pathtracing_plane_intersect>
+
 #include <pathtracing_sphere_intersect>
 
 //----------------------------------------------------------------------------------------------
@@ -375,27 +377,16 @@ float CSG_BoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r, out vec3 n1, out 
 	return result;
 }
 
-//-----------------------------------------------------------------------
-float PlaneIntersect( vec4 pla, Ray r )
-//-----------------------------------------------------------------------
-{
-	vec3 n = normalize(-pla.xyz);
-	float denom = dot(n, r.direction);
-	if (denom <= 0.0)
-		return INFINITY;
-	
-        vec3 pOrO = (pla.w * n) - r.origin; 
-        return dot(pOrO, n) / denom; 
-}
-
 //----------------------------------------------------------------------------------
 float CSG_PlaneIntersect( vec4 pla, Ray r, out vec3 n1, out vec3 n2, out float far )
 //----------------------------------------------------------------------------------
 {
-	vec3 n = normalize(-pla.xyz);
+	vec3 n = normalize(pla.xyz);
 	float denom = dot(n, r.direction);
-	if (denom <= 0.0)
-		return INFINITY;
+	
+	// uncomment if single-sided plane is desired
+	//if (denom >= 0.0)
+	//	return INFINITY;
 	
         vec3 pOrO = (pla.w * n) - r.origin; 
         float result = dot(pOrO, n) / denom;
@@ -1319,7 +1310,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		intersec.type = COAT;
 	}
 	// left wall and hallway
-	Plane leftWallPlane = Plane( vec4( 1,0,0,  300.0), vec3(0), vec3(0.05,0.15,0.15), DIFF);
+	Plane leftWallPlane = Plane( vec4( 1,0,0, -300.0), vec3(0), vec3(0.05,0.15,0.15), DIFF);
 	A_near = CSG_PlaneIntersect( leftWallPlane.pla, r, A_n1, A_n2, A_far );
 	B_near = CSG_BoxIntersect( vec3(-350, 0, -128), vec3(-290, 78, -72), r, B_n1, B_n2, B_far );
 	d = operation_SolidA_Minus_SolidB( A_near, A_far, B_near, B_far, A_n1, A_n2, B_n1, B_n2, n );
@@ -1576,10 +1567,10 @@ void SetupScene(void)
 	boxes[0] = Box( vec3(263.0,0.0,-90.0), vec3(270.0,90.0,-140.0), z, vec3(0.2,0.9,0.7), REFR);//Glass Box
 	boxes[1] = Box( vec3(269.0,6.0,-96.0), vec3(264.0,84.0,-134.0), z, vec3(0.0,0.0,0.0), DIFF);//Diffuse Box
 	
-	planes[0] = Plane( vec4( 0,0,1,  300.0), z, vec3(0.6), DIFF);//Gray Wall in front of camera
-	planes[1] = Plane( vec4( 0,0,-1, 300.0), z, vec3(0.6), DIFF);//Gray Wall behind camera
-	planes[2] = Plane( vec4(-1,0,0,  300.0), z, vec3(0.15,0.05,0.15), DIFF);//Purple Wall on the right
-	planes[3] = Plane( vec4( 0,-1,0, 301.0), z, vec3(0.5), DIFF);//Ceiling
+	planes[0] = Plane( vec4( 0,0,1,  -300.0), z, vec3(0.6), DIFF);//Gray Wall in front of camera
+	planes[1] = Plane( vec4( 0,0,-1, -300.0), z, vec3(0.6), DIFF);//Gray Wall behind camera
+	planes[2] = Plane( vec4(-1,0,0,  -300.0), z, vec3(0.15,0.05,0.15), DIFF);//Purple Wall on the right
+	planes[3] = Plane( vec4( 0,-1,0, -301.0), z, vec3(0.5), DIFF);//Ceiling
 	
 	disks[0] = Disk( 8.0, vec3(220, 20, 115), vec3(-1,0,0), z, vec3(0.2,0.5,1.0), COAT);
 	disks[1] = Disk( 8.0, vec3(220, 20, 200), vec3(-1,0,0), z, vec3(1.0,0.0,0.7), REFR);
