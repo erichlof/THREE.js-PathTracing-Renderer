@@ -139,6 +139,7 @@ varying vec2 vUv;
 #define WATER 9
 #define WOOD 10
 #define SEAFLOOR 11
+#define TERRAIN 12
 
 `;
 
@@ -182,13 +183,16 @@ THREE.ShaderChunk[ 'pathtracing_plane_intersect' ] = `
 float PlaneIntersect( vec4 pla, Ray r )
 //-----------------------------------------------------------------------
 {
-	vec3 n = normalize(-pla.xyz);
+	vec3 n = normalize(pla.xyz);
 	float denom = dot(n, r.direction);
-	if (denom <= 0.0)
-		return INFINITY;
+
+	// uncomment the following if single-sided plane is desired
+	//if (denom >= 0.0) 
+	//	return INFINITY;
 	
         vec3 pOrO = (pla.w * n) - r.origin; 
-        return dot(pOrO, n) / denom; 
+        float result = dot(pOrO, n) / denom;
+	return (result > 0.0) ? result : INFINITY;
 }
 
 `;
