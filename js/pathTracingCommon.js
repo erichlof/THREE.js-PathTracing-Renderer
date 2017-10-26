@@ -140,6 +140,9 @@ varying vec2 vUv;
 #define WOOD 10
 #define SEAFLOOR 11
 #define TERRAIN 12
+#define CLOTH 13
+#define LIGHTWOOD 14
+#define DARKWOOD 15
 
 `;
 
@@ -227,25 +230,45 @@ float DiskIntersect( vec3 diskPos, vec3 normal, float radius, Ray r )
 
 THREE.ShaderChunk[ 'pathtracing_sphere_intersect' ] = `
 
+bool solveQuadratic(float A, float B, float C, out float t0, out float t1)
+{
+	float discrim = B*B-4.0*A*C;
+    
+	if ( discrim < 0.0 )
+        	return false;
+    
+	float rootDiscrim = sqrt( discrim );
+    
+	float t_0 = (-B-rootDiscrim)/(2.0*A);
+	float t_1 = (-B+rootDiscrim)/(2.0*A);
+
+	t0 = min( t_0, t_1 );
+	t1 = max( t_0, t_1 );
+    
+	return true;
+}
+
 //-----------------------------------------------------------------------
-float SphereIntersect( float rad, vec3 pos, Ray r )
+float SphereIntersect( float rad, vec3 pos, Ray ray )
 //-----------------------------------------------------------------------
 {
-	vec3 op = pos - r.origin;
-	float b = dot(op, r.direction);
-	float det = b * b - dot(op,op) + rad * rad;
-       	if (det < 0.0)
+	float t = INFINITY;
+	float t0, t1;
+	vec3 L = ray.origin - pos;
+	float a = dot( ray.direction, ray.direction );
+	float b = 2.0 * dot( ray.direction, L );
+	float c = dot( L, L ) - (rad * rad);
+
+	if (!solveQuadratic( a, b, c, t0, t1))
 		return INFINITY;
-        
-	det = sqrt(det);	
-	float t1 = b - det;
-	if( t1 > 0.0 )
-		return t1;
+	
+	if ( t1 > 0.0 )
+		t = t1;
 		
-	float t2 = b + det;
-	if( t2 > 0.0 )
-		return t2;
-	return INFINITY;	
+	if ( t0 > 0.0 )
+		t = t0;
+	
+	return t;
 }
 
 `;
@@ -899,6 +922,85 @@ float TriangleIntersect( vec3 v0, vec3 v1, vec3 v2, Ray r )
 		return INFINITY;
 
 	return dot(edge2, qvec) * det;
+}
+
+`;
+
+THREE.ShaderChunk[ 'pathtracing_physical_sky_functions' ] = `
+
+float RayleighPhase(float cosTheta)
+{
+	return THREE_OVER_SIXTEENPI * (1.0 + (cosTheta * cosTheta));
+}
+
+float hgPhase(float cosTheta, float g)
+{
+        float g2 = g * g;
+        float inverse = 1.0 / pow(1.0 - 2.0 * g * cosTheta + g2, 1.5);
+	return ONE_OVER_FOURPI * ((1.0 - g2) * inverse);
+}
+
+vec3 totalMie()
+{
+	float c = (0.2 * TURBIDITY) * 10E-18;
+	return 0.434 * c * MIE_CONST;
+}
+
+float SunIntensity(float zenithAngleCos)
+{
+	return SUN_INTENSITY * max( 0.0, 1.0 - exp( -( CUTOFF_ANGLE - acos(zenithAngleCos) ) ) );
+}
+
+vec3 Get_Sky_Color(Ray r, vec3 sunDirection)
+{
+	
+    	vec3 viewDir = normalize(r.direction);
+	
+	/* most of the following code is borrowed from the three.js shader file: SkyShader.js */
+
+    	// Cosine angles
+	float cosViewSunAngle = max(0.001, dot(viewDir, sunDirection));
+    	float cosSunUpAngle = dot(sunDirection, UP_VECTOR); // allowed to be negative: + is daytime, - is nighttime
+    	float cosUpViewAngle = max(0.001, dot(UP_VECTOR, viewDir)); // cannot be 0, used as divisor
+	
+        // Get sun intensity based on how high in the sky it is
+    	float sunE = SunIntensity(cosSunUpAngle);
+        
+	// extinction (absorbtion + out scattering)
+	// rayleigh coefficients
+    	vec3 rayleighAtX = TOTAL_RAYLEIGH * RAYLEIGH_COEFFICIENT;
+    
+	// mie coefficients
+	vec3 mieAtX = totalMie() * MIE_COEFFICIENT;  
+    
+	// optical length
+	float zenithAngle = 1.0 / cosUpViewAngle;
+    
+	float rayleighOpticalLength = RAYLEIGH_ZENITH_LENGTH * zenithAngle;
+	float mieOpticalLength = MIE_ZENITH_LENGTH * zenithAngle;
+
+	// combined extinction factor	
+	vec3 Fex = exp(-(rayleighAtX * rayleighOpticalLength + mieAtX * mieOpticalLength));
+
+	// in scattering
+	vec3 rayleighXtoEye = rayleighAtX * RayleighPhase(cosViewSunAngle);
+	vec3 mieXtoEye = mieAtX * hgPhase(cosViewSunAngle, MIE_DIRECTIONAL_G);
+     
+    	vec3 totalLightAtX = rayleighAtX + mieAtX;
+    	vec3 lightFromXtoEye = rayleighXtoEye + mieXtoEye; 
+    
+    	vec3 somethingElse = sunE * (lightFromXtoEye / totalLightAtX);
+    
+    	vec3 sky = somethingElse * (1.0 - Fex);
+	float oneMinusCosSun = 1.0 - cosSunUpAngle;
+    	sky *= mix( vec3(1.0), pow(somethingElse * Fex,vec3(0.5)), 
+	    clamp(oneMinusCosSun * oneMinusCosSun * oneMinusCosSun * oneMinusCosSun * oneMinusCosSun, 0.0, 1.0) );
+
+	// composition + solar disc
+    	float sundisk = smoothstep(SUN_ANGULAR_DIAMETER_COS, SUN_ANGULAR_DIAMETER_COS, cosViewSunAngle + 0.0004);
+	vec3 sun = (sunE * SUN_INTENSITY * Fex) * sundisk;
+	
+	return sky + sun;
 }
 
 `;
