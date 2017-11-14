@@ -143,6 +143,7 @@ varying vec2 vUv;
 #define CLOTH 13
 #define LIGHTWOOD 14
 #define DARKWOOD 15
+#define PAINTING 16
 
 `;
 
@@ -229,7 +230,7 @@ float DiskIntersect( vec3 diskPos, vec3 normal, float radius, Ray r )
 `;
 
 THREE.ShaderChunk[ 'pathtracing_sphere_intersect' ] = `
-
+/*
 bool solveQuadratic(float A, float B, float C, out float t0, out float t1)
 {
 	float discrim = B*B-4.0*A*C;
@@ -242,6 +243,25 @@ bool solveQuadratic(float A, float B, float C, out float t0, out float t1)
 	float t_0 = (-B-rootDiscrim)/(2.0*A);
 	float t_1 = (-B+rootDiscrim)/(2.0*A);
 
+	t0 = min( t_0, t_1 );
+	t1 = max( t_0, t_1 );
+    
+	return true;
+}
+*/
+bool solveQuadratic(float A, float B, float C, out float t0, out float t1)
+{
+	float discrim = B*B-4.0*A*C;
+    
+	if ( discrim < 0.0 )
+        	return false;
+    
+	float rootDiscrim = sqrt( discrim );
+
+	float Q = (B > 0.0) ? -0.5 * (B + rootDiscrim) : -0.5 * (B - rootDiscrim); 
+	float t_0 = Q / A; 
+	float t_1 = C / Q;
+	
 	t0 = min( t_0, t_1 );
 	t1 = max( t_0, t_1 );
     
@@ -279,6 +299,8 @@ THREE.ShaderChunk[ 'pathtracing_ellipsoid_intersect' ] = `
 float EllipsoidIntersect( vec3 radii, vec3 pos, Ray r )
 //-----------------------------------------------------------------------
 {
+	float t = INFINITY;
+	float t0, t1;
 	vec3 oc = r.origin - pos;
 	vec3 oc2 = oc*oc;
 	vec3 ocrd = oc*r.direction;
@@ -290,20 +312,17 @@ float EllipsoidIntersect( vec3 radii, vec3 pos, Ray r )
 	float a = dot(rd2, invRad2);
 	float b = 2.0*dot(ocrd, invRad2);
 	float c = dot(oc2, invRad2) - 1.0;
-	float det = b*b - 4.0*a*c;
-	if (det < 0.0) 
+
+	if (!solveQuadratic( a, b, c, t0, t1))
 		return INFINITY;
-		
-	det = sqrt(det);
-	float t1 = (-b - det) / (2.0 * a);
-	if( t1 > 0.0 )
-		return t1;
-		
-	float t2 = (-b + det) / (2.0 * a);
-	if( t2 > 0.0 )
-		return t2;
 	
-	return INFINITY;	
+	if ( t1 > 0.0 )
+		t = t1;
+		
+	if ( t0 > 0.0 )
+		t = t0;
+	
+	return t;
 }
 
 `;
@@ -626,6 +645,7 @@ float CapsuleIntersect( vec3 p0, float r0, vec3 p1, float r1, Ray r, out vec3 n 
 
 THREE.ShaderChunk[ 'pathtracing_paraboloid_intersect' ] = `
 
+
 //------------------------------------------------------------------------------
 float ParaboloidIntersect( float rad, float height, vec3 pos, Ray r, out vec3 n )
 //------------------------------------------------------------------------------
@@ -638,37 +658,52 @@ float ParaboloidIntersect( float rad, float height, vec3 pos, Ray r, out vec3 n 
 	float a = k * (rd.x * rd.x + rd.z * rd.z);
 	float b = k * 2.0 * (rd.x * ro.x + rd.z * ro.z) - rd.y;
 	float c = k * (ro.x * ro.x + ro.z * ro.z) - ro.y;
-	float det = (b * b) - (4.0 * a * c);
-	if (det < 0.0) 
+
+	float t0, t1;
+	if (!solveQuadratic( a, b, c, t0, t1))
 		return INFINITY;
-		
-	det = sqrt(det);
-	float t1 = (-b - det) / (2.0 * a);
-	float t2 = (-b + det) / (2.0 * a);
+	
+	vec3 ip1, ip2;
 	float result = INFINITY;
-		
-	if( t2 > 0.0 )
-	{
-		vec3 ip = ro + rd * t2;
-		if (ip.y < height)
+	
+	if (t1 > 0.0)
+	{	
+		ip2 = ro + rd * t1;
+		if (ip2.y < height)
 		{
-			n = vec3( -2.0 * ip.x, 1.0, -2.0 * ip.z );
-			result = t2;
-		}
-			
+			n = vec3( -2.0 * ip2.x, 2.0 * ip2.y, -2.0 * ip2.z );
+			result = t1;
+		}		
 	}
 	
-	if( t1 > 0.0 )
+	if (t0 > 0.0)
 	{
-		vec3 ip = ro + rd * t1;
-		if (ip.y < height)
+		ip1 = ro + rd * t0;
+		if (ip1.y < height)
 		{
-			n = vec3( 2.0 * ip.x, -1.0, 2.0 * ip.z );
-			result = t1;
-		}
-			
+			n = vec3( 2.0 * ip1.x, -2.0 * ip1.y, 2.0 * ip1.z );
+			result = t0;
+		}		
 	}
+	
+	if( t0 > 0.0 && t1 > 0.0)
+	{
+		float dist1 = distance(ro,ip1);
+		float dist2 = distance(ro,ip2);
 		
+		if (dist2 < dist1 && ip2.y < height)
+		{
+			n = vec3( -2.0 * ip2.x, 2.0 * ip2.y, -2.0 * ip2.z );
+			result = t1;
+		}	
+		
+		if (dist1 < dist2 && ip1.y < height)
+		{
+			n = vec3( 2.0 * ip1.x, -2.0 * ip1.y, 2.0 * ip1.z );
+			result = t0;
+		}			
+	}
+	
 	return result;	
 }
 
