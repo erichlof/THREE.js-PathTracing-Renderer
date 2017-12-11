@@ -536,10 +536,11 @@ void SetupScene(void)
 {
 	vec3 z  = vec3(0.0);// No color value, Black        
 	vec3 L1 = vec3(1.0) * 6.0;// Bright White light
+	vec3 L2 = vec3(1.0, 0.9, 0.8) * 20.0;// Bright Yellowish light
 	vec3 tableColor = vec3(1.0, 0.7, 0.4) * 0.6;
 	vec3 brassColor = vec3(1.0, 0.7, 0.5) * 0.7;
 	
-	quads[0] = Quad( vec3( 180,-100,-299), vec3( 280,-100,-299), vec3( 280,  90,-299), vec3( 180,  90,-299), L1, z, 0.0, LIGHT);// Area Light Quad in doorway
+	quads[0] = Quad( vec3( 180,-100,-299), vec3( 280,-100,-299), vec3( 280,  90,-299), vec3( 180,  90,-299), L2, z, 0.0, LIGHT);// Area Light Quad in doorway
 	
 	quads[1] = Quad( vec3(-350,-100,-300), vec3( 350,-100,-300), vec3( 350, 150,-300), vec3(-350, 150,-300),  z, vec3(1.0), 0.0,   DIFF);// Back Wall (in front of camera, visible at startup)
 	quads[2] = Quad( vec3( 350,-100, 200), vec3(-350,-100, 200), vec3(-350, 150, 200), vec3( 350, 150, 200),  z, vec3(1.0), 0.0,   DIFF);// Front Wall (behind camera, not visible at startup)
@@ -948,7 +949,7 @@ void SetupScene(void)
 				// it is just a data placeholder as well as an Object3D that can be transformed/manipulated by 
 				// using familiar Three.js library commands. It is then fed into the GPU path tracing renderer
 				// through its 'matrixWorld' matrix. See below:
-				tallBoxMesh.rotation.set(0, Math.PI * 2.0 - 0.3, 0);
+				tallBoxMesh.rotation.set(0, Math.PI * 2.0 - 0.4, 0);
 				tallBoxMesh.position.set(179, -5, -298);
 				tallBoxMesh.updateMatrixWorld(true); // 'true' forces immediate matrix update
 				pathTracingUniforms.uTallBoxInvMatrix.value.getInverse( tallBoxMesh.matrixWorld );
