@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 	<head>
-		<title>three.js PathTracing Renderer - BVH Debugging</title>
+		<title>three.js PathTracing Renderer - BVH Debugging (WIP)</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1">
 		<style>
@@ -29,7 +29,7 @@
 	<body>
 
 		<div id="container"> </div>
-		<div id="info">three.js PathTracing Renderer - BVH Debugging</div>
+		<div id="info">three.js PathTracing Renderer - BVH Debugging (WIP)</div>
 		
 		<div id="cameraInfo" style="position:fixed; left:3%; bottom:2%; font-family:arial; font-type:bold; color:rgb(255,255,255);">
 		FOV: 60 / Aperture: 0.00 / FocusDistance: 100 <br> 
@@ -37,12 +37,12 @@
 		</div>
 
 		<script src="js/three.min.js"> </script>
+		<script src="js/OBJLoader.js"></script>
+		<script src="js/BVH_Acceleration_Structure.js"> </script>
 		<script src="js/pathTracingCommon.js"> </script>
 		<script src="js/threex.keyboardstate.js"> </script>
 		<script src="js/FirstPersonCameraControls.js"> </script>
 		<script src="js/MobileJoystickControls.js"> </script>
-		<script src="js/webgl-obj-loader.js"> </script>
-		<script src="js/BVH_Acceleration_Structure.js"> </script>
 		<script src="js/stats.min.js"> </script>
 		
 		
@@ -132,7 +132,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, inout float seed )
 			intersec.type = spheres[i].type;
 		}
         }
-	/*
+	
 	for (int i = 0; i < N_BOXES; i++)
         {
 		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, r, n );
@@ -145,8 +145,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, inout float seed )
 			intersec.type = boxes[i].type;
 		}
         }
-	*/
-	
+		
 	// AABB BVH Intersection
 	float bc, bd;
 	float iX3;
@@ -231,9 +230,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, inout float seed )
 				{
 					t = d;
 					intersec.normal = normalize( cross(v1-v0, v2-v0) );
-					intersec.emission = vec3(1,0,1);
-					intersec.color = vec3(1,0,1);
-					intersec.type = LIGHT;
+					intersec.emission = vec3(0);
+					intersec.color = vec3(1,0,0);
+					intersec.type = DIFF;
 				}
 				
 				if (p == aabbNodeData.g)
@@ -263,7 +262,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 	vec3 checkCol1 = vec3(0.5);
         Intersection intersec;
 	bool bounceIsSpecular = true;
-	int sampleDiffuseBudget = 2;
+	int diffuseSampleCount = 0;
 	
         for (int depth = 0; depth < 4; depth++)
 	{
@@ -279,7 +278,6 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 		// if we reached something bright, don't spawn any more rays
 		if (intersec.type == LIGHT)
 		{	
-
 			//if (bounceIsSpecular)
 			{
 				accumCol = mask * intersec.emission;
@@ -304,17 +302,17 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			}
 			
 			mask *= intersec.color;
+			bounceIsSpecular = false;
 			//accumCol += calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
-                        bounceIsSpecular = false;
 			
-			sampleDiffuseBudget -= 1;
-			if (sampleDiffuseBudget < 0) break;
+			//diffuseSampleCount += 1;
+			//if (diffuseSampleCount > 1 || rand(seed) < 0.5)
+			//	break;
 			
 			// choose random Diffuse sample vector
 			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 			r.origin += r.direction;
 			mask *= max(0.0, dot(r.direction, nl));
-			
 			continue;	
                 }
 		
@@ -371,21 +369,23 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			float c = 1.0 - ddn;
 			float Re = R0 + (1.0 - R0) * c * c * c * c * c;
 			
+			// choose random sample vector for diffuse material underneath ClearCoat
+			vec3 d = randomCosWeightedDirectionInHemisphere( nl, seed );
+			
 			// choose either specular reflection or diffuse
 			if( rand(seed) < Re )
 			{	
 				r = Ray( x, reflect(r.direction, nl) );
-				r.origin += r.direction;
+				r.origin += r.direction * 2.0;
 				bounceIsSpecular = true;
 				continue;	
 			}
 			else
 			{
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
-				r.origin += r.direction;
 				mask *= intersec.color;
-				
 				//accumCol += calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
+				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+				r.origin += r.direction * 2.0;
 				//mask *= max(0.0, dot(r.direction, nl));
 				bounceIsSpecular = false;
 				continue;
@@ -452,6 +452,7 @@ void SetupScene(void)
 			var focusDistance = 100.0;
 			var increaseFocusDist = false;
 			var decreaseFocusDist = false;
+			//var pixelRatio = window.devicePixelRatio * 0.5;
 			var pixelRatio = 0.5;
 			var TWO_PI = Math.PI * 2;
 			var randomVector = new THREE.Vector3();
@@ -474,7 +475,7 @@ void SetupScene(void)
 			var pinchDeltaY = 0;
 			var camFlightSpeed = 60;
 			var fontAspect;
-			var objMeshes = {};
+			var objMesh;
 			var total_number_of_triangles = 0;
 			var triangle_array;
 			var triangleDataTexture;
@@ -527,28 +528,17 @@ void SetupScene(void)
 			}
 			
 			
+			var objectLoader = new THREE.OBJLoader();
+			objectLoader.load("models/UtahTeapot.obj", function ( meshGroup ) {
 
-			OBJ.downloadMeshes( {
-    				//'my_mesh': 'models/name.obj', // located in the models folder on the server
-    				
-				//'my_mesh': 'models/diamond.obj' // 8 tris
-				//'my_mesh': 'models/cube.obj' // 12 tris
-				//'my_mesh': 'models/crane.obj', // 36 tris
-				//'my_mesh': 'models/emerald.obj' // 140 tris
-				//'my_mesh': 'models/desktopPC.obj' // 215 tris
-				//'my_mesh': 'models/volkswagenLogo.obj' // 284 tris
-				//'my_mesh': 'models/tree.obj' // 500 tris
-				//'my_mesh': 'models/shuttle.obj' // 616 tris
-				//'my_mesh': 'models/monkey.obj' // 968 tris
-				'my_mesh': 'models/UtahTeapot.obj' // 992 tris
-				//'my_mesh': 'models/teapot.obj' // 1024 tris
-				//'my_mesh': 'models/bunny.obj' // 69630 tris
+				objMesh = meshGroup.children[0].clone();
 				
-  			}, init );
+				init();
+			} );
 			
+  			
 			
-  							
-			function init( meshes ) {
+			function init() {
 
 				if ( 'createTouch' in document ) {
 					mouseControl = false;
@@ -605,9 +595,6 @@ void SetupScene(void)
 				
 				renderer = new THREE.WebGLRenderer();
 				renderer.autoClear = false;
-				// 1 is full resolution, 0.5 is half, 0.25 is quarter, etc. (must be > than 0.0)
-				renderer.setPixelRatio(pixelRatio);
-				renderer.setSize( window.innerWidth, window.innerHeight );
 				renderer.context.getExtension('OES_texture_float');
 				
 				container = document.getElementById( 'container' );
@@ -639,7 +626,7 @@ void SetupScene(void)
 				// worldCamera is the dynamic camera 3d object that will be positioned, oriented and 
 				// constantly updated inside the 3d scene.  Its view will ultimately get passed back to the 
 				// stationary quadCamera, which renders the scene to a fullscreen quad (made up of 2 large triangles).
-				worldCamera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
+				worldCamera = new THREE.PerspectiveCamera(60, 1, 1, 1000);
 				pathTracingScene.add(worldCamera);
 				
 				controls = new FirstPersonCameraControls( worldCamera );
@@ -651,7 +638,7 @@ void SetupScene(void)
 				pathTracingScene.add( cameraControlsObject );
 
 				// for flyCam
-				cameraControlsObject.position.set(0,40,95);
+				cameraControlsObject.position.set(0,40,50);
 				
 				// look slightly downward
 				cameraControlsPitchObject.rotation.x = -0.2;
@@ -683,11 +670,8 @@ void SetupScene(void)
 				} );
 				screenTextureRenderTarget.texture.generateMipmaps = false;
 			
-				objMeshes = meshes;
-				//console.log(objMeshes.my_mesh.uniqueVertexList);
-  				//console.log(objMeshes.my_mesh.faceIndices);
-
-				total_number_of_triangles = objMeshes.my_mesh.faceIndices.length / 3;
+				
+				total_number_of_triangles = objMesh.geometry.attributes.position.array.length / 9;
 				console.log("Triangle count:" + total_number_of_triangles);
 				
 				var buffer1 = new ArrayBuffer(4096 * 3 * 4); 
@@ -699,7 +683,7 @@ void SetupScene(void)
 				aabb_array = new Float32Array( buffer2 );
 				
 				var modelScale = 1.0;
-				var modelPositionOffset = new THREE.Vector3(0,18,-50);
+				var modelPositionOffset = new THREE.Vector3(0,26,-50);
 				
 				var b_box_min = new THREE.Vector3(Infinity, Infinity, Infinity);
         			var b_box_max = new THREE.Vector3(-Infinity, -Infinity, -Infinity);
@@ -707,23 +691,22 @@ void SetupScene(void)
         			var triangle_b_box_max = new THREE.Vector3();
 				var triangle_b_box_centroid = new THREE.Vector3();
 				
-				for (var i = 0, j = 0; i < objMeshes.my_mesh.faceIndices.length; i+=3, j++) {
+				for (var i = 0; i < objMesh.geometry.attributes.position.array.length / 9; i++) {
 					
 					triangle_b_box_min.set(Infinity, Infinity, Infinity);
         				triangle_b_box_max.set(-Infinity, -Infinity, -Infinity);
 					
-					v0.set( objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+0] + 0 ],
-					        objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+0] + 1 ],
-					        objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+0] + 2 ]
-					      );
-					v1.set( objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+1] + 0 ],
-					        objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+1] + 1 ],
-				                objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+1] + 2 ] 
-					      );
-					v2.set( objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+2] + 0 ],
-					        objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+2] + 1 ],
-					        objMeshes.my_mesh.uniqueVertexList[ 3 * objMeshes.my_mesh.faceIndices[i+2] + 2 ] 
-				              );
+					v0.set(objMesh.geometry.attributes.position.array[9*i+0],
+					       objMesh.geometry.attributes.position.array[9*i+1],
+					       objMesh.geometry.attributes.position.array[9*i+2]);
+					
+					v1.set(objMesh.geometry.attributes.position.array[9*i+3],
+					       objMesh.geometry.attributes.position.array[9*i+4],
+					       objMesh.geometry.attributes.position.array[9*i+5]);
+					
+					v2.set(objMesh.geometry.attributes.position.array[9*i+6],
+					       objMesh.geometry.attributes.position.array[9*i+7],
+					       objMesh.geometry.attributes.position.array[9*i+8]);
 					
 					b_box_min.copy( b_box_min.min(v0) );
 	        			b_box_max.copy( b_box_max.max(v0) );
@@ -740,9 +723,9 @@ void SetupScene(void)
 					v1.add( modelPositionOffset );
 					v2.add( modelPositionOffset );
 					
-					triangle_array[9*j+0] = v0.x; triangle_array[9*j+1] = v0.y; triangle_array[9*j+2] = v0.z;     
-					triangle_array[9*j+3] = v1.x; triangle_array[9*j+4] = v1.y; triangle_array[9*j+5] = v1.z;
-					triangle_array[9*j+6] = v2.x; triangle_array[9*j+7] = v2.y; triangle_array[9*j+8] = v2.z;
+					triangle_array[9*i+0] = v0.x; triangle_array[9*i+1] = v0.y; triangle_array[9*i+2] = v0.z;     
+					triangle_array[9*i+3] = v1.x; triangle_array[9*i+4] = v1.y; triangle_array[9*i+5] = v1.z;
+					triangle_array[9*i+6] = v2.x; triangle_array[9*i+7] = v2.y; triangle_array[9*i+8] = v2.z;
 					
 					triangle_b_box_min.copy( triangle_b_box_min.min(v0) );
 	        			triangle_b_box_max.copy( triangle_b_box_max.max(v0) );
@@ -755,27 +738,12 @@ void SetupScene(void)
 								     (triangle_b_box_min.y + triangle_b_box_max.y) * 0.5,
 								     (triangle_b_box_min.z + triangle_b_box_max.z) * 0.5 );
 					
-					aabb_array[9*j+0] = triangle_b_box_min.x;      aabb_array[9*j+1] = triangle_b_box_min.y;      aabb_array[9*j+2] = triangle_b_box_min.z;     
-					aabb_array[9*j+3] = triangle_b_box_max.x;      aabb_array[9*j+4] = triangle_b_box_max.y;      aabb_array[9*j+5] = triangle_b_box_max.z;
-					aabb_array[9*j+6] = triangle_b_box_centroid.x; aabb_array[9*j+7] = triangle_b_box_centroid.y; aabb_array[9*j+8] = triangle_b_box_centroid.z;
+					aabb_array[9*i+0] = triangle_b_box_min.x;      aabb_array[9*i+1] = triangle_b_box_min.y;      aabb_array[9*i+2] = triangle_b_box_min.z;     
+					aabb_array[9*i+3] = triangle_b_box_max.x;      aabb_array[9*i+4] = triangle_b_box_max.y;      aabb_array[9*i+5] = triangle_b_box_max.z;
+					aabb_array[9*i+6] = triangle_b_box_centroid.x; aabb_array[9*i+7] = triangle_b_box_centroid.y; aabb_array[9*i+8] = triangle_b_box_centroid.z;
 						
 				}
 				
-				objMeshes.my_mesh.bounding_box_min.copy(b_box_min);
-        			objMeshes.my_mesh.bounding_box_max.copy(b_box_max);
-				
-				objMeshes.my_mesh.bounding_box_min.multiplyScalar( modelScale );
-				objMeshes.my_mesh.bounding_box_max.multiplyScalar( modelScale );
-				
-				objMeshes.my_mesh.bounding_box_min.add( modelPositionOffset );
-				objMeshes.my_mesh.bounding_box_max.add( modelPositionOffset );
-				/*
-				for ( var i=0; i < (9*total_number_of_triangles); i++ ){
-					console.log(triangle_array[i]);
-				}
-				*/
-
-
 				BVH_Build();
 				
 				
@@ -1004,7 +972,6 @@ void SetupScene(void)
 				} // end if ( !mouseControl ) {
 				
 			} // end function onWindowResize( event )
-			
 			
 			
 
