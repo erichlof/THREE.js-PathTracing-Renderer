@@ -317,6 +317,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 	
         for (int depth = 0; depth < 4; depth++)
 	{
+		sampleDiffuseBudget -= 1;
 		
 		float t = SceneIntersect(r, intersec);
 		
@@ -342,7 +343,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
                 vec3 nl = dot(n,r.direction) <= 0.0 ? normalize(n) : normalize(n * -1.0);
 		vec3 x = r.origin + r.direction * t;
 		
-		    
+		
                 if (intersec.type == DIFF || intersec.type == CLOTH ) // Ideal DIFFUSE reflection
 		{
 			if (intersec.type == CLOTH)
@@ -356,8 +357,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			if (sampleDiffuseBudget < 0) break;
 			
 			// choose random Diffuse sample vector
-			vec3 d = randomCosWeightedDirectionInHemisphere( nl, seed );
-			r = Ray( x, normalize(d) );
+			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 			r.origin += r.direction;
 			mask *= max(0.0, dot(r.direction, nl));
 			
@@ -401,8 +401,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 				mask *= intersec.color;
 				accumCol += calcDirectLightingQuad(mask, x, nl, lightChoice, seed);
 				// choose random sample vector for diffuse material underneath ClearCoat
-				vec3 d = randomCosWeightedDirectionInHemisphere( nl, seed );
-				r = Ray( x, normalize(d) );
+				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 				r.origin += r.direction;
 				mask *= max(0.0, dot(r.direction, nl));
 				bounceIsSpecular = false;
@@ -480,18 +479,19 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 				
 				if (intersec.type == DARKWOOD)
 					intersec.color *= texture2D(tDarkWoodTexture, 3.5 * x.xz / 512.0).rgb;
+					
 				if (isSpot)
 					intersec.color = clamp(intersec.color + 0.5, 0.0, 1.0);
 					
 				if (intersec.type == LIGHTWOOD)
 					intersec.color *= texture2D(tLightWoodTexture, 6.0 * x.xz / 512.0).rgb;
+					
 				
 				mask *= intersec.color;
 				accumCol += calcDirectLightingQuad(mask, x, nl, lightChoice, seed);
 				
 				// choose random sample vector for diffuse material underneath ClearCoat
-				vec3 d = randomCosWeightedDirectionInHemisphere( nl, seed );
-				r = Ray( x, normalize(d) );
+				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 				r.origin += r.direction;
 				mask *= max(0.0, dot(r.direction, nl));
 				bounceIsSpecular = false;
@@ -560,8 +560,8 @@ void SetupScene(void)
 		
 		<script>
 			
-			var SCREEN_WIDTH = window.innerWidth;
-			var SCREEN_HEIGHT = window.innerHeight;
+			var SCREEN_WIDTH;
+			var SCREEN_HEIGHT;
 			var container, stats;
 			var controls;
 			var pathTracingScene, screenTextureScene, screenOutputScene;
@@ -586,7 +586,7 @@ void SetupScene(void)
 			var focusDistance = 132.0;
 			var increaseFocusDist = false;
 			var decreaseFocusDist = false;
-			var pixelRatio = window.devicePixelRatio * 0.5;
+			var pixelRatio = 0.5;
 			var TWO_PI = Math.PI * 2;
 			var randomVector = new THREE.Vector3();
 			var sampleCounter = 1.0;
@@ -650,83 +650,6 @@ void SetupScene(void)
 
 			}
 			
-			function onWindowResize( event ) {
-				
-				SCREEN_WIDTH = window.innerWidth;
-				SCREEN_HEIGHT = window.innerHeight;
-				
-				renderer.setPixelRatio(pixelRatio);
-				renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT );
-				
-				fontAspect = (SCREEN_WIDTH / 175) * (SCREEN_HEIGHT / 200);
-				if (fontAspect > 25) fontAspect = 25;
-				if (fontAspect < 4) fontAspect = 4;
-				fontAspect *= 2;
-				
-				pathTracingUniforms.uResolution.value.x = SCREEN_WIDTH * pixelRatio;
-				pathTracingUniforms.uResolution.value.y = SCREEN_HEIGHT * pixelRatio;
-				
-				pathTracingRenderTarget.setSize( SCREEN_WIDTH * pixelRatio, SCREEN_HEIGHT * pixelRatio );
-				screenTextureRenderTarget.setSize( SCREEN_WIDTH * pixelRatio, SCREEN_HEIGHT * pixelRatio );
-				
-				worldCamera.aspect = SCREEN_WIDTH / SCREEN_HEIGHT;
-				worldCamera.updateProjectionMatrix();
-				
-				// the following scales all scene objects by the worldCamera's field of view,
-				// taking into account the screen aspect ratio and multiplying the uniform uULen,
-				// the x-coordinate, by this ratio
-				fovScale = worldCamera.fov * 0.5 * (Math.PI / 180.0);
-				pathTracingUniforms.uVLen.value = Math.tan(fovScale);
-				pathTracingUniforms.uULen.value = pathTracingUniforms.uVLen.value * worldCamera.aspect;
-				
-				if ( !mouseControl ) {
-					
-					button1Element.style.display = "";
-					button2Element.style.display = "";
-					button3Element.style.display = "";
-					button4Element.style.display = "";
-					button5Element.style.display = "";
-					button6Element.style.display = "";
-					// check if mobile device is in portrait or landscape mode and position buttons accordingly
-					if (SCREEN_WIDTH < SCREEN_HEIGHT) {
-						
-						button1Element.style.right = 36 + "%";
-						button2Element.style.right = 2 + "%";
-						button3Element.style.right = 16 + "%";
-						button4Element.style.right = 16 + "%";
-						button5Element.style.right = 3 + "%";
-						button6Element.style.right = 3 + "%";
-
-						button1Element.style.bottom = 5 + "%";
-						button2Element.style.bottom = 5 + "%";
-						button3Element.style.bottom = 13 + "%";
-						button4Element.style.bottom = 2 + "%";
-						button5Element.style.bottom = 25 + "%";
-						button6Element.style.bottom = 18 + "%";
-						
-					}
-					else {
-						
-						button1Element.style.right = 22 + "%";
-						button2Element.style.right = 3 + "%";
-						button3Element.style.right = 11 + "%";
-						button4Element.style.right = 11 + "%";
-						button5Element.style.right = 3 + "%";
-						button6Element.style.right = 3 + "%";
-
-						button1Element.style.bottom = 10 + "%";
-						button2Element.style.bottom = 10 + "%";
-						button3Element.style.bottom = 26 + "%";
-						button4Element.style.bottom = 4 + "%";
-						button5Element.style.bottom = 48 + "%";
-						button6Element.style.bottom = 34 + "%";
-						
-					}
-					
-				} // end if ( !mouseControl ) {
-				
-			} // end function onWindowResize( event )
-			
 			
 			init();
 			
@@ -736,7 +659,7 @@ void SetupScene(void)
 				
 				if ( 'createTouch' in document ) {
 					mouseControl = false;
-					pixelRatio = window.devicePixelRatio * 0.15;
+					pixelRatio = 0.5;
 
 					mobileJoystickControls = new MobileJoystickControls ({
 						//showJoystick: true,
@@ -873,25 +796,25 @@ void SetupScene(void)
 				clothTexture.wrapS = THREE.RepeatWrapping;
 				clothTexture.wrapT = THREE.RepeatWrapping;
 				clothTexture.flipY = false;
-				clothTexture.minFilter = THREE.LinearFilter; 
-				clothTexture.magFilter = THREE.LinearFilter;
-				clothTexture.generateMipmaps = false;
+				//clothTexture.minFilter = THREE.LinearMipMapLinearFilter; 
+				//clothTexture.magFilter = THREE.LinearFilter;
+				//clothTexture.generateMipmaps = false;
 				
 				darkWoodTexture = new THREE.TextureLoader().load( 'textures/darkWood.jpg' );
 				darkWoodTexture.wrapS = THREE.RepeatWrapping;
 				darkWoodTexture.wrapT = THREE.RepeatWrapping;
 				darkWoodTexture.flipY = false;
-				darkWoodTexture.minFilter = THREE.LinearFilter; 
-				darkWoodTexture.magFilter = THREE.LinearFilter;
-				darkWoodTexture.generateMipmaps = false;
+				//darkWoodTexture.minFilter = THREE.LinearFilter; 
+				//darkWoodTexture.magFilter = THREE.LinearFilter;
+				//darkWoodTexture.generateMipmaps = false;
 				
 				lightWoodTexture = new THREE.TextureLoader().load( 'textures/lightWood.jpg' );
 				lightWoodTexture.wrapS = THREE.RepeatWrapping;
 				lightWoodTexture.wrapT = THREE.RepeatWrapping;
 				lightWoodTexture.flipY = false;
-				lightWoodTexture.minFilter = THREE.LinearFilter; 
-				lightWoodTexture.magFilter = THREE.LinearFilter;
-				lightWoodTexture.generateMipmaps = false;
+				//lightWoodTexture.minFilter = THREE.LinearFilter; 
+				//lightWoodTexture.magFilter = THREE.LinearFilter;
+				//lightWoodTexture.generateMipmaps = false;
 				
 				
 				pathTracingGeometry = new THREE.PlaneBufferGeometry( 2, 2 );
@@ -1010,6 +933,83 @@ void SetupScene(void)
 			} // end function init()
 			
 			
+			
+			function onWindowResize( event ) {
+				
+				SCREEN_WIDTH = window.innerWidth;
+				SCREEN_HEIGHT = window.innerHeight;
+				
+				renderer.setPixelRatio(pixelRatio);
+				renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT );
+				
+				fontAspect = (SCREEN_WIDTH / 175) * (SCREEN_HEIGHT / 200);
+				if (fontAspect > 25) fontAspect = 25;
+				if (fontAspect < 4) fontAspect = 4;
+				fontAspect *= 2;
+				
+				pathTracingUniforms.uResolution.value.x = renderer.context.drawingBufferWidth;
+				pathTracingUniforms.uResolution.value.y = renderer.context.drawingBufferHeight;
+				
+				pathTracingRenderTarget.setSize( renderer.context.drawingBufferWidth, renderer.context.drawingBufferHeight );
+				screenTextureRenderTarget.setSize( renderer.context.drawingBufferWidth, renderer.context.drawingBufferHeight );
+				
+				worldCamera.aspect = renderer.domElement.clientWidth / renderer.domElement.clientHeight;
+				worldCamera.updateProjectionMatrix();
+				
+				// the following scales all scene objects by the worldCamera's field of view,
+				// taking into account the screen aspect ratio and multiplying the uniform uULen,
+				// the x-coordinate, by this ratio
+				fovScale = worldCamera.fov * 0.5 * (Math.PI / 180.0);
+				pathTracingUniforms.uVLen.value = Math.tan(fovScale);
+				pathTracingUniforms.uULen.value = pathTracingUniforms.uVLen.value * worldCamera.aspect;
+				
+				if ( !mouseControl ) {
+					
+					button1Element.style.display = "";
+					button2Element.style.display = "";
+					button3Element.style.display = "";
+					button4Element.style.display = "";
+					button5Element.style.display = "";
+					button6Element.style.display = "";
+					// check if mobile device is in portrait or landscape mode and position buttons accordingly
+					if (SCREEN_WIDTH < SCREEN_HEIGHT) {
+						
+						button1Element.style.right = 36 + "%";
+						button2Element.style.right = 2 + "%";
+						button3Element.style.right = 16 + "%";
+						button4Element.style.right = 16 + "%";
+						button5Element.style.right = 3 + "%";
+						button6Element.style.right = 3 + "%";
+
+						button1Element.style.bottom = 5 + "%";
+						button2Element.style.bottom = 5 + "%";
+						button3Element.style.bottom = 13 + "%";
+						button4Element.style.bottom = 2 + "%";
+						button5Element.style.bottom = 25 + "%";
+						button6Element.style.bottom = 18 + "%";
+						
+					}
+					else {
+						
+						button1Element.style.right = 22 + "%";
+						button2Element.style.right = 3 + "%";
+						button3Element.style.right = 11 + "%";
+						button4Element.style.right = 11 + "%";
+						button5Element.style.right = 3 + "%";
+						button6Element.style.right = 3 + "%";
+
+						button1Element.style.bottom = 10 + "%";
+						button2Element.style.bottom = 10 + "%";
+						button3Element.style.bottom = 26 + "%";
+						button4Element.style.bottom = 4 + "%";
+						button5Element.style.bottom = 48 + "%";
+						button6Element.style.bottom = 34 + "%";
+						
+					}
+					
+				} // end if ( !mouseControl ) {
+				
+			} // end function onWindowResize( event )
 			
 			
 			
