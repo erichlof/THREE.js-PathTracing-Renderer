@@ -295,12 +295,13 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 	vec3 accumCol = vec3(0.0);
         vec3 mask = vec3(1.0);
         Intersection intersec;
-	int sampleDiffuseBudget = 2;
+	int sampleDiffuseBudget = 3;
 	bool bounceIsSpecular = true;
 	bool directLightFlag = false;
 	
         for (int depth = 0; depth < 5; depth++)
 	{
+		sampleDiffuseBudget -= 1;
 		
 		float t = SceneIntersect(r, intersec, directLightFlag);
 		directLightFlag = true;
@@ -340,7 +341,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			// choose random Diffuse sample vector
 			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 			r.origin += r.direction * 2.0;
-			mask *= max(0.0, dot(r.direction, nl));
+			//mask *= max(0.0, dot(r.direction, nl));
 			
 			continue;	
                 }
