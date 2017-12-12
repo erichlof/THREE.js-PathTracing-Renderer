@@ -1364,6 +1364,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 	vec3 accumCol = vec3(0.0);
         vec3 mask = vec3(1.0);
         Intersection intersec;
+	int sampleDiffuseBudget = 2;
 	bool bounceIsSpecular = true;
 	Quad lightChoice;
 	
@@ -1374,6 +1375,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 	
         for (int depth = 0; depth < 4; depth++)
 	{
+		sampleDiffuseBudget -= 1;
 		
 		float t = SceneIntersect(r, intersec);
 		
@@ -1410,19 +1412,20 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			accumCol += calcDirectLightingQuad(mask, x, nl, lightChoice, seed);
                         bounceIsSpecular = false;
 			
-			if (depth > 1 || rand(seed) < 0.8)
-				break;
+			sampleDiffuseBudget -= 1;
+			if (sampleDiffuseBudget < 0) break;
 			
 			// choose random Diffuse sample vector
 			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 			r.origin += r.direction;
-			mask *= max(0.0, dot(r.direction, nl));
+			//mask *= max(0.0, dot(r.direction, nl));
 			
 			continue;
 		}
 		
 		if (intersec.type == SPEC)  // Ideal SPECULAR reflection
 		{	
+			sampleDiffuseBudget += 1;
 			mask *= intersec.color;
 			
 			r = Ray( x, reflect(r.direction, nl) );
@@ -1447,6 +1450,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			
 			if (rand(seed) < Re) // reflect ray from surface
 			{
+				sampleDiffuseBudget += 1;
 				r = Ray( x, reflect(r.direction, nl) );
 			    	r.origin += r.direction;
 				bounceIsSpecular = true;
@@ -1510,7 +1514,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 				// choose random sample vector for diffuse material underneath ClearCoat
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 				r.origin += r.direction;
-				mask *= max(0.0, dot(r.direction, nl));
+				//mask *= max(0.0, dot(r.direction, nl));
 				bounceIsSpecular = false;
 				continue;
 			}
