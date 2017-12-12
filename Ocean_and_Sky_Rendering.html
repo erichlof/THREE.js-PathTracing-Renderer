@@ -569,6 +569,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout float seed )
         
 	float t = INFINITY;
 	int previousIntersecType = -1;
+	int sampleDiffuseBudget = 4;
 	bool checkOcean = true;
 	bool skyHit = false;
 	bool bounceIsSpecular = true;
@@ -576,6 +577,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout float seed )
 	
         for (int depth = 0; depth < 5; depth++)
 	{
+		sampleDiffuseBudget -= 1;
 		
 		t = SceneIntersect(r, intersec, checkOcean);
 		
@@ -658,10 +660,13 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout float seed )
 			mask *= intersec.color;
 			accumCol += calcDirectLightingSun(mask, x, nl, sunDirection, r, randVec) * 0.02 * cloudShadowFactor;
 			
+			sampleDiffuseBudget -= 1;
+			if (sampleDiffuseBudget < 0) break;
+			
 			// choose random Diffuse sample vector
                 	r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 			r.origin += r.direction * 2.0;
-			mask *= max(0.0, dot(r.direction, nl));
+			//mask *= max(0.0, dot(r.direction, nl));
 			previousIntersecType = DIFF;
 			bounceIsSpecular = false;
 			continue;
