@@ -304,10 +304,11 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 		}
 		*/
 		
+		
 		// if we reached something bright, don't spawn any more rays
 		if (intersec.type == LIGHT)
 		{	
-
+			
 			if (bounceIsSpecular)
 			{
 				accumCol = mask * intersec.emission;
@@ -316,13 +317,12 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			break;
 		}
 		
-		
 		// useful data 
 		vec3 n = intersec.normal;
                 vec3 nl = dot(n,r.direction) <= 0.0 ? normalize(n) : normalize(n * -1.0);
 		vec3 x = r.origin + r.direction * t;
 		
-		    
+		   
                 if (intersec.type == DIFF || intersec.type == CHECK) // Ideal DIFFUSE reflection
 		{
 			if( intersec.type == CHECK )
@@ -340,7 +340,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			// choose random Diffuse sample vector
 			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 			r.origin += r.direction;
-			mask *= max(0.0, dot(r.direction, nl));
+			//mask *= max(0.0, dot(r.direction, nl));
 			
 			continue;
 		}
@@ -407,9 +407,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			// choose either specular reflection or diffuse
 			if( rand(seed) < Re )
 			{	
-				vec3 reflectVec = reflect(r.direction, nl);
-				vec3 randVec = vec3(rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0);
-				r = Ray( x, mix( reflectVec, normalize(nl + randVec), roughness) );
+				r = Ray( x, reflect(r.direction, nl) );
 				r.origin += r.direction;
 				bounceIsSpecular = true;
 				continue;	
@@ -438,9 +436,9 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0.0);          
-	vec3 L1 = vec3(1.0, 1.0, 1.0) * 10.0;// White light
-	vec3 L2 = vec3(1.0, 0.8, 0.2) * 10.0;// Yellow light
-	vec3 L3 = vec3(0.1, 0.7, 1.0) * 10.0;// Blue light
+	vec3 L1 = vec3(1.0, 1.0, 1.0) * 12.0;// White light
+	vec3 L2 = vec3(1.0, 0.8, 0.2) * 12.0;// Yellow light
+	vec3 L3 = vec3(0.1, 0.7, 1.0) * 12.0;// Blue light
 		
         spheres[0] = Sphere(150.0, vec3(-400.0, 900.0, 200.0), L1, z, LIGHT);//spherical white Light1 
 	spheres[1] = Sphere(100.0, vec3(300.0, 400.0, -300.0), L2, z, LIGHT);//spherical yellow Light2
