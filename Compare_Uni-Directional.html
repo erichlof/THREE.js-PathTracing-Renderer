@@ -221,7 +221,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			// choose random Diffuse sample vector
 			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 			r.origin += r.direction * 2.0;
-			maskEyePath *= max(0.0, dot(r.direction, nl));
+			//maskEyePath *= max(0.0, dot(r.direction, nl));
 			continue;
 		}
 		
