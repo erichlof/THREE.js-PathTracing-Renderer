@@ -170,12 +170,13 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 	vec3 accumCol = vec3(0.0);
         vec3 mask = vec3(1.0);
         Intersection intersec;
-	int diffuseSampleCount = 0;
+	int sampleDiffuseBudget = 3;
 	bool bounceIsSpecular = true;
 	
 	
-        for (int depth = 0; depth < 4; depth++)
+        for (int depth = 0; depth < 5; depth++)
 	{
+		sampleDiffuseBudget -= 1;
 		
 		float t = SceneIntersect(r, intersec);
 		
@@ -207,16 +208,16 @@ vec3 CalculateRadiance( Ray r, inout float seed )
                 {
 			mask *= intersec.color;
 			bounceIsSpecular = false;
-			accumCol += calcDirectLightingQuad(mask, x, nl, quads[5], seed) * 0.3;
+			accumCol += calcDirectLightingQuad(mask, x, nl, quads[5], seed) * 0.4;
 			
-			diffuseSampleCount += 1;
-			if (diffuseSampleCount > 1 && rand(seed) < 0.5) break;
+			sampleDiffuseBudget -= 1;
+			if (sampleDiffuseBudget < 0) break;
 			
 			// choose random Diffuse sample vector
 			vec3 d = randomCosWeightedDirectionInHemisphere( nl, seed );
 			r = Ray( x, (d) );
 			r.origin += r.direction * 2.0;
-			mask *= max(0.0, dot(r.direction, nl));
+			//mask *= max(0.0, dot(r.direction, nl));
 			
 			continue;	
                 }
@@ -277,7 +278,7 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0.0, 0.0, 0.0);// No color value, Black        
-	vec3 L1 = vec3(1.0, 0.75, 0.4) * 50.0;// Bright Yellowish light
+	vec3 L1 = vec3(1.0, 0.75, 0.4) * 40.0;// Bright Yellowish light
 	
 	quads[0] = Quad( vec3( 0.0, 0.0, 1.0), vec3(  0.0,   0.0,-559.2), vec3(549.6,   0.0,-559.2), vec3(549.6, 548.8,-559.2), vec3(  0.0, 548.8,-559.2),  z, vec3(1.0, 1.0, 1.0 ),  DIFF);// Back Wall
 	quads[1] = Quad( vec3( 1.0, 0.0, 0.0), vec3(  0.0,   0.0,   0.0), vec3(  0.0,   0.0,-559.2), vec3(  0.0, 548.8,-559.2), vec3(  0.0, 548.8,   0.0),  z, vec3(0.7, 0.12,0.05),  DIFF);// Left Wall Red
