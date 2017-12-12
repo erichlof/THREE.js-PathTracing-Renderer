@@ -180,7 +180,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			// choose random Diffuse sample vector
 			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 			r.origin += r.direction * 2.0;
-			mask *= max(0.0, dot(r.direction, nl));
+			//mask *= max(0.0, dot(r.direction, nl));
 			continue;	
                 }
 		
@@ -241,7 +241,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 				mask *= intersec.color;
 				accumCol += calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
 				
-				mask *= max(0.0, dot(r.direction, nl));
+				//mask *= max(0.0, dot(r.direction, nl));
 				bounceIsSpecular = false;
 				continue;
 			}
