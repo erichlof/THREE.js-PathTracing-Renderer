@@ -263,7 +263,6 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 	int diffuseSampleCount = 0;
 	int previousIntersecType = -1;
 	bool bounceIsSpecular = true;
-	bool cosWeighted = true;
 	
 	//set following flag to true - we haven't found a diffuse surface yet and can exit early (keeps frame rate high)
 	bool skipConnectionEyePath = true;
@@ -332,7 +331,6 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			diffuseSampleCount += 1;
 			if (diffuseSampleCount > 1 || rand(seed) < 0.5)
 			{
-				cosWeighted = false;
 				break;
 			}
 				
@@ -340,7 +338,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 			r.origin += r.direction;
 			eyeX = r.origin;
-			maskEyePath *= max(0.0, dot(r.direction, nl));
+			//maskEyePath *= max(0.0, dot(r.direction, nl));
 			continue;
 		}
 		
@@ -520,8 +518,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 	float c = SceneIntersect(connectRay, intersec);
 	if (c >= connectDist)
 	{	
-		if (!cosWeighted)
-			maskEyePath *= max(0.0, dot(connectRay.direction, nlEyePath));
+		maskEyePath *= max(0.0, dot(connectRay.direction, nlEyePath));
 		
 		accumCol = (maskEyePath * maskLightPath);
 	}
