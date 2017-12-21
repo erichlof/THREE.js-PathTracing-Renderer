@@ -84,7 +84,7 @@ struct Ray { vec3 origin; vec3 direction; };
 struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; int type; };
 struct OpenCylinder { float radius; vec3 pos1; vec3 pos2; vec3 emission; vec3 color; int type; };
 struct CappedCylinder { float radius; vec3 cap1pos; vec3 cap2pos; vec3 emission; vec3 color; int type; };
-struct Torus { float radius0; float radius1; vec3 pos; vec3 emission; vec3 color; int type; };
+struct Torus { float radius0; float radius1; vec3 position; vec3 emission; vec3 color; int type; };
 struct Quad { vec3 v0; vec3 v1; vec3 v2; vec3 v3; vec3 emission; vec3 color; int type; };
 struct Box { vec3 minCorner; vec3 maxCorner; vec3 emission; vec3 color; int type; };
 struct Intersection { vec3 normal; vec3 emission; vec3 color; int type; };
