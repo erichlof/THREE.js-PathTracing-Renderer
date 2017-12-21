@@ -230,18 +230,20 @@ float DiskIntersect( vec3 diskPos, vec3 normal, float radius, Ray r )
 `;
 
 THREE.ShaderChunk[ 'pathtracing_sphere_intersect' ] = `
+
 /*
 bool solveQuadratic(float A, float B, float C, out float t0, out float t1)
 {
 	float discrim = B*B-4.0*A*C;
-    
+    	
 	if ( discrim < 0.0 )
         	return false;
-    
+	
+    	float A2 = 2.0 * A;
 	float rootDiscrim = sqrt( discrim );
     
-	float t_0 = (-B-rootDiscrim)/(2.0*A);
-	float t_1 = (-B+rootDiscrim)/(2.0*A);
+	float t_0 = (-B-rootDiscrim)/A2;
+	float t_1 = (-B+rootDiscrim)/A2;
 
 	t0 = min( t_0, t_1 );
 	t1 = max( t_0, t_1 );
@@ -249,6 +251,7 @@ bool solveQuadratic(float A, float B, float C, out float t0, out float t1)
 	return true;
 }
 */
+
 bool solveQuadratic(float A, float B, float C, out float t0, out float t1)
 {
 	float discrim = B*B-4.0*A*C;
@@ -267,6 +270,7 @@ bool solveQuadratic(float A, float B, float C, out float t0, out float t1)
     
 	return true;
 }
+
 
 //-----------------------------------------------------------------------
 float SphereIntersect( float rad, vec3 pos, Ray ray )
@@ -645,7 +649,6 @@ float CapsuleIntersect( vec3 p0, float r0, vec3 p1, float r1, Ray r, out vec3 n 
 
 THREE.ShaderChunk[ 'pathtracing_paraboloid_intersect' ] = `
 
-
 //------------------------------------------------------------------------------
 float ParaboloidIntersect( float rad, float height, vec3 pos, Ray r, out vec3 n )
 //------------------------------------------------------------------------------
@@ -757,7 +760,7 @@ float TorusIntersect( float rad0, float rad1, vec3 pos, Ray ray )
 		
 	float d1 = z   - 3.0*p;
 	float d2 = z*z - 3.0*r;
-	if( abs(d1)<0.0001 )
+	if( abs(d1)<0.5 ) // originally < 0.0001, but this was too precise and caused holes when viewed from the side
 	{
 		if( d2<0.0 ) return INFINITY;
 		d2 = sqrt(d2);
@@ -771,23 +774,24 @@ float TorusIntersect( float rad0, float rad1, vec3 pos, Ray ray )
 	
 	float result = INFINITY;
 	float d1SqMinusZ = d1*d1 - z;
-	h = d1SqMinusZ + d2;
-	if( h>0.0 )
-	{
-		h = sqrt(h);
-		float t1 = -d1 - h - a;
-		float t2 = -d1 + h - a;
-		if( t1>0.0 ) result=t1;
-		else if( t2>0.0 ) result=t2;
-	}
+	
 	h = d1SqMinusZ - d2;
 	if( h>0.0 )
 	{
 		h = sqrt(h);
 		float t1 = d1 - h - a;
 		float t2 = d1 + h - a;
-		if( t1>0.0 ) result=min(result,t1);
-		else if( t2>0.0 ) result=min(result,t2);
+		if( t2>0.0 ) result=t2;
+		if( t1>0.0 ) result=t1;
+	}
+	h = d1SqMinusZ + d2;
+	if( h>0.0 )
+	{
+		h = sqrt(h);
+		float t1 = -d1 - h - a;
+		float t2 = -d1 + h - a;
+		if( t2>0.0 ) result=min(result,t2);
+		if( t1>0.0 ) result=min(result,t1); 
 	}
 	return result;
 }
@@ -1143,10 +1147,6 @@ void main( void )
     	vec3 camRight   = vec3( uCameraMatrix[0][0],  uCameraMatrix[0][1],  uCameraMatrix[0][2]);
     	vec3 camUp      = vec3( uCameraMatrix[1][0],  uCameraMatrix[1][1],  uCameraMatrix[1][2]);
 	vec3 camForward = vec3(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]);
-
-	//vec3 camRight   = vec3( viewMatrix[0][0],  viewMatrix[0][1],  viewMatrix[0][2]);
-    	//vec3 camUp      = vec3( viewMatrix[1][0],  viewMatrix[1][1],  viewMatrix[1][2]);
-	//vec3 camForward = vec3(-viewMatrix[2][0], -viewMatrix[2][1], -viewMatrix[2][2]);
 	
 	// seed for rand(seed) function
 	float seed = mod(uSampleCounter,1000.0) * uRandomVector.x - uRandomVector.y + uResolution.y * gl_FragCoord.x / uResolution.x + uResolution.x * gl_FragCoord.y / uResolution.y;
