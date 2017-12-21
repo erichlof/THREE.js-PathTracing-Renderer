@@ -714,6 +714,7 @@ float ParaboloidIntersect( float rad, float height, vec3 pos, Ray r, out vec3 n 
 
 THREE.ShaderChunk[ 'pathtracing_torus_intersect' ] = `
 
+// borrowed from iq: https://www.shadertoy.com/view/4sBGDy
 //-----------------------------------------------------------------------
 float TorusIntersect( float rad0, float rad1, vec3 pos, Ray ray )
 //-----------------------------------------------------------------------
