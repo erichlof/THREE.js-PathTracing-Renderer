@@ -94,7 +94,7 @@ struct OpenCylinder { float radius; float height; vec3 position; vec3 emission; 
 struct CappedCylinder { float radius; vec3 cap1pos; vec3 cap2pos; vec3 emission; vec3 color; int type; };
 struct Cone { vec3 pos0; float radius0; vec3 pos1; float radius1; vec3 emission; vec3 color; int type; };
 struct Capsule { vec3 pos0; float radius0; vec3 pos1; float radius1; vec3 emission; vec3 color; int type; };
-struct Torus { vec3 pos; float radius0; float radius1; vec3 emission; vec3 color; int type; };
+struct Torus { float radius0; float radius1; vec3 position; vec3 emission; vec3 color; int type; };
 struct Box { vec3 minCorner; vec3 maxCorner; vec3 emission; vec3 color; int type; };
 struct Intersection { vec3 normal; vec3 emission; vec3 color; int type; };
 
@@ -235,13 +235,13 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	for (int i = 0; i < N_TORII; i++)
         {
 		rTrans = r;
-		rTrans.origin += vec3(60.0,-3.0,-50.0);
-		d = TorusIntersect( torii[i].radius0, torii[i].radius1, torii[i].pos, rTrans );
+		
+		d = TorusIntersect( torii[i].radius0, torii[i].radius1, torii[i].position, rTrans );
 		if (d < t)
 		{
 			t = d;
-			vec3 hit = rTrans.origin + rTrans.direction * t;
-			intersec.normal = normalize( hit*(dot(hit,hit)- torii[i].radius1*torii[i].radius1 - torii[i].radius0*torii[i].radius0*vec3(1.0,1.0,-1.0)));
+			vec3 hit = (rTrans.origin - torii[i].position) + rTrans.direction * t;
+			intersec.normal = normalize( hit*(dot(hit,hit)- torii[i].radius1*torii[i].radius1 - torii[i].radius0*torii[i].radius0*vec3(1,1,-1)));
 			intersec.emission = torii[i].emission;
 			intersec.color = torii[i].color;
 			intersec.type = torii[i].type;
@@ -459,7 +459,7 @@ void SetupScene(void)
 	
 	capsules[0] = Capsule( vec3(80,13,15), 10.0, vec3(110,15.8,15), 10.0, z, vec3(1.0,1.0,1.0), COAT);//white Capsule
 	
-	torii[0] = Torus( vec3(0,0,0), 10.0, 1.5, z, vec3(0.955008, 0.637427, 0.538163), SPEC);//copper Torus
+	torii[0] = Torus( 10.0, 1.5, vec3(-60.0,3.0,50.0), z, vec3(0.955008, 0.637427, 0.538163), SPEC);//copper Torus
 	
 	boxes[0] = Box( vec3(50.0,21.0,-60.0), vec3(100.0,28.0,-130.0), z, vec3(0.2,0.9,0.7), REFR);//Glass Box
 	boxes[1] = Box( vec3(56.0,23.0,-66.0), vec3(94.0,26.0,-124.0), z, vec3(0.0,0.0,0.0), DIFF);//Diffuse Box
