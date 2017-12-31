@@ -69,6 +69,9 @@ precision highp sampler2D;
 
 #include <pathtracing_uniforms_and_defines>
 
+uniform mat4 uTorusInvMatrix;
+uniform mat3 uTorusNormalMatrix;
+
 #define N_SPHERES 5
 #define N_PLANES 1
 #define N_DISKS 1
@@ -100,7 +103,7 @@ struct OpenCylinder { float radius; float height; vec3 position; vec3 emission; 
 struct CappedCylinder { float radius; vec3 cap1pos; vec3 cap2pos; vec3 emission; vec3 color; int type; };
 struct Cone { vec3 pos0; float radius0; vec3 pos1; float radius1; vec3 emission; vec3 color; int type; };
 struct Capsule { vec3 pos0; float radius0; vec3 pos1; float radius1; vec3 emission; vec3 color; int type; };
-struct Torus { float radius0; float radius1; vec3 position; vec3 emission; vec3 color; int type; };
+struct Torus { float radius0; float radius1; vec3 emission; vec3 color; int type; };
 struct Disk { float radiusSq; vec3 pos; vec3 normal; vec3 emission; vec3 color; int type; };
 struct Intersection { vec3 normal; vec3 emission; vec3 color; int type; };
 
@@ -386,18 +389,21 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		}
         }
 	
-	Ray rTrans = r;
+	Ray rObj;
+	// transform ray into Torus's object space
+	rObj.origin = vec3( uTorusInvMatrix * vec4(r.origin, 1.0) );
+	rObj.direction = vec3( uTorusInvMatrix * vec4(r.direction, 0.0) );
 	
 	for (int i = 0; i < N_TORII; i++)
-        {
-		rTrans = r;
-		
-		d = TorusIntersect( torii[i].radius0, torii[i].radius1, torii[i].position, rTrans );
+        {	
+		d = TorusIntersect( torii[i].radius0, torii[i].radius1, rObj );
 		if (d < t)
 		{
 			t = d;
-			vec3 hit = (rTrans.origin - torii[i].position) + rTrans.direction * t;
-			intersec.normal = normalize( hit*(dot(hit,hit)- torii[i].radius1*torii[i].radius1 - torii[i].radius0*torii[i].radius0*vec3(1,1,-1)));
+			vec3 hit = rObj.origin + rObj.direction * t;
+			intersec.normal = calcNormal_Torus(hit);
+			// transfom normal back into world space
+			intersec.normal = vec3(uTorusNormalMatrix * intersec.normal);
 			intersec.emission = torii[i].emission;
 			intersec.color = torii[i].color;
 			intersec.type = torii[i].type;
@@ -581,9 +587,9 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0.0);          
-	vec3 L1 = vec3(1.0, 1.0, 1.0) * 12.0;// White light
-	vec3 L2 = vec3(1.0, 0.8, 0.2) * 12.0;// Yellow light
-	vec3 L3 = vec3(0.1, 0.7, 1.0) * 12.0;// Blue light
+	vec3 L1 = vec3(1.0, 1.0, 1.0) * 10.0;// White light
+	vec3 L2 = vec3(1.0, 0.8, 0.2) * 10.0;// Yellow light
+	vec3 L3 = vec3(0.1, 0.7, 1.0) * 10.0;// Blue light
 		
         spheres[0] = Sphere(150.0, vec3(-400.0, 900.0, 200.0), L1, z, LIGHT);//spherical white Light1 
 	spheres[1] = Sphere(100.0, vec3(300.0, 400.0, -300.0), L2, z, LIGHT);//spherical yellow Light2
@@ -609,7 +615,7 @@ void SetupScene(void)
 	
 	capsules[0] = Capsule( vec3(80,13,15), 10.0, vec3(110,15.8,15), 10.0, z, vec3(1.0,1.0,1.0), COAT);//white Capsule
 	
-	torii[0] = Torus( 10.0, 1.5, vec3(-60.0,3.0,50.0), z, vec3(0.955008, 0.637427, 0.538163), SPEC);//copper Torus
+	torii[0] = Torus( 10.0, 1.5, z, vec3(0.955008, 0.637427, 0.538163), SPEC);//copper Torus
 	
 	/*
 	disks[0] = Disk( 190.0, vec3(-100.0,18.0,-10.0), vec3( 1.0,-1.0,0.0 ), z, vec3(0.9,0.01,0.01), DIFF);//RedDisk Left
@@ -635,8 +641,7 @@ void SetupScene(void)
 			var pathTracingGeometry, pathTracingMaterial, pathTracingMesh;
 			var screenTextureGeometry, screenTextureMaterial, screenTextureMesh;
 			var screenOutputGeometry, screenOutputMaterial, screenOutputMesh;
-			var tallBoxGeometry, tallBoxMaterial, tallBoxMesh;
-			var shortBoxGeometry, shortBoxMaterial, shortBoxMesh;
+			var torusObject;
 			var pathTracingRenderTarget, screenOutputRenderTarget;
 			var quadCamera, worldCamera;
 			var renderer, clock;
@@ -875,7 +880,10 @@ void SetupScene(void)
 					
 					uRandomVector: { type: "v3", value: new THREE.Vector3() },
 				
-					uCameraMatrix: { type: "m4", value: new THREE.Matrix4() }
+					uCameraMatrix: { type: "m4", value: new THREE.Matrix4() },
+					
+					uTorusInvMatrix: { type: "m4", value: new THREE.Matrix4() },
+					uTorusNormalMatrix: { type: "m3", value: new THREE.Matrix3() }
 	
 				};
 				
@@ -938,6 +946,12 @@ void SetupScene(void)
 				screenOutputMesh = new THREE.Mesh(screenOutputGeometry, screenOutputMaterial);
 				screenOutputScene.add(screenOutputMesh);
 				
+				// Torus Object
+				torusObject = new THREE.Object3D();
+				pathTracingScene.add(torusObject);
+				//torusObject.rotation.set(Math.PI * 0.5, 0, 0);
+				torusObject.rotation.set(-0.05, 0, -0.05);
+				torusObject.position.set(-60, 6, 50);
 				
 				/*
 				// Fullscreen API
@@ -1285,6 +1299,10 @@ void SetupScene(void)
 				pathTracingUniforms.uCameraJustStartedMoving.value = cameraJustStartedMoving;
 				pathTracingUniforms.uSampleCounter.value = sampleCounter;
 				pathTracingUniforms.uRandomVector.value = randomVector.set( Math.random(), Math.random(), Math.random() );
+				// TORUS
+				torusObject.updateMatrixWorld(true); // 'true' forces immediate matrix update
+				pathTracingUniforms.uTorusInvMatrix.value.getInverse( torusObject.matrixWorld );
+				pathTracingUniforms.uTorusNormalMatrix.value.getNormalMatrix( torusObject.matrixWorld );
 				// CAMERA
 				cameraControlsObject.updateMatrixWorld(true);			
 				pathTracingUniforms.uCameraMatrix.value.copy( worldCamera.matrixWorld );
