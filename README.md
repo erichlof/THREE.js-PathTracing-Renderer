@@ -110,8 +110,6 @@ This Demo renders objects inside a volume of gas/dust/fog/clouds(etc.).  Notice 
 Some pretty interesting shapes can be obtained by deforming objects and/or warping the ray space (position and direction).  This demo applies a twist warp to the spheres and mirror box and randomizes the object space of the top purple sphere, creating an acceptable representation of a cloud (for free - no extra processing time for volumetrics!)
 * [Ray/Object Warping Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Ray_Warping.html)<br>
 
-Taking this object warping idea further, I have been experimenting with rendering deformable surfaces such as liquids. Each ray (1 of millions) gets its own personalized map of where the deformable surface is located in 3D space, depending on where the ray hits the original non-deformed bounding box / bounding shape.  I am quite pleased with the initial results - pixel-accurate smooth surfaces, no cracks, seams or facets as you sometimes get with traditional triangulated patches/meshes.  And best of all, the total computation cost is 1 initial bounding shape and 1 deformed/displaced shape of the same type!  This can be executed on the GPU in parallel, achieving real time realistic looking water movement at 60 FPS on desktop and 30 FPS on a smartphone!  Later I will experiment with rendering terrain such as hills and mountains, maybe borrowing some popular fractal fBm noise functions on sites like glslSandbox and ShaderToy.
-* [Liquid (Fake) Simulation Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Liquid_Simulation.html)<br>
 
 <h2>Updates</h2>
 
