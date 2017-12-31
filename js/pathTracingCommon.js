@@ -550,14 +550,14 @@ float ConeIntersect( vec3 p0, float r0, vec3 p1, float r1, Ray r, out vec3 n )
 	
 	float det=(
 		-2.0*x0*dx*z0*dz
-        +2.0*x0*dx*y0*dy
-        -2.0*z0*dz*y0*dy
-        +dz2*x02
-        +dz2*y02
-        +dx2*z02
-        +dy2*z02
-        -dy2*x02
-        -dx2*y02
+		+2.0*x0*dx*y0*dy
+		-2.0*z0*dz*y0*dy
+		+dz2*x02
+		+dz2*y02
+		+dx2*z02
+		+dy2*z02
+		-dy2*x02
+		-dx2*y02
         );
 	
 	if(det<0.0)
@@ -714,6 +714,47 @@ float ParaboloidIntersect( float rad, float height, vec3 pos, Ray r, out vec3 n 
 
 THREE.ShaderChunk[ 'pathtracing_torus_intersect' ] = `
 
+float map_Torus( in vec3 pos )
+{
+	return length( vec2(length(pos.xz)-torii[0].radius0,pos.y) )-torii[0].radius1;
+}
+
+vec3 calcNormal_Torus( in vec3 pos )
+{
+	// epsilon = a small number
+	vec2 e = vec2(1.0,-1.0)*0.5773*0.0002;
+
+	return normalize( e.xyy*map_Torus( pos + e.xyy ) + 
+			  e.yyx*map_Torus( pos + e.yyx ) + 
+			  e.yxy*map_Torus( pos + e.yxy ) + 
+			  e.xxx*map_Torus( pos + e.xxx ) );
+}
+
+/* 
+Thanks to koiava for the ray marching strategy! https://www.shadertoy.com/user/koiava 
+*/
+float TorusIntersect( float rad0, float rad1, Ray r )
+{	
+	float testRadius = rad0 + rad1;
+	float d = SphereIntersect(testRadius, vec3(0), r);
+	if (d == INFINITY)
+		return INFINITY;
+	
+	vec3 pos = r.origin;
+	float t = 0.0;
+	
+	for (int i = 0; i < 100; i++)
+	{
+		d = map_Torus(pos);
+		if (d < 0.001 || t > 10000.0) break;
+		pos += r.direction * d;
+		t += d;
+	}
+	
+	return (d<0.001 && t < INFINITY) ? t : INFINITY;	
+}
+
+/*
 // borrowed from iq: https://www.shadertoy.com/view/4sBGDy
 //-----------------------------------------------------------------------
 float TorusIntersect( float rad0, float rad1, vec3 pos, Ray ray )
@@ -796,6 +837,7 @@ float TorusIntersect( float rad0, float rad1, vec3 pos, Ray ray )
 	}
 	return result;
 }
+*/
 
 `;
 
