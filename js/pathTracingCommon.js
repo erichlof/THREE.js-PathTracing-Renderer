@@ -735,23 +735,23 @@ Thanks to koiava for the ray marching strategy! https://www.shadertoy.com/user/k
 */
 float TorusIntersect( float rad0, float rad1, Ray r )
 {	
-	float testRadius = rad0 + rad1;
-	float d = SphereIntersect(testRadius, vec3(0), r);
+	vec3 n;
+	float d = CappedCylinderIntersect( vec3(0,rad1,0), vec3(0,-rad1,0), rad0+rad1, r, n );
 	if (d == INFINITY)
 		return INFINITY;
 	
 	vec3 pos = r.origin;
 	float t = 0.0;
-	
-	for (int i = 0; i < 100; i++)
+	float torusFar = d + (rad0 * 2.0) + (rad1 * 2.0);
+	for (int i = 0; i < 200; i++)
 	{
 		d = map_Torus(pos);
-		if (d < 0.001 || t > 10000.0) break;
+		if (d < 0.001 || t > torusFar) break;
 		pos += r.direction * d;
 		t += d;
 	}
 	
-	return (d<0.001 && t < INFINITY) ? t : INFINITY;	
+	return (d<0.001) ? t : INFINITY;
 }
 
 /*
