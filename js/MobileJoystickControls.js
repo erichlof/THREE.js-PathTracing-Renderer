@@ -21,7 +21,6 @@ var button5Element = null;
 var button6Element = null;
 
 // the following variables marked with an underscore ( _ ) are for internal use
-var _touch = null;
 var _touches = [];
 var _testTouch = null;
 var _stickDistance;
@@ -51,7 +50,7 @@ var MobileJoystickControls = function( opts ) {
 	
 	opts = opts || {};
 	_container = document.body;
-	_container.style.position = "relative";
+	//_container.style.position = "relative";
 	joystickPressed = false;
 	
 	//create joystick Base
@@ -679,26 +678,17 @@ function _onTouchStart( event ) {
 	}
 	
 	_touches = event.touches;
-	
+	joystickPressed = true;
+
 	if (_touches.length == 1) {
 		_stickX = _testTouch.pageX;
 		_stickY = _testTouch.pageY;
 	}
 	if (_touches.length == 2) {
 		
-		if ( _touches[0].target != button1Element && _touches[0].target != button2Element && 
-		     _touches[0].target != button3Element && _touches[0].target != button4Element && 
-		     _touches[0].target != button5Element && _touches[0].target != button6Element ) {
-				
-			_stickX = _touches[0].pageX;
-			_stickY = _touches[0].pageY;	
-		}
-		else {
-			_stickX = _touches[1].pageX;
-			_stickY = _touches[1].pageY;
-		}
+		_stickX = _testTouch.pageX;
+		_stickY = _testTouch.pageY;
 		
-		joystickPressed = true;
 		joystickDeltaX = _stickX - _baseX;
 		joystickDeltaY = _stickY - _baseY;
 	
@@ -740,18 +730,18 @@ function _onTouchEnd( event ) {
   
 	event.preventDefault();
 	
-	_touch = event.changedTouches[0];
-	if (_touch.target == button1Element) 
+	_testTouch = event.changedTouches[0];
+	if (_testTouch.target == button1Element) 
 		return _onButton1Up();
-	else if (_touch.target == button2Element) 
+	else if (_testTouch.target == button2Element) 
 		return _onButton2Up();
-	else if (_touch.target == button3Element) 
+	else if (_testTouch.target == button3Element) 
 		return _onButton3Up();
-	else if (_touch.target == button4Element) 
+	else if (_testTouch.target == button4Element) 
 		return _onButton4Up();
-	else if (_touch.target == button5Element) 
+	else if (_testTouch.target == button5Element) 
 		return _onButton5Up();
-	else if (_touch.target == button6Element) 
+	else if (_testTouch.target == button6Element) 
 		return _onButton6Up();
 
 	joystickPressed = false;
@@ -762,28 +752,23 @@ function _onTouchEnd( event ) {
 	if (_stationaryBase) {
 		_stickX = _baseX;
 		_stickY = _baseY;
-		if (_touches.length >= 1) {
-			if ( _touches[0].target != button1Element && _touches[0].target != button2Element && 
-		     	     _touches[0].target != button3Element && _touches[0].target != button4Element && 
-		     	     _touches[0].target != button5Element && _touches[0].target != button6Element ) {
+		if (_touches.length > 1) {
 				
-				_stickX = _touches[0].pageX;
-				_stickY = _touches[0].pageY;
-			}
+			_stickX = _touches[1].pageX;
+			_stickY = _touches[1].pageY;
+			
 		}
 	}
 	
 	if (!_stationaryBase) {
 		baseElement.style.display = "none";
 		stickElement.style.display = "none";
-		if (_touches.length >= 1) {
-			if ( _touches[0].target != button1Element && _touches[0].target != button2Element && 
-		     	     _touches[0].target != button3Element && _touches[0].target != button4Element && 
-		     	     _touches[0].target != button5Element && _touches[0].target != button6Element ) {
+		
+		if (_touches.length > 1) {
 				
-				_stickX = _baseX = _touches[0].pageX;
-				_stickY = _baseY = _touches[0].pageY;
-			}
+			_stickX = _baseX = _touches[1].pageX;
+			_stickY = _baseY = _touches[1].pageY;
+			
 		}
 	}
 	
@@ -798,38 +783,46 @@ function _onTouchMove( event ) {
 	event.preventDefault();
 	
 	_testTouch = event.changedTouches[0];
+
 	if ( _testTouch.target == button1Element || _testTouch.target == button2Element || 
-	     _testTouch.target == button3Element || _testTouch.target == button4Element || 
+	     _testTouch.target == button3Element || _testTouch.target == button4Element ||
 	     _testTouch.target == button5Element || _testTouch.target == button6Element ) {
-		
+
 		return;
 	}
-	
 	_touches = event.touches;
 	
 	if (_touches.length == 1) {
-		_stickX = _testTouch.pageX;
-		_stickY = _testTouch.pageY;
+		if ( _touches[0].target != button1Element && _touches[0].target != button2Element && 
+		     _touches[0].target != button3Element && _touches[0].target != button4Element && 
+		     _touches[0].target != button5Element && _touches[0].target != button6Element ) {
+
+			_stickX = _touches[0].pageX;
+			_stickY = _touches[0].pageY;
+		}
+
 	}
 	if (_touches.length == 2) {
 		
 		if ( _touches[0].target == button1Element || _touches[0].target == button2Element || 
 		     _touches[0].target == button3Element || _touches[0].target == button4Element ||
 		     _touches[0].target == button5Element || _touches[0].target == button6Element ) {
-			
+
 			_stickX = _touches[1].pageX;
 			_stickY = _touches[1].pageY;
 		}
-		else if ( _touches[1].target == button1Element || _touches[1].target == button2Element || 
-			  _touches[1].target == button3Element || _touches[1].target == button4Element ||
-			  _touches[1].target == button5Element || _touches[1].target == button6Element ) {
+	    	else if (_touches[1].target == button1Element || _touches[1].target == button2Element || 
+		         _touches[1].target == button3Element || _touches[1].target == button4Element ||
+		         _touches[1].target == button5Element || _touches[1].target == button6Element ) {
 			
 			_stickX = _touches[0].pageX;
 			_stickY = _touches[0].pageY;
 		}
 		else if ( _enableMultiTouch ) {
+			
 			pinchWidthX = Math.abs(_touches[1].pageX - _touches[0].pageX);
 			pinchWidthY = Math.abs(_touches[1].pageY - _touches[0].pageY);
+			
 		}
 		
 	}
