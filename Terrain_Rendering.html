@@ -564,7 +564,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout float seed )
 		if (intersec.type == TERRAIN)
 		{
 			float noiseValue = lookup_noise2D(vec2(x.xz*0.001));
-			vec3 terrainColor = vec3(noiseValue * 0.01);
+			vec3 terrainColor = vec3(0.03, 0.015, 0.01) * noiseValue;
 			vec3 snowColor = vec3(0.8);
 			vec3 up = vec3(0, 1, 0);
 			float dotUp_SunDirection = max(0.0, dot(up, sunDirection));
