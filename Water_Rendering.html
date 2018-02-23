@@ -33,7 +33,6 @@
 		<div id="info">three.js PathTracing Renderer - Water Rendering</div>
 		
 		<div id="cameraInfo" style="position:fixed; left:3%; bottom:2%; font-family:arial; color:rgb(255,255,255);">
-			Press 'SpaceBar' to run Water simulation <br>
 			FOV: 45 / Aperture: 0.0 / FocusDistance: 1180 <br> 
 			Samples: 0
 		</div>
@@ -76,8 +75,8 @@ uniform mat3 uTallBoxNormalMatrix;
 
 #include <pathtracing_uniforms_and_defines>
 
-#define N_QUADS 7
-#define N_BOXES 2
+#define N_QUADS 6
+#define N_BOXES 3
 
 
 //-----------------------------------------------------------------------
@@ -108,69 +107,38 @@ float QuadIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 v3, Ray r )
 }
 
 
-//--------------------------------------------------------------------------------------------------------
-float DisplacementBoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r, out vec3 normal, out float inside )
-//--------------------------------------------------------------------------------------------------------
-{
-	vec3 invDir = 1.0 / r.direction;
-	vec3 tmin = (minCorner - r.origin) * invDir;
-	vec3 tmax = (maxCorner - r.origin) * invDir;
-	
-	vec3 real_min = min(tmin, tmax);
-	vec3 real_max = max(tmin, tmax);
-	
-	float minmax = min( min(real_max.x, real_max.y), real_max.z);
-	float maxmin = max( max(real_min.x, real_min.y), real_min.z);
-	
-	// early out
-	if (minmax < maxmin) return INFINITY;
-	
-	if (maxmin > 0.0) // if we are outside the box
-	{
-		inside = 2.0;
-		return maxmin;	
-	}
-		
-	if (minmax > 0.0) // else if we are inside the box
-	{
-		inside = -2.0;
-		return minmax;
-	}
-				
-	return INFINITY;
-}
+#define STILL_WATER_LEVEL 100.0
+#define WATER_WAVE_AMP 10.0
 
-
-float getWaterQuadDepth( vec3 pos )
+float getWaterWaveHeight( vec3 pos )
 {
-	float waveHeight = 30.0;
-	float waveFrequency = 0.03;
-	float waveSpeed = uTime * 200.0;
+	float waveSpeed = uTime;
 	
-	float sampleAngle1 = mod((pos.x - waveSpeed * 0.1) * waveFrequency * 0.1, TWO_PI);
-	float sampleAngle2 = mod((pos.z - waveSpeed * 0.3) * waveFrequency * 0.5, TWO_PI);
-        float sampleAngle3 = mod((pos.x + waveSpeed * 0.7) * waveFrequency * 0.8, TWO_PI);
-	float sampleAngle4 = mod((pos.z + waveSpeed * 1.0) * waveFrequency * 1.0, TWO_PI);
+	float sampleAngle1 = mod(pos.x * 0.05  + waveSpeed * 1.0, TWO_PI);
+	float sampleAngle2 = mod(pos.z * 0.01  - waveSpeed * 1.7, TWO_PI);
+	float sampleAngle3 = mod(pos.x * 0.021 - waveSpeed * 2.9, TWO_PI);
+	float sampleAngle4 = mod(pos.z * 0.04  + waveSpeed * 3.2, TWO_PI);
 	
-	float offset = 0.25 * ( sin(sampleAngle1) + sin(sampleAngle2) + sin(sampleAngle3) + sin(sampleAngle4) );
-	return (offset * waveHeight);
+	float waveOffset = 0.25 * ( sin(sampleAngle1) + sin(sampleAngle2) + 
+				    sin(sampleAngle3) + sin(sampleAngle4) );
+
+	return STILL_WATER_LEVEL + (waveOffset * WATER_WAVE_AMP);
 }
 
 //------------------------------------------------------------------------------------------------
-float SceneIntersect( Ray r, inout Intersection intersec, bool directLightFlag )
+float SceneIntersect( Ray r, inout Intersection intersec, bool checkWater )
 //------------------------------------------------------------------------------------------------
 {
 	Ray rObj;
         float d, dw, dObj;
 	float t = INFINITY;
-        float eps = 0.01;
 	float waterWaveDepth;
 	vec3 hitObjectSpace;
 	vec3 hitWorldSpace;
 	vec3 normal, nw;
 	
 	
-	for (int i = 0; i < (N_QUADS - 1); i++)
+	for (int i = 0; i < N_QUADS; i++)
         {
 		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, r );
 		if (d < t && d > 0.0)
@@ -194,7 +162,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool directLightFlag )
 		t = d;
 		
 		// transfom normal back into world space
-		normal = vec3(uTallBoxNormalMatrix * normal);
+		normal = vec3(uTallBoxNormalMatrix * normalize(normal));
 		
 		intersec.normal = normalize(normal);
 		intersec.emission = boxes[0].emission;
@@ -222,45 +190,53 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool directLightFlag )
 		intersec.type = boxes[1].type;
 	}
 	
+	
+	if (!checkWater)
+		return t;
+
 	///////////////////////////////////////////////////////////////////////////////////////////////////////
-	// WATER QUAD 
+	// WATER VOLUME 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////
+
 	
-	if ( !directLightFlag )
+	float db = BoxIntersect( boxes[2].minCorner, boxes[2].maxCorner, r, normal );
+	if (db == INFINITY) 
+		return t;
+
+	vec3 pos = r.origin;
+	vec3 dir = r.direction;
+	float h = 0.0;
+	d = 0.0; // reset d
+	
+	for(int i = 0; i < 100; i++)
 	{
-		d = QuadIntersect( quads[6].v0, quads[6].v1, quads[6].v2, quads[6].v3, r );
-		if (d == INFINITY || d < 0.0) return t;
-		hitWorldSpace = r.origin + r.direction * d;
+		h = abs(pos.y - getWaterWaveHeight(pos));
+		if (d > 10000.0 || h < 0.01) break;
+		d += h * 0.5;
+		pos += dir * h * 0.5; 
 	}
-	else
+
+
+	// just putting if(d > db) bakes the bottom of the room wavy, surreal
+	if (d < t) 
 	{
-		hitWorldSpace = r.origin;
-	}
-	
-	waterWaveDepth = getWaterQuadDepth(hitWorldSpace);
-	
-	vec3 waterOffset = vec3(10, waterWaveDepth, 10);
-	vec3 waterBoxMin = vec3(-10,-10,-570);
-	vec3 waterBoxMax = quads[6].v1 + waterOffset;
-	float inside = 2.0;
-	dw = DisplacementBoxIntersect( waterBoxMin, waterBoxMax, r, normal, inside );
-	
-	if (dw < t)
-	{
-		t = dw;
-		float dx = getWaterQuadDepth(hitWorldSpace + vec3(eps,0,0)) - getWaterQuadDepth(hitWorldSpace + vec3(-eps,0,0));
-		float dy = eps * inside; // (the water wave height is a function of x and z, not dependent on y)
-		float dz = getWaterQuadDepth(hitWorldSpace + vec3(0,0,eps)) - getWaterQuadDepth(hitWorldSpace + vec3(0,0,-eps));
+		float eps = 1.0;
+		t = d;
+		hitWorldSpace = pos;
+		float dx = getWaterWaveHeight(hitWorldSpace - vec3(eps,0,0)) - getWaterWaveHeight(hitWorldSpace + vec3(eps,0,0));
+		float dy = eps * 2.0; // (the water wave height is a function of x and z, not dependent on y)
+		float dz = getWaterWaveHeight(hitWorldSpace - vec3(0,0,eps)) - getWaterWaveHeight(hitWorldSpace + vec3(0,0,eps));
 		intersec.normal = normalize(vec3(dx,dy,dz));
-		intersec.emission = quads[6].emission;
-		intersec.color = quads[6].color;
-		intersec.type = quads[6].type;
+		intersec.emission = boxes[2].emission;
+		intersec.color = boxes[2].color;
+		intersec.type = boxes[2].type;
 	}
 	
+
 	return t;
 }
 
-// can't #include the following because it passes bool directLightFlag to SceneIntersect
+// can't #include the following because it passes bool checkWater to SceneIntersect
 //
 vec3 calcDirectLightingQuad(vec3 mask, vec3 x, vec3 nl, Quad light, inout float seed)
 {
@@ -276,7 +252,7 @@ vec3 calcDirectLightingQuad(vec3 mask, vec3 x, vec3 nl, Quad light, inout float 
 	// cast shadow ray from intersection point	
 	Ray shadowRay = Ray(x, srDir);
 	shadowRay.origin += nl * 2.0; // larger dimensions of this scene require greater offsets
-	float st = SceneIntersect(shadowRay, shadowIntersec, true);
+	float st = SceneIntersect(shadowRay, shadowIntersec, false);
 	if ( shadowIntersec.type == LIGHT )
 	{
 		float r2 = distance(light.v0, light.v1) * distance(light.v0, light.v3);
@@ -294,19 +270,20 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 //-----------------------------------------------------------------------
 {
 	vec3 accumCol = vec3(0.0);
-        vec3 mask = vec3(1.0);
+	vec3 mask = vec3(1.0);
+	if (r.origin.y < STILL_WATER_LEVEL && r.origin.z < 1.0)mask = vec3(0.6, 1.0, 1.0);
         Intersection intersec;
-	int sampleDiffuseBudget = 3;
+	int sampleDiffuseBudget = 2;
 	bool bounceIsSpecular = true;
-	bool directLightFlag = false;
+	bool checkWater = true;
 	
-        for (int depth = 0; depth < 5; depth++)
+        for (int depth = 0; depth < 4; depth++)
 	{
-		sampleDiffuseBudget -= 1;
+		//sampleDiffuseBudget -= 1;
 		
-		float t = SceneIntersect(r, intersec, directLightFlag);
-		directLightFlag = true;
-		
+		float t = SceneIntersect(r, intersec, checkWater);
+		//checkWater = false;
+
 		if (t == INFINITY)
 		{
                         break;
@@ -315,7 +292,6 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 		// if we reached something bright, don't spawn any more rays
 		if (intersec.type == LIGHT)
 		{	
-
 			if (bounceIsSpecular)
 			{
 				accumCol = mask * intersec.emission;
@@ -353,11 +329,14 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			r.origin += r.direction * 2.0;
 			mask *= intersec.color;
 			bounceIsSpecular = true;
+			
                         continue;
                 }
 
                 if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
+			checkWater = false;
+
 			float nc = 1.0; // IOR of air
 			float nt = 1.33; // IOR of water
 			float nnt = dot(n,nl) > 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
@@ -369,7 +348,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
 			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
 			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
-			
+
 			if (rand(seed) < Re) // reflect ray from surface
 			{
 				r = Ray( x, reflect(r.direction, nl) );
@@ -390,7 +369,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			
 		} // end if (intersec.type == REFR)
 		
-	} // end for (int depth = 0; depth < 5; depth++)
+	} // end for (int depth = 0; depth < 4; depth++)
 	
 	return accumCol;      
 }
@@ -411,17 +390,71 @@ void SetupScene(void)
 	quads[4] = Quad( vec3(  0.0,   0.0,   0.0), vec3(549.6,   0.0,   0.0), vec3(549.6,   0.0,-559.2), vec3(  0.0,   0.0,-559.2),  z, vec3( 1 ),  DIFF);// Floor
 	// Rectangular Area Light
 	quads[5] = Quad( vec3(213.0, 548.0,-332.0), vec3(343.0, 548.0,-332.0), vec3(343.0, 548.0,-227.0), vec3(213.0, 548.0,-227.0), L1, z, LIGHT);// Area Light Quad in ceiling
-	// Water Quad
-	quads[6] = Quad( vec3(  0.0,   100.0,   0.0), vec3(549.6,   100.0,   0.0), vec3(549.6,   100.0,-559.2), vec3(  0.0,   100.0,-559.2),  z, vec3(0.6, 1.0, 1.0), REFR);// Water Quad
-
-	//boxes[0] = Box( vec3( -82.0,-170.0,  -80.0), vec3( 82.0, 170.0,  80.0), z, vec3(0.01), SPEC);// Tall black Metal Box Left
-	boxes[0] = Box( vec3( -82.0,-170.0,  -80.0), vec3( 82.0, 170.0,  80.0), z, vec3(0.99), DIFF);// Tall white Diffuse Box Left
+	
+	boxes[0] = Box( vec3( -82.0,-170.0,  -80.0), vec3( 82.0, 170.0,  80.0), z, vec3(0.9), SPEC);// Tall black Metal Box Left
+	//boxes[0] = Box( vec3( -82.0,-170.0,  -80.0), vec3( 82.0, 170.0,  80.0), z, vec3(0.99), DIFF);// Tall white Diffuse Box Left
 	boxes[1] = Box( vec3( -86.0, -85.0,  -80.0), vec3( 86.0,  85.0,  80.0), z, vec3(0.99), DIFF);// Short white Diffuse Box Right
+	// Water Box
+	boxes[2] = Box( vec3( -1.0, -1.0, -561), vec3( 551.0, STILL_WATER_LEVEL + WATER_WAVE_AMP, 0.0), z, vec3(0.6, 1.0, 1.0), REFR);
 }	
 
+void main( void )
+{
+	vec3 camPos     = vec3( uCameraMatrix[3][0],  uCameraMatrix[3][1],  uCameraMatrix[3][2]);
+	
+	vec3 camRight   = vec3( uCameraMatrix[0][0],  uCameraMatrix[0][1],  uCameraMatrix[0][2]);
+	vec3 camUp      = vec3( uCameraMatrix[1][0],  uCameraMatrix[1][1],  uCameraMatrix[1][2]);
+	vec3 camForward = vec3(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]);
+	
+	// seed for rand() function
+	float seed = mod(uSampleCounter,1000.0) * uRandomVector.x - uRandomVector.y + uResolution.y * gl_FragCoord.x / uResolution.x + uResolution.x * gl_FragCoord.y / uResolution.y;
+	
+	float r1 = 2.0 * rand(seed);
+	float r2 = 2.0 * rand(seed);
+	
+	vec2 pixelPos = vec2(0);
+	vec2 offset = vec2(0);
+	
+	//if ( !uCameraIsMoving ) 
+	{
+		offset.x = r1 < 1.0 ? sqrt(r1) - 1.0 : 1.0 - sqrt(2.0 - r1);
+		offset.y = r2 < 1.0 ? sqrt(r2) - 1.0 : 1.0 - sqrt(2.0 - r2);
+	}
+	
+	offset /= (uResolution);
+	pixelPos = (2.0 * (vUv + offset) - 1.0);
+	vec3 rayDir = normalize( pixelPos.x * camRight * uULen + pixelPos.y * camUp * uVLen + camForward );
+	
+	// depth of field
+	vec3 focalPoint = uFocusDistance * rayDir;
+	float randomAngle = rand(seed) * TWO_PI; // pick random point on aperture
+	float randomRadius = rand(seed) * uApertureSize;
+	vec3  randomAperturePos = ( cos(randomAngle) * camRight + sin(randomAngle) * camUp ) * randomRadius;
+	// point on aperture to focal point
+	vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
 
-#include <pathtracing_main>
+	Ray ray = Ray( camPos + randomAperturePos, finalRayDir );
 
+	SetupScene(); 
+
+	// perform path tracing and get resulting pixel color
+	vec3 pixelColor = CalculateRadiance( ray, seed );
+	
+	vec3 previousColor = texture2D(tPreviousTexture, vUv).rgb;
+	
+	if ( uCameraIsMoving )
+	{
+		previousColor *= 0.85; // motion-blur trail amount (old image)
+		pixelColor *= 0.15; // brightness of new image (noisy)
+	}
+	else
+	{
+		previousColor *= 0.9; // motion-blur trail amount (old image)
+		pixelColor *= 0.1; // brightness of new image (noisy)
+	}
+	
+	gl_FragColor = vec4( pixelColor + previousColor, 1.0 );	
+}
 
 		</script>
 		
@@ -458,7 +491,7 @@ void SetupScene(void)
 			var randomVector = new THREE.Vector3();
 			var sampleCounter = 1.0;
 			var keyboard = new THREEx.KeyboardState();
-			var cameraIsMoving = false;
+			var cameraIsMoving = true;
 			var cameraJustStartedMoving = false;
 			var cameraRecentlyMoving = false;
 			var isPaused = true;
@@ -625,8 +658,8 @@ void SetupScene(void)
 				pathTracingScene.add( cameraControlsObject );
 
 				// for flyCam
-				cameraControlsObject.position.set(278, 350, 400);
-				///cameraControlsYawObject.rotation.y = 0.0;
+				cameraControlsObject.position.set(217, 389, 417);
+				cameraControlsYawObject.rotation.y = -0.1;
 				// look slightly downward
 				cameraControlsPitchObject.rotation.x = -0.4;
 				
@@ -904,8 +937,8 @@ void SetupScene(void)
 				elapsedTime = clock.getElapsedTime() % 1000;
 				
 				// reset flags
-				cameraIsMoving = false;
-				cameraJustStartedMoving = false;
+				//cameraIsMoving = false;
+				//cameraJustStartedMoving = false;
 				
 				// check user controls
 				if (mouseControl) {
@@ -1004,10 +1037,6 @@ void SetupScene(void)
 				worldCamera.getWorldQuaternion(cameraWorldQuaternion);
 				
 				// allow flying camera
-				if ( (keyboard.pressed('space') ) ) {
-					
-					cameraIsMoving = true;
-				}
 				if ( (keyboard.pressed('W') || button3Pressed) && !(keyboard.pressed('S') || button4Pressed) ) {
 
 					cameraControlsObject.position.add(cameraDirectionVector.multiplyScalar(camFlightSpeed * frameTime));
@@ -1141,7 +1170,7 @@ void SetupScene(void)
 				screenOutputMaterial.uniforms.uOneOverSampleCounter.value = 1.0 / sampleCounter;
 				
 				
-				cameraInfoElement.innerHTML = "Press 'SpaceBar' to run Water simulation" + "<br>" + "FOV: " + worldCamera.fov + " / Aperture: " + apertureSize.toFixed(2) + " / FocusDistance: " + focusDistance + "<br>" + "Samples: " + sampleCounter;
+				cameraInfoElement.innerHTML = "FOV: " + worldCamera.fov + " / Aperture: " + apertureSize.toFixed(2) + " / FocusDistance: " + focusDistance + "<br>" + "Samples: " + sampleCounter;
 				
 				
 				// RENDERING in 3 steps
