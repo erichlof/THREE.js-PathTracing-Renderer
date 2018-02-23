@@ -563,19 +563,19 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout float seed )
 		// ray hits terrain
 		if (intersec.type == TERRAIN)
 		{
-			float noiseValue = lookup_noise2D(vec2(x.xz*0.001));
-			vec3 terrainColor = vec3(0.03, 0.015, 0.01) * noiseValue;
-			vec3 snowColor = vec3(0.8);
+			float noiseValue = lookup_noise2D(vec2(x.xz*0.0004));
+			vec3 terrainColor = vec3(0.1, 0.04, 0.02) * noiseValue;
+			vec3 snowColor = vec3(0.6);
 			vec3 up = vec3(0, 1, 0);
 			float dotUp_SunDirection = max(0.0, dot(up, sunDirection));
-			float terrainHeight = clamp( x.y / (TERRAIN_HEIGHT * 0.5), 0.0, 2.0 );
+			float terrainHeight = clamp( x.y / (TERRAIN_HEIGHT * 0.4), 0.0, 3.0 );
 			
 			if (x.y > uWaterLevel && n.y > 1.0 - terrainHeight)
 			{
 				terrainColor = snowColor;
 			}
 				
-			if ( isLightSourceVisible(x, n, sunDirection) ) // in sunlight
+			if ( isLightSourceVisible(x, n, normalize(sunDirection + (randVec * 0.005))) ) // in sunlight
 			{
 				vec3 sunColor = clamp(Get_Sky_Color(Ray(x, normalize(sunDirection + (randVec * 0.05))), sunDirection), 0.0, 1.0);
 				if (terrainColor == snowColor)
@@ -938,17 +938,17 @@ void main( void )
 				
 				pathTracingScene.add( cameraControlsObject );
 
-				// mountain / lake view
-				cameraControlsObject.position.set(755, 614, 3334); 
-				cameraControlsYawObject.rotation.y = 0.8;
-				cameraControlsPitchObject.rotation.x = 0.0;
-
 				// uncomment for aerial panorama
-				//cameraControlsObject.position.set(-53, 1055, 196);
-				//cameraControlsYawObject.rotation.y = 4.2;
-				//cameraControlsPitchObject.rotation.x = -0.1;
+				cameraControlsObject.position.set(-53, 1055, 196);
+				cameraControlsYawObject.rotation.y = 4.0;
+				cameraControlsPitchObject.rotation.x = -0.1;
 
-				// uncomment for right above lake
+				// uncomment for tall mountain / lake view
+				//cameraControlsObject.position.set(1397, 1035, -1840); 
+				//cameraControlsYawObject.rotation.y = 2.0;
+				//cameraControlsPitchObject.rotation.x = -0.4;
+
+				// uncomment for right above lake view
 				//cameraControlsObject.position.set(2272, -383, -605); 
 				//cameraControlsYawObject.rotation.y = 4.6;
 				//cameraControlsPitchObject.rotation.x = 0.0;
