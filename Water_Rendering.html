@@ -209,7 +209,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkWater )
 	float h = 0.0;
 	d = 0.0; // reset d
 	
-	for(int i = 0; i < 200; i++)
+	for(int i = 0; i < 150; i++)
 	{
 		h = abs(pos.y - getWaterWaveHeight(pos));
 		if (d > 10000.0 || h < 1.0) break;
