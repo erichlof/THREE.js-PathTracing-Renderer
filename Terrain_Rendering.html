@@ -142,20 +142,19 @@ float DisplacementBoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r )
 
 
 
-
 // WATER
 /* Credit: some of the following water code is borrowed from https://www.shadertoy.com/view/Ms2SD1 posted by user 'TDM' */
 
-#define ITER_FRAGMENT  4 // # of fractal iterations
-#define SEA_HEIGHT     1.0 // this is how many units from the top of the ocean bounding box
-#define SEA_FREQ       0.2 // wave density: lower = spread out, higher = close together
-#define SEA_CHOPPY     1.0 // smaller beachfront-type waves, they travel in parallel
-#define SEA_SPEED      0.02 // how quickly time passes
+#define ITER_FRAGMENT  4    // # of fractal iterations
+#define SEA_HEIGHT     0.5  // this is how many units from the top of the ocean bounding box
+#define SEA_FREQ       0.05 // wave density: lower = spread out, higher = close together
+#define SEA_CHOPPY     1.0  // smaller beachfront-type waves, they travel in parallel
+#define SEA_SPEED      10.0 // how quickly time passes
 #define OCTAVE_M       mat2(1.6, 1.2, -1.2, 1.6)
 
 float grayNoise( in vec2 uv )
 {
-	return texture2D( t_GrayNoise, uv ).x;
+	return texture2D( t_GrayNoise, (uv + 0.5) / 256.0 ).x * 2.0 - 1.0;
 }
 
 float sea_octave( vec2 uv, float choppy )
@@ -169,8 +168,6 @@ float sea_octave( vec2 uv, float choppy )
 
 float getOceanWaterHeight( vec3 p )
 {
-	p.x *= 0.0005;
-	p.z *= 0.0005;
 	float freq = SEA_FREQ;
 	float amp = SEA_HEIGHT;
 	float choppy = SEA_CHOPPY;
@@ -200,54 +197,27 @@ float getOceanWaterHeight( vec3 p )
 
 float noise3D( in vec3 p )
 {
-	return texture2D(t_PerlinNoise, p.xz ).x;
-}
-
-float lookup_noise2D( in vec2 uv )
-{
-	return texture2D(t_PerlinNoise, uv).x;
-	
+	return texture2D(t_PerlinNoise, p.xz / 256.0).x;
 }
 
 const mat3 m = mat3( 0.00,  0.80,  0.60,
                     -0.80,  0.36, -0.48,
 		    -0.60, -0.48,  0.64 );
 
-const mat2  m2 = mat2(0.8, 0.6, -0.6, 0.8);
-
 float fbm( vec3 p )
 {
 	float t;
 	t  = 0.5 * noise3D(p);   p = m * p * 2.6;
 	t += 0.25 * noise3D(p);  p = m * p * 2.8;
-	t += 0.125 * noise3D(p);// p = m * p * 3.0;
-
-	return t;
-}
-
-float fbm_shadow( vec3 p )
-{
-	float t;
-	t  = 0.5 * noise3D(p);
-	t += 0.25 * noise3D(p);
 	t += 0.125 * noise3D(p);
-	
+
 	return t;
 }
 
 float cloud_density( vec3 pos, float cov )
 {
-	vec3 p = pos * 0.003;
+	vec3 p = pos;
 	float dens = fbm(p);
-	dens *= smoothstep(cov, cov + 0.05, dens);
-
-	return clamp(dens, 0.0, 1.0);	
-}
-
-float cloud_density_shadow( vec3 pos, float cov )
-{
-	vec3 p = pos * 0.003;
-	float dens = fbm_shadow(p);
 	dens *= smoothstep(cov, cov + 0.05, dens);
 
 	return clamp(dens, 0.0, 1.0);	
@@ -302,29 +272,6 @@ vec4 render_clouds( Ray eye, vec3 p, vec3 sunDirection )
 	return vec4(C, alpha);
 }
 
-float checkCloudCover( vec3 sunDirection, vec3 p )
-{
-	float march_step = THICKNESS / float(N_MARCH_STEPS);
-	vec3 pos = p + vec3(uTime * -3.0, uTime * -0.5, uTime * -2.0);
-	vec3 dir_step = sunDirection / clamp(sunDirection.y, 0.001, 1.0) * march_step;
-	
-	float cov = abs(sin((uTime + 40.0) * 0.05));
-	cov = mix(0.3, 0.7, cov);
-	float alpha = 0.0;
-	float dens;
-	float T_i;
-	
-	for (int i = 0; i < N_MARCH_STEPS; i++)
-	{
-		dens = cloud_density_shadow(pos, cov);
-		T_i = exp(-ABSORPTION * dens * march_step);
-		alpha += (1.0 - T_i) * (1.0 - alpha);
-		pos += dir_step;
-	}
-	
-	return clamp(1.0 - alpha, 0.0, 1.0);
-}
-
 
 // TERRAIN
 
@@ -333,6 +280,13 @@ float checkCloudCover( vec3 sunDirection, vec3 p )
 #define TERRAIN_FREQ 2.0
 #define TERRAIN_AMP 0.5
 #define TERRAIN_SAMPLE_SCALE 0.00004
+
+const mat2  m2 = mat2(0.8, 0.6, -0.6, 0.8);
+
+float lookup_noise2D( in vec2 uv )
+{
+	return texture2D(t_PerlinNoise, uv).x;	
+}
 
 float terrain_map(vec2 p)
 {
@@ -385,7 +339,7 @@ float TerrainIntersect( Ray r )
 
 vec3 terrain_calcNormal( vec3 pos, float t )
 {
-	vec2 eps = vec2(max(0.6, 0.001 * t), 0.0);
+	vec2 eps = vec2(max(1.0, 0.001 * t), 0.0);
 	vec2 p = pos.xz;
 	return normalize( vec3( terrain_map_detail(p-eps.xy) - terrain_map_detail(p+eps.xy),
 				2.0 * eps.x,
@@ -398,17 +352,17 @@ bool isLightSourceVisible( vec3 pos, vec3 n, vec3 dirToLight)
 	float t = 0.0;
 	float terrainHeight = TERRAIN_HEIGHT * 1.5;
 	pos += n * 2.0;
+	//pos += dirToLight;
+	//pos += vec3(0,1,0);
 
-	
 	for(int i = 0; i < 150; i++)
 	{
-		
 		h = pos.y - terrain_map(pos.xz);
 		pos += dirToLight * h;
 		if ( pos.y > terrainHeight || h < 1.0) break;
 	}
 
-	return pos.y > terrainHeight;
+	return h >= 1.0;
 }
 
 
@@ -462,28 +416,6 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkWater )
 }
 
 
-vec3 calcDirectLightingSun( vec3 mask, vec3 x, vec3 nl, vec3 sunDirection, Ray r, vec3 randVec )
-{
-	vec3 dirLight = vec3(0);
-	Intersection shadowIntersec;
-	
-	// cast shadow ray from intersection point
-	Ray shadowRay = Ray( x, normalize( sunDirection + (randVec * 0.01) ) );
-	shadowRay.origin += nl * 2.0;
-	
-	float st = SceneIntersect(shadowRay, shadowIntersec, true);
-	
-	if ( st == INFINITY )
-	{
-		vec3 sunEmission = Get_Sky_Color(shadowRay, sunDirection);
-                dirLight = mask * sunEmission * max(0.01, dot(shadowRay.direction, nl));
-	}
-	
-	return dirLight;
-}
-
-
-
 //-----------------------------------------------------------------------
 vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout float seed )
 //-----------------------------------------------------------------------
@@ -493,7 +425,8 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout float seed )
 	vec3 initialSkyColor = Get_Sky_Color(r, sunDirection);
 	
 	Ray skyRay = Ray( r.origin * vec3(0.05), normalize(vec3(r.direction.x, abs(r.direction.y), r.direction.z)) );
-	float dc = SphereIntersect( 50000.0, vec3(skyRay.origin.x, -49900, skyRay.origin.z) + vec3(rand(seed) * 2.0), skyRay );
+	//float dc = SphereIntersect( 50000.0, vec3(skyRay.origin.x, -49900, skyRay.origin.z) + vec3(rand(seed) * 2.0), skyRay );
+	float dc = SphereIntersect( 20000.0, vec3(skyRay.origin.x, -19900, skyRay.origin.z) + vec3(rand(seed) * 2.0), skyRay );
 	vec3 skyPos = skyRay.origin + skyRay.direction * dc;
 	vec4 cld = render_clouds(skyRay, skyPos, sunDirection);
 	
@@ -540,18 +473,6 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout float seed )
 		}
 		
 		
-		/*
-		// if ray bounced off of diffuse material (i.e. scene geometric objects) and hits sky
-		if (t == INFINITY && previousIntersecType == DIFF)
-		{	
-			float rDotSun = max(0.0, dot(r.direction, sunDirection));
-			if (rDotSun < 0.99) // prevents sun 'fireflies' on diffuse surfaces
-				accumCol += mask * Get_Sky_Color(r, sunDirection);
-				
-			break;
-		}
-		*/
-		
 		// useful data 
 		n = intersec.normal;
                 nl = dot(n,r.direction) <= 0.0 ? normalize(n) : normalize(n * -1.0);
@@ -563,34 +484,43 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout float seed )
 		// ray hits terrain
 		if (intersec.type == TERRAIN)
 		{
+			firstX = x;
+
 			float noiseValue = lookup_noise2D(vec2(x.xz*0.0004));
-			vec3 terrainColor = vec3(0.1, 0.04, 0.02) * noiseValue;
-			vec3 snowColor = vec3(0.6);
+			vec3 rockColor = vec3(1.0, 0.4, 0.2) * 0.1 * noiseValue;
+			vec3 snowColor = vec3(0.7);
+			vec3 randomSkyVec = normalize(vec3(randVec.x, abs(randVec.y), randVec.z));
+			vec3 skyColor = clamp(Get_Sky_Color(Ray(x, randomSkyVec), sunDirection), 0.0, 1.0);
+			vec3 sunColor = clamp(Get_Sky_Color(Ray(x, normalize(sunDirection + (randVec * 0.05))), sunDirection), 0.0, 1.0);
+			vec3 ambientColor;
 			vec3 up = vec3(0, 1, 0);
-			float dotUp_SunDirection = max(0.0, dot(up, sunDirection));
 			float terrainHeight = clamp( x.y / (TERRAIN_HEIGHT * 0.4), 0.0, 3.0 );
 			
 			if (x.y > uWaterLevel && n.y > 1.0 - terrainHeight)
 			{
-				terrainColor = snowColor;
+				intersec.color = snowColor;
+				mask *= intersec.color;
+				ambientColor = mask * skyColor * max(0.0, dot(randomSkyVec, n));// ambient color from sky light
+				ambientColor = mix(ambientColor, snowColor, clamp(dot(sunDirection, up), 0.0, 0.5));
+			}
+			else
+			{
+				intersec.color = rockColor;
+				mask *= intersec.color;
+				ambientColor = mask * skyColor * max(0.0, dot(randomSkyVec, n)); // ambient color from sky light
+			}
+			
+			
+			accumCol = ambientColor;
+
+			if ( isLightSourceVisible( x, n, normalize(sunDirection + (randVec * 0.005)) ) ) // in direct sunlight
+			{
+				if (intersec.color == snowColor)
+					accumCol = mix( ambientColor, mask * sunColor, max(0.0, dot(normalize(n + (sunDirection * 0.6)), sunDirection)) );
+				else	
+					accumCol = mix( ambientColor, mask * sunColor, max(0.0, dot(n, sunDirection)) );	
 			}
 				
-			if ( isLightSourceVisible(x, n, normalize(sunDirection + (randVec * 0.005))) ) // in sunlight
-			{
-				vec3 sunColor = clamp(Get_Sky_Color(Ray(x, normalize(sunDirection + (randVec * 0.05))), sunDirection), 0.0, 1.0);
-				if (terrainColor == snowColor)
-					accumCol = mask * terrainColor * mix(sunColor, vec3(1), dotUp_SunDirection) *
-						max(0.3, dot(normalize(n + sunDirection), sunDirection)) * clamp(dotUp_SunDirection, 0.7, 1.0);
-				else	
-					accumCol = mask * terrainColor * max(0.0, dot(n, sunDirection));	
-			}
-			else // in shadow
-			{
-				if (terrainColor == snowColor)
-					accumCol = mask * terrainColor * max(0.0, dot(normalize(n + (up * 0.5)), up)) * dotUp_SunDirection;
-				else	
-					accumCol = mask * terrainColor * max(0.0, dot(n, up)) * 0.03;		
-			} 	
 			
 			break;
 		}
@@ -601,7 +531,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout float seed )
 			
 			float nc = 1.0; // IOR of air
 			float nt = 1.33; // IOR of water
-			float nnt = dot(n,nl) > 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
+			float nnt = dot(r.direction, n) <= 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
 			vec3 tdir = refract(r.direction, nl, nnt);
 				
 			// Original Fresnel equations
@@ -611,7 +541,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout float seed )
 			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
 			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
 			if (uCameraUnderWater > 0.0)
-				Re *= 0.2;
+				Re *= 1.0;
 			else Re *= 2.0; // tweak to add more reflectivity to water
 			if (rand(seed) < Re) // reflect ray from surface
 			{
@@ -650,15 +580,15 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout float seed )
 	else // terrain and other objects
 	{
 		hitDistance = distance(cameraRay.origin, firstX);
-		if (hitDistance > 90000.0)
-			accumCol = mix( initialSkyColor, accumCol, clamp(  exp( -log(hitDistance * 0.0001) ), 0.0, 1.0 ) );
-		   else accumCol = mix( initialSkyColor, accumCol, clamp( exp2( -log(hitDistance * 0.0001) ), 0.0, 1.0 ) );
+		accumCol = mix( initialSkyColor, accumCol, clamp( exp2( -log(hitDistance * 0.0001) ), 0.0, 1.0 ) );
+
+		// underwater fog effect
+		hitDistance = distance(cameraRay.origin, firstX);
+		hitDistance *= uCameraUnderWater;
+		accumCol = mix( vec3(0.0,0.05,0.05), accumCol, clamp( exp2( -hitDistance * 0.001 ), 0.0, 1.0 ) );
 	}
 	
-	// underwater fog effect
-	hitDistance = distance(cameraRay.origin, firstX);
-	hitDistance *= uCameraUnderWater;
-	accumCol = mix( vec3(0.0,0.05,0.05), accumCol, clamp( exp2( -hitDistance * 0.001 ), 0.0, 1.0 ) );
+	
 	
 	return vec3(max(vec3(0), accumCol));      
 }
@@ -696,7 +626,6 @@ void main( void )
         	offset.y = r2 < 1.0 ? sqrt(r2) - 1.0 : 1.0 - sqrt(2.0 - r2);
 	}
 	
-
 	offset /= (uResolution);
 	pixelPos = (2.0 * (vUv + offset) - 1.0);
 	vec3 rayDir = normalize( pixelPos.x * camRight * uULen + pixelPos.y * camUp * uVLen + camForward );
@@ -927,7 +856,7 @@ void main( void )
 				// worldCamera is the dynamic camera 3d object that will be positioned, oriented and 
 				// constantly updated inside the 3d scene.  Its view will ultimately get passed back to the 
 				// stationary quadCamera, which renders the scene to a fullscreen quad (made up of 2 large triangles).
-				worldCamera = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 1, 1000);
+				worldCamera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 1, 1000);
 				pathTracingScene.add(worldCamera);
 				
 				controls = new FirstPersonCameraControls( worldCamera );
@@ -939,9 +868,9 @@ void main( void )
 				pathTracingScene.add( cameraControlsObject );
 
 				// uncomment for aerial panorama
-				cameraControlsObject.position.set(-53, 1055, 196);
+				cameraControlsObject.position.set(-14046, 674, -2098);
 				cameraControlsYawObject.rotation.y = 4.0;
-				cameraControlsPitchObject.rotation.x = -0.1;
+				cameraControlsPitchObject.rotation.x = -0.05;
 
 				// uncomment for tall mountain / lake view
 				//cameraControlsObject.position.set(1397, 1035, -1840); 
