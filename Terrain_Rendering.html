@@ -913,8 +913,8 @@ void main( void )
 				
 
 				PerlinNoiseTexture = new THREE.TextureLoader().load( 'textures/perlin256.png' );
-				PerlinNoiseTexture.wrapS = THREE.RepeatWrapping;
-				PerlinNoiseTexture.wrapT = THREE.RepeatWrapping;
+				PerlinNoiseTexture.wrapS = THREE.MirrorRepeatWrapping;
+				PerlinNoiseTexture.wrapT = THREE.MirrorRepeatWrapping;
 				PerlinNoiseTexture.flipY = false;
 				PerlinNoiseTexture.minFilter = THREE.LinearFilter;
 				PerlinNoiseTexture.generateMipmaps = false;
