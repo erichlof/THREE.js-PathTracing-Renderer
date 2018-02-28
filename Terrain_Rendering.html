@@ -216,7 +216,7 @@ float fbm( vec3 p )
 
 float cloud_density( vec3 pos, float cov )
 {
-	vec3 p = pos;
+	vec3 p = pos * 0.8;
 	float dens = fbm(p);
 	dens *= smoothstep(cov, cov + 0.05, dens);
 
@@ -425,8 +425,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout float seed )
 	vec3 initialSkyColor = Get_Sky_Color(r, sunDirection);
 	
 	Ray skyRay = Ray( r.origin * vec3(0.05), normalize(vec3(r.direction.x, abs(r.direction.y), r.direction.z)) );
-	//float dc = SphereIntersect( 50000.0, vec3(skyRay.origin.x, -49900, skyRay.origin.z) + vec3(rand(seed) * 2.0), skyRay );
-	float dc = SphereIntersect( 20000.0, vec3(skyRay.origin.x, -19900, skyRay.origin.z) + vec3(rand(seed) * 2.0), skyRay );
+	float dc = SphereIntersect( 20000.0, vec3(skyRay.origin.x, -19850, skyRay.origin.z) + vec3(rand(seed) * 2.0), skyRay );
 	vec3 skyPos = skyRay.origin + skyRay.direction * dc;
 	vec4 cld = render_clouds(skyRay, skyPos, sunDirection);
 	
@@ -856,7 +855,7 @@ void main( void )
 				// worldCamera is the dynamic camera 3d object that will be positioned, oriented and 
 				// constantly updated inside the 3d scene.  Its view will ultimately get passed back to the 
 				// stationary quadCamera, which renders the scene to a fullscreen quad (made up of 2 large triangles).
-				worldCamera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 1, 1000);
+				worldCamera = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 1, 1000);
 				pathTracingScene.add(worldCamera);
 				
 				controls = new FirstPersonCameraControls( worldCamera );
