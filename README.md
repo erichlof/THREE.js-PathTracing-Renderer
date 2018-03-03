@@ -76,7 +76,7 @@ Enter Bi-Directional path tracing to the rescue!:
 
 ![](readme-Images/threejsPathTracing.png)
 
-<br>
+
 <h2>FEATURES</h2>
 
 * Real-time interactive Path Tracing in your Chrome browser - even on your smartphone! ( What?! )
