@@ -79,7 +79,7 @@ precision highp sampler2D;
 
 struct Ray { vec3 origin; vec3 direction; };
 struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; int type; };
-struct Quad { vec3 normal; vec3 v0; vec3 v1; vec3 v2; vec3 v3; vec3 emission; vec3 color; int type; };
+struct Quad { vec3 v0; vec3 v1; vec3 v2; vec3 v3; vec3 emission; vec3 color; int type; };
 struct Intersection { vec3 normal; vec3 emission; vec3 color; int type; };
 
 Sphere spheres[N_SPHERES];
@@ -90,7 +90,17 @@ Quad quads[N_QUADS];
 
 #include <pathtracing_sphere_intersect>
 
-#include <pathtracing_quad_intersect>
+#include <pathtracing_triangle_intersect>
+
+
+//----------------------------------------------------------------------------
+float QuadIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 v3, Ray r )
+//----------------------------------------------------------------------------
+{
+	float tTri1 = TriangleIntersect( v0, v1, v2, r );
+	float tTri2 = TriangleIntersect( v0, v2, v3, r );
+	return min(tTri1, tTri2);
+}
 
 
 //-----------------------------------------------------------------------
@@ -115,11 +125,11 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	
 	for (int i = 0; i < N_QUADS; i++)
         {
-		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, quads[i].normal, r );
-		if (d < t)
+		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, r );
+		if (d < t && d > 0.0)
 		{
 			t = d;
-			intersec.normal = (quads[i].normal);
+			intersec.normal = normalize( cross(quads[i].v1 - quads[i].v0, quads[i].v2 - quads[i].v0) );
 			intersec.emission = quads[i].emission;
 			intersec.color = quads[i].color;
 			intersec.type = quads[i].type;
@@ -129,6 +139,9 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	return t;
 }
 
+/* Credit: Some of the equi-angular sampling code is borrowed from https://www.shadertoy.com/view/Xdf3zB posted by user 'sjb' ,
+// who in turn got it from the paper 'Importance Sampling Techniques for Path Tracing in Participating Media' ,
+which can be viewed at: https://docs.google.com/viewer?url=https%3A%2F%2Fwww.solidangle.com%2Fresearch%2Fegsr2012_volume.pdf */
 void sampleEquiAngular( float u, float maxDistance, Ray r, vec3 lightPos, out float dist, out float pdf )
 {
 	// get coord of closest point to light along (infinite) ray
@@ -147,31 +160,14 @@ void sampleEquiAngular( float u, float maxDistance, Ray r, vec3 lightPos, out fl
 	pdf = D/((thetaB - thetaA)*(D*D + t*t));
 }
 
-vec3 calcDirectLightingSphere(vec3 mask, vec3 x, vec3 nl, Sphere light, inout float seed)
-{
-	vec3 dirLight = vec3(0.0);
-	Intersection shadowIntersec;
-	
-	// cast shadow ray from intersection point
-	vec3 ld = light.position;// + (randomSphereDirection(seed) * light.radius);
-	vec3 srDir = normalize(ld - x);
-	
-	Ray shadowRay = Ray(x, srDir);
-	shadowRay.origin += nl * 2.0;
-	float st = SceneIntersect(shadowRay, shadowIntersec);
-	if ( shadowIntersec.type == LIGHT || st == INFINITY )
-	{
-		float r2 = light.radius * light.radius;
-		vec3 d = light.position - x;
-		float dLength = length(d);
-		float d2 = dot(d,d);
-		float cos_a_max = sqrt(1. - clamp( r2 / d2, 0., 1.));
-                float weight = 2. * (1. - cos_a_max);
-                dirLight = mask * light.emission * weight * max(0.01, dot(srDir, nl));
-	}
-	
-	return dirLight;
-}
+
+#include <pathtracing_direct_lighting_sphere>
+
+
+#define FOG_COLOR vec3(0.07, 0.07, 0.07) // color of the fog / participating medium
+#define FOG_DENSITY 0.0005 // this is dependent on the particular scene size dimensions
+#define LIGHT_COLOR vec3(1.0, 1.0, 1.0) // color of light source
+#define LIGHT_POWER 30.0 // brightness of light source
 
 //-----------------------------------------------------------------------
 vec3 CalculateRadiance( Ray r, inout float seed )
@@ -179,96 +175,89 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 {
 	vec3 accumCol = vec3(0.0);
         vec3 mask = vec3(1.0);
-        Intersection intersec, vintersec;
-	vec3 x;
 	bool bounceIsSpecular = true;
 	float t, vt, camt;
-	int prevIntersecType = 0;
+	int prevIntersecType = -1;
 	Ray cameraRay = r;
 	Ray vray;
+	float xx;
+	float pdf;
+	float d;
+	float trans;
+	vec3 lightVec;
+	vec3 particlePos;
+	Intersection intersec;
+	Intersection vintersec;
 	
-        for (int depth = 0; depth < 6; depth++)
+	// depth of 4 is required for higher quality glass refraction
+        for (int depth = 0; depth < 4; depth++)
 	{
 		
-		float xx;
-		float pdf;
-		float d;
 		float u = rand(seed);
-		vec3 lightVec;
-		vec3 particlePos;
 		
-
-		// half way through max bounce depth(< 6), set tracing ray to the volume ray - this is what helps find volume caustics
-		if (depth == 3)
-		{
-			r = vray;
-			bounceIsSpecular = false; // reset specular flag so we don't get false fireflies
-		}
-
 		t = SceneIntersect(r, intersec);
+		
 		// on first loop iteration, save intersection distance along camera ray (t) into camt variable for use below
 		if (depth == 0) 
 			camt = t;
 
 		// sample along intial ray from camera into the scene
-		sampleEquiAngular(u, camt, cameraRay, vec3(275.0, 495.0, -280.0), xx, pdf);
+		sampleEquiAngular(u, camt, cameraRay, spheres[0].position, xx, pdf);
 
 		// create a particle along cameraRay and cast a shadow ray towards light (similar to Direct Lighting)
 		particlePos = cameraRay.origin + xx * cameraRay.direction;
-		lightVec = vec3( 275.0, 495.0, -280.0 ) - particlePos;
+		lightVec = spheres[0].position - particlePos;
 		d = length(lightVec);
 		vray = Ray(particlePos, normalize(lightVec));
+
 		vt = SceneIntersect(vray, vintersec);
 		
 		// if the particle can see the light source, apply volumetric lighting calculation
 		if (vintersec.type == LIGHT)
 		{	
-			float cameraDist = sqrt(distance(cameraRay.origin, vec3(275.0, 495.0, -280.0)));
-			//cameraDist *= cameraDist;
-			vec3 sigma = vec3(0.6, 0.6, 0.4);
-			vec3 trans = exp( -sigma * log(d + xx) );
-			float geomTerm =  (cameraDist ) / dot(lightVec, lightVec);
-			accumCol += vintersec.emission * geomTerm * trans / pdf;
+			trans = exp( -((d + xx) * FOG_DENSITY) );
+			// '(1.5 * rand(seed))' can be used to get rid of some of the banding artifacts 
+			// that occur due to limited machine precision when calculating distance factor
+			float geomTerm = (1.5 * rand(seed) + 0.5) / dot(lightVec, lightVec);
+			
+			accumCol += FOG_COLOR * vintersec.emission * geomTerm * trans / pdf;
 		}
-		// otherwise the particle will remain in shadow - this is what produces the characteristic shafts of light vs. volume shadows
+		// otherwise the particle will remain in shadow - this is what produces the shafts of light vs. the volume shadows
+
 		
-		// this is the normal ray tracing scene intersection result
+		// now do the normal path tracing routine with the camera ray
 		if (intersec.type == LIGHT)
 		{	
-			// if we have just bounced off a refractive surface(REFR) like glass, then allow particle to be lit
-			if (prevIntersecType == REFR && depth > 3)
+			if (bounceIsSpecular)
 			{
-				accumCol += mask * intersec.emission;
-				break;
+				trans = exp( -((d + camt) * FOG_DENSITY) );
+				accumCol += FOG_COLOR * mask * intersec.emission * trans;	
 			}
-			// this is part of the normal path tracing algorithm
-			else if (depth < 3 && bounceIsSpecular)
-			{
-				accumCol += mask * intersec.emission;
-				continue;
-			}
+			bounceIsSpecular = false;
+
+			continue; // normally we would 'break' here, but 'continue' allows more particles to be lit
 		}
-		
-		// reset previous material type
-		prevIntersecType = 0;
 		
 		// useful data 
 		vec3 n = intersec.normal;
                 vec3 nl = dot(n,r.direction) <= 0.0 ? normalize(n) : normalize(n * -1.0);
-		x = r.origin + r.direction * t;
+		vec3 x = r.origin + r.direction * t;
 		
 		    
                 if (intersec.type == DIFF) // Ideal DIFFUSE reflection
                 {
+			bounceIsSpecular = false;
+
 			mask *= intersec.color;
-			//if (depth < 3)
-			accumCol += calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
-                        bounceIsSpecular = false;
-			
+			trans = exp( -((d + camt) * FOG_DENSITY) );
+			accumCol += trans * calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
+
+			if (depth > 1)
+				break; // avoid calling cos-weighted direction next, because we are done looping
+                        
 			// choose random Diffuse sample vector
 			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 			r.origin += r.direction * 2.0;
-			mask *= max(0.0, dot(r.direction, nl));
 			
 			continue;	
                 }
@@ -278,7 +267,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			r = Ray( x, reflect(r.direction, nl) );
 			r.origin += r.direction * 2.0;
 			mask *= intersec.color;
-			bounceIsSpecular = true;
+			
                         continue;
                 }
 
@@ -286,7 +275,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 		{
 			float nc = 1.0; // IOR of Air
 			float nt = 1.5; // IOR of common Glass
-			float nnt = dot(n,nl) > 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
+			float nnt = dot(r.direction, n) <= 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
 			vec3 tdir = refract(r.direction, nl, nnt);
 				
 			// Original Fresnel equations
@@ -295,13 +284,12 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
 			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
 			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
-			//float Tr = 1.0 - Re;
 			
 			if (rand(seed) < Re) // reflect ray from surface
 			{
 				r = Ray( x, reflect(r.direction, nl) );
 			    	r.origin += r.direction * 2.0;
-				bounceIsSpecular = true;
+				
 			    	continue;	
 			}
 			else // transmit ray through surface
@@ -309,13 +297,12 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 				mask *= intersec.color;
 				r = Ray(x, tdir);
 				r.origin += r.direction * 2.0;
-				bounceIsSpecular = true;
-				prevIntersecType = REFR;
+				
 				continue;
 			}
 		} // end if (intersec.type == REFR)
 		
-		if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top (like car, or shiny pool ball)
+		if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top
 		{
 			// Schlick Fresnel approx.
 			float ddn = dot(-r.direction, nl);
@@ -331,17 +318,20 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			{	
 				r = Ray( x, reflect(r.direction, nl) );
 				r.origin += r.direction * 2.0;
-				bounceIsSpecular = true;
+				
 				continue;	
 			}
 			else
 			{
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
-				r.origin += r.direction * 2.0;
 				mask *= intersec.color;
+                                trans = exp( -((d + camt) * FOG_DENSITY) );
+				accumCol += trans * calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
 				
-				accumCol += calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
-				mask *= max(0.0, dot(r.direction, nl));
+				if (depth == 2)
+					break;
+				
+                                r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+				r.origin += r.direction * 2.0;
 				
 				bounceIsSpecular = false;
 				continue;
@@ -349,8 +339,82 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			
 		} //end if (intersec.type == COAT)
 		
-	} // end for (int depth = 0; depth < 6; depth++)
+        } // end for (int depth = 0; depth < 3; depth++)
 	
+	// Now we go hunting for volumetric caustics! A previously created particle (vray) is chosen
+	// as a starting point, the ray origin. Next, Randomize the ray direction based on glass sphere's radius.
+	// Then trace towards the light source, eventually rays will refract at just the right angles to find the light!
+	r.origin = vray.origin;
+	vec3 lp = spheres[0].position + (randomSphereDirection(seed) * spheres[1].radius);
+	r.direction = normalize(lp - r.origin);
+	//lightVec = (lp - r.origin);
+	//r.direction = normalize(lightVec);
+	mask = vec3(1); // reset color mask for this particle
+
+	// depth of 3 needed to possibly travel into glass sphere, out of it, and then find light = 3 iterations
+	for (int depth = 0; depth < 3; depth++)
+	{
+		
+		t = SceneIntersect(r, intersec);
+
+		// early out test, we are only looking for glass objects and light sources
+		if (intersec.type != REFR && intersec.type != LIGHT)
+			break;
+		
+		// useful data 
+		vec3 n = intersec.normal;
+		vec3 nl = dot(n,r.direction) <= 0.0 ? normalize(n) : normalize(n * -1.0);
+		vec3 x = r.origin + r.direction * t;
+
+		if (intersec.type == REFR)  // Ideal dielectric REFRACTION
+		{
+			float nc = 1.0; // IOR of Air
+			float nt = 1.5; // IOR of common Glass
+			float nnt = dot(r.direction, n) <= 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
+			vec3 tdir = refract(r.direction, nl, nnt);
+				
+			// Original Fresnel equations
+			float cosThetaInc = dot(nl, r.direction);
+			float cosThetaTra = dot(nl, tdir);
+			float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
+			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
+			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
+			
+			if (rand(seed) < Re) // reflect ray from surface
+			{
+				r = Ray( x, reflect(r.direction, nl) );
+			    	r.origin += r.direction * 2.0;
+				
+				prevIntersecType = SPEC;
+			    	continue;	
+			}
+			else // transmit ray through surface
+			{
+				mask *= intersec.color;
+				r = Ray(x, tdir);
+				r.origin += r.direction * 2.0;
+				
+				prevIntersecType = REFR;
+				continue;
+			}
+		} // end if (intersec.type == REFR)
+
+		if (intersec.type == LIGHT)
+		{	
+			// if we have just traveled through a refractive surface(REFR) like glass, then 
+			// allow particle to be lit, producing volumetric caustics
+			if (prevIntersecType == REFR && depth == 2)
+			{
+				trans = exp( -((d + xx) * FOG_DENSITY) );
+				accumCol += FOG_COLOR * mask * intersec.emission * trans;
+			}
+			
+			break;
+		}
+
+        } // end for (int depth = 0; depth < 3; depth++)
+
+
 	return accumCol;      
 }
 
@@ -359,18 +423,19 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0.0, 0.0, 0.0);// No color value, Black        
-	vec3 L1 = vec3(1.0, 1.0, 1.0) * 2.0;// Bright light
+	vec3 L1 = LIGHT_COLOR * LIGHT_POWER;
 		    
-	spheres[0] = Sphere( 20.0, vec3(275.0, 495.0, -280.0), L1, z, LIGHT);// Light Sphere
+	spheres[0] = Sphere( 10.0, vec3(275.0, 430.0, -280.0), L1, z, LIGHT);// Light Sphere
 	
-	spheres[1] = Sphere(  90.0, vec3(150.0, 201.0, -200.0),  z, vec3(0.4, 0.9, 1.0),  REFR);// Glass Sphere Left
-	spheres[2] = Sphere(  90.0, vec3(370.0, 250.0, -270.0),  z, vec3(1.0, 1.0, 1.0),  COAT);// ClearCoat Sphere Right
+	spheres[1] = Sphere(  90.0, vec3(170.0, 201.0, -200.0),  z, vec3(1.0, 1.0, 1.0),  REFR);// Glass Sphere Left
+	spheres[2] = Sphere(  90.0, vec3(390.0, 250.0, -250.0),  z, vec3(1.0, 1.0, 1.0),  COAT);// ClearCoat Sphere Right
 	
-	quads[0] = Quad( vec3( 0.0, 0.0, 1.0), vec3(  0.0,   0.0,-559.2), vec3(549.6,   0.0,-559.2), vec3(549.6, 548.8,-559.2), vec3(  0.0, 548.8,-559.2), z, vec3( 1.0,  1.0,  1.0), DIFF);// Back Wall
-	quads[1] = Quad( vec3( 1.0, 0.0, 0.0), vec3(  0.0,   0.0,   0.0), vec3(  0.0,   0.0,-559.2), vec3(  0.0, 548.8,-559.2), vec3(  0.0, 548.8,   0.0), z, vec3( 0.7, 0.05, 0.05), DIFF);// Left Wall Red
-	quads[2] = Quad( vec3(-1.0, 0.0, 0.0), vec3(549.6,   0.0,-559.2), vec3(549.6,   0.0,   0.0), vec3(549.6, 548.8,   0.0), vec3(549.6, 548.8,-559.2), z, vec3(0.05, 0.05, 0.7 ), DIFF);// Right Wall Blue
-	//quads[3] = Quad( vec3( 0.0,-1.0, 0.0), vec3(  0.0, 548.8,-559.2), vec3(549.6, 548.8,-559.2), vec3(549.6, 548.8,   0.0), vec3(  0.0, 548.8,   0.0), z, vec3( 1.0,  1.0,  1.0), DIFF);// Ceiling
-	//quads[4] = Quad( vec3( 0.0, 1.0, 0.0), vec3(  0.0,   0.0,   0.0), vec3(549.6,   0.0,   0.0), vec3(549.6,   0.0,-559.2), vec3(  0.0,   0.0,-559.2), z, vec3( 1.0,  1.0,  1.0), DIFF);// Floor
+	quads[0] = Quad( vec3(  0.0,   0.0,-559.2), vec3(549.6,   0.0,-559.2), vec3(549.6, 548.8,-559.2), vec3(  0.0, 548.8,-559.2), z, vec3( 1.0,  1.0,  1.0), DIFF);// Back Wall
+	quads[1] = Quad( vec3(  0.0,   0.0,   0.0), vec3(  0.0,   0.0,-559.2), vec3(  0.0, 548.8,-559.2), vec3(  0.0, 548.8,   0.0), z, vec3( 0.7, 0.05, 0.05), DIFF);// Left Wall Red
+	quads[2] = Quad( vec3(549.6,   0.0,-559.2), vec3(549.6,   0.0,   0.0), vec3(549.6, 548.8,   0.0), vec3(549.6, 548.8,-559.2), z, vec3(0.05, 0.05, 0.7 ), DIFF);// Right Wall Blue
+	//quads[3] = Quad( vec3(  0.0,   0.0,   0.0), vec3(549.6,   0.0,   0.0), vec3(549.6,   0.0,-559.2), vec3(  0.0,   0.0,-559.2), z, vec3( 1.0,  1.0,  1.0), DIFF);// Floor
+	//quads[4] = Quad( vec3(  0.0, 548.8,-559.2), vec3(549.6, 548.8,-559.2), vec3(549.6, 548.8,   0.0), vec3(  0.0, 548.8,   0.0), z, vec3( 1.0,  1.0,  1.0), DIFF);// Ceiling
+	
 }
 
 
@@ -579,7 +644,7 @@ void SetupScene(void)
 				pathTracingScene.add( cameraControlsObject );
 
 				// for flyCam
-				cameraControlsObject.position.set(278, 270, 1000);
+				cameraControlsObject.position.set(278, 270, 900);
 				///cameraControlsYawObject.rotation.y = 0.0;
 				// look slightly upward
 				cameraControlsPitchObject.rotation.x = 0.005;
@@ -1034,7 +1099,7 @@ void SetupScene(void)
 					cameraRecentlyMoving = false;
 					
 				}
-					
+
 				
 				pathTracingUniforms.uCameraIsMoving.value = cameraIsMoving;
 				pathTracingUniforms.uCameraJustStartedMoving.value = cameraJustStartedMoving;
