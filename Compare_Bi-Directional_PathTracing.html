@@ -180,7 +180,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 
 
 #define LIGHTPATH_LENGTH  2
-#define EYEPATH_LENGTH    5
+#define EYEPATH_LENGTH    3
 
 //-----------------------------------------------------------------------
 vec3 CalculateRadiance( Ray r, inout float seed )
@@ -239,7 +239,6 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 			r.origin += r.direction * 2.0;
 			eyeX = r.origin;
-			//maskEyePath *= max(0.0, dot(r.direction, nl));
 			
 			continue;
 		}
@@ -247,9 +246,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 		if (intersec.type == SPEC)  // Ideal SPECULAR reflection
 		{
 			maskEyePath *= intersec.color;
-			vec3 reflectVec = reflect(r.direction, nl);
-			vec3 randVec =  (randomDirectionInHemisphere(nl, seed));
-			r = Ray( x, mix(reflectVec, randVec, 0.0) );
+			r = Ray( x, reflect(r.direction, nl) );
 			r.origin += r.direction * 2.0;
 			
 			continue;
@@ -260,12 +257,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 		{	
 			float nc = 1.0; // IOR of Air
 			float nt = 1.5; // IOR of Common Glass
-			if (dot(n, nl) < 0.0) 
-			{
-				nc = nt;
-				nt = 1.0;
-			}
-			float nnt = nc / nt;
+			float nnt = dot(r.direction, n) <= 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
 			vec3 tdir = refract(r.direction, nl, nnt);
 				
 			// Original Fresnel equations
@@ -305,13 +297,12 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 	randPointOnLight.x = mix(quads[5].v0.x, quads[5].v1.x, rand(seed));
 	randPointOnLight.y = quads[5].v0.y;
 	randPointOnLight.z = mix(quads[5].v0.z, quads[5].v3.z, rand(seed));
-	//vec3 randLightDir = randomDirectionInHemisphere(quads[5].normal, seed);
 	vec3 randLightDir = randomCosWeightedDirectionInHemisphere(quads[5].normal, seed);
 	randLightDir = normalize(randLightDir);
 	r = Ray( randPointOnLight, randLightDir );
 	r.origin += r.direction * 2.0;
 	lightX = r.origin;
-	maskLightPath = quads[5].emission * ONE_OVER_TWO_PI;
+	maskLightPath = quads[5].emission;
 	nlLightPath = quads[5].normal;
 	
 	
@@ -326,8 +317,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 		
 		t = SceneIntersect(r, intersec);
 		
-		
-		if ( t == INFINITY || intersec.type == LIGHT)
+		if ( t == INFINITY )
 		{
 			break;
 		}
@@ -345,20 +335,20 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			lightX = x + nl * 2.0;
 			nlLightPath = nl;
 			
+			if (depth > 0) 
+				break;
+
 			// choose random Diffuse sample vector
-			r = Ray( x, randomDirectionInHemisphere(nl, seed) );
+			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 			r.origin += r.direction * 2.0;
 			lightX = r.origin;
-			
 			continue;
 		}
 		
 		if (intersec.type == SPEC)  // Ideal SPECULAR reflection
 		{
 			maskLightPath *= intersec.color;
-			vec3 reflectVec = reflect(r.direction, nl);
-			vec3 randVec = (randomDirectionInHemisphere(nl, seed));
-			r = Ray( x, mix(reflectVec, randVec, 0.0) );
+			r = Ray( x, reflect(r.direction, nl) );
 			r.origin += r.direction * 2.0;
 			
 			continue;
@@ -367,13 +357,8 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 		if (intersec.type == REFR)  // Ideal dielectric refraction
 		{
 			float nc = 1.0; // IOR of Air
-			float nt = 1.5; // IOR of Common Glass
-			if (dot(n, nl) < 0.0) 
-			{
-				nc = nt;
-				nt = 1.0;
-			}
-			float nnt = nc / nt;
+			float nt = 1.5; // IOR of common Glass
+			float nnt = dot(r.direction, n) <= 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
 			vec3 tdir = refract(r.direction, nl, nnt);
 				
 			// Original Fresnel equations
@@ -408,7 +393,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 	Ray connectRay = Ray(eyeX, normalize(lightX - eyeX));
 	float connectDist = distance(eyeX, lightX);
 	float c = SceneIntersect(connectRay, intersec);
-	if (c >= connectDist)
+	if (c > (connectDist - 1.0))
 	{
 		maskLightPath *= max(0.0, dot(-connectRay.direction, nlLightPath));
 			
