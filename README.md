@@ -17,6 +17,8 @@ For comparison, here is a real photograph of the original Cornell Box vs. a rend
 
 <br>
 
+* [Multi-Method PathTracing Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/MultiMethod_PathTracing.html) This is a new real-time path tracing method of my own.  It combines 3 different rendering approaches in the same frame (regular camera-path tracing with direct lighting (as above), light-path tracing to assist the darker areas in shadows (see bi-directional section below), and my own caustics-path tracing algorithm to help mirror/glass caustics converge much faster).  I'm pleased with the results - this is the fastest-converging Cornell Box scene with mirror specular caustics that I've seen anywhere.  And it's all done with Webgl and the browser! (try it on your phone/tablet!)  ;-)
+
 * [Volumetric Rendering Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Volumetric_Rendering.html) renders objects inside a volume of dust/fog/etc..  Notice the cool volumetric caustics from the glass sphere on the left, rendered almost instantly!
 
 * [Ocean and Sky Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Ocean_and_Sky_Rendering.html) which models an enormous calm ocean underneath a realistic physical sky. Now has more photo-realistic procedural clouds!
