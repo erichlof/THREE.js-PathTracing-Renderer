@@ -1018,7 +1018,7 @@ float RayleighPhase(float cosTheta)
 float hgPhase(float cosTheta, float g)
 {
         float g2 = g * g;
-        float inverse = 1.0 / pow(1.0 - 2.0 * g * cosTheta + g2, 1.5);
+        float inverse = 1.0 / pow(max(0.0, 1.0 - 2.0 * g * cosTheta + g2), 1.5);
 	return ONE_OVER_FOURPI * ((1.0 - g2) * inverse);
 }
 
@@ -1079,7 +1079,7 @@ vec3 Get_Sky_Color(Ray r, vec3 sunDirection)
 	    clamp(oneMinusCosSun * oneMinusCosSun * oneMinusCosSun * oneMinusCosSun * oneMinusCosSun, 0.0, 1.0) );
 
 	// composition + solar disc
-    	float sundisk = smoothstep(SUN_ANGULAR_DIAMETER_COS, SUN_ANGULAR_DIAMETER_COS, cosViewSunAngle + 0.0004);
+    	float sundisk = smoothstep(SUN_ANGULAR_DIAMETER_COS - 0.0001, SUN_ANGULAR_DIAMETER_COS, cosViewSunAngle);
 	vec3 sun = (sunE * SUN_INTENSITY * Fex) * sundisk;
 	
 	return sky + sun;
@@ -1101,21 +1101,24 @@ vec3 randomSphereDirection( inout float seed )
 	return vec3( sin(r.x) * vec2(sin(r.y), cos(r.y)), cos(r.x) );	
 }
 
-vec3 randomDirectionInHemisphere( vec3 n, inout float seed )
+vec3 randomDirectionInHemisphere( vec3 nl, inout float seed )
 {
-	vec2 r = vec2(rand(seed), rand(seed)) * TWO_PI;
-	vec3 dr = vec3( sin(r.x) * vec2(sin(r.y), cos(r.y)), cos(r.x) );	
-	return dot(dr,n) * dr;
+	float up = rand(seed); // unbiased
+    	float over = sqrt(1.0 - up * up);
+	float around = rand(seed) * TWO_PI;
+	vec3 u = normalize( cross( abs(nl.x) > 0.1 ? vec3(0, 1, 0) : vec3(1, 0, 0), nl ) );
+	vec3 v = normalize( cross(nl, u) );
+	return cos(around) * over * u + sin(around) * over * v + up * nl;
 }
 
 vec3 randomCosWeightedDirectionInHemisphere( vec3 nl, inout float seed )
 {
-	float up = sqrt(rand(seed)); // weighted cos(theta)
-    	float over = sqrt(1.0 - up * up); // sin(theta)
-    	float around = rand(seed) * TWO_PI;
+	float up = sqrt(rand(seed)); // weighted
+    	float over = sqrt(1.0 - up * up);
+	float around = rand(seed) * TWO_PI;
 	vec3 u = normalize( cross( abs(nl.x) > 0.1 ? vec3(0, 1, 0) : vec3(1, 0, 0), nl ) );
 	vec3 v = normalize( cross(nl, u) );
-    	return vec3( cos(around) * over * u ) + ( sin(around) * over * v ) + (up * nl);		
+	return cos(around) * over * u + sin(around) * over * v + up * nl;
 }
 
 `;
