@@ -252,7 +252,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 
 
 #define EYE_PATH_LENGTH    5
-#define LIGHT_PATH_LENGTH  2
+#define LIGHT_PATH_LENGTH  1
 
 //-----------------------------------------------------------------------
 vec3 CalculateRadiance( Ray r, inout float seed )
@@ -269,9 +269,11 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 	float t = INFINITY;
 	int diffuseSampleCount = 0;
 	int previousIntersecType = -1;
-	//set following flag to true - we haven't found a diffuse surface yet and can exit early (keeps frame rate high)
 	bool bounceIsSpecular = true;
-	bool skipConnectionEyePath = true;
+
+	//set following flag to true - we haven't found a diffuse surface yet and can exit early (keeps frame rate high)
+	bool skipConnectionLightPath = true;
+	
 	
 	// Eye path tracing (from Camera) ///////////////////////////////////////////////////////////////////////////
 	
@@ -290,8 +292,8 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			if (bounceIsSpecular)
 			{
 				accumCol = maskEyePath * intersec.emission;
-				
-				skipConnectionEyePath = true;
+			
+				skipConnectionLightPath = true;
 			}
 			
 			break;
@@ -308,9 +310,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			maskEyePath *= intersec.color;
 			eyeX = x + nl * 2.0;
 			nlEyePath = nl;
-			skipConnectionEyePath = false;
-			bounceIsSpecular = false;
-			previousIntersecType = DIFF;
+			skipConnectionLightPath = false;
 			
 			diffuseSampleCount += 1;
 			if (diffuseSampleCount > 1 || rand(seed) < 0.5)
@@ -322,7 +322,8 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 			r.origin += r.direction * 2.0;
 			eyeX = r.origin;
-			//maskEyePath *= max(0.0, dot(r.direction, nl));
+			bounceIsSpecular = false;
+			previousIntersecType = DIFF;
 			continue;
 		}
 		
@@ -343,12 +344,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 		{	
 			float nc = 1.0; // IOR of Air
 			float nt = 1.6; // IOR of Heavy Glass
-			if (dot(n, nl) < 0.0) 
-			{
-				nc = nt;
-				nt = 1.0;
-			}
-			float nnt = nc / nt;
+			float nnt = dot(r.direction, n) <= 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
 			vec3 tdir = refract(r.direction, nl, nnt);
 				
 			// Original Fresnel equations
@@ -370,7 +366,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			else // transmit ray through surface
 			{
 				if (previousIntersecType == DIFF) 
-					maskEyePath *= 4.0;
+					maskEyePath *= TWO_PI;
 					
 				previousIntersecType = REFR;
 				maskEyePath *= intersec.color;
@@ -383,7 +379,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 	} // end for (int depth = 0; depth < EYE_PATH_LENGTH; depth++)
 	
 	
-	if (skipConnectionEyePath)
+	if (skipConnectionLightPath)
 		return accumCol;
 	
 	
@@ -392,16 +388,18 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 	vec3 randLightPos;
 	vec3 randLightDir;
 	vec3 randPointOnLight;
-	
+	vec3 nlLightPath;
+
 	// Choose a random light source for this loop
-	if (rand(seed) < 0.7)
+	if (rand(seed) < 0.85)
 	{
 		// Floor Lamp
 		vec3 floorLampDir = vec3(0,1,0);
-		randLightDir = normalize(randomDirectionInHemisphere(floorLampDir, seed));
+		nlLightPath = floorLampDir;
+		randLightDir = randomDirectionInHemisphere(floorLampDir, seed);
 		randLightPos = vec3(80.0, 372.0, -430.0);
 		randPointOnLight = randLightPos + randLightDir * 6.0; // multiplied by light bulb radius
-		maskLightPath = spheres[1].emission * ONE_OVER_TWO_PI;
+		maskLightPath = spheres[1].emission;
 	}
 	else
 	{
@@ -409,10 +407,11 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 		vec3 spotlightPos1 = vec3(380.0, 290.0, -470.0);
 		vec3 spotlightPos2 = vec3(430.0, 315.0, -485.0);
 		vec3 spotlightDir = normalize(spotlightPos1 - spotlightPos2);
+		nlLightPath = spotlightDir;
 		randLightPos = spotlightPos2 + spotlightDir * 2.0;
-		randLightDir = normalize(randomDirectionInHemisphere(spotlightDir, seed));
+		randLightDir = randomCosWeightedDirectionInHemisphere(spotlightDir, seed);
 		randPointOnLight = randLightPos + randLightDir;
-		maskLightPath = disks[1].emission * ONE_OVER_TWO_PI;
+		maskLightPath = disks[1].emission;
 	}
 	
 	r = Ray( randPointOnLight, randLightDir );
@@ -420,22 +419,18 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 	vec3 originalLightPos = r.origin;
 	lightX = originalLightPos;
 	vec3 originalLightMask = maskLightPath;
+	bool diffuseReached = false;
 	
-	// the following loop only performs 2 iterations because of the relative ease of this particular scene for
+	// the following loop only performs 1 iteration because of the relative ease of this particular scene for
 	// the light sources to escape their blockers and find a diffuse surface (like a nearby wall) to illuminate.
-	// For more hidden lights however, 3 depth iterations might be needed to get the light out and into the scene.
+	// For more hidden lights however, 2 depth iterations might be needed to get the light out and into the scene.
 	
 	for (int depth = 0; depth < LIGHT_PATH_LENGTH; depth++)
 	{
 	
-		if (depth == 0 && rand(seed) < 0.5)
-		{
-			break;
-		}
-		
 		t = SceneIntersect(r, intersec);
 		
-		if ( t == INFINITY )
+		if ( t == INFINITY || intersec.type != DIFF)
 		{
 			break;
 		}
@@ -445,22 +440,13 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 		nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(n * -1.0);
 		x = r.origin + r.direction * t;
 		
-		
-		if (intersec.type == DIFF) // Ideal DIFFUSE reflection
+		//if (intersec.type == DIFF) // Ideal DIFFUSE reflection
 		{
-			maskLightPath *= max(0.0, dot(-r.direction, nl));
 			maskLightPath *= intersec.color;
+			nlLightPath = nl;
 			lightX = x + nl * 2.0;
+			diffuseReached = true;
 			break;
-		}
-		
-		if (intersec.type == SPEC)  // Ideal SPECULAR reflection
-		{
-			vec3 reflectVec = reflect(r.direction, nl);
-			vec3 randVec = (randomDirectionInHemisphere(nl, seed));
-			r = Ray( x, mix(reflectVec, randVec, intersec.roughness) );
-			r.origin += r.direction * 2.0;
-			continue;
 		}
 		
 	} // end for (int depth = 0; depth < LIGHT_PATH_LENGTH; depth++)
@@ -471,14 +457,20 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 	Ray connectRay = Ray(eyeX, normalize(lightX - eyeX));
 	float connectDist = distance(eyeX, lightX);
 	float c = SceneIntersect(connectRay, intersec);
-	if (c >= connectDist)
-	{	
+	if (c < connectDist)
+		return accumCol;
+	else
+	{
 		maskEyePath *= max(0.0, dot(connectRay.direction, nlEyePath));
 		
+		if (diffuseReached)
+			maskLightPath *= max(0.0, dot(-connectRay.direction, nlLightPath));
+
 		accumCol = (maskEyePath * maskLightPath);
 	}
 	
-	return accumCol;    
+	return accumCol;
+
 }
 
 
@@ -487,9 +479,9 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0);// No color value, Black        
-	vec3 L1 = vec3(1.0, 1.0, 1.0) * 40.0;// Bright White light
-	vec3 L2 = vec3(0.936507, 0.642866, 0.310431) * 50.0;// Bright Yellowish light
-	vec3 wallColor = vec3(1.0, 0.98, 1.0) * 0.4;
+	vec3 L1 = vec3(1.0, 1.0, 1.0) * 10.0;// Bright White light
+	vec3 L2 = vec3(0.936507, 0.642866, 0.310431) * 25.0;// Bright Yellowish light
+	vec3 wallColor = vec3(1.0, 0.98, 1.0) * 0.5;
 	vec3 tableColor = vec3(1.0, 0.7, 0.4) * 0.6;
 	vec3 lampColor = vec3(1.0, 1.0, 0.8) * 0.7;
 	vec3 spotlightPos1 = vec3(380.0, 290.0, -470.0);
@@ -499,7 +491,7 @@ void SetupScene(void)
 	quads[0] = Quad( vec3( 0.0, 0.0, 1.0), vec3(  0.0,   0.0,-559.2), vec3(549.6,   0.0,-559.2), vec3(549.6, 548.8,-559.2), vec3(  0.0, 548.8,-559.2),  z, wallColor, 0.0, DIFF);// Back Wall
 	quads[1] = Quad( vec3( 1.0, 0.0, 0.0), vec3(  0.0,   0.0,   0.0), vec3(  0.0,   0.0,-559.2), vec3(  0.0, 548.8,-559.2), vec3(  0.0, 548.8,   0.0),  z, wallColor, 0.0, DIFF);// Left Wall Red
 	quads[2] = Quad( vec3(-1.0, 0.0, 0.0), vec3(549.6,   0.0,-559.2), vec3(549.6,   0.0,   0.0), vec3(549.6, 548.8,   0.0), vec3(549.6, 548.8,-559.2),  z, wallColor, 0.0, DIFF);// Right Wall Green
-	quads[3] = Quad( vec3( 0.0,-1.0, 0.0), vec3(  0.0, 548.8,-559.2), vec3(549.6, 548.8,-559.2), vec3(549.6, 548.8,   0.0), vec3(  0.0, 548.8,   0.0),  z, vec3(1.0), 0.0, DIFF);// Ceiling
+	quads[3] = Quad( vec3( 0.0,-1.0, 0.0), vec3(  0.0, 548.8,-559.2), vec3(549.6, 548.8,-559.2), vec3(549.6, 548.8,   0.0), vec3(  0.0, 548.8,   0.0),  z, wallColor, 0.0, DIFF);// Ceiling
 	quads[4] = Quad( vec3( 0.0, 1.0, 0.0), vec3(  0.0,   0.0,   0.0), vec3(549.6,   0.0,   0.0), vec3(549.6,   0.0,-559.2), vec3(  0.0,   0.0,-559.2),  z, wallColor, 0.0, DIFF);// Floor
 	
 	boxes[0] = Box( vec3(180.0, 145.0, -540.0), vec3(510.0, 155.0, -310.0), z, tableColor, 0.0, DIFF);// Table Top
