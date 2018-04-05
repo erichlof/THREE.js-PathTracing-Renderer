@@ -287,9 +287,12 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 		if (intersec.type == LIGHT)
 		{
 			if (bounceIsSpecular)
+			{
 				accumCol = maskEyePath * intersec.emission;
 			
-			skipConnectionEyePath = true;
+				skipConnectionEyePath = true;
+			}
+			
 			break;
 		}
 		
@@ -339,7 +342,6 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 			r.origin += r.direction;
 			eyeX = r.origin;
-			//maskEyePath *= max(0.0, dot(r.direction, nl));
 			continue;
 		}
 		
@@ -362,12 +364,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 		{	
 			float nc = 1.0; // IOR of Air
 			float nt = 1.5; // IOR of Common Glass
-			if (dot(n, nl) < 0.0) 
-			{
-				nc = nt;
-				nt = 1.0;
-			}
-			float nnt = nc / nt;
+			float nnt = dot(r.direction, n) <= 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
 			vec3 tdir = refract(r.direction, nl, nnt);
 				
 			// Original Fresnel equations
@@ -376,8 +373,6 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
 			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
 			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
-			
-			
 			
 			if (rand(seed) < Re) // reflect ray from surface
 			{
@@ -440,7 +435,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 					vec2 uv;
 					uv.y = 0.4 * nl.y;
 					uv.x = atan(nl.x, nl.z) / (TWO_PI);
-					intersec.color *= texture2D(tMarbleTexture, uv).rgb;
+					intersec.color = texture2D(tMarbleTexture, uv).rgb;
 				}
 				
 				skipConnectionEyePath = false;
@@ -450,13 +445,9 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 				eyeX = x + nl;
 				nlEyePath = nl;
 				
-				if (intersec.type == CHECK)
-					break;
-				
 				// choose random sample vector for diffuse material underneath ClearCoat
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 				r.origin += r.direction;
-				//maskEyePath *= max(0.0, dot(r.direction, nl));
 				continue;	
 			}	
 		} //end if (intersec.type == COAT)
@@ -475,24 +466,29 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 	randPointOnLight.y = mix(quads[0].v0.y, quads[0].v3.y, rand(seed));
 	randPointOnLight.z = quads[0].v0.z;
 	vec3 randLightDir = randomDirectionInHemisphere(vec3(0,0,1), seed);
-	//vec3 randLightDir = vec3(1,0,0.1) + (randVec * u);//randomCosWeightedDirectionInHemisphere(vec3(1,0,0.1), seed);
+	vec3 nlLightPath = vec3(0,0,1);
+	bool diffuseReached = false;
 	randLightDir = normalize(randLightDir);
 	r = Ray( randPointOnLight, randLightDir );
 	r.origin += r.direction;
 	lightX = r.origin;
-	
-	maskLightPath = quads[0].emission * ONE_OVER_TWO_PI;
+	maskLightPath = quads[0].emission;
 	
 	
 	for (int depth = 0; depth < LIGHT_PATH_LENGTH; depth++)
 	{
 		// this lets the original light be the only node on the light path, about 50% of the time
-		if (depth == 0 && rand(seed) < 0.5)
+		if (rand(seed) < 0.5)
 		{
 			break;
 		}
 				
 		t = SceneIntersect(r, intersec);
+
+		if ( intersec.type != DIFF )
+		{
+			break;
+		}
 		
 		// useful data 
 		n = normalize(intersec.normal);
@@ -500,12 +496,12 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 		x = r.origin + r.direction * t;
 		
 		
-		if (intersec.type == DIFF)
+		//if (intersec.type == DIFF)
 		{
 			maskLightPath *= intersec.color;
-			maskLightPath *= max(0.01, dot(-r.direction, nl));
 			lightX = x + nl;
-			
+			nlLightPath = nl;
+			diffuseReached = true;
 			break;
 		}
 		
@@ -517,10 +513,15 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 	Ray connectRay = Ray(eyeX, normalize(lightX - eyeX));
 	float connectDist = distance(eyeX, lightX);
 	float c = SceneIntersect(connectRay, intersec);
-	if (c >= connectDist)
-	{	
+	if (c < connectDist)
+		return accumCol;
+	else
+	{
 		maskEyePath *= max(0.0, dot(connectRay.direction, nlEyePath));
-		
+
+		if (diffuseReached)
+			maskLightPath *= max(0.0, dot(-connectRay.direction, nlLightPath));
+
 		accumCol = (maskEyePath * maskLightPath);
 	}
 	
@@ -533,8 +534,8 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0.0);// No color value, Black        
-	vec3 L1 = vec3(1.0) * 6.0;// Bright White light
-	vec3 L2 = vec3(1.0, 0.9, 0.8) * 20.0;// Bright Yellowish light
+	//vec3 L1 = vec3(1.0) * 6.0;// Bright White light
+	vec3 L2 = vec3(1.0, 0.9, 0.8) * 3.0;// Bright Yellowish light
 	vec3 tableColor = vec3(1.0, 0.7, 0.4) * 0.6;
 	vec3 brassColor = vec3(1.0, 0.7, 0.5) * 0.7;
 	
@@ -941,9 +942,9 @@ void SetupScene(void)
 					roughness: 1.0 // ideal Diffuse material	
 				} );
 				
-				tallBoxMesh = new THREE.Mesh(tallBoxGeometry, tallBoxMaterial);
+				tallBoxMesh = new THREE.Object3D();//new THREE.Mesh(tallBoxGeometry, tallBoxMaterial);
 				pathTracingScene.add(tallBoxMesh);
-				tallBoxMesh.visible = false; // disable normal Three.js rendering updates of this object: 
+				//tallBoxMesh.visible = false; // disable normal Three.js rendering updates of this object: 
 				// it is just a data placeholder as well as an Object3D that can be transformed/manipulated by 
 				// using familiar Three.js library commands. It is then fed into the GPU path tracing renderer
 				// through its 'matrixWorld' matrix. See below:
