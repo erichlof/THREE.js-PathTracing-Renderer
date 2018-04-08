@@ -133,7 +133,7 @@ varying vec2 vUv;
 #define SPEC 3
 #define CHECK 4
 #define COAT 5
-#define VOLUME 6
+#define CARCOAT 6
 #define TRANSLUCENT 7
 #define SPECSUB 8
 #define WATER 9
