@@ -1084,7 +1084,8 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	if (d < t)
 	{
 		t = d;
-		n = (r.origin + r.direction * d) - spheres[0].position;
+		//n = (r.origin + r.direction * d) - spheres[0].position;
+		n = vec3(0,1,0);
 		intersec.normal = normalize(n);
 		intersec.emission = spheres[0].emission;
 		intersec.color = spheres[0].color;
@@ -1339,7 +1340,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 	vec3 accumCol = vec3(0.0);
         vec3 mask = vec3(1.0);
         Intersection intersec;
-	int sampleDiffuseBudget = 2;
+	int sampleDiffuseBudget = 3;
 	bool bounceIsSpecular = true;
 	Quad lightChoice;
 	
@@ -1365,7 +1366,6 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 		// if we reached something bright, don't spawn any more rays
 		if (intersec.type == LIGHT)
 		{	
-
 			if (bounceIsSpecular)
 			{
 				accumCol = mask * intersec.emission;
@@ -1387,28 +1387,24 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			accumCol += calcDirectLightingQuad(mask, x, nl, lightChoice, seed);
                         bounceIsSpecular = false;
 			
-			//if (depth > 1 || rand(seed) < 0.8)
-			//	break;
-			
 			sampleDiffuseBudget -= 1;
-			if (sampleDiffuseBudget < 0) break;
+			if (sampleDiffuseBudget < 0 || rand(seed) < 0.5) break;
 			
 			// choose random Diffuse sample vector
 			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 			r.origin += r.direction;
-			//mask *= max(0.0, dot(r.direction, nl));
 			
 			continue;
 		}
 		
 		if (intersec.type == SPEC)  // Ideal SPECULAR reflection
 		{	
-			sampleDiffuseBudget += 1;
+			//sampleDiffuseBudget += 1;
 			mask *= intersec.color;
 			
 			r = Ray( x, reflect(r.direction, nl) );
 			r.origin += r.direction;
-			bounceIsSpecular = true;
+			//bounceIsSpecular = true;
 			continue;
 		}
 		
@@ -1416,7 +1412,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 		{
 			float nc = 1.0; // IOR of Air
 			float nt = 1.5; // IOR of common Glass
-			float nnt = dot(n,nl) > 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
+			float nnt = dot(r.direction, n) <= 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
 			vec3 tdir = refract(r.direction, nl, nnt);
 				
 			// Original Fresnel equations
@@ -1428,10 +1424,10 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			
 			if (rand(seed) < Re) // reflect ray from surface
 			{
-				sampleDiffuseBudget += 1;
+				//sampleDiffuseBudget += 1;
 				r = Ray( x, reflect(r.direction, nl) );
 			    	r.origin += r.direction;
-				bounceIsSpecular = true;
+				//bounceIsSpecular = true;
 			    	continue;	
 			}
 			else // transmit ray through surface
@@ -1439,7 +1435,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 				mask *= intersec.color;
 				r = Ray(x, tdir);
 				r.origin += r.direction;
-				bounceIsSpecular = true;
+				//bounceIsSpecular = true;
 				continue;
 			}
 			
@@ -1462,37 +1458,41 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 				
 				maskFactor = 0.05;
 				roughness = 0.05;
-				iOR = 1.3;
+				iOR = 1.1;
 			}
 			
-			// Schlick Fresnel approx.
-			float ddn = dot(-r.direction, nl);
-			float nc = 1.0; // IOR of air
-			float nt = iOR; // IOR of ClearCoat 
-			float R0 = (nc - nt) / (nc + nt);
-			R0 *= R0;
-			float c = 1.0 - ddn;
-			float Re = R0 + (1.0 - R0) * c * c * c * c * c;
+			float nc = 1.0; // IOR of Air
+			float nt = iOR; // IOR of Clear Coat
+			float nnt = dot(r.direction, n) <= 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
+			vec3 tdir = refract(r.direction, nl, nnt);
+				
+			// Original Fresnel equations
+			float cosThetaInc = dot(nl, r.direction);
+			float cosThetaTra = dot(nl, tdir);
+			float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
+			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
+			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
 			
 			// choose either specular reflection or diffuse
-			if( rand(seed) < Re )
+			if ( rand(seed) < Re )
 			{	
+				//sampleDiffuseBudget += 1;
 				mask *= maskFactor;
 				vec3 reflectVec = reflect(r.direction, nl);
 				vec3 randVec = vec3(rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0);
 				r = Ray( x, mix( reflectVec, normalize(nl + randVec), roughness) );
 				r.origin += r.direction;
-				bounceIsSpecular = true;
+				//bounceIsSpecular = true;
 				continue;	
 			}
 			else
 			{
 				mask *= intersec.color;
 				accumCol += calcDirectLightingQuad(mask, x, nl, lightChoice, seed);
+				sampleDiffuseBudget -= 1;
 				// choose random sample vector for diffuse material underneath ClearCoat
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 				r.origin += r.direction;
-				//mask *= max(0.0, dot(r.direction, nl));
 				bounceIsSpecular = false;
 				continue;
 			}
@@ -1501,21 +1501,24 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 		
 		if (intersec.type == SPECSUB)  // Shiny(specular) coating over Sub-Surface Scattering material
 		{
-			// Schlick Fresnel approx.
-			float ddn = dot(-r.direction, nl);
-			float nc = 1.0; // IOR of air
-			float nt = 1.3; // IOR of coating (for polished jade)
-			float R0 = (nc - nt) / (nc + nt);
-			R0 *= R0;
-			float c = 1.0 - ddn;
-			float Re = R0 + (1.0 - R0) * c * c * c * c * c;
+			float nc = 1.0; // IOR of Air
+			float nt = 1.4; // IOR of Clear Coat
+			float nnt = dot(r.direction, n) <= 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
+			vec3 tdir = refract(r.direction, nl, nnt);
+				
+			// Original Fresnel equations
+			float cosThetaInc = dot(nl, r.direction);
+			float cosThetaTra = dot(nl, tdir);
+			float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
+			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
+			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
 			
 			// choose either specular reflection or translucent subsurface scattering/transmission
-			if( bounceIsSpecular && rand(seed) < Re )
+			if( rand(seed) < Re )
 			{
 				r = Ray( x, reflect(r.direction, nl) );
 				r.origin += r.direction * 2.0;
-				bounceIsSpecular = true;
+				//bounceIsSpecular = true;
 				continue;
 			}
 			
@@ -1540,6 +1543,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			
 			x = x + d * scatteringDistance;
 			accumCol += calcDirectLightingQuad(mask, x, nl, lightChoice, seed);
+			sampleDiffuseBudget -= 1;
 			r = Ray( x, d );
 			
 			continue;
