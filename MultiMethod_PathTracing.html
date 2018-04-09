@@ -267,7 +267,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 				nlFirst = nlEyePath;
 			}
 
-			accumCol += 1.0 * calcDirectLightingQuad_MultiMethod(maskEyePath, x, nl, quads[5], seed, lightFound);
+			accumCol += calcDirectLightingQuad_MultiMethod(maskEyePath, x, nl, quads[5], seed, lightFound);
 			
 			// Russian roulette
 			if (rand(seed) < 0.3 || depth > 2)
@@ -358,12 +358,18 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 	randPointOnLight.x = mix(quads[5].v0.x, quads[5].v1.x, rand(seed));
 	randPointOnLight.y = quads[5].v0.y;
 	randPointOnLight.z = mix(quads[5].v0.z, quads[5].v3.z, rand(seed));
+
+	// either choice below is valid
 	vec3 randLightDir = randomCosWeightedDirectionInHemisphere(quads[5].normal, seed);
+	maskLightPath = quads[5].emission;
+	//vec3 randLightDir = randomDirectionInHemisphere(quads[5].normal, seed);
+	//maskLightPath = quads[5].emission * max(0.0, dot(randLightDir, quads[5].normal));
+
 	randLightDir = normalize(randLightDir);
 	r = Ray( randPointOnLight, randLightDir );
 	r.origin += r.direction * 2.0;
 	lightX = r.origin;
-	maskLightPath = quads[5].emission;
+	
         nlLightPath = quads[5].normal;
 	
 	
@@ -405,7 +411,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 		return accumCol;
 
 	// if we made it this far, the light ray has reached a diffuse surface that we can 
-	// sample from, and light source has not yet been found by directLighting (we are in shadow)
+	// sample from, and the light source has not yet been found by directLighting (we are in shadow)
 
 	// Connect Camera path and Light path ////////////////////////////////////////////////////////////
 	
