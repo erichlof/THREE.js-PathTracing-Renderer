@@ -313,7 +313,6 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			// choose random Diffuse sample vector
 			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 			r.origin += r.direction;
-			//mask *= max(0.0, dot(r.direction, nl));
 			continue;	
                 }
 		
@@ -330,7 +329,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 		{
 			float nc = 1.0; // IOR of Air
 			float nt = 1.5; // IOR of common Glass
-			float nnt = dot(n,nl) > 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
+			float nnt = dot(r.direction, n) <= 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
 			vec3 tdir = refract(r.direction, nl, nnt);
 				
 			// Original Fresnel equations
@@ -387,7 +386,6 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 				//accumCol += calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 				r.origin += r.direction * 2.0;
-				//mask *= max(0.0, dot(r.direction, nl));
 				bounceIsSpecular = false;
 				continue;
 			}
@@ -399,7 +397,6 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 	
 	return accumCol;      
 }
-
 
 //-----------------------------------------------------------------------
 void SetupScene(void)
