@@ -91,14 +91,15 @@ uniform mat3 uQuad2NormalMatrix;
 struct Ray { vec3 origin; vec3 direction; };
 struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; int type; };
 struct Ellipsoid { vec3 radii; vec3 position; vec3 emission; vec3 color; int type; };
-struct Box { vec3 minCorner; vec3 maxCorner; vec3 emission; vec3 color; int type; };
 struct Quad { vec3 v0; vec3 v1; vec3 v2; vec3 v3; vec3 emission; vec3 color; int type; };
+struct Box { vec3 minCorner; vec3 maxCorner; vec3 emission; vec3 color; int type; };
 struct Intersection { vec3 normal; vec3 emission; vec3 color; int type; };
 
 Sphere spheres[N_SPHERES];
 Ellipsoid ellipsoids[N_ELLIPSOIDS];
-Box boxes[N_BOXES];
 Quad quads[N_QUADS];
+Box boxes[N_BOXES];
+
 
 
 #include <pathtracing_random_functions>
@@ -107,10 +108,7 @@ Quad quads[N_QUADS];
 
 #include <pathtracing_ellipsoid_intersect>
 
-#include <pathtracing_box_intersect>
-
 #include <pathtracing_triangle_intersect>
-
 
 //----------------------------------------------------------------------------
 float QuadIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 v3, Ray r )
@@ -120,6 +118,9 @@ float QuadIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 v3, Ray r )
 	float tTri2 = TriangleIntersect( v0, v2, v3, r );
 	return min(tTri1, tTri2);
 }
+
+#include <pathtracing_box_intersect>
+
 
 //-----------------------------------------------------------------------
 float SceneIntersect( Ray r, inout Intersection intersec )
@@ -155,19 +156,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		}
 	}
 	
-	for (int i = 0; i < N_BOXES; i++)
-        {
 	
-		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, r, n );
-		if (d < t)
-		{
-			t = d;
-			intersec.normal = normalize(n);
-			intersec.emission = boxes[i].emission;
-			intersec.color = boxes[i].color;
-			intersec.type = boxes[i].type;
-		}
-        }
 	
 	Ray rObj;
 	// transform ray into Quad0's object space
@@ -209,6 +198,19 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		intersec.type = quads[2].type;
 	}
         
+	for (int i = 0; i < N_BOXES; i++)
+        {
+	
+		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, r, n );
+		if (d < t)
+		{
+			t = d;
+			intersec.normal = normalize(n);
+			intersec.emission = boxes[i].emission;
+			intersec.color = boxes[i].color;
+			intersec.type = boxes[i].type;
+		}
+        }
 	
 	return t;
 	
@@ -231,6 +233,13 @@ bool SceneIntersect_IsLightVisible( Ray r, float t )
 			result = false;	
         }
 	
+	for (int i = 0; i < N_ELLIPSOIDS; i++)
+        {
+		d = EllipsoidIntersect( ellipsoids[i].radii, ellipsoids[i].position, r );
+		if (d < t && ellipsoids[i].type != LIGHT)
+			result = false;	
+	}
+	
 	for (int i = 0; i < N_BOXES; i++)
         {
 	
@@ -238,13 +247,6 @@ bool SceneIntersect_IsLightVisible( Ray r, float t )
 		if (d < t && boxes[i].type != LIGHT)
 			result = false;	
         }
-	
-	for (int i = 0; i < N_ELLIPSOIDS; i++)
-        {
-		d = EllipsoidIntersect( ellipsoids[i].radii, ellipsoids[i].position, r );
-		if (d < t && ellipsoids[i].type != LIGHT)
-			result = false;	
-	}
 	
 	return result;
 	
@@ -354,21 +356,8 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			// choose random Diffuse sample vector
 			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 			r.origin += r.direction;
-			//mask *= max(0.0, dot(r.direction, nl));
 			continue;	
                 }
-		
-		/*
-		// Not used in this scene
-                if (intersec.type == SPEC)  // Ideal SPECULAR reflection
-                {
-			r = Ray( x, reflect(r.direction, nl) );
-			r.origin += r.direction;
-			mask *= intersec.color;
-			bounceIsSpecular = true;
-                        continue;
-                }
-		*/
 		
                 if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
@@ -376,7 +365,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			
 			float nc = 1.0; // IOR of Air
 			float nt = 1.5; // IOR of common Glass
-			float nnt = dot(n,nl) > 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
+			float nnt = dot(r.direction, n) <= 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
 			vec3 tdir = refract(r.direction, nl, nnt);
 				
 			// Original Fresnel equations
@@ -385,7 +374,6 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
 			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
 			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
-			float Tr = 1.0 - Re;
 			
 			// the following if statement and break statement cheats a little in order to get rid of the
 			// annoying bright spots ('fireflies') on the left tall columns.  It still allows green caustics 
@@ -397,12 +385,11 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 				break;
 			}
 			
-			prevIntersecType = REFR;
-			
 			if (rand(seed) < Re) // reflect ray from surface
 			{
 				r = Ray( x, reflect(r.direction, nl) );
-			    	r.origin += r.direction;
+				r.origin += r.direction;
+				prevIntersecType = SPEC;
 			    	continue;	
 			}
 			else // transmit ray through surface
@@ -410,6 +397,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 				mask *= intersec.color;
 				r = Ray(x, tdir);
 				r.origin += r.direction;
+				prevIntersecType = REFR;
 				bounceIsSpecular = true;
 				continue;
 			}
