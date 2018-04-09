@@ -5,7 +5,6 @@
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1">
 		<style>
-
 			html, body {
 				width: 100%;
 				height: 100%;
@@ -49,15 +48,12 @@
 		
 precision highp float;
 precision highp int;
-
 varying vec2 vUv;
-
 void main()
 {
 	vUv = uv;
 	gl_Position = vec4( position, 1.0 );
 }
-
 		</script>
 		
 		
@@ -86,9 +82,7 @@ uniform sampler2D tLightWoodTexture;
 #define N_BOXES 9
 #define N_CONES 5
 
-
 //-----------------------------------------------------------------------
-
 struct Ray { vec3 origin; vec3 direction; };
 struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; float roughness; int type; };
 struct Ellipsoid { vec3 radii; vec3 position; vec3 emission; vec3 color; float roughness; int type; };
@@ -106,19 +100,12 @@ Box boxes[N_BOXES];
 Cone cones[N_CONES];
 
 #include <pathtracing_random_functions>
-
 #include <pathtracing_plane_intersect>
-
 #include <pathtracing_sphere_intersect>
-
 #include <pathtracing_ellipsoid_intersect>
-
 #include <pathtracing_quad_intersect>
-
 #include <pathtracing_box_intersect>
-
 #include <pathtracing_cone_intersect>
-
 
 //-----------------------------------------------------------------------
 float SceneIntersect( Ray r, inout Intersection intersec )
@@ -217,7 +204,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	
 } // end float SceneIntersect( Ray r, inout Intersection intersec )
 
-
 //-----------------------------------------------------------------------
 bool SceneIntersect_IsLightVisible( Ray r, float t )
 //-----------------------------------------------------------------------
@@ -273,8 +259,8 @@ bool SceneIntersect_IsLightVisible( Ray r, float t )
 	
 } // end bool SceneIntersect_IsLightVisible( Ray r, float t )
 
-
 //#include <pathtracing_direct_lighting_quad>
+
 vec3 calcDirectLightingQuad(vec3 mask, vec3 x, vec3 nl, Quad light, inout float seed)
 {
 	vec3 dirLight = vec3(0.0);
@@ -294,10 +280,8 @@ vec3 calcDirectLightingQuad(vec3 mask, vec3 x, vec3 nl, Quad light, inout float 
 		float weight = clamp(r2 / dot(d, d), 0.0, 1.0);
 		dirLight = mask * light.emission * weight * max(dot(nl, srDir), 0.01);
 	}
-
 	return dirLight;
 }
-
 
 //-----------------------------------------------------------------------
 vec3 CalculateRadiance( Ray r, inout float seed )
@@ -360,41 +344,30 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			// choose random Diffuse sample vector
 			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 			r.origin += r.direction;
-			//mask *= max(0.0, dot(r.direction, nl));
 			
-			continue;
-		}
-		
-		if (intersec.type == SPEC)  // Ideal SPECULAR reflection
-		{	
-			mask *= intersec.color;
-			
-			r = Ray( x, reflect(r.direction, nl) );
-			r.origin += r.direction;
-			bounceIsSpecular = true;
 			continue;
 		}
 		
 		if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top
-		{	
-			float IoR = 1.5;
-			
-			// Schlick Fresnel approx.
-			float ddn = dot(-r.direction, nl);
-			float nc = 1.0; // IOR of air
-			float nt = IoR; // IOR of ClearCoat 
-			float R0 = (nc - nt) / (nc + nt);
-			R0 *= R0;
-			float c = 1.0 - ddn;
-			float Re = R0 + (1.0 - R0) * c * c * c * c * c;
+		{
+			float nc = 1.0; // IOR of Air
+			float nt = 1.4; // IOR of Clear Coat
+			float nnt = dot(r.direction, n) <= 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
+			vec3 tdir = refract(r.direction, nl, nnt);
+				
+			// Original Fresnel equations
+			float cosThetaInc = dot(nl, r.direction);
+			float cosThetaTra = dot(nl, tdir);
+			float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
+			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
+			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
 			
 			// choose either specular reflection or diffuse
 			if( rand(seed) < Re )
 			{	
-				vec3 reflectVec = reflect(r.direction, nl);
-				r = Ray( x, mix( reflectVec, normalize(nl + randVec), intersec.roughness) );
+				r = Ray( x, reflect(r.direction, nl) );
 				r.origin += r.direction;
-				bounceIsSpecular = true;
+				//bounceIsSpecular = true;
 				continue;	
 			}
 			else
@@ -404,7 +377,6 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 				// choose random sample vector for diffuse material underneath ClearCoat
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 				r.origin += r.direction;
-				//mask *= max(0.0, dot(r.direction, nl));
 				bounceIsSpecular = false;
 				continue;
 			}
@@ -413,16 +385,17 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 		
 		if (intersec.type == LIGHTWOOD || intersec.type == DARKWOOD)  // Diffuse object underneath with thin ClearCoat on top
 		{
-			float IoR = 1.1;
-			
-			// Schlick Fresnel approx.
-			float ddn = dot(-r.direction, nl);
-			float nc = 1.0; // IOR of air
-			float nt = IoR; // IOR of ClearCoat 
-			float R0 = (nc - nt) / (nc + nt);
-			R0 *= R0;
-			float c = 1.0 - ddn;
-			float Re = R0 + (1.0 - R0) * c * c * c * c * c;
+			float nc = 1.0; // IOR of Air
+			float nt = 1.1; // IOR of Clear Coat
+			float nnt = dot(r.direction, n) <= 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
+			vec3 tdir = refract(r.direction, nl, nnt);
+				
+			// Original Fresnel equations
+			float cosThetaInc = dot(nl, r.direction);
+			float cosThetaTra = dot(nl, tdir);
+			float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
+			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
+			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
 			
 			// choose either specular reflection or diffuse
 			if ( rand(seed) < Re )
@@ -430,7 +403,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 				vec3 reflectVec = reflect(r.direction, nl);
 				r = Ray( x, mix( reflectVec, normalize(nl + randVec), intersec.roughness) );
 				r.origin += r.direction;
-				bounceIsSpecular = true;
+				//bounceIsSpecular = true;
 				continue;	
 			}
 			else
@@ -494,7 +467,6 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 				// choose random sample vector for diffuse material underneath ClearCoat
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 				r.origin += r.direction;
-				//mask *= max(0.0, dot(r.direction, nl));
 				bounceIsSpecular = false;
 				continue;
 			}
@@ -506,8 +478,6 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 	
 	return accumCol;      
 }
-
-
 //-----------------------------------------------------------------------
 void SetupScene(void)
 //-----------------------------------------------------------------------
@@ -551,10 +521,7 @@ void SetupScene(void)
 	cones[3] = Cone( vec3(0,4,-270), 4.0, vec3(0,3.5,-160), 3.5, z, vec3(0.4, 0.01, 0.3), 0.0, DARKWOOD);//Wooden CueStick butt
 	cones[4] = Cone( vec3(0,4.5,-375), 4.5, vec3(0,4,-270), 4.0, z, vec3(0.1), 0.0, CLOTH);//CueStick handle wrap
 }
-
-
 #include <pathtracing_main>
-
 
 		</script>
 		
@@ -618,7 +585,6 @@ void SetupScene(void)
 			var cameraControlsObject;//for positioning and moving the camera itself
 			var cameraControlsYawObject;//allows access to control camera's left/right movements through mobile input
 			var cameraControlsPitchObject;//allows access to control camera's up/down movements through mobile input
-
 			var PI_2 = Math.PI / 2;//used by controls below
 			
 			var infoElement = document.getElementById( 'info' );
@@ -635,10 +601,8 @@ void SetupScene(void)
 			
 			
 			function onMouseWheel( event ) {
-
 				event.preventDefault();
 				event.stopPropagation();
-
 				if ( event.deltaY > 0 ) {
 					
 					increaseFOV = true;
@@ -648,7 +612,6 @@ void SetupScene(void)
 					decreaseFOV = true;
 					
 				}
-
 			}
 			
 			
@@ -661,54 +624,38 @@ void SetupScene(void)
 				if ( 'createTouch' in document ) {
 					mouseControl = false;
 					pixelRatio = 0.5;
-
 					mobileJoystickControls = new MobileJoystickControls ({
 						//showJoystick: true,
 						enableMultiTouch: true
 					});	
 				}
-
 				// if on mobile device, unpause the app because there is no ESC key and no mouse capture to do
 				if ( !mouseControl )
 					isPaused = false;
-
 				if (mouseControl) {
-
 					window.addEventListener( 'wheel', onMouseWheel, false );
-
 					document.body.addEventListener("click", function() {
 						this.requestPointerLock = this.requestPointerLock || this.mozRequestPointerLock;
 						this.requestPointerLock();
 					}, false);
-
 					window.addEventListener("click", function(event) {
 						event.preventDefault();	
 					}, false);
 					window.addEventListener("dblclick", function(event) {
 						event.preventDefault();	
 					}, false);
-
-
 					var pointerlockChange = function ( event ) {
-
 						if ( document.pointerLockElement === document.body || 
 						    document.mozPointerLockElement === document.body || document.webkitPointerLockElement === document.body ) {
-
 							isPaused = false;
-
 						} else {
-
 							isPaused = true;
-
 						}
-
 					};
-
 					// Hook pointer lock state change events
 					document.addEventListener( 'pointerlockchange', pointerlockChange, false );
 					document.addEventListener( 'mozpointerlockchange', pointerlockChange, false );
 					document.addEventListener( 'webkitpointerlockchange', pointerlockChange, false );
-
 				}
 				
 				renderer = new THREE.WebGLRenderer();
@@ -819,7 +766,6 @@ void SetupScene(void)
 				
 				
 				pathTracingGeometry = new THREE.PlaneBufferGeometry( 2, 2 );
-
 				pathTracingUniforms = {
 					
 					tPreviousTexture: { type: "t", value: screenTextureRenderTarget.texture },
@@ -858,7 +804,6 @@ void SetupScene(void)
 				        depthTest: false,
                                         depthWrite: false
                                 } );
-
 				pathTracingMesh = new THREE.Mesh( pathTracingGeometry, pathTracingMaterial );
 				pathTracingScene.add( pathTracingMesh );
 				
@@ -909,7 +854,6 @@ void SetupScene(void)
 				document.addEventListener("click", function() {
 					
 					if ( !document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement ) {
-
 						if (document.documentElement.requestFullscreen) {
 							document.documentElement.requestFullscreen();
 							
@@ -920,7 +864,6 @@ void SetupScene(void)
 							document.documentElement.webkitRequestFullscreen();
 						
 						}
-
 					}
 				});
 				*/
@@ -981,7 +924,6 @@ void SetupScene(void)
 						button4Element.style.right = 16 + "%";
 						button5Element.style.right = 3 + "%";
 						button6Element.style.right = 3 + "%";
-
 						button1Element.style.bottom = 5 + "%";
 						button2Element.style.bottom = 5 + "%";
 						button3Element.style.bottom = 13 + "%";
@@ -998,7 +940,6 @@ void SetupScene(void)
 						button4Element.style.right = 11 + "%";
 						button5Element.style.right = 3 + "%";
 						button6Element.style.right = 3 + "%";
-
 						button1Element.style.bottom = 10 + "%";
 						button2Element.style.bottom = 10 + "%";
 						button3Element.style.bottom = 26 + "%";
@@ -1043,7 +984,6 @@ void SetupScene(void)
 			
 				// if not playing on desktop, get input from the mobileJoystickControls
 				if ( !mouseControl ) {
-
 					newDeltaX = joystickDeltaX;
 					
 					if (newDeltaX) {
@@ -1117,39 +1057,32 @@ void SetupScene(void)
 				cameraDirectionVector.normalize();
 				controls.getUpVector(cameraUpVector);
 				controls.getRightVector(cameraRightVector);
-
 				// the following gives us a rotation quaternion (4D vector), which will be useful for 
 				// rotating scene objects to match the camera's rotation
 				worldCamera.getWorldQuaternion(cameraWorldQuaternion);
 				
 				// allow flying camera
 				if ( (keyboard.pressed('W') || button3Pressed) && !(keyboard.pressed('S') || button4Pressed) ) {
-
 					cameraControlsObject.position.add(cameraDirectionVector.multiplyScalar(camFlightSpeed * frameTime));
 					cameraIsMoving = true;
 				}
 				if ( (keyboard.pressed('S') || button4Pressed) && !(keyboard.pressed('W') || button3Pressed) ) {
-
 					cameraControlsObject.position.sub(cameraDirectionVector.multiplyScalar(camFlightSpeed * frameTime));
 					cameraIsMoving = true;
 				}
 				if ( (keyboard.pressed('A') || button1Pressed) && !(keyboard.pressed('D') || button2Pressed) ) {
-
 					cameraControlsObject.position.sub(cameraRightVector.multiplyScalar(camFlightSpeed * frameTime));
 					cameraIsMoving = true;
 				}
 				if ( (keyboard.pressed('D') || button2Pressed) && !(keyboard.pressed('A') || button1Pressed) ) {
-
 					cameraControlsObject.position.add(cameraRightVector.multiplyScalar(camFlightSpeed * frameTime));
 					cameraIsMoving = true;
 				}
 				if ( keyboard.pressed('Q') && !keyboard.pressed('Z') ) {
-
 					cameraControlsObject.position.add(cameraUpVector.multiplyScalar(camFlightSpeed * frameTime));
 					cameraIsMoving = true;
 				}
 				if ( keyboard.pressed('Z') && !keyboard.pressed('Q') ) {
-
 					cameraControlsObject.position.sub(cameraUpVector.multiplyScalar(camFlightSpeed * frameTime));
 					cameraIsMoving = true;
 				}
@@ -1280,7 +1213,6 @@ void SetupScene(void)
 					
 				
 			} // end function animate()
-
 		</script>
 
 	</body>
