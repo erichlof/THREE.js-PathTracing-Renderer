@@ -159,11 +159,10 @@ float DisplacementBoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r )
 // SEA
 /* Credit: some of the following ocean code is borrowed from https://www.shadertoy.com/view/Ms2SD1 posted by user 'TDM' */
 
-#define ITER_FRAGMENT    4 // # of fractal iterations
-#define SEA_HEIGHT     1.0 // this is how many units from the top of the ocean bounding box
+#define SEA_HEIGHT     1.5 // this is how many units from the top of the ocean bounding box
 #define SEA_FREQ       2.0 // wave density: lower = spread out, higher = close together
 #define SEA_CHOPPY     2.0 // smaller beachfront-type waves, they travel in parallel
-#define SEA_SPEED      0.2 // how quickly time passes
+#define SEA_SPEED      0.15 // how quickly time passes
 #define OCTAVE_M   mat2(1.6, 1.2, -1.2, 1.6);
 
 float hash( vec2 p )
@@ -202,8 +201,27 @@ float getOceanWaterHeight( vec3 p )
 	float sea_time = uTime * SEA_SPEED;
 	
 	vec2 uv = p.xz; uv.x *= 0.75;
+	float d, h = 0.0;
+
+	d =  sea_octave((uv + sea_time) * freq, choppy);
+	d += sea_octave((uv - sea_time) * freq, choppy);
+	h += d * amp;        
+	
+	return 70.0 * (h * 0.5 - 0.5);
+}
+
+float getOceanWaterHeight_Detail( vec3 p )
+{
+	p.x *= 0.001;
+	p.z *= 0.001;
+	float freq = SEA_FREQ;
+	float amp = SEA_HEIGHT;
+	float choppy = SEA_CHOPPY;
+	float sea_time = uTime * SEA_SPEED;
+	
+	vec2 uv = p.xz; uv.x *= 0.75;
 	float d, h = 0.0;    
-	for(int i = 0; i < ITER_FRAGMENT; i++)
+	for(int i = 0; i < 4; i++)
 	{        
 		d =  sea_octave((uv + sea_time) * freq, choppy);
 		d += sea_octave((uv - sea_time) * freq, choppy);
@@ -424,23 +442,41 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkOcean )
 		return t;
 	}
 
-	d = PlaneIntersect( vec4(0, 1, 0, 0.0), r );
-	if ( d >= INFINITY ) return t;
-	hitWorldSpace = r.origin + r.direction * d;
-	
-	waterWaveHeight = getOceanWaterHeight(hitWorldSpace);
-	dw = DisplacementBoxIntersect( vec3(-INFINITY, -INFINITY, -INFINITY), vec3(INFINITY, waterWaveHeight, INFINITY), r);
-	
-	if (dw < t)
+	vec3 pos = r.origin;
+	vec3 dir = r.direction;
+	float h = 0.0;
+	d = 0.0; // reset d
+
+	for(int i = 0; i < 50; i++)
 	{
-		t = dw;
-		//hitWorldSpace = r.origin + r.direction * dw;
-		float dx = getOceanWaterHeight(hitWorldSpace + vec3(eps,0,0)) - getOceanWaterHeight(hitWorldSpace + vec3(-eps,0,0));
+		h = abs(pos.y - getOceanWaterHeight(pos));
+		if (d > 2000.0 || h < 1.0) break;
+		d += h;
+		pos += dir * h; 
+	}
+	hitWorldSpace = pos;
+	
+	if (d > 2000.0)
+	{
+		d = PlaneIntersect( vec4(0, 1, 0, 0.0), r );
+		if ( d >= INFINITY ) return t;
+		hitWorldSpace = r.origin + r.direction * d;
+		
+		waterWaveHeight = getOceanWaterHeight_Detail(hitWorldSpace);
+		d = DisplacementBoxIntersect( vec3(-INFINITY, -INFINITY, -INFINITY), vec3(INFINITY, waterWaveHeight, INFINITY), r);
+	}
+	
+	if (d < t) 
+	{
+		float eps = 1.0;
+		t = d;
+		float dx = getOceanWaterHeight_Detail(hitWorldSpace - vec3(eps,0,0)) - getOceanWaterHeight_Detail(hitWorldSpace + vec3(eps,0,0));
 		float dy = eps * 2.0; // (the water wave height is a function of x and z, not dependent on y)
-		float dz = getOceanWaterHeight(hitWorldSpace + vec3(0,0,eps)) - getOceanWaterHeight(hitWorldSpace + vec3(0,0,-eps));
+		float dz = getOceanWaterHeight_Detail(hitWorldSpace - vec3(0,0,eps)) - getOceanWaterHeight_Detail(hitWorldSpace + vec3(0,0,eps));
+		
 		intersec.normal = normalize(vec3(dx,dy,dz));
 		intersec.emission = vec3(0);
-		intersec.color = vec3(0.5, 0.7, 0.8);
+		intersec.color = vec3(0.6, 1.0, 1.0);
 		intersec.type = REFR;
 	}
 	
@@ -504,7 +540,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout float seed )
 	bool bounceIsSpecular = true;
 	
 	
-        for (int depth = 0; depth < 5; depth++)
+        for (int depth = 0; depth < 4; depth++)
 	{
 		sampleDiffuseBudget -= 1;
 		
