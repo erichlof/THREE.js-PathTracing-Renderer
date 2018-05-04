@@ -236,34 +236,34 @@ float getOceanWaterHeight_Detail( vec3 p )
 // CLOUDS
 /* Credit: some of the following cloud code is borrowed from https://www.shadertoy.com/view/XtBXDw posted by user 'valentingalea' */
 
-#define THICKNESS      20.0
+#define THICKNESS      25.0
 #define ABSORPTION     0.45
 #define N_MARCH_STEPS  12
 #define N_LIGHT_STEPS  3
 
-const mat3 m3 = mat3( 0.00,  0.80,  0.60,
-                     -0.80,  0.36, -0.48,
-		     -0.60, -0.48,  0.64 );
-
 float noise3D( in vec3 p )
 {
-	return texture2D(t_PerlinNoise, p.xz / 256.0).x;
+	return texture2D(t_PerlinNoise, p.xz).x;
 }
+
+const mat3 m = 1.21 * mat3( 0.00,  0.80,  0.60,
+                    -0.80,  0.36, -0.48,
+		    -0.60, -0.48,  0.64 );
 
 float fbm( vec3 p )
 {
 	float t;
-	t  = 0.5 * noise3D(p);   p = m3 * p * 2.0;
-	t += 0.25 * noise3D(p);  p = m3 * p * 2.0;
-	t += 0.125 * noise3D(p);
-
+	float mult = 2.0;
+	t  = 1.0 * noise3D(p);   p = m * p * mult;
+	t += 0.5 * noise3D(p);   p = m * p * mult;
+	t += 0.25 * noise3D(p);
+	
 	return t;
 }
 
 float cloud_density( vec3 pos, float cov )
 {
-	vec3 p = pos;
-	float dens = fbm(p);
+	float dens = fbm(pos * 0.002);
 	dens *= smoothstep(cov, cov + 0.05, dens);
 
 	return clamp(dens, 0.0, 1.0);	
@@ -290,11 +290,11 @@ vec4 render_clouds( Ray eye, vec3 p, vec3 sunDirection )
 {
 	float march_step = THICKNESS / float(N_MARCH_STEPS);
 	vec3 pos = p + vec3(uTime * -3.0, uTime * -0.5, uTime * -2.0);
-	vec3 dir_step = eye.direction / clamp(eye.direction.y, 0.001, 1.0) * march_step;
-	vec3 light_step = sunDirection * 10.0;
+	vec3 dir_step = eye.direction / clamp(eye.direction.y, 0.3, 1.0) * march_step;
+	vec3 light_step = sunDirection * 5.0;
 	
 	float covAmount = (sin(mod(uTime * 0.1, TWO_PI))) * 0.5 + 0.5;
-	float coverage = mix(0.4, 0.75, clamp(covAmount, 0.0, 1.0));
+	float coverage = mix(1.0, 1.5, clamp(covAmount, 0.0, 1.0));
 	float T = 1.0; // transmitance
 	vec3 C = vec3(0); // color
 	float alpha = 0.0;
@@ -325,7 +325,7 @@ float checkCloudCover( vec3 sunDirection, vec3 p )
 	vec3 dir_step = sunDirection / clamp(sunDirection.y, 0.001, 1.0) * march_step;
 	
 	float covAmount = (sin(mod(uTime * 0.1, TWO_PI))) * 0.5 + 0.5;
-	float coverage = mix(0.4, 0.75, clamp(covAmount, 0.0, 1.0));
+	float coverage = mix(1.0, 1.5, clamp(covAmount, 0.0, 1.0));
 	float alpha = 0.0;
 	float dens;
 	float T_i;
@@ -447,16 +447,16 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkOcean )
 	float h = 0.0;
 	d = 0.0; // reset d
 
-	for(int i = 0; i < 50; i++)
+	for(int i = 0; i < 100; i++)
 	{
 		h = abs(pos.y - getOceanWaterHeight(pos));
-		if (d > 2000.0 || h < 1.0) break;
+		if (d > 4000.0 || h < 1.0) break;
 		d += h;
 		pos += dir * h; 
 	}
 	hitWorldSpace = pos;
 	
-	if (d > 2000.0)
+	if (d > 4000.0)
 	{
 		d = PlaneIntersect( vec4(0, 1, 0, 0.0), r );
 		if ( d >= INFINITY ) return t;
@@ -464,6 +464,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkOcean )
 		
 		waterWaveHeight = getOceanWaterHeight_Detail(hitWorldSpace);
 		d = DisplacementBoxIntersect( vec3(-INFINITY, -INFINITY, -INFINITY), vec3(INFINITY, waterWaveHeight, INFINITY), r);
+		hitWorldSpace = r.origin + r.direction * d;
 	}
 	
 	if (d < t) 
@@ -516,12 +517,12 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout float seed )
 	vec3 initialSkyColor = Get_Sky_Color(r, sunDirection);
 	
 	Ray skyRay = Ray( r.origin * vec3(0.02), normalize(vec3(r.direction.x, abs(r.direction.y), r.direction.z)) );
-	float dc = SphereIntersect( 30000.0, vec3(skyRay.origin.x, -29900, skyRay.origin.z) + vec3(rand(seed) * 2.0), skyRay );
+	float dc = SphereIntersect( 20000.0, vec3(skyRay.origin.x, -19900.0, skyRay.origin.z) + vec3(rand(seed) * 2.0), skyRay );
 	vec3 skyPos = skyRay.origin + skyRay.direction * dc;
 	vec4 cld = render_clouds(skyRay, skyPos, sunDirection);
 	
 	Ray cloudShadowRay = Ray(r.origin * vec3(0.02), normalize(sunDirection + (randVec * 0.05)));
-	float dcs = SphereIntersect( 30000.0, vec3(skyRay.origin.x, -29900, skyRay.origin.z) + vec3(rand(seed) * 2.0), cloudShadowRay );
+	float dcs = SphereIntersect( 20000.0, vec3(skyRay.origin.x, -19900.0, skyRay.origin.z) + vec3(rand(seed) * 2.0), cloudShadowRay );
 	vec3 cloudShadowPos = cloudShadowRay.origin + cloudShadowRay.direction * dcs;
 	float cloudShadowFactor = checkCloudCover(cloudShadowRay.direction, cloudShadowPos);
 	
@@ -745,12 +746,12 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout float seed )
 		cloudColor = mix(initialSkyColor, cloudColor, clamp(cld.a, 0.0, 1.0));
 		
 		hitDistance = distance(skyRay.origin, skyPos);
-		accumCol = mask * mix( accumCol, cloudColor, clamp( exp2( -hitDistance * 0.003 ), 0.0, 1.0 ) );
+		accumCol = mask * mix( accumCol, cloudColor, clamp( exp2( -hitDistance * 0.004 ), 0.0, 1.0 ) );
 	}	
 	else // terrain and other objects
 	{
 		hitDistance = distance(cameraRay.origin, firstX);
-		accumCol = mix( initialSkyColor, accumCol, clamp( exp2( -log(hitDistance * 0.0001) ), 0.0, 1.0 ) );
+		accumCol = mix( initialSkyColor, accumCol, clamp( exp2( -log(hitDistance * 0.00003) ), 0.0, 1.0 ) );
 
 		// underwater fog effect
 		hitDistance = distance(cameraRay.origin, firstX);
@@ -1083,10 +1084,11 @@ void main( void )
 				
 				
 				PerlinNoiseTexture = new THREE.TextureLoader().load( 'textures/perlin256.png' );
-				PerlinNoiseTexture.wrapS = THREE.MirroredRepeatWrapping;
-				PerlinNoiseTexture.wrapT = THREE.MirroredRepeatWrapping;
+				PerlinNoiseTexture.wrapS = THREE.RepeatWrapping;
+				PerlinNoiseTexture.wrapT = THREE.RepeatWrapping;
 				PerlinNoiseTexture.flipY = false;
 				PerlinNoiseTexture.minFilter = THREE.LinearFilter;
+				PerlinNoiseTexture.magFilter = THREE.LinearFilter;
 				PerlinNoiseTexture.generateMipmaps = false;
 				
 				
