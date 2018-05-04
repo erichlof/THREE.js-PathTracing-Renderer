@@ -386,7 +386,6 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkWater )
 	hitPos = pos;
 	if (h >= 1.0) d = INFINITY;
 
-	/*
 	if (d > TERRAIN_FAR)
 	{
 		dp = PlaneIntersect( vec4(0, 1, 0, uWaterLevel), r );
@@ -398,7 +397,6 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkWater )
 		}
 		
 	}
-	*/
 
 	if (d < t)
 	{
