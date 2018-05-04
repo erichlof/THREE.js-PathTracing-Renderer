@@ -33,7 +33,7 @@
 		<div id="info">three.js PathTracing Renderer - Terrain Rendering</div>
 		
 		<div id="cameraInfo" style="position:fixed; left:3%; bottom:2%; font-family:arial; color:rgb(255,255,255);">
-		FOV: 50 / Aperture: 0.00 / FocusDistance: 1180 <br> 
+		FOV: 70 / Aperture: 0.00 / FocusDistance: 1180 <br> 
 		Samples: 0
 		</div>
 
@@ -75,7 +75,6 @@ uniform vec3 uSunDirection;
 #include <pathtracing_uniforms_and_defines>
 
 uniform sampler2D t_PerlinNoise;
-uniform sampler2D t_GrayNoise;
 
 #include <pathtracing_skymodel_defines>
 
@@ -94,20 +93,9 @@ struct Intersection { vec3 normal; vec3 emission; vec3 color; vec2 uv; int type;
 
 #include <pathtracing_plane_intersect>
 
-#include <pathtracing_triangle_intersect>
-
 #include <pathtracing_box_intersect>
 
 #include <pathtracing_physical_sky_functions>
-
-//----------------------------------------------------------------------------
-float QuadIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 v3, Ray r )
-//----------------------------------------------------------------------------
-{
-	float tTri1 = TriangleIntersect( v0, v1, v2, r );
-	float tTri2 = TriangleIntersect( v0, v2, v3, r );
-	return min(tTri1, tTri2);
-}
 
 
 //---------------------------------------------------------------------------------------------------------
@@ -141,25 +129,36 @@ float DisplacementBoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r )
 }
 
 
-
 // WATER
 /* Credit: some of the following water code is borrowed from https://www.shadertoy.com/view/Ms2SD1 posted by user 'TDM' */
 
-#define ITER_FRAGMENT  4    // # of fractal iterations
-#define SEA_HEIGHT     0.5  // this is how many units from the top of the ocean bounding box
-#define SEA_FREQ       0.05 // wave density: lower = spread out, higher = close together
-#define SEA_CHOPPY     1.0  // smaller beachfront-type waves, they travel in parallel
-#define SEA_SPEED      10.0 // how quickly time passes
-#define OCTAVE_M       mat2(1.6, 1.2, -1.2, 1.6)
+#define WATER_SAMPLE_SCALE 0.05 
+#define WATER_WAVE_HEIGHT 2.0 // max height of water waves   
+#define WATER_FREQ        1.0 // wave density: lower = spread out, higher = close together
+#define WATER_CHOPPY      1.0 // smaller beachfront-type waves, they travel in parallel
+#define WATER_SPEED       0.5 // how quickly time passes
+#define OCTAVE_M  mat2(1.6, 1.2, -1.2, 1.6);
 
-float grayNoise( in vec2 uv )
+float hash( vec2 p )
 {
-	return texture2D( t_GrayNoise, (uv + 0.5) / 256.0 ).x * 2.0 - 1.0;
+	float h = dot(p,vec2(127.1,311.7));	
+    	return fract(sin(h)*43758.5453123);
+}
+
+float noise( in vec2 p )
+{
+	vec2 i = floor( p );
+	vec2 f = fract( p );	
+	vec2 u = f*f*(3.0-2.0*f);
+	return -1.0+2.0*mix( mix( hash( i + vec2(0.0,0.0) ), 
+		     hash( i + vec2(1.0,0.0) ), u.x),
+		mix( hash( i + vec2(0.0,1.0) ), 
+		     hash( i + vec2(1.0,1.0) ), u.x), u.y);
 }
 
 float sea_octave( vec2 uv, float choppy )
 {
-	uv += grayNoise(uv);        
+	uv += noise(uv);        
 	vec2 wv = 1.0 - abs(sin(uv));
 	vec2 swv = abs(cos(uv));    
 	wv = mix(wv, swv, wv);
@@ -168,14 +167,33 @@ float sea_octave( vec2 uv, float choppy )
 
 float getOceanWaterHeight( vec3 p )
 {
-	float freq = SEA_FREQ;
-	float amp = SEA_HEIGHT;
-	float choppy = SEA_CHOPPY;
-	float sea_time = uTime * SEA_SPEED;
+	float freq = WATER_FREQ;
+	float amp = 1.0;
+	float choppy = WATER_CHOPPY;
+	float sea_time = uTime * WATER_SPEED;
 	
-	vec2 uv = p.xz; uv.x *= 0.75;
+	vec2 uv = p.xz * WATER_SAMPLE_SCALE; 
+	uv.x *= 0.75;
+	float d, h = 0.0;
+
+	d =  sea_octave((uv + sea_time) * freq, choppy);
+	d += sea_octave((uv - sea_time) * freq, choppy);
+	h += d * amp;        
+	
+	return h * WATER_WAVE_HEIGHT + uWaterLevel;
+}
+
+float getOceanWaterHeight_Detail( vec3 p )
+{
+	float freq = WATER_FREQ;
+	float amp = 1.0;
+	float choppy = WATER_CHOPPY;
+	float sea_time = uTime * WATER_SPEED;
+	
+	vec2 uv = p.xz * WATER_SAMPLE_SCALE; 
+	uv.x *= 0.75;
 	float d, h = 0.0;    
-	for(int i = 0; i < ITER_FRAGMENT; i++)
+	for(int i = 0; i < 4; i++)
 	{        
 		d =  sea_octave((uv + sea_time) * freq, choppy);
 		d += sea_octave((uv - sea_time) * freq, choppy);
@@ -183,41 +201,42 @@ float getOceanWaterHeight( vec3 p )
 		uv *= OCTAVE_M; freq *= 1.9; amp *= 0.22;
 		choppy = mix(choppy, 1.0, 0.2);
 	}
-	return h;
+
+	return h * WATER_WAVE_HEIGHT + uWaterLevel;
 }
 
 
 // CLOUDS
 /* Credit: some of the following cloud code is borrowed from https://www.shadertoy.com/view/XtBXDw posted by user 'valentingalea' */
 
-#define THICKNESS      20.0
+#define THICKNESS      25.0
 #define ABSORPTION     0.45
-#define N_MARCH_STEPS  10
+#define N_MARCH_STEPS  12
 #define N_LIGHT_STEPS  3
 
 float noise3D( in vec3 p )
 {
-	return texture2D(t_PerlinNoise, p.xz / 256.0).x;
+	return texture2D(t_PerlinNoise, p.xz).x;
 }
 
-const mat3 m = mat3( 0.00,  0.80,  0.60,
+const mat3 m = 1.21 * mat3( 0.00,  0.80,  0.60,
                     -0.80,  0.36, -0.48,
 		    -0.60, -0.48,  0.64 );
 
 float fbm( vec3 p )
 {
 	float t;
-	t  = 0.5 * noise3D(p);   p = m * p * 2.6;
-	t += 0.25 * noise3D(p);  p = m * p * 2.8;
-	t += 0.125 * noise3D(p);
-
+	float mult = 2.0;
+	t  = 1.0 * noise3D(p);   p = m * p * mult;
+	t += 0.5 * noise3D(p);   p = m * p * mult;
+	t += 0.25 * noise3D(p);
+	
 	return t;
 }
 
 float cloud_density( vec3 pos, float cov )
 {
-	vec3 p = pos * 0.8;
-	float dens = fbm(p);
+	float dens = fbm(pos * 0.002);
 	dens *= smoothstep(cov, cov + 0.05, dens);
 
 	return clamp(dens, 0.0, 1.0);	
@@ -244,11 +263,11 @@ vec4 render_clouds( Ray eye, vec3 p, vec3 sunDirection )
 {
 	float march_step = THICKNESS / float(N_MARCH_STEPS);
 	vec3 pos = p + vec3(uTime * -3.0, uTime * -0.5, uTime * -2.0);
-	vec3 dir_step = eye.direction / clamp(eye.direction.y, 0.001, 1.0) * march_step;
-	vec3 light_step = sunDirection * 10.0;
+	vec3 dir_step = eye.direction / clamp(eye.direction.y, 0.3, 1.0) * march_step;
+	vec3 light_step = sunDirection * 5.0;
 	
-	float covAmount = (sin(mod(uTime * 0.2, TWO_PI))) * 0.5 + 0.5;
-	float coverage = mix(0.55, 0.71, clamp(covAmount, 0.0, 1.0));
+	float covAmount = (sin(mod(uTime * 0.1, TWO_PI))) * 0.5 + 0.5;
+	float coverage = mix(1.1, 1.5, clamp(covAmount, 0.0, 1.0));
 	float T = 1.0; // transmitance
 	vec3 C = vec3(0); // color
 	float alpha = 0.0;
@@ -275,94 +294,68 @@ vec4 render_clouds( Ray eye, vec3 p, vec3 sunDirection )
 
 // TERRAIN
 
-#define TERRAIN_FAR 200000.0
 #define TERRAIN_HEIGHT 2000.0
-#define TERRAIN_FREQ 2.0
-#define TERRAIN_AMP 0.5
-#define TERRAIN_SAMPLE_SCALE 0.00004
+#define TERRAIN_SAMPLE_SCALE 0.00004 
+#define TERRAIN_LIFT -1000.0 // how much to lift or drop the entire terrain
+#define TERRAIN_FAR 100000.0
 
-const mat2  m2 = mat2(0.8, 0.6, -0.6, 0.8);
-
-float lookup_noise2D( in vec2 uv )
+float lookup_Heightmap( in vec3 pos )
 {
-	return texture2D(t_PerlinNoise, uv).x;	
-}
-
-float terrain_map(vec2 p)
-{
-	float f = 0.0;
-	float amplitude = TERRAIN_AMP;
-	p *= TERRAIN_SAMPLE_SCALE;
-	
-	for (int i = 0; i < 2; i++)
-	{
-		f += amplitude * (lookup_noise2D(p) * 2.0 - 1.0);
-		amplitude *= TERRAIN_AMP;
-		p = m2 * p * TERRAIN_FREQ;	
-	}
-	
-	return (f * TERRAIN_HEIGHT);
-}
-
-float terrain_map_detail(vec2 p)
-{
-	float f = 0.0;
-	float amplitude = TERRAIN_AMP;
-	p *= TERRAIN_SAMPLE_SCALE;
-	
-	for (int i = 0; i < 7; i++)
-	{
-		f += amplitude * (lookup_noise2D(p) * 2.0 - 1.0);
-		amplitude *= TERRAIN_AMP;
-		p = m2 * p * TERRAIN_FREQ;	
-	}
-	
-	return (f * TERRAIN_HEIGHT);
-}
-
-float TerrainIntersect( Ray r )
-{
-	vec3 pos = r.origin;
-	vec3 dir = (r.direction);
+	vec2 uv = pos.xz;
+	uv *= TERRAIN_SAMPLE_SCALE;
 	float h = 0.0;
-	float t = 0.0;
-	
-	for(int i = 0; i < 300; i++)
+	float mult = 1.0;
+
+	for (int i = 0; i < 3; i ++)
 	{
-		h = pos.y - terrain_map(pos.xz);
-		if (t > TERRAIN_FAR || h < 1.0) break;
-		t += h * 0.5;
-		pos += dir * h * 0.5; 
+		h += mult * texture2D(t_PerlinNoise, uv + 0.5).x;
+		mult *= 0.5;
+		uv *= 2.0;
 	}
-	return t < TERRAIN_FAR ? t : INFINITY;
+	return h * TERRAIN_HEIGHT + TERRAIN_LIFT;	
+}
+
+float lookup_Normal( in vec3 pos )
+{
+	vec2 uv = pos.xz;
+	uv *= TERRAIN_SAMPLE_SCALE;
+	float h = 0.0;
+	float mult = 1.0;
+
+	for (int i = 0; i < 9; i ++)
+	{
+		h += mult * texture2D(t_PerlinNoise, uv + 0.5).x;
+		mult *= 0.5;
+		uv *= 2.0;
+	}
+	return h * TERRAIN_HEIGHT + TERRAIN_LIFT; 
 }
 
 vec3 terrain_calcNormal( vec3 pos, float t )
 {
-	vec2 eps = vec2(max(1.0, 0.001 * t), 0.0);
-	vec2 p = pos.xz;
-	return normalize( vec3( terrain_map_detail(p-eps.xy) - terrain_map_detail(p+eps.xy),
-				2.0 * eps.x,
-				terrain_map_detail(p-eps.yx) - terrain_map_detail(p+eps.yx) ) );
+	vec3 eps = vec3(0.02, 0.0, 0.0);
+	
+	return normalize( vec3( lookup_Normal(pos-eps.xyy) - lookup_Normal(pos+eps.xyy),
+			  	eps.x * 2.0,
+			  	lookup_Normal(pos-eps.yyx) - lookup_Normal(pos+eps.yyx) ) );
 }
 
 bool isLightSourceVisible( vec3 pos, vec3 n, vec3 dirToLight)
 {
 	float h = 1.0;
 	float t = 0.0;
-	float terrainHeight = TERRAIN_HEIGHT * 1.5;
-	pos += n * 2.0;
-	//pos += dirToLight;
-	//pos += vec3(0,1,0);
+	float terrainHeight = TERRAIN_HEIGHT * 1.5 + TERRAIN_LIFT;
+	pos += n * 2.0; // large outdoor scene requires moving away from surface a lot, 
+	// otherwise, black patches from incorrect self-shadowing occur on mobile due to less precision
 
-	for(int i = 0; i < 150; i++)
+	for(int i = 0; i < 300; i++)
 	{
-		h = pos.y - terrain_map(pos.xz);
+		h = pos.y - lookup_Heightmap(pos);
 		pos += dirToLight * h;
-		if ( pos.y > terrainHeight || h < 1.0) break;
+		if ( pos.y > terrainHeight || h < 0.0) break;
 	}
 
-	return h >= 1.0;
+	return h >= 0.0;
 }
 
 
@@ -371,44 +364,92 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkWater )
 //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 {
 	vec3 normal;
-        float d, dw;
+	float d = 0.0;
+	float dp = 0.0;
 	float t = INFINITY;
-	vec3 hitPos; 
+	vec3 hitPos;
+	float terrainHeight;
+	float waterWaveHeight;
 
 	// Terrain
-	d = TerrainIntersect( r );
+	vec3 pos = r.origin;
+	vec3 dir = (r.direction);
+	float h = 0.0;
+	
+	for (int i = 0; i < 300; i++)
+	{
+		h = pos.y - lookup_Heightmap(pos);
+		if (d > TERRAIN_FAR || h < 1.0) break;
+		d += h * 0.45;
+		pos += dir * h * 0.45; 
+	}
+	hitPos = pos;
+	if (h >= 1.0) d = INFINITY;
+
+	/*
+	if (d > TERRAIN_FAR)
+	{
+		dp = PlaneIntersect( vec4(0, 1, 0, uWaterLevel), r );
+		if (dp < d)
+		{
+			hitPos = r.origin + r.direction * dp;
+			terrainHeight = lookup_Heightmap(hitPos);
+			d = DisplacementBoxIntersect( vec3(-INFINITY, -INFINITY, -INFINITY), vec3(INFINITY, terrainHeight, INFINITY), r);
+		}
+		
+	}
+	*/
+
 	if (d < t)
 	{
 		t = d;
-		hitPos = r.origin + r.direction * t;
 		intersec.normal = terrain_calcNormal(hitPos, t);
 		intersec.emission = vec3(0);
 		intersec.color = vec3(0);
 		intersec.type = TERRAIN;
 	}
 	
-	if (!checkWater)
+	if ( !checkWater )
 		return t;
 	
-	d = PlaneIntersect( vec4(0, 1, 0, uWaterLevel), r );
-	if ( d >= TERRAIN_FAR ) return t;
-	vec3 hitWorldSpace = r.origin + r.direction * d;
-	
-	float waterWaveHeight = getOceanWaterHeight(hitWorldSpace);
-	dw = DisplacementBoxIntersect( vec3(-INFINITY, -INFINITY, -INFINITY), vec3(INFINITY, waterWaveHeight + uWaterLevel, INFINITY), r);
-	
-	if (dw < t)
+	pos = r.origin; // reset pos
+	dir = r.direction; // reset dir
+	h = 0.0; // reset h
+	d = 0.0; // reset d
+
+	for(int i = 0; i < 50; i++)
 	{
-		t = dw;
-		//hitWorldSpace = r.origin + r.direction * dw;
+		h = abs(pos.y - getOceanWaterHeight(pos));
+		if (d > 1000.0 || h < 1.0) break;
+		d += h;
+		pos += dir * h; 
+	}
+	hitPos = pos;
+	if (h >= 1.0) d = INFINITY;
+	
+	if (d > 1000.0)
+	{
+		dp = PlaneIntersect( vec4(0, 1, 0, uWaterLevel), r );
+		if ( dp < d )
+		{
+			hitPos = r.origin + r.direction * dp;
+			waterWaveHeight = getOceanWaterHeight_Detail(hitPos);
+			d = DisplacementBoxIntersect( vec3(-INFINITY, -INFINITY, -INFINITY), vec3(INFINITY, waterWaveHeight, INFINITY), r);
+		}
+		
+	}
+	
+	if (d < t) 
+	{
 		float eps = 1.0;
-		float dx = getOceanWaterHeight(hitWorldSpace - vec3(eps,0,0)) - getOceanWaterHeight(hitWorldSpace + vec3(eps,0,0));
+		t = d;
+		float dx = getOceanWaterHeight_Detail(hitPos - vec3(eps,0,0)) - getOceanWaterHeight_Detail(hitPos + vec3(eps,0,0));
 		float dy = eps * 2.0; // (the water wave height is a function of x and z, not dependent on y)
-		float dz = getOceanWaterHeight(hitWorldSpace - vec3(0,0,eps)) - getOceanWaterHeight(hitWorldSpace + vec3(0,0,eps));
+		float dz = getOceanWaterHeight_Detail(hitPos - vec3(0,0,eps)) - getOceanWaterHeight_Detail(hitPos + vec3(0,0,eps));
+		
 		intersec.normal = normalize(vec3(dx,dy,dz));
 		intersec.emission = vec3(0);
-		//intersec.color = vec3(0.5,0.7,0.8);
-		intersec.color = vec3(0.1,0.5,0.3);
+		intersec.color = vec3(0.6, 1.0, 1.0);
 		intersec.type = REFR;
 	}
 		
@@ -424,8 +465,8 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout float seed )
 	Ray cameraRay = r;
 	vec3 initialSkyColor = Get_Sky_Color(r, sunDirection);
 	
-	Ray skyRay = Ray( r.origin * vec3(0.05), normalize(vec3(r.direction.x, abs(r.direction.y), r.direction.z)) );
-	float dc = SphereIntersect( 20000.0, vec3(skyRay.origin.x, -19850, skyRay.origin.z) + vec3(rand(seed) * 2.0), skyRay );
+	Ray skyRay = Ray( r.origin * vec3(0.02), normalize(vec3(r.direction.x, abs(r.direction.y), r.direction.z)) );
+	float dc = SphereIntersect( 20000.0, vec3(skyRay.origin.x, -19900.0, skyRay.origin.z) + vec3(rand(seed) * 2.0), skyRay );
 	vec3 skyPos = skyRay.origin + skyRay.direction * dc;
 	vec4 cld = render_clouds(skyRay, skyPos, sunDirection);
 	
@@ -446,7 +487,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout float seed )
 	{
 		
 		t = SceneIntersect(r, intersec, checkWater);
-		
+
 		// ray hits sky first
 		if (t == INFINITY && depth == 0 )
 		{
@@ -456,16 +497,15 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout float seed )
 			break;	
 		}
 		
-		
 		// if ray bounced off of water and hits sky
 		if ( t == INFINITY && previousIntersecType == REFR )
 		{
-			//if (bounceIsSpecular) // prevents sun 'fireflies' on diffuse surfaces
+			if (bounceIsSpecular) // prevents sun 'fireflies' on diffuse surfaces
 			{
 				accumCol = mask * Get_Sky_Color(r, sunDirection);
 			}
 			
-			skyHit = true; // uncomment for clouds reflection in water
+			skyHit = true;
 			firstX = skyPos;
 			
 			break;	
@@ -484,43 +524,43 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout float seed )
 		if (intersec.type == TERRAIN)
 		{
 			firstX = x;
-
-			float noiseValue = lookup_noise2D(vec2(x.xz*0.0004));
-			vec3 rockColor = vec3(1.0, 0.4, 0.2) * 0.1 * noiseValue;
+			float rockNoise = texture2D(t_PerlinNoise, (0.001 * x.xz)).x;
+			vec3 rockColor0 = vec3(0.2, 0.2, 0.2) * 0.01 * rockNoise;
+			vec3 rockColor1 = vec3(0.2, 0.2, 0.2) * rockNoise;
 			vec3 snowColor = vec3(0.7);
+			vec3 up = vec3(0, 1, 0);
 			vec3 randomSkyVec = normalize(vec3(randVec.x, abs(randVec.y), randVec.z));
 			vec3 skyColor = clamp(Get_Sky_Color(Ray(x, randomSkyVec), sunDirection), 0.0, 1.0);
-			vec3 sunColor = clamp(Get_Sky_Color(Ray(x, normalize(sunDirection + (randVec * 0.05))), sunDirection), 0.0, 1.0);
+			vec3 sunColor = clamp(Get_Sky_Color(Ray(x, normalize(sunDirection + (randVec * 0.02))), sunDirection), 0.0, 1.0);
 			vec3 ambientColor;
-			vec3 up = vec3(0, 1, 0);
-			float terrainHeight = clamp( x.y / (TERRAIN_HEIGHT * 0.4), 0.0, 3.0 );
-			
-			if (x.y > uWaterLevel && n.y > 1.0 - terrainHeight)
+			float terrainLayer = clamp( (x.y + (rockNoise * 300.0) * n.y) / (TERRAIN_HEIGHT * 1.5 + TERRAIN_LIFT), 0.0, 1.0 );
+			bool snowFlag = false;
+
+			if (terrainLayer > 0.7 && terrainLayer > 1.0 - n.y)
 			{
+				snowFlag = true;
 				intersec.color = snowColor;
-				mask *= intersec.color;
-				ambientColor = mask * skyColor * max(0.0, dot(randomSkyVec, n));// ambient color from sky light
-				ambientColor = mix(ambientColor, snowColor, clamp(dot(sunDirection, up), 0.0, 0.5));
-			}
+				ambientColor = intersec.color * skyColor; // ambient color from sky light
+			}	
 			else
 			{
-				intersec.color = rockColor;
-				mask *= intersec.color;
-				ambientColor = mask * skyColor * max(0.0, dot(randomSkyVec, n)); // ambient color from sky light
-			}
-			
+				intersec.color = mix(rockColor0, rockColor1, clamp(terrainLayer * n.y, 0.0, 1.0) );
+				ambientColor = intersec.color * skyColor * max(0.0, dot(randomSkyVec, n)); // ambient color from sky light
+			}		
 			
 			accumCol = ambientColor;
 
-			if ( isLightSourceVisible( x, n, normalize(sunDirection + (randVec * 0.005)) ) ) // in direct sunlight
+			vec3 shadowRayDirection = normalize(sunDirection + (randomSkyVec * max(dot(sunDirection, up), 0.1)));						
+			if ( isLightSourceVisible(x, n, shadowRayDirection) ) // in direct sunlight
 			{
-				if (intersec.color == snowColor)
-					accumCol = mix( ambientColor, mask * sunColor, max(0.0, dot(normalize(n + (sunDirection * 0.6)), sunDirection)) );
-				else	
-					accumCol = mix( ambientColor, mask * sunColor, max(0.0, dot(n, sunDirection)) );	
+				if (snowFlag)
+				{
+					n = normalize(mix(n, sunDirection, terrainLayer * 0.6));
+				}
+
+				accumCol = intersec.color * sunColor * max(0.0, dot(n, normalize(sunDirection + (randVec * 0.01))));	
 			}
 				
-			
 			break;
 		}
 		
@@ -539,9 +579,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout float seed )
 			float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
 			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
 			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
-			if (uCameraUnderWater > 0.0)
-				Re *= 1.0;
-			else Re *= 2.0; // tweak to add more reflectivity to water
+			
 			if (rand(seed) < Re) // reflect ray from surface
 			{
 				r = Ray( x, reflect(r.direction, nl) );
@@ -574,12 +612,12 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout float seed )
 		cloudColor = mix(initialSkyColor, cloudColor, clamp(cld.a, 0.0, 1.0));
 		
 		hitDistance = distance(skyRay.origin, skyPos);
-		accumCol = mask * mix( accumCol, cloudColor, clamp( exp2( -hitDistance * 0.003 ), 0.0, 1.0 ) );
+		accumCol = mask * mix( accumCol, cloudColor, clamp( exp2( -hitDistance * 0.004 ), 0.0, 1.0 ) );
 	}	
 	else // terrain and other objects
 	{
 		hitDistance = distance(cameraRay.origin, firstX);
-		accumCol = mix( initialSkyColor, accumCol, clamp( exp2( -log(hitDistance * 0.0001) ), 0.0, 1.0 ) );
+		accumCol = mix( initialSkyColor, accumCol, clamp( exp2( -log(hitDistance * 0.00008) ), 0.0, 1.0 ) );
 
 		// underwater fog effect
 		hitDistance = distance(cameraRay.origin, firstX);
@@ -588,11 +626,11 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout float seed )
 	}
 	
 	
-	
 	return vec3(max(vec3(0), accumCol));      
 }
 
 /*
+// not needed in this demo, all objects are procedurally generated
 //-----------------------------------------------------------------------
 void SetupScene(void)
 //-----------------------------------------------------------------------
@@ -673,7 +711,7 @@ void main( void )
 			var controls;
 			var pathTracingScene, screenTextureScene, screenOutputScene;
 			var pathTracingUniforms, screenTextureUniforms, screenOutputUniforms;
-			var PerlinNoiseTexture, GrayNoiseTexture;
+			var PerlinNoiseTexture;
 			var pathTracingDefines;
 			var pathTracingGeometry, pathTracingMaterial, pathTracingMesh;
 			var screenTextureGeometry, screenTextureMaterial, screenTextureMesh;
@@ -713,8 +751,8 @@ void main( void )
 			var oldPinchWidthY = 0;
 			var pinchDeltaX = 0;
 			var pinchDeltaY = 0;
-			var camFlightSpeed = 300;
-			var waterLevel = -500.0;
+			var camFlightSpeed = 100;
+			var waterLevel = 400.0;
 			var cameraUnderWater = false;
 			var fontAspect;
 			
@@ -855,7 +893,7 @@ void main( void )
 				// worldCamera is the dynamic camera 3d object that will be positioned, oriented and 
 				// constantly updated inside the 3d scene.  Its view will ultimately get passed back to the 
 				// stationary quadCamera, which renders the scene to a fullscreen quad (made up of 2 large triangles).
-				worldCamera = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 1, 1000);
+				worldCamera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 1000);
 				pathTracingScene.add(worldCamera);
 				
 				controls = new FirstPersonCameraControls( worldCamera );
@@ -866,23 +904,10 @@ void main( void )
 				
 				pathTracingScene.add( cameraControlsObject );
 
-				// uncomment for aerial panorama
-				cameraControlsObject.position.set(-14046, 674, -2098);
-				cameraControlsYawObject.rotation.y = 4.0;
-				cameraControlsPitchObject.rotation.x = -0.05;
-
-				// uncomment for tall mountain / lake view
-				//cameraControlsObject.position.set(1397, 1035, -1840); 
-				//cameraControlsYawObject.rotation.y = 2.0;
-				//cameraControlsPitchObject.rotation.x = -0.4;
-
-				// uncomment for right above lake view
-				//cameraControlsObject.position.set(2272, -383, -605); 
-				//cameraControlsYawObject.rotation.y = 4.6;
-				//cameraControlsPitchObject.rotation.x = 0.0;
-				
-				
-				
+				cameraControlsObject.position.set(-837, 1350, 2156);
+				cameraControlsYawObject.rotation.y = 0.8;
+				cameraControlsPitchObject.rotation.x = 0.0;
+			
 				oldYawRotation = cameraControlsYawObject.rotation.y;
 				oldPitchRotation = cameraControlsPitchObject.rotation.x;
 				
@@ -912,18 +937,12 @@ void main( void )
 				
 
 				PerlinNoiseTexture = new THREE.TextureLoader().load( 'textures/perlin256.png' );
-				PerlinNoiseTexture.wrapS = THREE.MirrorRepeatWrapping;
-				PerlinNoiseTexture.wrapT = THREE.MirrorRepeatWrapping;
+				PerlinNoiseTexture.wrapS = THREE.RepeatWrapping;
+				PerlinNoiseTexture.wrapT = THREE.RepeatWrapping;
 				PerlinNoiseTexture.flipY = false;
 				PerlinNoiseTexture.minFilter = THREE.LinearFilter;
+				PerlinNoiseTexture.magFilter = THREE.LinearFilter;
 				PerlinNoiseTexture.generateMipmaps = false;
-				
-				GrayNoiseTexture = new THREE.TextureLoader().load( 'textures/grayNoise256.png' );
-				GrayNoiseTexture.wrapS = THREE.RepeatWrapping;
-				GrayNoiseTexture.wrapT = THREE.RepeatWrapping;
-				GrayNoiseTexture.flipY = false;
-				GrayNoiseTexture.minFilter = THREE.LinearFilter; 
-				GrayNoiseTexture.generateMipmaps = false;
 				
 				
 				pathTracingGeometry = new THREE.PlaneBufferGeometry( 2, 2 );
@@ -933,7 +952,6 @@ void main( void )
 					tPreviousTexture: { type: "t", value: screenTextureRenderTarget.texture },
 					
 					t_PerlinNoise: { type: "t", value: PerlinNoiseTexture },
-					t_GrayNoise: { type: "t", value: GrayNoiseTexture },
 					
 					uCameraIsMoving: { type: "b1", value: false },
 					uCameraJustStartedMoving: { type: "b1", value: false },
@@ -1363,7 +1381,7 @@ void main( void )
 				
 				sunAngle = (elapsedTime * 0.03) % Math.PI;
 				sunDirection.set(Math.cos(sunAngle) * 1.2, Math.sin(sunAngle), -Math.cos(sunAngle) * 3.0);
-				sunDirection.normalize();	
+				sunDirection.normalize();
 
 				pathTracingUniforms.uCameraUnderWater.value = cameraUnderWater;
 				pathTracingUniforms.uWaterLevel.value = waterLevel;
@@ -1379,7 +1397,6 @@ void main( void )
 				screenOutputMaterial.uniforms.uOneOverSampleCounter.value = 1.0 / sampleCounter;
 				
 				cameraInfoElement.innerHTML = "FOV: " + worldCamera.fov + " / Aperture: " + apertureSize.toFixed(2) + " / FocusDistance: " + focusDistance + "<br>" + "Samples: " + sampleCounter;
-				
 				
 				// RENDERING in 3 steps
 				
