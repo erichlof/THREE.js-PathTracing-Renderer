@@ -534,13 +534,12 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout float seed )
 			vec3 sunColor = clamp(Get_Sky_Color(Ray(x, normalize(sunDirection + (randVec * 0.02))), sunDirection), 0.0, 1.0);
 			vec3 ambientColor;
 			float terrainLayer = clamp( (x.y + (rockNoise * 300.0) * n.y) / (TERRAIN_HEIGHT * 1.5 + TERRAIN_LIFT), 0.0, 1.0 );
-			bool snowFlag = false;
 
 			if (terrainLayer > 0.7 && terrainLayer > 1.0 - n.y)
 			{
-				snowFlag = true;
 				intersec.color = snowColor;
-				ambientColor = intersec.color * skyColor; // ambient color from sky light
+				ambientColor = skyColor * max(0.0, dot(up, n)); // ambient color from sky light
+				n = normalize(mix(n, sunDirection, terrainLayer * 0.5));
 			}	
 			else
 			{
@@ -553,11 +552,6 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout float seed )
 			vec3 shadowRayDirection = normalize(sunDirection + (randomSkyVec * max(dot(sunDirection, up), 0.1)));						
 			if ( isLightSourceVisible(x, n, shadowRayDirection) ) // in direct sunlight
 			{
-				if (snowFlag)
-				{
-					n = normalize(mix(n, sunDirection, terrainLayer * 0.6));
-				}
-
 				accumCol = intersec.color * sunColor * max(0.0, dot(n, normalize(sunDirection + (randVec * 0.01))));	
 			}
 				
