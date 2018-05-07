@@ -333,7 +333,7 @@ float lookup_Normal( in vec3 pos )
 
 vec3 terrain_calcNormal( vec3 pos, float t )
 {
-	vec3 eps = vec3(0.02, 0.0, 0.0);
+	vec3 eps = vec3(0.2, 0.0, 0.0);
 	
 	return normalize( vec3( lookup_Normal(pos-eps.xyy) - lookup_Normal(pos+eps.xyy),
 			  	eps.x * 2.0,
