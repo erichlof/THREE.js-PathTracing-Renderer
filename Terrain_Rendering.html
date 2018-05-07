@@ -75,6 +75,7 @@ uniform vec3 uSunDirection;
 #include <pathtracing_uniforms_and_defines>
 
 uniform sampler2D t_PerlinNoise;
+uniform float uTerrain_eps;
 
 #include <pathtracing_skymodel_defines>
 
@@ -333,7 +334,7 @@ float lookup_Normal( in vec3 pos )
 
 vec3 terrain_calcNormal( vec3 pos, float t )
 {
-	vec3 eps = vec3(0.2, 0.0, 0.0);
+	vec3 eps = vec3(uTerrain_eps, 0.0, 0.0);
 	
 	return normalize( vec3( lookup_Normal(pos-eps.xyy) - lookup_Normal(pos+eps.xyy),
 			  	eps.x * 2.0,
@@ -746,6 +747,7 @@ void main( void )
 			var camFlightSpeed = 100;
 			var waterLevel = 400.0;
 			var cameraUnderWater = false;
+			var terrain_eps = 0.2;
 			var fontAspect;
 			
 			// the following variables will be used to calculate rotations and directions from the camera
@@ -799,6 +801,7 @@ void main( void )
 				if ( 'createTouch' in document ) {
 					mouseControl = false;
 					pixelRatio = 0.5;
+					terrain_eps = 0.02;
 					
 					mobileJoystickControls = new MobileJoystickControls ({
 						//showJoystick: true,
@@ -956,6 +959,7 @@ void main( void )
 					uVLen: { type: "f", value: 1.0 },
 					uApertureSize: { type: "f", value: 0.0 },
 					uFocusDistance: { type: "f", value: 1180.0 },
+					uTerrain_eps: { type: "f", value: terrain_eps },
 					
 					uResolution: { type: "v2", value: new THREE.Vector2() },
 					
