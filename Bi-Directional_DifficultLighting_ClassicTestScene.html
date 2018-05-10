@@ -433,8 +433,9 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 				if (intersec.color.r == 0.99) // tag for marble ellipsoid
 				{
 					vec2 uv;
-					uv.y = 0.4 * nl.y;
-					uv.x = atan(nl.x, nl.z) / (TWO_PI);
+					// spherical coordinates
+					uv.x = (1.0 + atan(nl.z, nl.x) / PI) * 0.5;
+					uv.y = acos(nl.y) / PI;
 					intersec.color = texture2D(tMarbleTexture, uv).rgb;
 				}
 				
