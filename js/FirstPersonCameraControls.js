@@ -12,13 +12,11 @@ var FirstPersonCameraControls = function ( camera ) {
 
 	camera.rotation.set( 0, 0, 0 );
 
-	this.pitchObject = new THREE.Object3D();
-	this.pitchObject.add( camera );
+	var pitchObject = new THREE.Object3D();
+	pitchObject.add( camera );
 
-	this.yawObject = new THREE.Object3D();
-	this.yawObject.add( this.pitchObject );
-	
-	var scope = this;
+	var yawObject = new THREE.Object3D();
+	yawObject.add( pitchObject );
 
 	var movementX = 0;
 	var movementY = 0;
@@ -28,10 +26,11 @@ var FirstPersonCameraControls = function ( camera ) {
 		movementX = event.movementX || event.mozMovementX || 0;
 		movementY = event.movementY || event.mozMovementY || 0;
 
-		scope.yawObject.rotation.y -= movementX * 0.002;
-		scope.pitchObject.rotation.x -= movementY * 0.002;
-
-		scope.pitchObject.rotation.x = Math.max( - PI_2, Math.min( PI_2, scope.pitchObject.rotation.x ) );
+		yawObject.rotateOnWorldAxis(yawObject.up, -movementX * 0.002);
+		
+		pitchObject.rotation.x -= movementY * 0.002;
+		// clamp the camera's vertical movement (around the x-axis) to the scene's 'ceiling' and 'floor'
+		pitchObject.rotation.x = Math.max( - PI_2, Math.min( PI_2, pitchObject.rotation.x ) );
 			
 	};
 
@@ -40,44 +39,25 @@ var FirstPersonCameraControls = function ( camera ) {
 
 	this.getObject = function () {
 
-		return scope.yawObject;
+		return yawObject;
 
 	};
 	
 	this.getYawObject = function () {
 
-		return scope.yawObject;
+		return yawObject;
 
 	};
 	
 	this.getPitchObject = function () {
 
-		return scope.pitchObject;
+		return pitchObject;
 
 	};
-/*	
+
 	this.getDirection = function() {
 
-		// assumes the camera itself is not rotated
-
-		var direction = new THREE.Vector3( 0, 0, -1 );
-		var rotation = new THREE.Euler( 0, 0, 0, "YXZ" );
-
-		return function( v ) {
-
-			rotation.set( scope.pitchObject.rotation.x, scope.yawObject.rotation.y, 0 );
-
-			v.copy( direction ).applyEuler( rotation );
-
-			return v;
-
-		};
-
-	}();
-*/	
-	this.getDirection = function() {
-
-		var te = camera.matrixWorld.elements;
+		var te = pitchObject.matrixWorld.elements;
 
 		return function( v ) {
 			
@@ -91,7 +71,7 @@ var FirstPersonCameraControls = function ( camera ) {
 	
 	this.getUpVector = function() {
 
-		var te = camera.matrixWorld.elements;
+		var te = pitchObject.matrixWorld.elements;
 
 		return function( v ) {
 			
@@ -105,7 +85,7 @@ var FirstPersonCameraControls = function ( camera ) {
 	
 	this.getRightVector = function() {
 
-		var te = camera.matrixWorld.elements;
+		var te = pitchObject.matrixWorld.elements;
 
 		return function( v ) {
 			
