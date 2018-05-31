@@ -9,6 +9,8 @@ Real-time PathTracing with global illumination and progressive rendering, all on
 
 * [Terrain Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Terrain_Rendering.html) combines traditional raytracing with raymarching to render stunning outdoor environments in real time!  Land is procedurally generated, can be altered with simple parameters. Total number of triangles processed for these worlds: 2! (for screen size quad) :-)
 
+* [Planet Demo (W.I.P.)](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Planet_Rendering.html) takes raymarching and raytracing to the extreme and renders an entire Earth-like planet with physically-based atmosphere!  Still a work in progress, the terrain is procedurely generated.  Although the mountains/lakes are too repetitious (W.I.P.), this simulation demonstrates the power of path tracing: you can hover above the planet at high orbit (5000 Km altitude), then drop all the way down and land your camera right on top of a single rock or single lake water wave (1 meter). All planet/atmosphere measurements are to scale.  The level of detail possible with raytracing is extraordinary!
+
 * [Cornell Box Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/CornellBox_DirectLighting.html) which renders the famous Cornell Box, but at ~60 fps!
 
 For comparison, here is a real photograph of the original Cornell Box vs. a rendering with the three.js PathTracer:
