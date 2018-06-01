@@ -15,14 +15,27 @@
 				margin: 0px;
 				overflow: hidden;
 				touch-action: none;
+				cursor: default;
 			}
 			
 			#info {
-				position: absolute;
+				position: fixed;
 				top: 5px;
 				width: 100%;
 				text-align: center;
 				color: #ffffff;
+				cursor: default;
+				user-select: none;
+			}
+
+			#cameraInfo {
+				position: fixed;
+				left: 3%;
+				bottom: 2%;
+				font-family: Arial;
+				color: #ffffff;
+				cursor: default;
+				user-select: none;
 			}
 
 			.toggleButton {
@@ -30,17 +43,19 @@
 				background-color: gray;
 				border: none;
 				color: white;
-				bottom: 10px;
+				top: 5px;
 				right: 5px;
 				padding: 10px 20px;
 				text-align: center;
 				text-decoration: none;
-				font-size: 16px;
+				font-size: 14px;
 				margin: 4px 2px;
 				cursor: pointer;
+				user-select: none;
+				z-index: 11;
 			}
 			#timePauseButton {
-				bottom: 60px;
+				top: 50px;
 			}		
 			
 		</style>
@@ -52,8 +67,7 @@
 		<div id="info">three.js PathTracing Renderer - Planet Rendering (preview - WIP)</div>
 		<button id="cameraPosButton" class="toggleButton" onclick="toggleCameraPos()">Teleport to Surface</button>
 		<button id="timePauseButton" class="toggleButton" onclick="toggleTimePause()">Pause Time</button>
-		<div id="cameraInfo" style="position:fixed; left:3%; bottom:2%; font-family:arial; color:rgb(255,255,255);">
-		</div>
+		<div id="cameraInfo"> </div>
 
 		
 
@@ -88,13 +102,13 @@ precision highp float;
 precision highp int;
 precision highp sampler2D;
 
-
 uniform sampler2D t_PerlinNoise;
 uniform vec3 uSunDirection;
 uniform vec3 uCameraFrameForward;
 uniform vec3 uCameraFrameRight;
 uniform vec3 uCameraFrameUp;
 uniform float uCameraUnderWater;
+uniform float uSunAngle;
 uniform bool uCameraWithinAtmosphere;
 
 #include <pathtracing_uniforms_and_defines>
@@ -117,6 +131,38 @@ Sphere spheres[N_SPHERES];
 
 #define EARTH_RADIUS      6360.0 // in Km
 #define ATMOSPHERE_RADIUS 6420.0 // in Km
+
+vec3 hash33(vec3 p)
+{
+	p = fract(p * vec3(443.8975,397.2973, 491.1871));
+    	p += dot(p.zxy, p.yxz+19.27);
+    	return fract(vec3(p.x * p.y, p.z*p.x, p.y*p.z));
+}
+
+vec3 stars(in vec3 p)
+{
+	vec3 c = vec3(0);
+	float res = uResolution.x;
+	
+	for (float i = 0.0; i < 4.0; i++)
+	{
+		vec3 q = fract(p*(.15*res))-0.5;
+		vec3 id = floor(p*(.15*res));
+		vec2 rn = hash33(id).xy;
+		float c2 = 1.-smoothstep(0.,.6,length(q));
+		c2 *= step(rn.x,.0005+i*i*0.001);
+		c += c2*(mix(vec3(1.0,0.49,0.1),vec3(0.75,0.9,1.),clamp(rn.y,0.0,1.0))*0.1+0.9);
+		p *= 1.3;
+	}
+	return vec3(pow(max(0.0,c.r), 5.0), pow(max(0.0,c.g), 7.0), pow(max(0.0,c.b), 6.5));
+}
+
+/*
+float starRand(vec3 v)
+{
+	return fract(sin(dot(v ,vec3(12.9898,78.233,.0235))) * 43758.5453);
+}
+*/
 
 //----------------------------------------------------------------------------------------
 bool PlanetSphereIntersect( Ray ray, float rad, vec3 pos, inout float t0, inout float t1 )
@@ -161,7 +207,7 @@ vec3 computeIncidentLight(Ray r, float tmin, float tmax)
 	float mu = dot(r.direction, uSunDirection); // mu in the paper which is the cosine of the angle between the sun direction and the ray direction 
 	float phaseR = 3.0 / (16.0 * PI) * (1.0 + mu * mu); 
 	float g = 0.76; 
-	float phaseM = 3.0 / (8.0 * PI) * ((1.0 - g * g) * (1.0 + mu * mu)) / ((2.0 + g * g) * pow(1.0 + g * g - 2.0 * g * mu, 1.5)); 
+	float phaseM = 3.0 / (8.0 * PI) * ((1.0 - g * g) * (1.0 + mu * mu)) / ((2.0 + g * g) * pow(max(0.0, 1.0 + g * g - 2.0 * g * mu), 1.5)); 
     	for (int i = 0; i < 16; ++i)
 	{ 
 		vec3 samplePosition = r.origin + (tCurrent + segmentLength * 0.5) * r.direction; 
@@ -339,8 +385,8 @@ float water_octave( vec2 uv, float choppy )
 	uv += noise(uv);        
 	vec2 wv = 1.0 - abs(sin(uv));
 	vec2 swv = abs(cos(uv));    
-	wv = mix(wv, swv, wv);
-	return pow(1.0 - pow(wv.x * wv.y, 0.65), choppy);
+	wv = mix(wv, swv, clamp(wv, 0.0, 1.0));
+	return pow(max(0.0, 1.0 - pow(max(0.0, wv.x * wv.y), 0.65)), choppy);
 }
 
 float getWaterHeight( vec3 pos )
@@ -514,7 +560,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkWater )
 
 
 //-----------------------------------------------------------------------
-vec3 CalculateRadiance( Ray r, inout float seed )
+vec3 CalculateRadiance( Ray r, inout float seed, vec3 starRayDir )
 //-----------------------------------------------------------------------
 {
 	vec3 randVec = vec3(rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0);
@@ -533,6 +579,11 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 	bool checkWater = true;
 	bool isDayTime = true;
 	
+	if (uCameraWithinAtmosphere && dot(uSunDirection, uCameraFrameUp) < 0.0)
+	{
+		isDayTime = false;
+	}
+
 	if (PlanetSphereIntersect(r, EARTH_RADIUS, vec3(0), t0, t1) && t1 > 0.0) 
 			tMax = max(0.0, t0);
 
@@ -577,6 +628,7 @@ vec3 CalculateRadiance( Ray r, inout float seed )
                 nl = dot(n,r.direction) <= 0.0 ? normalize(n) : normalize(n * -1.0);
 		x = r.origin + r.direction * t;
 		
+		
 		if (intersec.type == DIFF) // Moon
 		{
 			vec2 uv;
@@ -597,10 +649,10 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 		{
 			firstX = x;
 			terrainHit = true;
+			float altitude = length(x) - EARTH_RADIUS;
 			vec2 uv;
 			uv.x = dot(x, uCameraFrameRight);
 			uv.y = dot(x, uCameraFrameForward);
-			float altitude = length(x);
 			float rockNoise = texture2D(t_PerlinNoise, (0.2 * uv)).x;
 			vec3 rockColor0 = vec3(0.2, 0.2, 0.2) * 0.01 * rockNoise;
 			vec3 rockColor1 = vec3(0.2, 0.2, 0.2) * rockNoise;
@@ -613,13 +665,10 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			vec3 sunColor = computeIncidentLight(Ray(x, sunDirection), 0.0, tMax);
 			sunColor = clamp(sunColor + 0.5, 0.0, 1.0);
 			vec3 ambientColor;
-			float terrainLayer = clamp( ((altitude - EARTH_RADIUS) + (rockNoise * 1.0) * nY) / (TERRAIN_HEIGHT * 1.5 + TERRAIN_LIFT), 0.0, 1.0 );
+			float terrainLayer = clamp( (altitude + (rockNoise * 1.0) * nY) / (TERRAIN_HEIGHT * 1.5 + TERRAIN_LIFT), 0.0, 1.0 );
 
-			if (uCameraWithinAtmosphere && dot(sunDirection, uCameraFrameUp) < 0.0)
-			{
-				isDayTime = false;
+			if (!isDayTime)
 				sunDirection *= -1.0;
-			}
 
 			if (terrainLayer > 0.7 && terrainLayer > 1.0 - nY)
 			{
@@ -644,9 +693,9 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 			}
 			else terrainColor = ambientColor;
 			
-			if (isDayTime && (altitude - EARTH_RADIUS) < 1.0) // terrain is under water
+			if (isDayTime && altitude < 1.0) // terrain is under water
 			{
-				terrainColor = mix(rockColor0, terrainColor, clamp(0.1*(altitude-EARTH_RADIUS), 0.0, 1.0));
+				terrainColor = mix(rockColor0, terrainColor, clamp(0.1*altitude, 0.0, 1.0));
 			}
 			
 			break;
@@ -697,7 +746,28 @@ vec3 CalculateRadiance( Ray r, inout float seed )
 		hitDistance *= uCameraUnderWater;
 		accumCol = mix( vec3(0.0,0.05,0.05), accumCol, clamp( exp2( -hitDistance * 1.0 ), 0.0, 1.0 ) );
 	}
-	
+
+	// stars
+	if (t == INFINITY)
+	{
+		vec3 rotatedStarDir = starRayDir;
+		rotatedStarDir.x = starRayDir.x * cos(uSunAngle) + starRayDir.z * sin(uSunAngle);
+		rotatedStarDir.z = starRayDir.x * -sin(uSunAngle) + starRayDir.z * cos(uSunAngle);
+		vec3 starVal = stars(normalize(rotatedStarDir));
+		float altitude = length(cameraRay.origin); 
+		if (altitude < ATMOSPHERE_RADIUS && isDayTime)
+		{
+			float starAlt = EARTH_RADIUS + 15.0; // in Km
+			if (altitude > starAlt)
+				starVal = mix(vec3(0), starVal, clamp(exp(-(ATMOSPHERE_RADIUS - altitude) * 0.07), 0.0, 1.0));
+			else
+				starVal = mix(vec3(0), starVal, clamp(dot(uCameraFrameUp, -uSunDirection), 0.0, 1.0));
+		
+		}
+			
+		accumCol += starVal;
+	}
+
 	return vec3(max(vec3(0), accumCol));      
 }
 
@@ -739,8 +809,10 @@ void main( void )
 	
 	offset /= (uResolution);
 	pixelPos = (2.0 * (vUv + offset) - 1.0);
+	vec2 starPixelPos = (2.0 * vUv - 1.0);
 	vec3 rayDir = normalize( pixelPos.x * camRight * uULen + pixelPos.y * camUp * uVLen + camForward );
-	
+	vec3 starRayDir = normalize( starPixelPos.x * camRight * uULen + starPixelPos.y * camUp * uVLen + camForward );
+
 	// depth of field
 	vec3 focalPoint = uFocusDistance * rayDir;
 	float randomAngle = rand(seed) * TWO_PI; // pick random point on aperture
@@ -750,11 +822,11 @@ void main( void )
 	vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
     
 	Ray ray = Ray( camPos + randomAperturePos, finalRayDir );
-
+	//Ray starRay = Ray( camPos + randomAperturePos, starRayDir );
 	SetupScene(); 
 
 	// perform path tracing and get resulting pixel color
-	vec3 pixelColor = CalculateRadiance( ray, seed );
+	vec3 pixelColor = CalculateRadiance( ray, seed, starRayDir );
 	
 	vec3 previousColor = texture2D(tPreviousTexture, vUv).rgb;
 	
@@ -858,14 +930,7 @@ void main( void )
 			var PI_2 = Math.PI / 2;//used by controls below
 			
 			var infoElement = document.getElementById( 'info' );
-			infoElement.style.cursor = "default";
-			infoElement.style.webkitUserSelect = "none";
-			infoElement.style.MozUserSelect = "none";
-			
 			var cameraInfoElement = document.getElementById( 'cameraInfo' );
-			cameraInfoElement.style.cursor = "default";
-			cameraInfoElement.style.webkitUserSelect = "none";
-			cameraInfoElement.style.MozUserSelect = "none";
 			
 			var mouseControl = true;
 			
@@ -958,7 +1023,7 @@ void main( void )
 				container.appendChild( renderer.domElement );
 				
 				stats = new Stats();
-				stats.domElement.style.position = 'absolute';
+				stats.domElement.style.position = 'fixed';
 				stats.domElement.style.top = '0px';
 				stats.domElement.style.cursor = "default";
 				stats.domElement.style.webkitUserSelect = "none";
@@ -1025,7 +1090,7 @@ void main( void )
 					stencilBuffer: false
 				} );
 				screenTextureRenderTarget.texture.generateMipmaps = false;
-				
+
 
 				PerlinNoiseTexture = new THREE.TextureLoader().load( 'textures/perlin256.png' );
 				PerlinNoiseTexture.wrapS = THREE.RepeatWrapping;
@@ -1055,6 +1120,7 @@ void main( void )
 					uApertureSize: { type: "f", value: 0.0 },
 					uFocusDistance: { type: "f", value: 1180.0 },
 					uCameraUnderWater: { type: "f", value: 0.0 },
+					uSunAngle: { type: "f", value: 0.0 },
 					
 					uResolution: { type: "v2", value: new THREE.Vector2() },
 					
@@ -1594,6 +1660,7 @@ void main( void )
 				sunDirection.normalize();
 
 				pathTracingUniforms.uCameraUnderWater.value = cameraUnderWater;
+				pathTracingUniforms.uSunAngle.value = sunAngle;
 				pathTracingUniforms.uSunDirection.value.copy(sunDirection);
 				pathTracingUniforms.uTime.value = elapsedTime;
 				pathTracingUniforms.uCameraIsMoving.value = cameraIsMoving;
