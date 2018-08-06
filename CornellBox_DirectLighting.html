@@ -353,7 +353,7 @@ void SetupScene(void)
 
 			function init() {
 
-				if ( 'createTouch' in document ) {
+				if ( 'ontouchstart' in window ) {
 					mouseControl = false;
 					pixelRatio = 0.5;
 					mobileJoystickControls = new MobileJoystickControls ({
