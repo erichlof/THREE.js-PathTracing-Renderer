@@ -103,15 +103,13 @@ Enter Bi-Directional path tracing to the rescue!:
 
 The following demos show what I have been experimenting with most recently.  They might not work 100% and might have small visual artifacts that I am trying to fix.  I just wanted to share some more possible areas in the world of path tracing! :-) <br>
 
-Rendering spheres, boxes and mathematical shapes is nice, but most modern graphics models are built out of triangles.  The following demo uses an .obj loader to load a model in .obj format (list of triangles) from disk and then places it in a scene to be path traced.  As of now, it runs too slow for my taste.  It still needs a BVH acceleration structure to speed things up greatly (I am currently investigating different approaches on the GPU). I am showing this because I wanted to demonstrate the ability of the three.js PathTracing renderer to load and render a model in one of the most popular model formats ever: <br>
-
-* [.OBJ Model Loading Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/OBJ_Model_Loader.html)<br>
-
-I successfully added workarounds for the WebGL 1.0 limitation of no dynamic array indexing ( such as correctBranch[x] and stackLevel[x] ) where 'x' is a dynamic variable that is necessary for BVH tree traversal through the various levels and branches.  Although it appears to be working under WebGL 1.0 as of now, when a larger model of 900 or more triangles is loaded, it crashes my browser page (loses the WebGL context).  I am still trying to determine the cause - I have a couple of possible suspects to investigate in the near future.  But lower-poly count models render at 60fps, and 30fps on my smartphone! <br>
+Rendering spheres, boxes and mathematical shapes is nice, but most modern graphics models are built out of triangles.  The following demo uses an .obj loader to load a model in .obj format (list of triangles) from disk and then places it in a scene to be path traced.  
+I successfully added workarounds for the WebGL 1.0 limitation of no dynamic array indexing (such as correctBranch[x] and stackLevel[x] ) where 'x' is a dynamic variable that is necessary for BVH tree traversal through the various levels and branches.  Although it appears to be working under WebGL 1.0 as of now, when a larger model of 900 or more triangles is loaded, it crashes my browser page (loses the WebGL context).  I am still trying to determine the cause - I have a couple of possible suspects to investigate in the near future.  But lower-poly count models render at 60fps, and 30fps on my smartphone! <br>
 
 * [BVH WebGL 1.0 Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/BVH_WebGL_1.html)<br>
 
-Some pretty interesting shapes can be obtained by deforming objects and/or warping the ray space (position and direction).  This demo applies a twist warp to the spheres and mirror box and randomizes the object space of the top purple sphere, creating an acceptable representation of a cloud (for free - no extra processing time for volumetrics!)
+Some pretty interesting shapes can be obtained by deforming objects and/or warping the ray space (position and direction).  This demo applies a twist warp to the spheres and mirror box and randomizes the object space of the top purple sphere, creating an acceptable representation of a cloud (for free - no extra processing time for volumetrics!) <br>
+
 * [Ray/Object Warping Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Ray_Warping.html)<br>
 
 
