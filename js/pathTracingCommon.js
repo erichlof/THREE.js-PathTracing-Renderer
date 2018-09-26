@@ -928,30 +928,27 @@ float BoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r, out vec3 normal )
 //--------------------------------------------------------------------------
 {
 	vec3 invDir = 1.0 / r.direction;
-	vec3 tmin = (minCorner - r.origin) * invDir;
-	vec3 tmax = (maxCorner - r.origin) * invDir;
+	vec3 near = (minCorner - r.origin) * invDir;
+	vec3 far  = (maxCorner - r.origin) * invDir;
 	
-	vec3 real_min = min(tmin, tmax);
-	vec3 real_max = max(tmin, tmax);
+	vec3 tmin = min(near, far);
+	vec3 tmax = max(near, far);
 	
-	float minmax = min( min(real_max.x, real_max.y), real_max.z);
-	float maxmin = max( max(real_min.x, real_min.y), real_min.z);
+	float t0 = max( max(tmin.x, tmin.y), tmin.z);
+	float t1 = min( min(tmax.x, tmax.y), tmax.z);
 	
-	if (minmax > maxmin)
+	if (t0 < t1)
 	{
-		
-		if (maxmin > 0.0) // if we are outside the box
+		if (t0 > 0.0) // if we are outside the box
 		{
-			normal = -sign(r.direction) * step(real_min.yzx, real_min) * step(real_min.zxy, real_min);
-			return maxmin;	
+			normal = -sign(r.direction) * step(tmin.yzx, tmin) * step(tmin.zxy, tmin);
+			return t0;	
 		}
-		
-		else if (minmax > 0.0) // else if we are inside the box
+		else if (t1 > 0.0) // else if we are inside the box
 		{
-			normal = -sign(r.direction) * step(real_max, real_max.yzx) * step(real_max, real_max.zxy);
-			return minmax;
-		}
-				
+			normal = -sign(r.direction) * step(tmax, tmax.yzx) * step(tmax, tmax.zxy);
+			return t1;
+		}		
 	}
 	
 	return INFINITY;
@@ -962,20 +959,25 @@ float BoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r, out vec3 normal )
 THREE.ShaderChunk[ 'pathtracing_boundingbox_intersect' ] = `
 
 //--------------------------------------------------------------------------------------
-bool BoundingBoxIntersect( vec3 minCorner, vec3 maxCorner, vec3 rayOrigin, vec3 invDir )
+float BoundingBoxIntersect( vec3 minCorner, vec3 maxCorner, vec3 rayOrigin, vec3 invDir )
 //--------------------------------------------------------------------------------------
 {
-	vec3 tmin = (minCorner - rayOrigin) * invDir;
-	vec3 tmax = (maxCorner - rayOrigin) * invDir;
+	vec3 near = (minCorner - rayOrigin) * invDir;
+	vec3 far  = (maxCorner - rayOrigin) * invDir;
+	
+	vec3 tmin = min(near, far);
+	vec3 tmax = max(near, far);
+	
+	float t0 = max( max(tmin.x, tmin.y), tmin.z);
+	float t1 = min( min(tmax.x, tmax.y), tmax.z);
+	
+	if (t1 < t0) return INFINITY; // ray misses box
 
-	vec3 real_min = min(tmin, tmax);
-   	vec3 real_max = max(tmin, tmax);
-   
-   	float minmax = min( min(real_max.x, real_max.y), real_max.z);
-   	float maxmin = max( max(real_min.x, real_min.y), real_min.z);
-
-	//return minmax > maxmin;
-	return minmax > max(maxmin, 0.0);
+	if (t0 > 0.0) return t0; // if we are outside the box
+	
+	else if (t1 > 0.0) return t1; // else if we are inside the box
+	
+	return INFINITY; // default result
 }
 
 `;
