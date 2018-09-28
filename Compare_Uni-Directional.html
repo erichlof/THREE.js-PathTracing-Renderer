@@ -46,11 +46,12 @@
 		
 		
 		<script id="pathTracingVertexShader" type="x-shader/x-vertex">
-		
+#version 300 es
+
 precision highp float;
 precision highp int;
 
-varying vec2 vUv;
+out vec2 vUv;
 
 void main()
 {
@@ -63,7 +64,8 @@ void main()
 		
 		
 		<script id="pathTracingFragmentShader" type="x-shader/x-fragment">
-				
+#version 300 es
+
 precision highp float;
 precision highp int;
 precision highp sampler2D;
@@ -275,6 +277,7 @@ void SetupScene(void)
 			
 			var SCREEN_WIDTH;
 			var SCREEN_HEIGHT;
+			var canvas, context;
 			var container, stats;
 			var controls;
 			var pathTracingScene, screenTextureScene, screenOutputScene;
@@ -422,12 +425,16 @@ void SetupScene(void)
 
 				}
 				
-				renderer = new THREE.WebGLRenderer();
+				canvas = document.createElement( 'canvas' );
+                                context = canvas.getContext( 'webgl2' );
+                                
+				renderer = new THREE.WebGLRenderer( { canvas: canvas, context: context } );
 				renderer.autoClear = false;
 				// 1 is full resolution, 0.5 is half, 0.25 is quarter, etc. (must be > than 0.0)
 				renderer.setPixelRatio(pixelRatio);
 				renderer.setSize( window.innerWidth, window.innerHeight );
-				renderer.context.getExtension('OES_texture_float');
+				//required by WebGL 2.0 for rendering to FLOAT textures
+                                renderer.context.getExtension('EXT_color_buffer_float');
 				
 				container = document.getElementById( 'container' );
 				container.appendChild( renderer.domElement );
