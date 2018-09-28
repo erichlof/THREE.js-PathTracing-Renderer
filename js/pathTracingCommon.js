@@ -9,13 +9,13 @@ var screenTextureShader = {
         ] ),
 
         vertexShader: [
-		
+                '#version 300 es',
+                
                 'precision highp float;',
 		'precision highp int;',
 
-		'varying vec2 vUv;',
+		'out vec2 vUv;',
 
-		
 		'void main()',
 		'{',
 			'vUv = uv;',
@@ -25,18 +25,19 @@ var screenTextureShader = {
         ].join( '\n' ),
 
         fragmentShader: [
-		
+                '#version 300 es',
+                
                 'precision highp float;',
 		'precision highp int;',
 		'precision highp sampler2D;',
 
-		'varying vec2 vUv;',
-		'uniform sampler2D tTexture0;',
-
-
+                'uniform sampler2D tTexture0;',
+                'in vec2 vUv;',
+                'out vec4 out_FragColor;',
+		
 		'void main()',
 		'{',	
-			'gl_FragColor = texture2D(tTexture0, vUv);',	
+			'out_FragColor = texture(tTexture0, vUv);',	
 		'}'
 		
         ].join( '\n' )
@@ -55,37 +56,38 @@ var screenOutputShader = {
         ] ),
 
         vertexShader: [
-		
+                '#version 300 es',
+                
                 'precision highp float;',
 		'precision highp int;',
 
-		'varying vec2 vUv;',
+		'out vec2 vUv;',
 
-		
 		'void main()',
 		'{',
 			'vUv = uv;',
 			'gl_Position = vec4( position, 1.0 );',
 		'}'
 
-		
         ].join( '\n' ),
 
         fragmentShader: [
-		
+                '#version 300 es',
+                
                 'precision highp float;',
 		'precision highp int;',
 		'precision highp sampler2D;',
 
-		'varying vec2 vUv;',
-		'uniform float uOneOverSampleCounter;',
+                'uniform float uOneOverSampleCounter;',
 		'uniform sampler2D tTexture0;',
-
+		'in vec2 vUv;',
+                'out vec4 out_FragColor;',
+		
 		'void main()',
 		'{',
-			'vec4 pixelColor = texture2D(tTexture0, vUv) * uOneOverSampleCounter;',
+			'vec4 pixelColor = texture(tTexture0, vUv) * uOneOverSampleCounter;',
 
-			'gl_FragColor = sqrt(pixelColor);',	
+			'out_FragColor = sqrt(pixelColor);',	
 		'}'
 		
         ].join( '\n' )
@@ -113,8 +115,8 @@ uniform mat4 uCameraMatrix;
 
 uniform sampler2D tPreviousTexture;
 
-varying vec2 vUv;
-
+in vec2 vUv;
+out vec4 out_FragColor;
 
 #define PI               3.14159265358979323
 #define TWO_PI           6.28318530717958648
@@ -1229,7 +1231,7 @@ void main( void )
 	// perform path tracing and get resulting pixel color
 	vec3 pixelColor = CalculateRadiance( ray, seed );
 	
-	vec3 previousColor = texture2D(tPreviousTexture, vUv).rgb;
+	vec3 previousColor = texture(tPreviousTexture, vUv).rgb;
 	
 	if ( uCameraJustStartedMoving )
 	{
@@ -1241,7 +1243,7 @@ void main( void )
 		pixelColor *= 0.5; // brightness of new image (noisy)
 	}
 		
-	gl_FragColor = vec4( pixelColor + previousColor, 1.0 );
+	out_FragColor = vec4( pixelColor + previousColor, 1.0 );
 	
 }
 
