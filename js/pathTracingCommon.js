@@ -973,13 +973,16 @@ float BoundingBoxIntersect( vec3 minCorner, vec3 maxCorner, vec3 rayOrigin, vec3
 	float t0 = max( max(tmin.x, tmin.y), tmin.z);
 	float t1 = min( min(tmax.x, tmax.y), tmax.z);
 	
-	if (t1 < t0) return INFINITY; // ray misses box
-
-	if (t0 > 0.0) return t0; // if we are outside the box
+	if (t0 < t1)
+	{
+		if (t0 > 0.0) // if we are outside the box
+			return t0;	
+		
+		else if (t1 > 0.0) // else if we are inside the box
+			return t1;		
+	}
 	
-	else if (t1 > 0.0) return t1; // else if we are inside the box
-	
-	return INFINITY; // default result
+	return INFINITY;
 }
 
 `;
