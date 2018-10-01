@@ -24,12 +24,11 @@ var RTopCorner = new THREE.Vector3();
 
 function BVH_FlatNode() {
 
-        this.isLeaf = 0;
         this.idSelf = 0;
         this.idLeftChild = 0;
         this.idRightChild = 0;
         this.idParent = 0;
-        this.idTriangle = 0;
+        //this.idTriangle = 0;
         this.minCorner = new THREE.Vector3();
         this.maxCorner = new THREE.Vector3();
 }
@@ -54,12 +53,11 @@ function BVH_Build_Recursive(workList, idParent, isLeftBranch) {
                 k = workList[0];
                 // create leaf node and stop recursion
                 let flatnode = new BVH_FlatNode();
-                flatnode.isLeaf = 1.0;
                 flatnode.idSelf = buildnodes.length;
-                flatnode.idLeftChild = -1;
+                flatnode.idLeftChild = -k - 1;
                 flatnode.idRightChild = -1;
                 flatnode.idParent = idParent;
-                flatnode.idTriangle = k;
+                //flatnode.idTriangle = k;
                 flatnode.minCorner.set(aabb_array[9 * k + 0], aabb_array[9 * k + 1], aabb_array[9 * k + 2]);
                 flatnode.maxCorner.set(aabb_array[9 * k + 3], aabb_array[9 * k + 4], aabb_array[9 * k + 5]);
                 buildnodes.push(flatnode);
@@ -87,12 +85,11 @@ function BVH_Build_Recursive(workList, idParent, isLeftBranch) {
 
                 // create inner node
                 let flatnode0 = new BVH_FlatNode();
-                flatnode0.isLeaf = 0.0;
                 flatnode0.idSelf = buildnodes.length;
                 flatnode0.idLeftChild = buildnodes.length + 1;
                 flatnode0.idRightChild = buildnodes.length + 2;
                 flatnode0.idParent = idParent;
-                flatnode0.idTriangle = -1;
+                //flatnode0.idTriangle = -1;
                 flatnode0.minCorner.copy(currentMinCorner);
                 flatnode0.maxCorner.copy(currentMaxCorner);
                 buildnodes.push(flatnode0);
@@ -108,12 +105,11 @@ function BVH_Build_Recursive(workList, idParent, isLeftBranch) {
                 k = workList[0];
                 // create 'left' leaf node
                 let flatnode1 = new BVH_FlatNode();
-                flatnode1.isLeaf = 1.0;
                 flatnode1.idSelf = buildnodes.length;
-                flatnode1.idLeftChild = -1;
+                flatnode1.idLeftChild = -k - 1;
                 flatnode1.idRightChild = -1;
                 flatnode1.idParent = flatnode0.idSelf;
-                flatnode1.idTriangle = k;
+                //flatnode1.idTriangle = k;
                 flatnode1.minCorner.set(aabb_array[9 * k + 0], aabb_array[9 * k + 1], aabb_array[9 * k + 2]);
                 flatnode1.maxCorner.set(aabb_array[9 * k + 3], aabb_array[9 * k + 4], aabb_array[9 * k + 5]);
                 leftBranchCounter++;
@@ -126,12 +122,11 @@ function BVH_Build_Recursive(workList, idParent, isLeftBranch) {
                 k = workList[1];
                 // create 'right' leaf node and stop recursion
                 let flatnode2 = new BVH_FlatNode();
-                flatnode2.isLeaf = 1.0;
                 flatnode2.idSelf = buildnodes.length;
-                flatnode2.idLeftChild = -1;
+                flatnode2.idLeftChild = -k - 1;
                 flatnode2.idRightChild = -1;
                 flatnode2.idParent = flatnode0.idSelf;
-                flatnode2.idTriangle = k;
+                //flatnode2.idTriangle = k;
                 flatnode2.minCorner.set(aabb_array[9 * k + 0], aabb_array[9 * k + 1], aabb_array[9 * k + 2]);
                 flatnode2.maxCorner.set(aabb_array[9 * k + 3], aabb_array[9 * k + 4], aabb_array[9 * k + 5]);
                 rightBranchCounter++;
@@ -156,13 +151,12 @@ function BVH_Build_Recursive(workList, idParent, isLeftBranch) {
 
                 // create inner node
                 let flatnode = new BVH_FlatNode();
-                flatnode.isLeaf = 0.0;
                 flatnode.idSelf = buildnodes.length;
                 idSelf = buildnodes.length; // need for id on recursive build calls
                 flatnode.idLeftChild = buildnodes.length + 1; // traverse down the left branches first
                 flatnode.idRightChild = 0; // missing link will be filled in soon, don't know how deep the left branches will go
                 flatnode.idParent = idParent;     
-                flatnode.idTriangle = -1;
+                //flatnode.idTriangle = -1;
                 flatnode.minCorner.copy(currentMinCorner);
                 flatnode.maxCorner.copy(currentMaxCorner);
                 buildnodes.push(flatnode);
