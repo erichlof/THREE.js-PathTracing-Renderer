@@ -2,7 +2,7 @@
 <html lang="en">
 
 <head>
-	<title>three.js PathTracing Renderer - BVH (WebGL 1.0 workaround)</title>
+	<title>three.js PathTracing Renderer - BVH (WebGL 2.0)</title>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1">
 	<style>
@@ -32,7 +32,7 @@
 <body>
 
 	<div id="container"> </div>
-	<div id="info">three.js PathTracing Renderer - BVH (WebGL 1.0 workaround)</div>
+	<div id="info">three.js PathTracing Renderer - BVH (WebGL 2.0)</div>
 
 	<div id="cameraInfo" style="position:fixed; left:3%; bottom:2%; font-family:arial; color:rgb(255,255,255);">
 		FOV: 60 / Aperture: 0.00 / FocusDistance: 100 <br>
@@ -104,108 +104,41 @@ Box boxes[N_BOXES];
 
 #include <pathtracing_triangle_intersect>
 	
-/*
-float data[32];
-float getData(int id)
-{
-    for (int i=0; i<32; i++)
-    {
-        if (i == id) return data[i];
-    }
-}
-*/
+
 struct StackLevelData
 {
         float id;
         float rayT;
-} stackLevels[24];
+} stackLevels[32];
 
 struct BoxNode
 {
+	float branch_A_Index;
         vec3 minCorner;
-        vec3 maxCorner;
-        float branch_A_Index;
+        
 	float branch_B_Index;
-	float idTriangle;
+	vec3 maxCorner;
 };
 
 BoxNode GetBoxNode(const in float i)
 {
-	float iX3 = i * 3.0;
-	// (iX3 + 0.0) corresponds to .x:    isLeaf, .y:     idSelf, .z: idLeftChild, .w: idRightChild 
-	// (iX3 + 1.0) corresponds to .x:  idParent, .y: idTriangle, .z:   aabbMin.x, .w:    aabbMin.y
-	// (iX3 + 2.0) corresponds to .x: aabbMin.z, .y:  aabbMax.x, .z:   aabbMax.y, .w:    aabbMax.z
-	float InvTextureWidth = 0.00024414062; // (1.0 / 4096 texture width)
+	float iX2 = i * 2.0;
+	// (iX2 + 0.0) corresponds to .x: idLeftChild, .y: aabbMin.x, .z: aabbMin.y, .w: aabbMin.z 
+	// (iX2 + 1.0) corresponds to .x: idRightChild .y: aabbMax.x, .z: aabbMax.y, .w: aabbMax.z 
+	//float InvTextureWidth = 0.00024414062; // (1.0 / 4096 texture width)
+	float InvTextureWidth = 1.0 / 2048.0; // (2048 = texture width and height)
+	vec2 uv0 = vec2( mod(iX2 + 0.0, 2048.0), (iX2 + 0.0) / 2048.0 ) * InvTextureWidth;
+	vec2 uv1 = vec2( mod(iX2 + 1.0, 2048.0), (iX2 + 1.0) / 2048.0 ) * InvTextureWidth;
 
-	vec4 aabbNodeData0 = texture2D( tAABBTexture, vec2((iX3 + 0.0) * InvTextureWidth, 0) );
-	vec4 aabbNodeData1 = texture2D( tAABBTexture, vec2((iX3 + 1.0) * InvTextureWidth, 0) );
-	vec4 aabbNodeData2 = texture2D( tAABBTexture, vec2((iX3 + 2.0) * InvTextureWidth, 0) );
+	vec4 aabbNodeData0 = texture( tAABBTexture, uv0 );
+	vec4 aabbNodeData1 = texture( tAABBTexture, uv1 );
 
-	BoxNode BN = BoxNode( vec3(aabbNodeData1.zw, aabbNodeData2.x),
-			      vec3(aabbNodeData2.yzw), 
-			      aabbNodeData0.z, 
-			      aabbNodeData0.w,
-			      aabbNodeData1.y );
+	BoxNode BN = BoxNode( aabbNodeData0.x,
+			      aabbNodeData0.yzw,
+			      aabbNodeData1.x,
+			      aabbNodeData1.yzw );
 
         return BN;
-}
-
-// Workaround for WebGL 1.0 limitation of no dynamic array indexing
-StackLevelData getStackLevelData_byIndex(const in float ix)
-{
-        if (ix == 0.) return stackLevels[0];
-        if (ix == 1.) return stackLevels[1];
-        if (ix == 2.) return stackLevels[2];
-        if (ix == 3.) return stackLevels[3];
-        if (ix == 4.) return stackLevels[4];
-        if (ix == 5.) return stackLevels[5];
-        if (ix == 6.) return stackLevels[6];
-        if (ix == 7.) return stackLevels[7];
-        if (ix == 8.) return stackLevels[8];
-        if (ix == 9.) return stackLevels[9];
-        if (ix == 10.) return stackLevels[10];
-        if (ix == 11.) return stackLevels[11];
-        if (ix == 12.) return stackLevels[12];
-        if (ix == 13.) return stackLevels[13];
-        if (ix == 14.) return stackLevels[14];
-        if (ix == 15.) return stackLevels[15];
-        if (ix == 16.) return stackLevels[16];
-        if (ix == 17.) return stackLevels[17];
-	if (ix == 18.) return stackLevels[18];
-	if (ix == 19.) return stackLevels[19];
-        if (ix == 20.) return stackLevels[20];
-	if (ix == 21.) return stackLevels[21];
-	if (ix == 22.) return stackLevels[22];
-        return stackLevels[23];
-}
-
-// Workaround for WebGL 1.0 limitation of no dynamic array indexing
-void setStackLevelData_byIndex(in float ix, const in StackLevelData value)
-{
-             if (ix == 0.) stackLevels[0] = value;
-        else if (ix == 1.) stackLevels[1] = value;
-        else if (ix == 2.) stackLevels[2] = value;
-        else if (ix == 3.) stackLevels[3] = value;
-        else if (ix == 4.) stackLevels[4] = value;
-        else if (ix == 5.) stackLevels[5] = value;
-        else if (ix == 6.) stackLevels[6] = value;
-        else if (ix == 7.) stackLevels[7] = value;
-        else if (ix == 8.) stackLevels[8] = value;
-        else if (ix == 9.) stackLevels[9] = value;
-        else if (ix == 10.) stackLevels[10] = value;
-        else if (ix == 11.) stackLevels[11] = value;
-        else if (ix == 12.) stackLevels[12] = value;
-        else if (ix == 13.) stackLevels[13] = value;
-        else if (ix == 14.) stackLevels[14] = value;
-        else if (ix == 15.) stackLevels[15] = value;
-        else if (ix == 16.) stackLevels[16] = value;
-        else if (ix == 17.) stackLevels[17] = value;
-	else if (ix == 18.) stackLevels[18] = value;
-	else if (ix == 19.) stackLevels[19] = value;
-        else if (ix == 20.) stackLevels[20] = value;
-        else if (ix == 21.) stackLevels[21] = value;
-        else if (ix == 22.) stackLevels[22] = value;
-        else stackLevels[23] = value;
 }
 
 //-----------------------------------------------------------------------
@@ -213,84 +146,26 @@ float SceneIntersect( Ray r, inout Intersection intersec, inout float seed )
 //-----------------------------------------------------------------------
 {
 	vec3 n;
-	float d, d0, d1;
+	float d = INFINITY;
 	float t = INFINITY;
-	
-        for (int i = 0; i < N_SPHERES; i++)
-        {
-		d = SphereIntersect( spheres[i].radius, spheres[i].position, r );
-		if (d < t)
-		{
-			t = d;
-			intersec.normal = (r.origin + r.direction * t) - spheres[i].position;
-			intersec.emission = spheres[i].emission;
-			intersec.color = spheres[i].color;
-			intersec.type = spheres[i].type;
-		}
-        }
-	
-	for (int i = 0; i < N_BOXES; i++)
-        {
-		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, r, n );
-		if (d < t)
-		{
-			t = d;
-			intersec.normal = normalize(n);
-			intersec.emission = boxes[i].emission;
-			intersec.color = boxes[i].color;
-			intersec.type = boxes[i].type;
-		}
-        }
 		
-	// AABB BVH Intersection
+	// AABB BVH Intersection variables
 	vec4 aabbNodeData0, aabbNodeData1, aabbNodeData2;
 	vec4 vt0, vt1, vt2;
 	vec3 aabbMin, aabbMax;
 	vec3 inverseDir = 1.0 / r.direction;
 	vec3 v0, v1, v2;
-	
-        float hitIndex = 0.0;
+	vec2 uv0, uv1, uv2;
         float stackptr = 0.0;	
 	float bc, bd;
-	float iX3;
-	float InvTextureWidth = 0.00024414062; // (1.0 / 4096 texture width)
-	float closer = 0.0;
-	float farther = 0.0;
-	float id = 0.0;
+	//float InvTextureWidth = 0.00024414062; // (1.0 / 4096 texture width)
+	float InvTextureWidth = 1.0 / 2048.0; // (2048 = texture width and height)
+        float id = 0.0;
+        
 	bool skip = false;
 
-	/*
-	// test rendering of all triangles
-	for (float i = 0.0; i < 71.0; i += 1.0)
-	{
-		aabbNodeData0 = texture2D( tAABBTexture, vec2((i * 3.0 + 0.0) * InvTextureWidth, 0) );
-		aabbNodeData1 = texture2D( tAABBTexture, vec2((i * 3.0 + 1.0) * InvTextureWidth, 0) );
-		 
-		if (aabbNodeData0.x == 1.0) // Is leaf? -> Intersect triangle in this leaf
-		{	
-			id = aabbNodeData1.y;
-			vt0 = texture2D( tTriangleTexture, vec2((id * 3.0 + 0.0) * InvTextureWidth, 0) );	      
-			vt1 = texture2D( tTriangleTexture, vec2((id * 3.0 + 1.0) * InvTextureWidth, 0) );	      
-			vt2 = texture2D( tTriangleTexture, vec2((id * 3.0 + 2.0) * InvTextureWidth, 0) );
-
-			v0 = vec3(vt0.xyz);
-			v1 = vec3(vt0.w,vt1.xy);
-			v2 = vec3(vt1.zw, vt2.x);
-			d = TriangleIntersect( v0, v1, v2, r );
-
-			if (d < t && d > 0.0)
-			{
-				t = d;
-				intersec.normal = normalize( cross(v1-v0, v2-v0) );
-				intersec.emission = vec3(1,0,0);
-				intersec.color = vec3(1,0,0);
-				intersec.type = DIFF;
-			}
-		}
-	}
-	*/
-
-	// now intersect rood node (index 0.0), and save result into currentStackData
+	
+	// first intersect rood node (index 0.0), and save result into currentStackData
 	BoxNode currentBoxNode = GetBoxNode(0.0);
         StackLevelData currentStackData = 
            StackLevelData(0.0, BoundingBoxIntersect(currentBoxNode.minCorner, currentBoxNode.maxCorner, r.origin, inverseDir));
@@ -301,10 +176,14 @@ float SceneIntersect( Ray r, inout Intersection intersec, inout float seed )
                 {
                         if (currentBoxNode.branch_A_Index < 0.0) //  < 0.0 signifies a leaf node
                         {
-                                id = 3.0 * currentBoxNode.idTriangle;
-				vt0 = texture2D( tTriangleTexture, vec2((id + 0.0) * InvTextureWidth, 0) );	      
-				vt1 = texture2D( tTriangleTexture, vec2((id + 1.0) * InvTextureWidth, 0) );	      
-				vt2 = texture2D( tTriangleTexture, vec2((id + 2.0) * InvTextureWidth, 0) );
+				id = 3.0 * (-currentBoxNode.branch_A_Index - 1.0);
+				uv0 = vec2( mod(id + 0.0, 2048.0), (id + 0.0) / 2048.0 ) * InvTextureWidth;
+				uv1 = vec2( mod(id + 1.0, 2048.0), (id + 1.0) / 2048.0 ) * InvTextureWidth;
+				uv2 = vec2( mod(id + 2.0, 2048.0), (id + 2.0) / 2048.0 ) * InvTextureWidth;
+				
+				vt0 = texture( tTriangleTexture, uv0 );	      
+				vt1 = texture( tTriangleTexture, uv1 );	      
+				vt2 = texture( tTriangleTexture, uv2 );
 
 				v0 = vec3(vt0.xyz);
 				v1 = vec3(vt0.w, vt1.xy);
@@ -346,7 +225,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, inout float seed )
                                 if (slDataB.rayT < t) // see if branch 'b' (the smaller rayT) needs to be processed 
                                 {
                                         if (skip == true) // if 'a' needed to be processed also,
-                                                setStackLevelData_byIndex(stackptr++, slDataA); // cue larger branch 'a' for future round
+                                                stackLevels[int(stackptr++)] = slDataA; // cue larger branch 'a' for future round
                                                                 // also, increase pointer by 1
                                         currentStackData = slDataB;
                                         currentBoxNode = nodeB;
@@ -357,19 +236,45 @@ float SceneIntersect( Ray r, inout Intersection intersec, inout float seed )
 		
                 if (skip == false) // if no valid aabb intersections were found, backtrack 
                 {
-                        // decrease pointer by 1 (0.0 is root level, 23.0 is maximum depth)
+                        // decrease pointer by 1 (0.0 is root level, 32.0 is maximum depth)
                         if (--stackptr < 0.0) // went past the root level, terminate loop
                                 break;
-                        currentStackData = getStackLevelData_byIndex(stackptr); // get the next stackElement_Data
+                        currentStackData = stackLevels[int(stackptr)];
                         currentBoxNode = GetBoxNode(currentStackData.id);
                 }
 		skip = false; // reset skip
 		
         } // end for (int g = 0; g == 0; g += 0)
 
+
+        for (int i = 0; i < N_SPHERES; i++)
+        {
+		d = SphereIntersect( spheres[i].radius, spheres[i].position, r );
+		if (d < t)
+		{
+			t = d;
+			intersec.normal = (r.origin + r.direction * t) - spheres[i].position;
+			intersec.emission = spheres[i].emission;
+			intersec.color = spheres[i].color;
+			intersec.type = spheres[i].type;
+		}
+        }
+	
+	for (int i = 0; i < N_BOXES; i++)
+        {
+		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, r, n );
+		if (d < t)
+		{
+			t = d;
+			intersec.normal = normalize(n);
+			intersec.emission = boxes[i].emission;
+			intersec.color = boxes[i].color;
+			intersec.type = boxes[i].type;
+		}
+        }
+
 	return t;
 
-	
 } // end float SceneIntersect( Ray r, inout Intersection intersec )
 
 
@@ -665,11 +570,13 @@ void SetupScene(void)
 		var objectLoader = new THREE.OBJLoader();
 		//objectLoader.load("models/crane.obj", function (meshGroup) {
 		//objectLoader.load("models/tree.obj", function (meshGroup) {
-		objectLoader.load("models/desktopPC.obj", function (meshGroup) {
+		//objectLoader.load("models/desktopPC.obj", function (meshGroup) {
 		//objectLoader.load("models/shuttle.obj", function (meshGroup) {
-		//objectLoader.load("models/UtahTeapot.obj", function (meshGroup) {
-		//objectLoader.load("models/monkey.obj", function (meshGroup) { // crashes my browser at the moment, WIP)
-		//objectLoader.load("models/classic1982-tron-lightcycle-Hull.obj", function (meshGroup) { // also crashes my browser
+		objectLoader.load("models/UtahTeapot.obj", function (meshGroup) {
+		//objectLoader.load("models/monkey.obj", function (meshGroup) { 
+		//objectLoader.load("models/classic1982-tron-lightcycle-Hull.obj", function (meshGroup) { 
+		//objectLoader.load("models/male02.obj", function (meshGroup) {
+		//objectLoader.load("models/bunny.obj", function (meshGroup) { // this will take 2 minutes to compile!
 		
 			objMesh = meshGroup.children[0].clone();
 
@@ -823,12 +730,12 @@ void SetupScene(void)
 			total_number_of_triangles = objMesh.geometry.attributes.position.array.length / 9;
 			console.log("Triangle count:" + total_number_of_triangles);
 
-			var buffer1 = new ArrayBuffer(4096 * 4 * 4);
-			//4096 = max width of texture, 4 = r,g,b, and a components, 4 = bytes each (4bytes*8bits=32bit for Float32Array)
+			var buffer1 = new ArrayBuffer(2048 * 2048 * 4 * 4);
+			// 2048 = width/height of texture, 4 = r,g,b, and a components, 4 = bytes each (4bytes*8bits=32bit for Float32Array)
 			triangle_array = new Float32Array(buffer1);
 
-			var buffer2 = new ArrayBuffer(4096 * 4 * 4);
-			//4096 = max width of texture, 4 = r,g,b, and a components, 4 = bytes each (4bytes*8bits=32bit for Float32Array)
+			var buffer2 = new ArrayBuffer(2048 * 2048 * 4 * 4);
+			// 2048 = width/height of texture, 4 = r,g,b, and a components, 4 = bytes each (4bytes*8bits=32bit for Float32Array)
 			aabb_array = new Float32Array(buffer2);
 
 			
@@ -843,8 +750,8 @@ void SetupScene(void)
 			//var modelPositionOffset = new THREE.Vector3(10, 19.5, -50);
 
 			// settings for desktopPC model
-			var modelScale = 0.7;
-			var modelPositionOffset = new THREE.Vector3(0, 18, -26);
+			//var modelScale = 0.7;
+			//var modelPositionOffset = new THREE.Vector3(0, 18, -26);
 			
 			// settings for shuttle model
 			//objMesh.geometry.rotateX(-Math.PI * 0.5);
@@ -854,12 +761,24 @@ void SetupScene(void)
 			//var modelPositionOffset = new THREE.Vector3(10, 40, -50);
 
 			// settings for UtahTeapot model
-			//var modelScale = 1.0;
-			//var modelPositionOffset = new THREE.Vector3(10, 25.5, -30);
+			var modelScale = 1.0;
+			var modelPositionOffset = new THREE.Vector3(10, 25.5, -30);
 
-			// settings for monkey model (crashes my browser at the moment, WIP)
+			// settings for monkey model
 			//var modelScale = 10.0;
-			//var modelPositionOffset = new THREE.Vector3(0, 18, -26);
+			//var modelPositionOffset = new THREE.Vector3(0, 30, -40);
+
+			// settings for classic1982-tron-lightcycle-Hull model
+			//var modelScale = 30.0;
+			//var modelPositionOffset = new THREE.Vector3(-80, 0, -40);
+
+			// settings for male02 model
+			//var modelScale = 0.3;
+			//var modelPositionOffset = new THREE.Vector3(-50, 0, -40);
+
+			// settings for bunny model (will take around 2 minutes to compile!)
+			//var modelScale = 6.0;
+			//var modelPositionOffset = new THREE.Vector3(0, 20, -40);
 
 			var triangle_b_box_min = new THREE.Vector3();
 			var triangle_b_box_max = new THREE.Vector3();
@@ -937,28 +856,24 @@ void SetupScene(void)
 			BVH_Build_Recursive(totalWork, -1, false); // '-1' signifies no parent for the Root node
 			//console.log(buildnodes);
 
+
 			// Copy the buildnodes array into the aabb_array
 			for (let n = 0; n < buildnodes.length; n++) {
 
-				aabb_array[(12 * n) + 0] = buildnodes[n].isLeaf; // r or x component
-				aabb_array[(12 * n) + 1] = buildnodes[n].idSelf; // g or y component
-				aabb_array[(12 * n) + 2] = buildnodes[n].idLeftChild; // b or z component
-				aabb_array[(12 * n) + 3] = buildnodes[n].idRightChild; // a or w component
+				aabb_array[(8 * n) + 0] = buildnodes[n].idLeftChild;  // r or x component
+				aabb_array[(8 * n) + 1] = buildnodes[n].minCorner.x;  // g or y component
+				aabb_array[(8 * n) + 2] = buildnodes[n].minCorner.y;  // b or z component
+				aabb_array[(8 * n) + 3] = buildnodes[n].minCorner.z;  // a or w component
 
-				aabb_array[(12 * n) + 4] = buildnodes[n].idParent; // r or x component
-				aabb_array[(12 * n) + 5] = buildnodes[n].idTriangle; // g or y component, not used now
-				aabb_array[(12 * n) + 6] = buildnodes[n].minCorner.x; // b or z component
-				aabb_array[(12 * n) + 7] = buildnodes[n].minCorner.y; // a or w component
-
-				aabb_array[(12 * n) + 8] = buildnodes[n].minCorner.z; // r or x component
-				aabb_array[(12 * n) + 9] = buildnodes[n].maxCorner.x; // g or y component
-				aabb_array[(12 * n) + 10] = buildnodes[n].maxCorner.y; // b or z component
-				aabb_array[(12 * n) + 11] = buildnodes[n].maxCorner.z; // a or w component
+				aabb_array[(8 * n) + 4] = buildnodes[n].idRightChild; // r or x component
+				aabb_array[(8 * n) + 5] = buildnodes[n].maxCorner.x;  // g or y component
+				aabb_array[(8 * n) + 6] = buildnodes[n].maxCorner.y;  // b or z component
+				aabb_array[(8 * n) + 7] = buildnodes[n].maxCorner.z;  // a or w component
 			}
 
 			triangleDataTexture = new THREE.DataTexture(triangle_array,
-				4096,
-				1,
+				2048,
+				2048,
 				THREE.RGBAFormat,
 				THREE.FloatType,
 				THREE.Texture.DEFAULT_MAPPING,
@@ -974,8 +889,8 @@ void SetupScene(void)
 			triangleDataTexture.needsUpdate = true;
 
 			aabbDataTexture = new THREE.DataTexture(aabb_array,
-				4096,
-				1,
+				2048,
+				2048,
 				THREE.RGBAFormat,
 				THREE.FloatType,
 				THREE.Texture.DEFAULT_MAPPING,
