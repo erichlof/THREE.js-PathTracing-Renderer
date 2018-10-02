@@ -939,21 +939,21 @@ float BoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r, out vec3 normal )
 	float t0 = max( max(tmin.x, tmin.y), tmin.z);
 	float t1 = min( min(tmax.x, tmax.y), tmax.z);
 	
-	if (t0 < t1)
-	{
-		if (t0 > 0.0) // if we are outside the box
-		{
-			normal = -sign(r.direction) * step(tmin.yzx, tmin) * step(tmin.zxy, tmin);
-			return t0;	
-		}
-		else if (t1 > 0.0) // else if we are inside the box
-		{
-			normal = -sign(r.direction) * step(tmax, tmax.yzx) * step(tmax, tmax.zxy);
-			return t1;
-		}		
-	}
+	float result = INFINITY;
+	if (t1 < t0) return result;
 	
-	return INFINITY;
+	if (t1 > 0.0) // if we are inside the box
+	{
+		normal = -sign(r.direction) * step(tmax, tmax.yzx) * step(tmax, tmax.zxy);
+		result = t1;
+	}
+	if (t0 > 0.0) // if we are outside the box
+	{
+		normal = -sign(r.direction) * step(tmin.yzx, tmin) * step(tmin.zxy, tmin);
+		result = t0;	
+	}
+			
+	return result;
 }
 
 `;
@@ -972,17 +972,14 @@ float BoundingBoxIntersect( vec3 minCorner, vec3 maxCorner, vec3 rayOrigin, vec3
 	
 	float t0 = max( max(tmin.x, tmin.y), tmin.z);
 	float t1 = min( min(tmax.x, tmax.y), tmax.z);
+
+	float result = INFINITY;
+	if (t1 < t0) return result;
+
+	if (t1 > 0.0) result = t1;
+	if (t0 > 0.0) result = t0;
 	
-	if (t0 < t1)
-	{
-		if (t0 > 0.0) // if we are outside the box
-			return t0;	
-		
-		else if (t1 > 0.0) // else if we are inside the box
-			return t1;		
-	}
-	
-	return INFINITY;
+	return result;
 }
 
 `;
@@ -995,6 +992,10 @@ float TriangleIntersect( vec3 v0, vec3 v1, vec3 v2, Ray r )
 {
 	vec3 edge1 = v1 - v0;
 	vec3 edge2 = v2 - v0;
+
+	// comment out the following line if double-sided triangles are wanted
+	//if (dot(r.direction, cross(edge1, edge2)) > 0.0) return INFINITY;
+
 	vec3 tvec = r.origin - v0;
 	vec3 pvec = cross(r.direction, edge2);
 	float det = 1.0 / dot(edge1, pvec);
