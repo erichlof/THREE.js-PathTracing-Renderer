@@ -102,6 +102,7 @@ uniform bool uCameraJustStartedMoving;
 
 uniform float uTime;
 uniform float uSampleCounter;
+uniform float uFrameCounter;
 uniform float uULen;
 uniform float uVLen;
 uniform float uApertureSize;
@@ -128,6 +129,7 @@ out vec4 out_FragColor;
 #define ONE_OVER_THREE   0.33333333333333333
 #define E                2.71828182845904524
 #define INFINITY         1000000.0
+
 
 #define LIGHT 0
 #define DIFF 1
@@ -978,7 +980,7 @@ float BoundingBoxIntersect( vec3 minCorner, vec3 maxCorner, vec3 rayOrigin, vec3
 
 	if (t1 > 0.0) result = t1;
 	if (t0 > 0.0) result = t0;
-	
+
 	return result;
 }
 
@@ -994,7 +996,7 @@ float TriangleIntersect( vec3 v0, vec3 v1, vec3 v2, Ray r )
 	vec3 edge2 = v2 - v0;
 
 	// comment out the following line if double-sided triangles are wanted
-	//if (dot(r.direction, cross(edge1, edge2)) > 0.0) return INFINITY;
+	if (dot(r.direction, cross(edge1, edge2)) > 0.0) return INFINITY;
 
 	vec3 tvec = r.origin - v0;
 	vec3 pvec = cross(r.direction, edge2);
@@ -1097,19 +1099,23 @@ vec3 Get_Sky_Color(Ray r, vec3 sunDirection)
 
 THREE.ShaderChunk[ 'pathtracing_random_functions' ] = `
 
-float rand( inout float seed )
-{ 
-	seed -= uRandomVector.x * uRandomVector.y;
-	return fract( sin( seed ) * 43758.5453123 );
+// from iq https://www.shadertoy.com/view/4tXyWN
+float rand( inout uvec2 seed )
+{
+	seed += uvec2(1);
+
+    	uvec2 q = 1103515245U * ( (seed >> 1U) ^ (seed.yx) );
+    	uint  n = 1103515245U * ( (q.x) ^ (q.y >> 3U) );
+	return float(n) * (1.0 / float(0xffffffffU));
 }
 
-vec3 randomSphereDirection( inout float seed )
+vec3 randomSphereDirection( inout uvec2 seed )
 {
     	vec2 r = vec2(rand(seed), rand(seed)) * TWO_PI;
 	return vec3( sin(r.x) * vec2(sin(r.y), cos(r.y)), cos(r.x) );	
 }
 
-vec3 randomDirectionInHemisphere( vec3 nl, inout float seed )
+vec3 randomDirectionInHemisphere( vec3 nl, inout uvec2 seed )
 {
 	float up = rand(seed); // unbiased
     	float over = sqrt(1.0 - up * up);
@@ -1119,7 +1125,7 @@ vec3 randomDirectionInHemisphere( vec3 nl, inout float seed )
 	return cos(around) * over * u + sin(around) * over * v + up * nl;
 }
 
-vec3 randomCosWeightedDirectionInHemisphere( vec3 nl, inout float seed )
+vec3 randomCosWeightedDirectionInHemisphere( vec3 nl, inout uvec2 seed )
 {
 	float up = sqrt(rand(seed)); // weighted
     	float over = sqrt(1.0 - up * up);
@@ -1133,7 +1139,7 @@ vec3 randomCosWeightedDirectionInHemisphere( vec3 nl, inout float seed )
 
 THREE.ShaderChunk[ 'pathtracing_direct_lighting_sphere' ] = `
 
-vec3 calcDirectLightingSphere(vec3 mask, vec3 x, vec3 nl, Sphere light, inout float seed)
+vec3 calcDirectLightingSphere(vec3 mask, vec3 x, vec3 nl, Sphere light, inout uvec2 seed)
 {
 	vec3 dirLight = vec3(0.0);
 	Intersection shadowIntersec;
@@ -1162,7 +1168,7 @@ vec3 calcDirectLightingSphere(vec3 mask, vec3 x, vec3 nl, Sphere light, inout fl
 
 THREE.ShaderChunk[ 'pathtracing_direct_lighting_quad' ] = `
 
-vec3 calcDirectLightingQuad(vec3 mask, vec3 x, vec3 nl, Quad light, inout float seed)
+vec3 calcDirectLightingQuad(vec3 mask, vec3 x, vec3 nl, Quad light, inout uvec2 seed)
 {
 	vec3 dirLight = vec3(0.0);
 	Intersection shadowIntersec;
@@ -1203,8 +1209,8 @@ void main( void )
 	vec3 camForward = vec3(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]);
 	
 	// seed for rand(seed) function
-	float seed = mod(uSampleCounter,1000.0) * uRandomVector.x - uRandomVector.y + uResolution.y * gl_FragCoord.x / uResolution.x + uResolution.x * gl_FragCoord.y / uResolution.y;
-	
+	uvec2 seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord);
+
 	float r1 = 2.0 * rand(seed);
 	float r2 = 2.0 * rand(seed);
 	
