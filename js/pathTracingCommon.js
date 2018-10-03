@@ -994,21 +994,51 @@ float TriangleIntersect( vec3 v0, vec3 v1, vec3 v2, Ray r )
 {
 	vec3 edge1 = v1 - v0;
 	vec3 edge2 = v2 - v0;
-
-	// comment out the following line if double-sided triangles are wanted
-	//if (dot(r.direction, cross(edge1, edge2)) > 0.0) return INFINITY;
-
-	vec3 tvec = r.origin - v0;
 	vec3 pvec = cross(r.direction, edge2);
 	float det = 1.0 / dot(edge1, pvec);
+
+	// comment out the following line if double-sided triangles are wanted
+	//if (det <= 0.0) return INFINITY;
+
+	vec3 tvec = r.origin - v0;
 	float u = dot(tvec, pvec) * det;
 
 	if (u < 0.0 || u > 1.0)
 		return INFINITY;
 
 	vec3 qvec = cross(tvec, edge1);
-
 	float v = dot(r.direction, qvec) * det;
+
+	if (v < 0.0 || u + v > 1.0)
+		return INFINITY;
+
+	return dot(edge2, qvec) * det;
+}
+
+`;
+
+THREE.ShaderChunk[ 'pathtracing_bvhTriangle_intersect' ] = `
+
+//-------------------------------------------------------------------------------------------
+float BVH_TriangleIntersect( vec3 v0, vec3 v1, vec3 v2, Ray r, out float u, out float v )
+//-------------------------------------------------------------------------------------------
+{
+	vec3 edge1 = v1 - v0;
+	vec3 edge2 = v2 - v0;
+	vec3 pvec = cross(r.direction, edge2);
+	float det = 1.0 / dot(edge1, pvec);
+
+	// comment out the following line if double-sided triangles are wanted
+	//if (det <= 0.0) return INFINITY;
+
+	vec3 tvec = r.origin - v0;
+	u = dot(tvec, pvec) * det;
+
+	if (u < 0.0 || u > 1.0)
+		return INFINITY;
+
+	vec3 qvec = cross(tvec, edge1);
+	v = dot(r.direction, qvec) * det;
 
 	if (v < 0.0 || u + v > 1.0)
 		return INFINITY;
