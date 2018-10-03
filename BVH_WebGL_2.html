@@ -79,6 +79,11 @@ uniform sampler2D tAABBTexture;
 
 #include <pathtracing_uniforms_and_defines>
 
+//float InvTextureWidth = 0.000244140625; // (1 / 4096 texture width)
+//float InvTextureWidth = 0.00048828125;  // (1 / 2048 texture width)
+//float InvTextureWidth = 0.0009765625;   // (1 / 1024 texture width)
+
+#define INV_TEXTURE_WIDTH 0.0009765625
 
 #define N_SPHERES 5
 #define N_BOXES 2
@@ -102,7 +107,7 @@ Box boxes[N_BOXES];
 
 #include <pathtracing_boundingbox_intersect>
 
-#include <pathtracing_triangle_intersect>
+#include <pathtracing_bvhTriangle_intersect>
 	
 
 struct StackLevelData
@@ -121,16 +126,13 @@ struct BoxNode
 
 BoxNode GetBoxNode(const in float i)
 {
+	// each bounding box's data is encoded in 2 rgba(or xyzw) texture slots 
 	float iX2 = (i * 2.0);
 	// (iX2 + 0.0) corresponds to .x: idLeftChild, .y: aabbMin.x, .z: aabbMin.y, .w: aabbMin.z 
 	// (iX2 + 1.0) corresponds to .x: idRightChild .y: aabbMax.x, .z: aabbMax.y, .w: aabbMax.z 
-	//float InvTextureWidth = 0.000244140625; // (1 / 4096 texture width)
-	//float InvTextureWidth = 0.00048828125; // (1 / 2048 texture width)
-	float InvTextureWidth = 0.0009765625; // (1 / 1024 texture width)
-	vec2 uv0 = vec2( (mod(iX2 + 0.0, 1024.0)), floor((iX2 + 0.0) * InvTextureWidth) ) * InvTextureWidth;
-	vec2 uv1 = vec2( (mod(iX2 + 1.0, 1024.0)), floor((iX2 + 1.0) * InvTextureWidth) ) * InvTextureWidth;
-	//vec2 uv0 = vec2( (mod(iX2 + 0.0, 1024.0)), 0.0 ) * InvTextureWidth;
-	//vec2 uv1 = vec2( (mod(iX2 + 1.0, 1024.0)), 0.0 ) * InvTextureWidth;
+	
+	vec2 uv0 = vec2( (mod(iX2 + 0.0, 1024.0)), floor((iX2 + 0.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
+	vec2 uv1 = vec2( (mod(iX2 + 1.0, 1024.0)), floor((iX2 + 1.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
 
 	vec4 aabbNodeData0 = texture( tAABBTexture, uv0 );
 	vec4 aabbNodeData1 = texture( tAABBTexture, uv1 );
@@ -153,17 +155,14 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		
 	// AABB BVH Intersection variables
 	vec4 aabbNodeData0, aabbNodeData1, aabbNodeData2;
-	vec4 vt0, vt1, vt2;
+	vec4 vd0, vd1, vd2, vd3, vd4;
 	vec3 aabbMin, aabbMax;
 	vec3 inverseDir = 1.0 / r.direction;
-	vec3 v0, v1, v2;
-	vec2 uv0, uv1, uv2;
+	vec2 uv0, uv1, uv2, uv3, uv4;
         float stackptr = 0.0;	
 	float bc, bd;
-	//float InvTextureWidth = 0.000244140625; // (1 / 4096 texture width)
-	//float InvTextureWidth = 0.00048828125; // (1 / 2048 texture width)
-	float InvTextureWidth = 0.0009765625; // (1 / 1024 texture width)
-        float id = 0.0;
+	float id = 0.0;
+	float tw, tu, tv;
         
 	bool skip = false;
 
@@ -179,29 +178,32 @@ float SceneIntersect( Ray r, inout Intersection intersec )
                 {
                         if (currentBoxNode.branch_A_Index < 0.0) //  < 0.0 signifies a leaf node
                         {
-				id = 3.0 * (-currentBoxNode.branch_A_Index - 1.0);
-				uv0 = vec2( (mod(id + 0.0, 1024.0)), floor((id + 0.0) * InvTextureWidth) ) * InvTextureWidth;
-				uv1 = vec2( (mod(id + 1.0, 1024.0)), floor((id + 1.0) * InvTextureWidth) ) * InvTextureWidth;
-				uv2 = vec2( (mod(id + 2.0, 1024.0)), floor((id + 2.0) * InvTextureWidth) ) * InvTextureWidth;
-				//uv0 = vec2( (mod(id + 0.0, 1024.0)), 0.0 ) * InvTextureWidth;
-				//uv1 = vec2( (mod(id + 1.0, 1024.0)), 0.0 ) * InvTextureWidth;
-				//uv2 = vec2( (mod(id + 2.0, 1024.0)), 0.0 ) * InvTextureWidth;
+				// each triangle's data is encoded in 8 rgba(or xyzw) texture slots
+				id = 8.0 * (-currentBoxNode.branch_A_Index - 1.0);
+				uv0 = vec2( (mod(id + 0.0, 1024.0)), floor((id + 0.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
+				uv1 = vec2( (mod(id + 1.0, 1024.0)), floor((id + 1.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
+				uv2 = vec2( (mod(id + 2.0, 1024.0)), floor((id + 2.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
+				uv3 = vec2( (mod(id + 3.0, 1024.0)), floor((id + 3.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
+				uv4 = vec2( (mod(id + 4.0, 1024.0)), floor((id + 4.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
 				
-				vt0 = texture( tTriangleTexture, uv0 );	      
-				vt1 = texture( tTriangleTexture, uv1 );	      
-				vt2 = texture( tTriangleTexture, uv2 );
+				vd0 = texture( tTriangleTexture, uv0 );	      
+				vd1 = texture( tTriangleTexture, uv1 );	      
+				vd2 = texture( tTriangleTexture, uv2 );
+				vd3 = texture( tTriangleTexture, uv3 );	      
+				vd4 = texture( tTriangleTexture, uv4 );
 
-				v0 = vec3(vt0.xyz);
-				v1 = vec3(vt0.w, vt1.xy);
-				v2 = vec3(vt1.zw, vt2.x);
-				d = TriangleIntersect( v0, v1, v2, r );
+				d = BVH_TriangleIntersect( vec3(vd0.xyz), vec3(vd0.w, vd1.xy), vec3(vd1.zw, vd2.x), r, tu, tv );
 
 				if (d < t && d > 0.0)
 				{
 					t = d;
-					intersec.normal = normalize( cross(v1-v0, v2-v0) );
+					// face normal for flat-shaded look
+					//intersec.normal = normalize( cross(vec3(vd0.w, vd1.xy) - vec3(vd0.xyz), vec3(vd1.zw, vd2.x) - vec3(vd0.xyz)) );
+					// interpolated normal using triangle intersection's uv's
+					tw = 1.0 - tu - tv;
+					intersec.normal = normalize(tw * vec3(vd2.yzw) + tu * vec3(vd3.xyz) + tv * vec3(vd3.w, vd4.xy));
 					intersec.emission = vec3(1, 0, 1); // use this if intersec.type will be LIGHT
-					intersec.color = vec3(0.8, 0.8, 0.8);
+					intersec.color = vec3(0.1, 0.2, 0.5);
 					intersec.type = COAT;
 				}
                         }
@@ -407,7 +409,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			// Schlick Fresnel approx.
 			float ddn = dot(-r.direction, nl);
 			float nc = 1.0; // IOR of air
-			float nt = 1.4; // IOR of ClearCoat 
+			float nt = 1.5; // IOR of ClearCoat 
 			float R0 = (nc - nt) / (nc + nt);
 			R0 *= R0;
 			float c = 1.0 - ddn;
@@ -495,7 +497,6 @@ void SetupScene(void)
 		var focusDistance = 100.0;
 		var increaseFocusDist = false;
 		var decreaseFocusDist = false;
-		//var pixelRatio = window.devicePixelRatio * 0.5;
 		var pixelRatio = 0.5;
 		var TWO_PI = Math.PI * 2;
 		var randomVector = new THREE.Vector3();
@@ -529,9 +530,15 @@ void SetupScene(void)
 		var aabb_array;
 		var aabbDataTexture;
 		var totalWork = [];
-		var v0 = new THREE.Vector3();
-		var v1 = new THREE.Vector3();
-		var v2 = new THREE.Vector3();
+		var vp0 = new THREE.Vector3();
+		var vp1 = new THREE.Vector3();
+		var vp2 = new THREE.Vector3();
+		var vn0 = new THREE.Vector3();
+		var vn1 = new THREE.Vector3();
+		var vn2 = new THREE.Vector3();
+		var vt0 = new THREE.Vector2();
+		var vt1 = new THREE.Vector2();
+		var vt2 = new THREE.Vector2();
 
 		// the following variables will be used to calculate rotations and directions from the camera
 		var cameraDirectionVector = new THREE.Vector3(); //for moving where the camera is looking
@@ -581,7 +588,6 @@ void SetupScene(void)
 		//objectLoader.load("models/crane.obj", function (meshGroup) {
 		//objectLoader.load("models/tree.obj", function (meshGroup) {
 		//objectLoader.load("models/desktopPC.obj", function (meshGroup) {
-		//objectLoader.load("models/shuttle.obj", function (meshGroup) {
 		objectLoader.load("models/UtahTeapot.obj", function (meshGroup) {
 		//objectLoader.load("models/monkey.obj", function (meshGroup) { 
 		//objectLoader.load("models/classic1982-tron-lightcycle-Hull.obj", function (meshGroup) { 
@@ -755,8 +761,8 @@ void SetupScene(void)
 			//var modelPositionOffset = new THREE.Vector3(0, 26, -50);
 
 			// settings for crane model
-			//var modelScale = 0.8;
-			//var modelPositionOffset = new THREE.Vector3(10, 11.8, -50);
+			//var modelScale = 1.0; // 0.8
+			//var modelPositionOffset = new THREE.Vector3(10, 13, -50); // 10,11.8,-50
 
 			// settings for tree model
 			//var modelScale = 2.0;
@@ -765,17 +771,10 @@ void SetupScene(void)
 			// settings for desktopPC model
 			//var modelScale = 0.7;
 			//var modelPositionOffset = new THREE.Vector3(0, 18, -26);
-			
-			// settings for shuttle model
-			//objMesh.geometry.rotateX(-Math.PI * 0.5);
-			//objMesh.geometry.rotateY(Math.PI * 0.5);
-			//objMesh.geometry.lookAt(new THREE.Vector3(-1000,1000,1000));
-			//var modelScale = 3.0;
-			//var modelPositionOffset = new THREE.Vector3(10, 40, -50);
 
 			// settings for UtahTeapot model
 			var modelScale = 1.0;
-			var modelPositionOffset = new THREE.Vector3(10, 25.5, -30);
+			var modelPositionOffset = new THREE.Vector3(10, 26, -30);
 
 			// settings for monkey model
 			//var modelScale = 10.0;
@@ -799,53 +798,92 @@ void SetupScene(void)
 			var triangle_b_box_max = new THREE.Vector3();
 			var triangle_b_box_centroid = new THREE.Vector3();
 
+			var vpa = objMesh.geometry.attributes.position.array;
+			var vna = objMesh.geometry.attributes.normal.array;
+			var vta = objMesh.geometry.attributes.uv.array;
+
 			for (var i = 0; i < total_number_of_triangles; i++) {
 
 				triangle_b_box_min.set(Infinity, Infinity, Infinity);
 				triangle_b_box_max.set(-Infinity, -Infinity, -Infinity);
+				// record vertex texture coordinates (UVs)
+				vt0.set( vta[6 * i + 0], vta[6 * i + 1] );
+				vt1.set( vta[6 * i + 2], vta[6 * i + 3] );
+				vt2.set( vta[6 * i + 4], vta[6 * i + 5] );
 
-				v0.set(objMesh.geometry.attributes.position.array[9 * i + 0],
-					objMesh.geometry.attributes.position.array[9 * i + 1],
-					objMesh.geometry.attributes.position.array[9 * i + 2]);
+				// record vertex normals
+				vn0.set( vna[9 * i + 0], vna[9 * i + 1], vna[9 * i + 2] ).normalize();
+				vn1.set( vna[9 * i + 3], vna[9 * i + 4], vna[9 * i + 5] ).normalize();
+				vn2.set( vna[9 * i + 6], vna[9 * i + 7], vna[9 * i + 8] ).normalize();
+				
+				// record vertex positions
+				vp0.set( vpa[9 * i + 0], vpa[9 * i + 1], vpa[9 * i + 2] );
+				vp1.set( vpa[9 * i + 3], vpa[9 * i + 4], vpa[9 * i + 5] );
+				vp2.set( vpa[9 * i + 6], vpa[9 * i + 7], vpa[9 * i + 8] );
 
-				v1.set(objMesh.geometry.attributes.position.array[9 * i + 3],
-					objMesh.geometry.attributes.position.array[9 * i + 4],
-					objMesh.geometry.attributes.position.array[9 * i + 5]);
+				vp0.multiplyScalar(modelScale);
+				vp1.multiplyScalar(modelScale);
+				vp2.multiplyScalar(modelScale);
 
-				v2.set(objMesh.geometry.attributes.position.array[9 * i + 6],
-					objMesh.geometry.attributes.position.array[9 * i + 7],
-					objMesh.geometry.attributes.position.array[9 * i + 8]);
+				vp0.add(modelPositionOffset);
+				vp1.add(modelPositionOffset);
+				vp2.add(modelPositionOffset);
 
+				//slot 0
+				triangle_array[32 * i +  0] = vp0.x; // r or x
+				triangle_array[32 * i +  1] = vp0.y; // g or y 
+				triangle_array[32 * i +  2] = vp0.z; // b or z
+				triangle_array[32 * i +  3] = vp1.x; // a or w
 
-				v0.multiplyScalar(modelScale);
-				v1.multiplyScalar(modelScale);
-				v2.multiplyScalar(modelScale);
+				//slot 1
+				triangle_array[32 * i +  4] = vp1.y; // r or x
+				triangle_array[32 * i +  5] = vp1.z; // g or y
+				triangle_array[32 * i +  6] = vp2.x; // b or z
+				triangle_array[32 * i +  7] = vp2.y; // a or w
 
-				v0.add(modelPositionOffset);
-				v1.add(modelPositionOffset);
-				v2.add(modelPositionOffset);
+				//slot 2
+				triangle_array[32 * i +  8] = vp2.z; // r or x
+				triangle_array[32 * i +  9] = vn0.x; // g or y
+				triangle_array[32 * i + 10] = vn0.y; // b or z
+				triangle_array[32 * i + 11] = vn0.z; // a or w
 
-				triangle_array[12 * i + 0] = v0.x; // r or x
-				triangle_array[12 * i + 1] = v0.y; // g or y 
-				triangle_array[12 * i + 2] = v0.z; // b or z
-				triangle_array[12 * i + 3] = v1.x; // a or w
+				//slot 3
+				triangle_array[32 * i + 12] = vn1.x; // r or x
+				triangle_array[32 * i + 13] = vn1.y; // g or y
+				triangle_array[32 * i + 14] = vn1.z; // b or z
+				triangle_array[32 * i + 15] = vn2.x; // a or w
 
-				triangle_array[12 * i + 4] = v1.y; // r or x
-				triangle_array[12 * i + 5] = v1.z; // g or y
-				triangle_array[12 * i + 6] = v2.x; // b or z
-				triangle_array[12 * i + 7] = v2.y; // a or w
+				//slot 4
+				triangle_array[32 * i + 16] = vn2.y; // r or x
+				triangle_array[32 * i + 17] = vn2.z; // g or y
+				triangle_array[32 * i + 18] = vt0.x; // b or z
+				triangle_array[32 * i + 19] = vt0.y; // a or w
 
-				triangle_array[12 * i + 8] = v2.z; // r or x
-				triangle_array[12 * i + 9] = 0; // not used now
-				triangle_array[12 * i + 10] = 0; // not used now
-				triangle_array[12 * i + 11] = 0; // not used now
+				//slot 5
+				triangle_array[32 * i + 20] = vt1.x; // r or x
+				triangle_array[32 * i + 21] = vt1.y; // g or y
+				triangle_array[32 * i + 22] = vt2.x; // b or z
+				triangle_array[32 * i + 23] = vt2.y; // a or w
 
-				triangle_b_box_min.copy(triangle_b_box_min.min(v0));
-				triangle_b_box_max.copy(triangle_b_box_max.max(v0));
-				triangle_b_box_min.copy(triangle_b_box_min.min(v1));
-				triangle_b_box_max.copy(triangle_b_box_max.max(v1));
-				triangle_b_box_min.copy(triangle_b_box_min.min(v2));
-				triangle_b_box_max.copy(triangle_b_box_max.max(v2));
+				// the remaining 2 slots will be used in the future for PBR material properties
+				//slot 6
+				triangle_array[32 * i + 24] = 0; // r or x 
+				triangle_array[32 * i + 25] = 0; // g or y
+				triangle_array[32 * i + 26] = 0; // b or z
+				triangle_array[32 * i + 27] = 0; // a or w
+
+				//slot 7
+				triangle_array[32 * i + 28] = 0; // r or x
+				triangle_array[32 * i + 29] = 0; // g or y
+				triangle_array[32 * i + 30] = 0; // b or z
+				triangle_array[32 * i + 31] = 0; // a or w
+
+				triangle_b_box_min.copy(triangle_b_box_min.min(vp0));
+				triangle_b_box_max.copy(triangle_b_box_max.max(vp0));
+				triangle_b_box_min.copy(triangle_b_box_min.min(vp1));
+				triangle_b_box_max.copy(triangle_b_box_max.max(vp1));
+				triangle_b_box_min.copy(triangle_b_box_min.min(vp2));
+				triangle_b_box_max.copy(triangle_b_box_max.max(vp2));
 
 				triangle_b_box_centroid.set((triangle_b_box_min.x + triangle_b_box_max.x) * 0.5,
 					(triangle_b_box_min.y + triangle_b_box_max.y) * 0.5,
