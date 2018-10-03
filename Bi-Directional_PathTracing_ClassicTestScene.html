@@ -257,7 +257,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 #define LIGHT_PATH_LENGTH  1
 
 //-----------------------------------------------------------------------
-vec3 CalculateRadiance( Ray r, inout float seed )
+vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 //-----------------------------------------------------------------------
 {
 	Intersection intersec;
@@ -554,6 +554,7 @@ void SetupScene(void)
 			var TWO_PI = Math.PI * 2;
 			var randomVector = new THREE.Vector3();
 			var sampleCounter = 1.0;
+			var frameCounter = 1.0;
 			var keyboard = new THREEx.KeyboardState();
 			var cameraIsMoving = false;
 			var cameraJustStartedMoving = false;
@@ -770,6 +771,7 @@ void SetupScene(void)
 					uCameraJustStartedMoving: { type: "b1", value: false },
 					uTime: { type: "f", value: 0.0 },
 					uSampleCounter: { type: "f", value: 0.0 },
+					uFrameCounter: { type: "f", value: 1.0 },
 					uULen: { type: "f", value: 1.0 },
 					uVLen: { type: "f", value: 1.0 },
 					uApertureSize: { type: "f", value: 0.0 },
@@ -1170,6 +1172,7 @@ void SetupScene(void)
 				if ( cameraIsMoving ) {
 					
 					sampleCounter = 1.0;
+					frameCounter  += 1.0;
 					
 					if ( !cameraRecentlyMoving ) {
 						cameraJustStartedMoving = true;
@@ -1181,6 +1184,10 @@ void SetupScene(void)
 				if ( !cameraIsMoving ) {
 	
 					sampleCounter += 1.0;
+					frameCounter  += 1.0;
+					if (cameraRecentlyMoving)
+						frameCounter = 1.0;
+					
 					cameraRecentlyMoving = false;
 					
 				}
@@ -1189,6 +1196,7 @@ void SetupScene(void)
 				pathTracingUniforms.uCameraIsMoving.value = cameraIsMoving;
 				pathTracingUniforms.uCameraJustStartedMoving.value = cameraJustStartedMoving;
 				pathTracingUniforms.uSampleCounter.value = sampleCounter;
+				pathTracingUniforms.uFrameCounter.value = frameCounter;
 				pathTracingUniforms.uRandomVector.value = randomVector.set( Math.random(), Math.random(), Math.random() );
 				// CAMERA
 				cameraControlsObject.updateMatrixWorld(true);			
