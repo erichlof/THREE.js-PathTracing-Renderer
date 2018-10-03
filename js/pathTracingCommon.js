@@ -996,7 +996,7 @@ float TriangleIntersect( vec3 v0, vec3 v1, vec3 v2, Ray r )
 	vec3 edge2 = v2 - v0;
 
 	// comment out the following line if double-sided triangles are wanted
-	if (dot(r.direction, cross(edge1, edge2)) > 0.0) return INFINITY;
+	//if (dot(r.direction, cross(edge1, edge2)) > 0.0) return INFINITY;
 
 	vec3 tvec = r.origin - v0;
 	vec3 pvec = cross(r.direction, edge2);
