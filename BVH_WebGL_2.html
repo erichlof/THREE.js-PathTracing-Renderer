@@ -76,6 +76,7 @@ precision highp sampler2D;
 
 uniform sampler2D tTriangleTexture;
 uniform sampler2D tAABBTexture;
+uniform sampler2D tMarbleTexture;
 
 #include <pathtracing_uniforms_and_defines>
 
@@ -83,7 +84,7 @@ uniform sampler2D tAABBTexture;
 //float InvTextureWidth = 0.00048828125;  // (1 / 2048 texture width)
 //float InvTextureWidth = 0.0009765625;   // (1 / 1024 texture width)
 
-#define INV_TEXTURE_WIDTH 0.0009765625
+#define INV_TEXTURE_WIDTH 0.00048828125
 
 #define N_SPHERES 5
 #define N_BOXES 2
@@ -93,7 +94,7 @@ uniform sampler2D tAABBTexture;
 struct Ray { vec3 origin; vec3 direction; };
 struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; int type; };
 struct Box { vec3 minCorner; vec3 maxCorner; vec3 emission; vec3 color; int type; };
-struct Intersection { vec3 normal; vec3 emission; vec3 color; int type; };
+struct Intersection { vec3 normal; vec3 emission; vec3 color; vec2 uv; int type; };
 
 Sphere spheres[N_SPHERES];
 Box boxes[N_BOXES];
@@ -131,8 +132,8 @@ BoxNode GetBoxNode(const in float i)
 	// (iX2 + 0.0) corresponds to .x: idLeftChild, .y: aabbMin.x, .z: aabbMin.y, .w: aabbMin.z 
 	// (iX2 + 1.0) corresponds to .x: idRightChild .y: aabbMax.x, .z: aabbMax.y, .w: aabbMax.z 
 	
-	vec2 uv0 = vec2( (mod(iX2 + 0.0, 1024.0)), floor((iX2 + 0.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
-	vec2 uv1 = vec2( (mod(iX2 + 1.0, 1024.0)), floor((iX2 + 1.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
+	vec2 uv0 = vec2( (mod(iX2 + 0.0, 2048.0)), floor((iX2 + 0.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
+	vec2 uv1 = vec2( (mod(iX2 + 1.0, 2048.0)), floor((iX2 + 1.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
 
 	vec4 aabbNodeData0 = texture( tAABBTexture, uv0 );
 	vec4 aabbNodeData1 = texture( tAABBTexture, uv1 );
@@ -155,10 +156,10 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		
 	// AABB BVH Intersection variables
 	vec4 aabbNodeData0, aabbNodeData1, aabbNodeData2;
-	vec4 vd0, vd1, vd2, vd3, vd4;
+	vec4 vd0, vd1, vd2, vd3, vd4, vd5;
 	vec3 aabbMin, aabbMax;
 	vec3 inverseDir = 1.0 / r.direction;
-	vec2 uv0, uv1, uv2, uv3, uv4;
+	vec2 uv0, uv1, uv2, uv3, uv4, uv5;
         float stackptr = 0.0;	
 	float bc, bd;
 	float id = 0.0;
@@ -180,31 +181,37 @@ float SceneIntersect( Ray r, inout Intersection intersec )
                         {
 				// each triangle's data is encoded in 8 rgba(or xyzw) texture slots
 				id = 8.0 * (-currentBoxNode.branch_A_Index - 1.0);
-				uv0 = vec2( (mod(id + 0.0, 1024.0)), floor((id + 0.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
-				uv1 = vec2( (mod(id + 1.0, 1024.0)), floor((id + 1.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
-				uv2 = vec2( (mod(id + 2.0, 1024.0)), floor((id + 2.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
-				uv3 = vec2( (mod(id + 3.0, 1024.0)), floor((id + 3.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
-				uv4 = vec2( (mod(id + 4.0, 1024.0)), floor((id + 4.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
+				uv0 = vec2( (mod(id + 0.0, 2048.0)), floor((id + 0.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
+				uv1 = vec2( (mod(id + 1.0, 2048.0)), floor((id + 1.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
+				uv2 = vec2( (mod(id + 2.0, 2048.0)), floor((id + 2.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
+				uv3 = vec2( (mod(id + 3.0, 2048.0)), floor((id + 3.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
+				uv4 = vec2( (mod(id + 4.0, 2048.0)), floor((id + 4.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
+				uv5 = vec2( (mod(id + 5.0, 2048.0)), floor((id + 5.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
 				
 				vd0 = texture( tTriangleTexture, uv0 );	      
 				vd1 = texture( tTriangleTexture, uv1 );	      
 				vd2 = texture( tTriangleTexture, uv2 );
 				vd3 = texture( tTriangleTexture, uv3 );	      
 				vd4 = texture( tTriangleTexture, uv4 );
+				vd5 = texture( tTriangleTexture, uv5 );
 
 				d = BVH_TriangleIntersect( vec3(vd0.xyz), vec3(vd0.w, vd1.xy), vec3(vd1.zw, vd2.x), r, tu, tv );
 
 				if (d < t && d > 0.0)
 				{
 					t = d;
-					// face normal for flat-shaded look
+					// face normal for flat-shaded polygon look
 					//intersec.normal = normalize( cross(vec3(vd0.w, vd1.xy) - vec3(vd0.xyz), vec3(vd1.zw, vd2.x) - vec3(vd0.xyz)) );
+					
 					// interpolated normal using triangle intersection's uv's
 					tw = 1.0 - tu - tv;
 					intersec.normal = normalize(tw * vec3(vd2.yzw) + tu * vec3(vd3.xyz) + tv * vec3(vd3.w, vd4.xy));
 					intersec.emission = vec3(1, 0, 1); // use this if intersec.type will be LIGHT
-					intersec.color = vec3(0.1, 0.2, 0.5);
-					intersec.type = COAT;
+					intersec.color = vec3(0.15, 0.4, 0.6);
+					//intersec.color = vec3(0.9);
+					intersec.uv = tw * vec2(vd4.zw) + tu * vec2(vd5.xy) + tv * vec2(vd5.zw);
+					intersec.type = REFR;
+					//intersec.type = COAT;
 				}
                         }
                         else // else this is a branch
@@ -429,6 +436,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			else
 			{
 				mask *= intersec.color;
+				mask *= texture(tMarbleTexture, intersec.uv).rgb;
 				//accumCol += calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 				r.origin += r.direction * 2.0;
@@ -524,12 +532,14 @@ void SetupScene(void)
 		var camFlightSpeed = 60;
 		var fontAspect;
 		var objMesh;
+		var marbleTexture;
 		var total_number_of_triangles = 0;
 		var triangle_array;
 		var triangleDataTexture;
 		var aabb_array;
 		var aabbDataTexture;
-		var totalWork = [];
+		//var totalWork = [];
+		var totalWork;
 		var vp0 = new THREE.Vector3();
 		var vp1 = new THREE.Vector3();
 		var vp2 = new THREE.Vector3();
@@ -584,15 +594,20 @@ void SetupScene(void)
 		// make sure to find the section below entitled 'different Model Settings'
 		// and uncomment the matching settings for the model that you want to load
 		var objectLoader = new THREE.OBJLoader();
-		//objectLoader.load("models/cube.obj", function (meshGroup) {
-		//objectLoader.load("models/crane.obj", function (meshGroup) {
-		//objectLoader.load("models/tree.obj", function (meshGroup) {
-		//objectLoader.load("models/desktopPC.obj", function (meshGroup) {
-		objectLoader.load("models/UtahTeapot.obj", function (meshGroup) {
-		//objectLoader.load("models/monkey.obj", function (meshGroup) { 
-		//objectLoader.load("models/classic1982-tron-lightcycle-Hull.obj", function (meshGroup) { 
-		//objectLoader.load("models/male02.obj", function (meshGroup) {
-		//objectLoader.load("models/bunny.obj", function (meshGroup) { // this will take 2 minutes to compile!
+		//objectLoader.load("models/tree.obj", function (meshGroup) { // Triangles: 500
+		//objectLoader.load("models/monkey.obj", function (meshGroup) { // Triangles: 968
+		//objectLoader.load("models/UtahTeapot.obj", function (meshGroup) { // Triangles: 992
+		//objectLoader.load("models/male02.obj", function (meshGroup) { // Triangles: 2,270
+		//objectLoader.load("models/f16.obj", function (meshGroup) { // Triangles: 4,056
+		objectLoader.load("models/stanford-bunny.obj", function (meshGroup) { // Triangles: 30,338
+		//objectLoader.load("models/bull-statue.obj", function (meshGroup) { // Triangles: 61,872
+		//objectLoader.load("models/woolly-mammoth-skeleton.obj", function (meshGroup) { // Triangles: 99,998
+		//objectLoader.load("models/stanford-dragon.obj", function (meshGroup) { // Triangles: 100,000
+		//objectLoader.load("models/stanford-buddha.obj", function (meshGroup) { // Triangles: 100,000
+		//objectLoader.load("models/stanford-asian-dragon.obj", function (meshGroup) { // Triangles: 199,845
+		//objectLoader.load("models/stanford-tRex.obj", function (meshGroup) { // Triangles: 200,000
+		//objectLoader.load("models/stanford-armadillo.obj", function (meshGroup) { // Triangles: 212,574
+		//objectLoader.load("models/stanford-angelLucy.obj", function (meshGroup) { // Triangles: 448,880 - might take 1 minute to compile
 		
 			objMesh = meshGroup.children[0].clone();
 
@@ -746,71 +761,109 @@ void SetupScene(void)
 			total_number_of_triangles = objMesh.geometry.attributes.position.array.length / 9;
 			console.log("Triangle count:" + total_number_of_triangles);
 
-			triangle_array = new Float32Array(1024 * 1024 * 4);
-			// 1024 = width of texture, 1024 = height of texture, 4 = r,g,b, and a components
+			totalWork = new Uint32Array(total_number_of_triangles);
+
+			triangle_array = new Float32Array(2048 * 2048 * 4);
+			// 2048 = width of texture, 2048 = height of texture, 4 = r,g,b, and a components
 			
-			aabb_array = new Float32Array(1024 * 1024 * 4);
-			// 1024 = width of texture, 1024 = height of texture, 4 = r,g,b, and a components
+			aabb_array = new Float32Array(2048 * 2048 * 4);
+			// 2048 = width of texture, 2048 = height of texture, 4 = r,g,b, and a components
 			
+			var modelScale = 1.0;
+			var modelPositionOffset = new THREE.Vector3();
 
 			
 			/**************** different Model Settings ***************/
 
-			// settings for cube model
-			//var modelScale = 0.4;
-			//var modelPositionOffset = new THREE.Vector3(0, 26, -50);
-
-			// settings for crane model
-			//var modelScale = 1.0; // 0.8
-			//var modelPositionOffset = new THREE.Vector3(10, 13, -50); // 10,11.8,-50
-
 			// settings for tree model
-			//var modelScale = 2.0;
-			//var modelPositionOffset = new THREE.Vector3(10, 19.5, -50);
-
-			// settings for desktopPC model
-			//var modelScale = 0.7;
-			//var modelPositionOffset = new THREE.Vector3(0, 18, -26);
-
-			// settings for UtahTeapot model
-			var modelScale = 1.0;
-			var modelPositionOffset = new THREE.Vector3(10, 26, -30);
+			//modelScale = 2.0;
+			//modelPositionOffset.set(10, 19.5, -50);
 
 			// settings for monkey model
-			//var modelScale = 10.0;
-			//var modelPositionOffset = new THREE.Vector3(0, 30, -40);
+			//modelScale = 10.0;
+			//modelPositionOffset.set(0, 30, -40);
 
-			// settings for classic1982-tron-lightcycle-Hull model
-			//var modelScale = 30.0;
-			//var modelPositionOffset = new THREE.Vector3(-80, 0, -40);
+			// settings for UtahTeapot model
+			//modelScale = 1.0;
+			//modelPositionOffset.set(10, 26, -30);
 
 			// settings for male02 model
-			//var modelScale = 0.3;
-			//var modelPositionOffset = new THREE.Vector3(-50, 0, -40);
+			//modelScale = 0.3;
+			//modelPositionOffset.set(-50, 0, -40);
 
-			// settings for bunny model (will take around 2 minutes to compile!)
-			//var modelScale = 6.0;
-			//var modelPositionOffset = new THREE.Vector3(0, 20, -40);
+			// settings for f16 model
+			//modelScale = 16.0;
+			//modelPositionOffset.set(0, 30, -40);
 
+			// settings for stanford-bunny model
+			modelScale = 0.04;
+			modelPositionOffset.set(0, 27.5, -40);
 
+			// settings for bull-statue model
+			//modelScale = 2.0;
+			//modelPositionOffset.set(0, 18.1, -40);
 
+			// settings for woolly-mammoth-skeleton model
+			//modelScale = 0.009;
+			//modelPositionOffset.set(0, 33.5, -40);
+
+			// settings for stanford-dragon model
+			//modelScale = 3.0;
+			//modelPositionOffset.set(0, 18, -40);
+
+			// settings for stanford-buddha model
+			//modelScale = 3.0;
+			//modelPositionOffset.set(0, 18, -40);
+
+			// settings for stanford-asian-dragon model
+			//modelScale = 2.0;
+			//modelPositionOffset.set(0, 18.2, -40);
+
+			// settings for stanford-tRex model
+			//modelScale = 10.0;
+			//modelPositionOffset.set(0, 31, -40);
+
+			// settings for stanford-armadillo model
+			//modelScale = 8.0;
+			//modelPositionOffset.set(0, 26.5, -40);
+
+			// settings for stanford-angelLucy model (might take 1 minute to compile)
+			//modelScale = 0.05;
+			//modelPositionOffset.set(0, 17.3, -40);
+
+		
+			
 			var triangle_b_box_min = new THREE.Vector3();
 			var triangle_b_box_max = new THREE.Vector3();
 			var triangle_b_box_centroid = new THREE.Vector3();
+			
 
-			var vpa = objMesh.geometry.attributes.position.array;
-			var vna = objMesh.geometry.attributes.normal.array;
-			var vta = objMesh.geometry.attributes.uv.array;
+			var vpa = new Float32Array(objMesh.geometry.attributes.position.array);
+			var vna = new Float32Array(objMesh.geometry.attributes.normal.array);
+			var modelHasUVs = -1.0;
+			if (objMesh.geometry.attributes.uv !== undefined) {
+				var vta = new Float32Array(objMesh.geometry.attributes.uv.array);
+				modelHasUVs = 1.0;
+			}
+				
 
-			for (var i = 0; i < total_number_of_triangles; i++) {
-
+			for (let i = 0; i < total_number_of_triangles; i++) {
+			
 				triangle_b_box_min.set(Infinity, Infinity, Infinity);
 				triangle_b_box_max.set(-Infinity, -Infinity, -Infinity);
-				// record vertex texture coordinates (UVs)
-				vt0.set( vta[6 * i + 0], vta[6 * i + 1] );
-				vt1.set( vta[6 * i + 2], vta[6 * i + 3] );
-				vt2.set( vta[6 * i + 4], vta[6 * i + 5] );
 
+				// record vertex texture coordinates (UVs)
+				if (modelHasUVs > 0) {
+					vt0.set( vta[6 * i + 0], vta[6 * i + 1] );
+					vt1.set( vta[6 * i + 2], vta[6 * i + 3] );
+					vt2.set( vta[6 * i + 4], vta[6 * i + 5] );
+				}
+				else {
+					vt0.set( -1, -1 );
+					vt1.set( -1, -1 );
+					vt2.set( -1, -1 );
+				}
+				
 				// record vertex normals
 				vn0.set( vna[9 * i + 0], vna[9 * i + 1], vna[9 * i + 2] ).normalize();
 				vn1.set( vna[9 * i + 3], vna[9 * i + 4], vna[9 * i + 5] ).normalize();
@@ -899,25 +952,27 @@ void SetupScene(void)
 				aabb_array[9 * i + 7] = triangle_b_box_centroid.y;
 				aabb_array[9 * i + 8] = triangle_b_box_centroid.z;
 
-				totalWork.push(i);
+				totalWork[i] = i;
 			}
 
 
 			// Build the BVH acceleration structure, which places a bounding box ('root' of the tree) around all of the 
 			// triangles of the entire mesh, then subdivides each box into 2 smaller boxes.  It continues until it reaches 1 triangle,
 			// which it then designates as a 'leaf'
-			BVH_Build_Recursive(totalWork, -1, false); // '-1' signifies no parent for the Root node
+			BVH_Build_Recursive(totalWork, -1, false, 0); // '-1' signifies no parent for the Root node
 			//console.log(buildnodes);
 
 
 			// Copy the buildnodes array into the aabb_array
 			for (let n = 0; n < buildnodes.length; n++) {
 
+				// slot 0
 				aabb_array[8 * n + 0] = buildnodes[n].idLeftChild;  // r or x component
 				aabb_array[8 * n + 1] = buildnodes[n].minCorner.x;  // g or y component
 				aabb_array[8 * n + 2] = buildnodes[n].minCorner.y;  // b or z component
 				aabb_array[8 * n + 3] = buildnodes[n].minCorner.z;  // a or w component
 
+				// slot 1
 				aabb_array[8 * n + 4] = buildnodes[n].idRightChild; // r or x component
 				aabb_array[8 * n + 5] = buildnodes[n].maxCorner.x;  // g or y component
 				aabb_array[8 * n + 6] = buildnodes[n].maxCorner.y;  // b or z component
@@ -926,8 +981,8 @@ void SetupScene(void)
 			}
 
 			triangleDataTexture = new THREE.DataTexture(triangle_array,
-				1024,
-				1024,
+				2048,
+				2048,
 				THREE.RGBAFormat,
 				THREE.FloatType,
 				THREE.Texture.DEFAULT_MAPPING,
@@ -943,8 +998,8 @@ void SetupScene(void)
 			triangleDataTexture.needsUpdate = true;
 
 			aabbDataTexture = new THREE.DataTexture(aabb_array,
-				1024,
-				1024,
+				2048,
+				2048,
 				THREE.RGBAFormat,
 				THREE.FloatType,
 				THREE.Texture.DEFAULT_MAPPING,
@@ -959,7 +1014,13 @@ void SetupScene(void)
 			aabbDataTexture.generateMipmaps = false;
 			aabbDataTexture.needsUpdate = true;
 
-
+			marbleTexture = new THREE.TextureLoader().load( 'textures/uvGrid.jpg' );
+			marbleTexture.wrapS = THREE.RepeatWrapping;
+			marbleTexture.wrapT = THREE.RepeatWrapping;
+			//marbleTexture.flipY = false;
+			marbleTexture.minFilter = THREE.LinearFilter; 
+			marbleTexture.magFilter = THREE.LinearFilter;
+			marbleTexture.generateMipmaps = false;
 
 			pathTracingGeometry = new THREE.PlaneBufferGeometry(2, 2);
 
@@ -968,6 +1029,7 @@ void SetupScene(void)
 				tPreviousTexture: { type: "t", value: screenTextureRenderTarget.texture },
 				tTriangleTexture: { type: "t", value: triangleDataTexture },
 				tAABBTexture: { type: "t", value: aabbDataTexture },
+				tMarbleTexture: { type: "t", value: marbleTexture },
 
 				uCameraIsMoving: { type: "b1", value: false },
 				uCameraJustStartedMoving: { type: "b1", value: false },
