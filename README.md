@@ -91,7 +91,8 @@ Enter Bi-Directional path tracing to the rescue!:
 * Both Uni-Directional (normal) and Bi-Directional path tracing approaches available for different lighting situations.
 * Support for: Spheres, Planes, Discs, Quads, Triangles, and quadrics such as Cylinders, Cones, Ellipsoids, Paraboloids, Hyperboloids, Capsules, and Rings/Torii. Parametric/procedural surfaces (i.e. terrain, clouds, waves, etc.) are handled through Raymarching.
 * Constructive Solid Geometry(CSG) allows you to combine 2 shapes using operations like addition, subtraction, and overlap.
-* Basic support for loading models in .obj format (triangle and quad faces are supported, but no higher-order polys like pentagon, hexagon, etc.)
+* Support for loading models in .obj format
+* BVH (Bounding Volume Hierarchy) greatly speeds up rendering of triangle models in .obj format (tested: handles up to 500,000 triangles!)
 * Current material options: Metallic (mirrors, gold, etc.), Refractive (glass, water, etc.), Diffuse(matte, chalk, etc), ClearCoat(cars, plastic, billiard balls, etc.), Translucent (skin, leaves, cloth, etc.), Subsurface w/ shiny coat (jelly beans, cherries, teeth, polished Jade, etc.)
 * Materials can now use Texture images which can be loaded, applied, and manipulated in the path tracer       
 * Diffuse/Matte objects use Monte Carlo integration (a random process, hence the visual noise) to sample the unit-hemisphere oriented around the normal of the ray-object hitpoint and collects any light that is being received.  This is the key-difference between path tracing and simple old-fashioned ray tracing.  This is what produces realistic global illumination effects such as color bleeding/sharing between diffuse objects and refractive caustics from specular/glass/water objects.
@@ -103,7 +104,7 @@ Enter Bi-Directional path tracing to the rescue!:
 
 The following demos show what I have been experimenting with most recently.  They might not work 100% and might have small visual artifacts that I am trying to fix.  I just wanted to share some more possible areas in the world of path tracing! :-) <br>
 
-Rendering spheres, boxes and mathematical shapes is nice, but most modern graphics models are built out of triangles.  The following demo uses the three.js .obj-Loader to load a model in .obj format (list of triangles) from disk or served as a static file. It then builds a BVH acceleration structure (hierarchy of bounding boxes around all the triangles) and then places the object in a scene to be path traced. With recent support for WebGL 2.0 from three.js (thanks mrdoob!), I have successfully implemented traversal of the BVH entirely on the GPU (which wasn't possible under WebGL 1.0).  The initial results are promising:  Handles low-poly up to 40,000 triangles (although the 40,000 triangle bunny.obj file takes 2 minutes to build the BVH - investigating that... ) and renders at 60fps, and 30fps on my smartphone! <br>
+Rendering spheres, boxes and mathematical shapes is nice, but most modern graphics models are built out of triangles.  The following demo uses the three.js .obj-Loader to load a model in .obj format (list of triangles) from disk or served as a static file. It then builds a BVH acceleration structure (hierarchy of bounding boxes around all the triangles) and then places the object in a scene to be path traced. With recent support for WebGL 2.0 from three.js (thanks mrdoob!), I have successfully implemented traversal of the BVH entirely on the GPU (which wasn't possible under WebGL 1.0).  The initial results are promising:  Handles low-poly up to 500,000 triangle models (I tested up to that amount so far) and renders at 30-60fps! Update: Mobile devices lose rendering context when trying to load the .obj files and build the BVH GPU data texture - Investigating that...  But for now, on desktop it works great! <br>
 
 * [BVH WebGL 2.0 Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/BVH_WebGL_2.html)<br>
 
@@ -127,7 +128,7 @@ Some pretty interesting shapes can be obtained by deforming objects and/or warpi
 * Add support for layered texture materials (diffuse, normal map, specular map, emissive map, etc.)
 * Instead of scene description hard-coded in the path tracing shader, let the scene be defined using the Three.js library
 * Continue to improve on BVH under WebGL 2.0 which is now supprted by three.js, yay!
-* Dynamic Scene description/BVH updating and streaming into the GPU path tracer via Data Texture. <br>
+* Dynamic Scene description/BVH updating and streaming into the GPU path tracer on each animation frame via LBVH (which requires bit manipulations, Morton codes, and Z-order curves). This would allow real-time path tracing of scenes with complex triangle geometry<br>
 
 <h2>ABOUT</h2>
 
