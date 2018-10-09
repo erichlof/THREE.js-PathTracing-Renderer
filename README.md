@@ -128,7 +128,7 @@ Some pretty interesting shapes can be obtained by deforming objects and/or warpi
 * Add support for layered texture materials (diffuse, normal map, specular map, emissive map, etc.)
 * Instead of scene description hard-coded in the path tracing shader, let the scene be defined using the Three.js library
 * Continue to improve on BVH under WebGL 2.0 which is now supprted by three.js, yay!
-* Dynamic Scene description/BVH updating and streaming into the GPU path tracer on each animation frame via LBVH (which requires bit manipulations, Morton codes, and Z-order curves). This would allow real-time path tracing of scenes with complex triangle geometry<br>
+* Dynamic Scene description/BVH updating and streaming into the GPU path tracer on each animation frame via LBVH (which requires bit manipulations, Morton codes, and Z-order curves). This would allow real-time path tracing of scenes with complex, animating triangle geometry<br>
 
 <h2>ABOUT</h2>
 
