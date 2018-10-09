@@ -1028,6 +1028,7 @@ float BVH_TriangleIntersect( vec3 v0, vec3 v1, vec3 v2, Ray r, out float u, out 
 	vec3 pvec = cross(r.direction, edge2);
 	float det = 1.0 / dot(edge1, pvec);
 
+	// uncomment the following line if back-face culling is desired, otherwise
 	// comment out the following line if double-sided triangles are wanted
 	//if (det <= 0.0) return INFINITY;
 
