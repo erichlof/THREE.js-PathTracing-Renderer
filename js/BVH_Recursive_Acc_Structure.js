@@ -34,7 +34,7 @@ function BVH_FlatNode() {
 }
 
 
-function BVH_Build_Recursive(workList, idParent, isLeftBranch) {
+function BVH_Build_Recursive(workList, idParent, isLeftBranch, depth) {
 
         
         let k;
@@ -203,12 +203,12 @@ function BVH_Build_Recursive(workList, idParent, isLeftBranch) {
                         // In that axis, do the bounding boxes in the workList queue "span" across, (meaning distributed over a reasonable distance)?
                         // Or are they all already "packed" on the axis? Meaning that they are too close to each other
                         if (Math.abs(stop - start) < 1e-4)
-                                // BBox side along this axis too short, we must move to a different axis!
                                 continue; // go to next axis
 
                         // Binning: Try splitting at a uniform sampling (at equidistantly spaced planes) that gets smaller the deeper we go:
-                        ///step = (stop - start) / (1024 / (depth + 1));
-                        step = (stop - start) / 1024; 
+                        //step = (stop - start) / (1024 / (depth + 1));
+                        step = (stop - start) / 24;
+
                         // for each bin (equally spaced bins of size "step"):
                         for (let testSplit = start + step; testSplit < (stop - step); testSplit += step) {
 
@@ -253,7 +253,7 @@ function BVH_Build_Recursive(workList, idParent, isLeftBranch) {
                                 // Now use the Surface Area Heuristic to see if this split has a better "cost"
 
                                 // First, check for bad partitionings, ie bins with 0 or 1 triangle AABBs make no sense
-                                ///if (countLeft < 1 || countRight < 1) continue;
+                                //if (countLeft < 1 || countRight < 1) continue;
 
                                 // It's a real partitioning, calculate the sides of Left and Right BBox
                                 let lside1 = LTopCorner.x - LBottomCorner.x;
@@ -289,15 +289,15 @@ function BVH_Build_Recursive(workList, idParent, isLeftBranch) {
         // we should have the best splitting plane, best splitting axis and bboxes with minimal traversal cost
 
         // Otherwise, create BVH inner node with L and R child nodes, split with the optimal value we found above
-        let leftWorkList = [];
-        let rightWorkList = [];
+        let leftWorkCounter = 0;
+        let rightWorkCounter = 0;
         
         // distribute the triangle AABBs in the left or right child nodes
+        
+        // this loop is to count how many elements we need for the left branch and the right branch
         // for each triangle AABB in the workList set
         for (let i = 0; i < workList.length; i++) {
                 k = workList[i];
-                //testMinCorner.set(aabb_array[9 * k + 0], aabb_array[9 * k + 1], aabb_array[9 * k + 2]);
-                //testMaxCorner.set(aabb_array[9 * k + 3], aabb_array[9 * k + 4], aabb_array[9 * k + 5]);
                 testCentroid.set( aabb_array[9 * k + 6], aabb_array[9 * k + 7], aabb_array[9 * k + 8]);
 
                 // get bbox center
@@ -307,20 +307,50 @@ function BVH_Build_Recursive(workList, idParent, isLeftBranch) {
                 else value = testCentroid.z; // Z-axis
 
                 if (value < bestSplit) {
-                        leftWorkList.push(k);
+                        leftWorkCounter++;
                 } else {
-                        rightWorkList.push(k);
+                        rightWorkCounter++;
+                }
+        }
+
+        // now that the size of each branch is known, we can initialize the left and right arrays
+        let leftWorkList = new Uint32Array(leftWorkCounter);
+        let rightWorkList = new Uint32Array(rightWorkCounter);
+        // reset counters for the loop coming up
+        leftWorkCounter = 0;
+        rightWorkCounter = 0;
+
+        // now we go through the same loop, but this time we fill in the data for the left and right arrays
+        // for each triangle AABB in the workList set
+        for (let i = 0; i < workList.length; i++) {
+                k = workList[i];
+                testCentroid.set( aabb_array[9 * k + 6], aabb_array[9 * k + 7], aabb_array[9 * k + 8]);
+
+                // get bbox center
+                let value;
+                if (bestAxis == 0) value = testCentroid.x; // X-axis
+                else if (bestAxis == 1) value = testCentroid.y; // Y-axis
+                else value = testCentroid.z; // Z-axis
+
+                if (value < bestSplit) {
+                        
+                        leftWorkList[leftWorkCounter] = k;
+                        leftWorkCounter++;
+                } else {
+                        
+                        rightWorkList[rightWorkCounter] = k;
+                        rightWorkCounter++;
                 }
         }
 
         //console.log("building left with " + leftWorkList.length + " triangles");
         leftBranchCounter++;
         // recursively build the left branches
-        BVH_Build_Recursive(leftWorkList, idSelf, true);
+        BVH_Build_Recursive(leftWorkList, idSelf, true, depth + 1);
 
         //console.log("building right with " + rightWorkList.length + " triangles");
         rightBranchCounter++;
         // recursively build the right branches
-        BVH_Build_Recursive(rightWorkList, idSelf, false);
+        BVH_Build_Recursive(rightWorkList, idSelf, false, depth + 1);
 
 } // end function BVH_Build_Recursive(workList, idParent)
