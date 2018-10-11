@@ -348,20 +348,18 @@ float getTerrainHeight_Detail( in vec3 pos )
 
 vec3 terrain_calcNormal( vec3 pos, float t )
 {
-	float e = 0.001;
-	vec3 c = pos + (uCameraFrameUp * getTerrainHeight_Detail(pos));
-	vec3 xPos = c + (uCameraFrameRight*e);
-	vec3 zPos = c + (uCameraFrameForward*e);
-	vec3 xNeg = c - (uCameraFrameRight*e);
-	vec3 zNeg = c - (uCameraFrameForward*e);
-	float xPosH = getTerrainHeight_Detail(xPos);
-	float zPosH = getTerrainHeight_Detail(zPos);
-	float xNegH = getTerrainHeight_Detail(xNeg);
-	float zNegH = getTerrainHeight_Detail(zNeg);
-	xPos += (uCameraFrameUp * xPosH);
-	zPos += (uCameraFrameUp * zPosH);
-	xNeg += (uCameraFrameUp * xNegH);
-	zNeg += (uCameraFrameUp * zNegH);
+	float e = 0.002;
+
+	vec3 xPos = pos + (uCameraFrameRight*e);
+	vec3 xNeg = pos - (uCameraFrameRight*e);
+	vec3 zPos = pos + (uCameraFrameForward*e);
+	vec3 zNeg = pos - (uCameraFrameForward*e);
+
+	xPos += (uCameraFrameUp * getTerrainHeight_Detail(xPos));
+	xNeg += (uCameraFrameUp * getTerrainHeight_Detail(xNeg));
+	zPos += (uCameraFrameUp * getTerrainHeight_Detail(zPos));
+	zNeg += (uCameraFrameUp * getTerrainHeight_Detail(zNeg));
+
 	vec3 xVec = normalize(xPos - xNeg);
 	vec3 zVec = normalize(zPos - zNeg); 
 	return normalize(cross(zVec, xVec));
@@ -392,7 +390,7 @@ bool terrain_isSunVisible( vec3 pos, vec3 n, vec3 dirToLight)
 float TerrainIntersect( Ray r )
 {
 	vec3 pos = r.origin;
-	vec3 dir = (r.direction);
+	vec3 dir = r.direction;
 	float h = 0.0;
 	float t = 0.0;
 	float precisionFactor = 0.5;
@@ -410,12 +408,12 @@ float TerrainIntersect( Ray r )
 // WATER
 /* Credit: some of the following water code is borrowed from https://www.shadertoy.com/view/Ms2SD1 posted by user 'TDM' */
 
-#define WATER_SAMPLE_SCALE 1.0   // higher equals more repitition
+#define WATER_SAMPLE_SCALE 50.0  // higher equals more repitition
 #define MAX_WAVE_HEIGHT    0.001 // (in Km) Max water wave amplitude
-#define WATER_FREQ         100.0 // wave density: lower = spread out, higher = close together
+#define WATER_FREQ         1.0   // wave density: lower = spread out, higher = close together
 #define WATER_CHOPPY       2.0   // smaller beachfront-type waves, they travel in parallel
-#define WATER_SPEED        0.005 // how quickly time passes
-#define WATER_FAR 	   2.0	 // (in Km) how far to draw wave details
+#define WATER_SPEED        0.5   // how quickly time passes
+#define WATER_FAR 	   1.0	 // (in Km) how far to draw wave details
 #define OCTAVE_M   mat2(1.6, 1.2, -1.2, 1.6);
 
 float hash( vec2 p )
@@ -450,6 +448,7 @@ float getWaterHeight( vec3 pos )
 	float amp = MAX_WAVE_HEIGHT;
 	float choppy = WATER_CHOPPY;
 	float water_time = uTime * WATER_SPEED;
+	pos *= WATER_SAMPLE_SCALE;
 	vec2 uv;
 	uv.x = dot(pos, uCameraFrameRight);
 	uv.y = dot(pos, uCameraFrameForward);
@@ -473,12 +472,13 @@ float getWaterHeight_Detail( vec3 pos )
 	float amp = MAX_WAVE_HEIGHT;
 	float choppy = WATER_CHOPPY;
 	float water_time = uTime * WATER_SPEED;
+	pos *= WATER_SAMPLE_SCALE;
 	vec2 uv;
 	uv.x = dot(pos, uCameraFrameRight);
 	uv.y = dot(pos, uCameraFrameForward);
 	float d, h = 0.0;
 
-	for(int i = 0; i < 5; i++)
+	for(int i = 0; i < 4; i++)
 	{        
 		d =  water_octave((uv + water_time) * freq, choppy);
 		d += water_octave((uv - water_time) * freq, choppy);
@@ -492,20 +492,17 @@ float getWaterHeight_Detail( vec3 pos )
 
 vec3 water_calcNormal( vec3 pos, float t )
 {
-	float e = 0.005;
-	vec3 c = pos + (uCameraFrameUp * getWaterHeight_Detail(pos));
-	vec3 xPos = c + (uCameraFrameRight*e);
-	vec3 zPos = c + (uCameraFrameForward*e);
-	vec3 xNeg = c - (uCameraFrameRight*e);
-	vec3 zNeg = c - (uCameraFrameForward*e);
-	float xPosH = getWaterHeight_Detail(xPos);
-	float zPosH = getWaterHeight_Detail(zPos);
-	float xNegH = getWaterHeight_Detail(xNeg);
-	float zNegH = getWaterHeight_Detail(zNeg);
-	xPos += (uCameraFrameUp * xPosH);
-	zPos += (uCameraFrameUp * zPosH);
-	xNeg += (uCameraFrameUp * xNegH);
-	zNeg += (uCameraFrameUp * zNegH);
+	float e = 0.01;
+	vec3 xPos = pos + (uCameraFrameRight*e);
+	vec3 xNeg = pos - (uCameraFrameRight*e);
+	vec3 zPos = pos + (uCameraFrameForward*e);
+	vec3 zNeg = pos - (uCameraFrameForward*e);
+
+	xPos += (uCameraFrameUp * getWaterHeight_Detail(xPos));
+	xNeg += (uCameraFrameUp * getWaterHeight_Detail(xNeg));
+	zPos += (uCameraFrameUp * getWaterHeight_Detail(zPos));
+	zNeg += (uCameraFrameUp * getWaterHeight_Detail(zNeg));
+	
 	vec3 xVec = normalize(xPos - xNeg);
 	vec3 zVec = normalize(zPos - zNeg); 
 	return normalize(cross(zVec, xVec));
@@ -514,12 +511,12 @@ vec3 water_calcNormal( vec3 pos, float t )
 float WaterIntersect( Ray r )
 {
 	vec3 pos = r.origin;
-	vec3 dir = (r.direction);
+	vec3 dir = r.direction;
 	float h = 0.0;
 	float t = 0.0;
 	float precisionFactor = 1.0;
 	
-	for (int i = 0; i < 200; i++)
+	for (int i = 0; i < 300; i++)
 	{
 		h = abs(length(pos) - getWaterHeight(pos));
 		if (t > WATER_FAR || h < 0.01) break;
@@ -540,8 +537,8 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkWater )
 	vec3 hitPos;
 	vec3 normal; 
 
-	//if (uCameraWithinAtmosphere)
-		d = TerrainIntersect( r );
+	d = TerrainIntersect( r );
+
 	if (d > TERRAIN_FAR)
 	{
 		d = SphereIntersect(EARTH_RADIUS, vec3(0), r);
@@ -568,8 +565,8 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkWater )
 
 	d = INFINITY; // reset d
 
-	//if (uCameraWithinAtmosphere)
-		d = WaterIntersect( r );
+	d = WaterIntersect( r );
+	
 	if (d > WATER_FAR)
 	{
 		d = SphereIntersect(EARTH_RADIUS, vec3(0), r);
@@ -770,19 +767,19 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, vec3 starRayDir )
 			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
 			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
 
-			//Re *= 2.0; // tweak to add more reflectivity to water
+			Re *= 2.0; // tweak to add more reflectivity to water
 			
 			if (rand(seed) < Re) // reflect ray from surface
 			{
 				r = Ray( x, reflect(r.direction, nl) );
-				//r.origin += r.direction * 1.0;
+				r.origin += r.direction * 1.0;
 				continue;	
 			}
 			else // transmit ray through surface
 			{
 				mask *= intersec.color;
 				r = Ray(x, tdir);
-				//r.origin += r.direction * 1.0;
+				r.origin += r.direction * 1.0;
 				continue;
 			}
 			
