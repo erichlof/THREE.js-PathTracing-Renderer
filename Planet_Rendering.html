@@ -319,7 +319,7 @@ float getTerrainHeight( in vec3 pos )
 	float h = 0.0;
 	float amp = TERRAIN_HEIGHT;
 
-	for (int i = 0; i < 4; i ++)
+	for (int i = 0; i < 5; i ++)
 	{
 		h += amp * texture2D(t_PerlinNoise, uv + 0.5).x;
 		amp *= 0.5;
@@ -337,7 +337,7 @@ float getTerrainHeight_Detail( in vec3 pos )
 	float h = 0.0;
 	float amp = TERRAIN_HEIGHT;
 
-	for (int i = 0; i < 9; i ++)
+	for (int i = 0; i < 15; i ++)
 	{
 		h += amp * texture2D(t_PerlinNoise, uv + 0.5).x;
 		amp *= 0.5;
@@ -349,6 +349,8 @@ float getTerrainHeight_Detail( in vec3 pos )
 vec3 terrain_calcNormal( vec3 pos, float t )
 {
 	float e = 0.002;
+
+	pos += uCameraFrameUp * getTerrainHeight_Detail(pos);
 
 	vec3 xPos = pos + (uCameraFrameRight*e);
 	vec3 xNeg = pos - (uCameraFrameRight*e);
@@ -478,7 +480,7 @@ float getWaterHeight_Detail( vec3 pos )
 	uv.y = dot(pos, uCameraFrameForward);
 	float d, h = 0.0;
 
-	for(int i = 0; i < 4; i++)
+	for(int i = 0; i < 5; i++)
 	{        
 		d =  water_octave((uv + water_time) * freq, choppy);
 		d += water_octave((uv - water_time) * freq, choppy);
@@ -493,6 +495,9 @@ float getWaterHeight_Detail( vec3 pos )
 vec3 water_calcNormal( vec3 pos, float t )
 {
 	float e = 0.01;
+
+	pos += uCameraFrameUp * getWaterHeight_Detail(pos);
+
 	vec3 xPos = pos + (uCameraFrameRight*e);
 	vec3 xNeg = pos - (uCameraFrameRight*e);
 	vec3 zPos = pos + (uCameraFrameForward*e);
@@ -1154,9 +1159,9 @@ void main( void )
 				PerlinNoiseTexture.wrapS = THREE.RepeatWrapping;
 				PerlinNoiseTexture.wrapT = THREE.RepeatWrapping;
 				PerlinNoiseTexture.flipY = false;
-				PerlinNoiseTexture.minFilter = THREE.LinearFilter;
-				PerlinNoiseTexture.magFilter = THREE.LinearFilter;
-				PerlinNoiseTexture.generateMipmaps = false;
+				//PerlinNoiseTexture.minFilter = THREE.LinearFilter;
+				//PerlinNoiseTexture.magFilter = THREE.LinearFilter;
+				//PerlinNoiseTexture.generateMipmaps = false;
 				
 				
 				pathTracingGeometry = new THREE.PlaneBufferGeometry( 2, 2 );
