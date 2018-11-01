@@ -207,7 +207,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 					tw = 1.0 - tu - tv;
 					intersec.normal = normalize(tw * vec3(vd2.yzw) + tu * vec3(vd3.xyz) + tv * vec3(vd3.w, vd4.xy));
 					intersec.emission = vec3(1, 0, 1); // use this if intersec.type will be LIGHT
-					intersec.color = vec3(0.15, 0.4, 0.6);
+					intersec.color = vec3(0.1, 0.5, 0.7);
 					//intersec.color = vec3(0.9);
 					intersec.uv = tw * vec2(vd4.zw) + tu * vec2(vd5.xy) + tv * vec2(vd5.zw);
 					intersec.type = REFR;
@@ -436,7 +436,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			else
 			{
 				mask *= intersec.color;
-				mask *= texture(tMarbleTexture, intersec.uv).rgb;
+				//mask *= texture(tMarbleTexture, intersec.uv).rgb;
 				//accumCol += calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 				r.origin += r.direction * 2.0;
@@ -1014,13 +1014,13 @@ void SetupScene(void)
 			aabbDataTexture.generateMipmaps = false;
 			aabbDataTexture.needsUpdate = true;
 
-			marbleTexture = new THREE.TextureLoader().load( 'textures/uvGrid.jpg' );
+			marbleTexture = new THREE.TextureLoader().load( 'textures/whiteMarble.jpg' );
 			marbleTexture.wrapS = THREE.RepeatWrapping;
 			marbleTexture.wrapT = THREE.RepeatWrapping;
 			//marbleTexture.flipY = false;
-			marbleTexture.minFilter = THREE.LinearFilter; 
-			marbleTexture.magFilter = THREE.LinearFilter;
-			marbleTexture.generateMipmaps = false;
+			//marbleTexture.minFilter = THREE.LinearFilter; 
+			//marbleTexture.magFilter = THREE.LinearFilter;
+			//marbleTexture.generateMipmaps = false;
 
 			pathTracingGeometry = new THREE.PlaneBufferGeometry(2, 2);
 
