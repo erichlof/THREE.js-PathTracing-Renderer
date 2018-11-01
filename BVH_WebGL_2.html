@@ -94,7 +94,7 @@ uniform sampler2D tMarbleTexture;
 struct Ray { vec3 origin; vec3 direction; };
 struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; int type; };
 struct Box { vec3 minCorner; vec3 maxCorner; vec3 emission; vec3 color; int type; };
-struct Intersection { vec3 normal; vec3 emission; vec3 color; vec2 uv; int type; };
+struct Intersection { vec3 normal; vec3 emission; vec3 color; vec2 uv; int type; bool useTexture; };
 
 Sphere spheres[N_SPHERES];
 Box boxes[N_BOXES];
@@ -208,10 +208,12 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 					intersec.normal = normalize(tw * vec3(vd2.yzw) + tu * vec3(vd3.xyz) + tv * vec3(vd3.w, vd4.xy));
 					intersec.emission = vec3(1, 0, 1); // use this if intersec.type will be LIGHT
 					intersec.color = vec3(0.1, 0.5, 0.7);
-					//intersec.color = vec3(0.9);
 					intersec.uv = tw * vec2(vd4.zw) + tu * vec2(vd5.xy) + tv * vec2(vd5.zw);
 					intersec.type = REFR;
+					// the following is for textured models
 					//intersec.type = COAT;
+					//intersec.color = vec3(0.9);
+					//intersec.useTexture = true;
 				}
                         }
                         else // else this is a branch
@@ -274,6 +276,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.emission = spheres[i].emission;
 			intersec.color = spheres[i].color;
 			intersec.type = spheres[i].type;
+			intersec.useTexture = false;
 		}
         }
 	
@@ -287,6 +290,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.emission = boxes[i].emission;
 			intersec.color = boxes[i].color;
 			intersec.type = boxes[i].type;
+			intersec.useTexture = false;
 		}
         }
 	
@@ -436,7 +440,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			else
 			{
 				mask *= intersec.color;
-				//mask *= texture(tMarbleTexture, intersec.uv).rgb;
+				if (intersec.useTexture)
+					mask *= texture(tMarbleTexture, intersec.uv).rgb;
 				//accumCol += calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 				r.origin += r.direction * 2.0;
@@ -458,8 +463,6 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0);          
-	vec3 L1 = vec3(1.0, 1.0, 1.0) * 3.0;// White light
-	//vec3 L2 = vec3(1.0, 0.9, 0.6) * 3.0;// Yellowish light
 	vec3 L3 = vec3(0.5, 0.7, 1.0) * 0.9;// Blueish light
 	
 	spheres[0] = Sphere( 10000.0,     vec3(0, 0, 0), L3,                 z, LIGHT);//spherical white Light1
@@ -608,7 +611,7 @@ void SetupScene(void)
 		//objectLoader.load("models/stanford-asian-dragon.obj", function (meshGroup) { // Triangles: 199,845
 		//objectLoader.load("models/stanford-tRex.obj", function (meshGroup) { // Triangles: 200,000
 		//objectLoader.load("models/stanford-armadillo.obj", function (meshGroup) { // Triangles: 212,574
-		//objectLoader.load("models/stanford-angelLucy.obj", function (meshGroup) { // Triangles: 448,880 - might take 20 seconds to compile
+		//objectLoader.load("models/stanford-angelLucy.obj", function (meshGroup) { // Triangles: 448,880 - might take 10 seconds to compile
 		
 			objMesh = meshGroup.children[0].clone();
 
@@ -812,7 +815,7 @@ void SetupScene(void)
 			//modelPositionOffset.set(0, 18, -40);
 
 			// settings for stanford-buddha model
-			//modelScale = 3.0; // 3.0
+			//modelScale = 3.0;
 			//modelPositionOffset.set(0, 18, -40);
 
 			// settings for stanford-asian-dragon model
@@ -821,14 +824,17 @@ void SetupScene(void)
 
 			// settings for stanford-tRex model
 			//modelScale = 10.0;
+			//objMesh.geometry.lookAt(new THREE.Vector3(-1000, 0, -1000));
 			//modelPositionOffset.set(0, 31, -40);
 
 			// settings for stanford-armadillo model
 			//modelScale = 8.0;
+			//objMesh.geometry.lookAt(new THREE.Vector3(0, 0, -1000));
 			//modelPositionOffset.set(0, 26.5, -40);
 
-			// settings for stanford-angelLucy model (might take 20 seconds to compile)
+			// settings for stanford-angelLucy model (might take 10 seconds to compile)
 			//modelScale = 0.05;
+			//objMesh.geometry.lookAt(new THREE.Vector3(1000, 0, 0));
 			//modelPositionOffset.set(0, 17.3, -40);
 
 		
@@ -1014,7 +1020,7 @@ void SetupScene(void)
 			aabbDataTexture.generateMipmaps = false;
 			aabbDataTexture.needsUpdate = true;
 
-			marbleTexture = new THREE.TextureLoader().load( 'textures/whiteMarble.jpg' );
+			marbleTexture = new THREE.TextureLoader().load( 'textures/uvGrid.jpg' );
 			marbleTexture.wrapS = THREE.RepeatWrapping;
 			marbleTexture.wrapT = THREE.RepeatWrapping;
 			//marbleTexture.flipY = false;
