@@ -41,7 +41,7 @@
 
 	<script src="js/three.min.js"> </script>
 	<script src="js/OBJLoader.js"></script>
-	<script src="js/BVH_Recursive_Acc_Structure.js"> </script>
+	<script src="js/BVH_Acc_Structure_Iterative_Builder.js"> </script>
 	<script src="js/pathTracingCommon.js"> </script>
 	<script src="js/threex.keyboardstate.js"> </script>
 	<script src="js/FirstPersonCameraControls.js"> </script>
@@ -590,10 +590,11 @@ void SetupScene(void)
 
 		}
 
-		// when you uncomment a different model loading directive,
-		// make sure to find the section below entitled 'different Model Settings'
+		// when you uncomment a different model loading directive, it is suggested,
+		// but not mandatory, to find the section below entitled 'different Model Settings'
 		// and uncomment the matching settings for the model that you want to load
 		var objectLoader = new THREE.OBJLoader();
+		//objectLoader.load("models/crane.obj", function (meshGroup) { // Triangles: 36
 		//objectLoader.load("models/tree.obj", function (meshGroup) { // Triangles: 500
 		//objectLoader.load("models/monkey.obj", function (meshGroup) { // Triangles: 968
 		//objectLoader.load("models/UtahTeapot.obj", function (meshGroup) { // Triangles: 992
@@ -607,7 +608,7 @@ void SetupScene(void)
 		//objectLoader.load("models/stanford-asian-dragon.obj", function (meshGroup) { // Triangles: 199,845
 		//objectLoader.load("models/stanford-tRex.obj", function (meshGroup) { // Triangles: 200,000
 		//objectLoader.load("models/stanford-armadillo.obj", function (meshGroup) { // Triangles: 212,574
-		//objectLoader.load("models/stanford-angelLucy.obj", function (meshGroup) { // Triangles: 448,880 - might take 1 minute to compile
+		//objectLoader.load("models/stanford-angelLucy.obj", function (meshGroup) { // Triangles: 448,880 - might take 20 seconds to compile
 		
 			objMesh = meshGroup.children[0].clone();
 
@@ -771,7 +772,6 @@ void SetupScene(void)
 			
 			var modelScale = 1.0;
 			var modelPositionOffset = new THREE.Vector3();
-
 			
 			/**************** different Model Settings ***************/
 
@@ -812,7 +812,7 @@ void SetupScene(void)
 			//modelPositionOffset.set(0, 18, -40);
 
 			// settings for stanford-buddha model
-			//modelScale = 3.0;
+			//modelScale = 3.0; // 3.0
 			//modelPositionOffset.set(0, 18, -40);
 
 			// settings for stanford-asian-dragon model
@@ -827,7 +827,7 @@ void SetupScene(void)
 			//modelScale = 8.0;
 			//modelPositionOffset.set(0, 26.5, -40);
 
-			// settings for stanford-angelLucy model (might take 1 minute to compile)
+			// settings for stanford-angelLucy model (might take 20 seconds to compile)
 			//modelScale = 0.05;
 			//modelPositionOffset.set(0, 17.3, -40);
 
@@ -959,9 +959,9 @@ void SetupScene(void)
 			// Build the BVH acceleration structure, which places a bounding box ('root' of the tree) around all of the 
 			// triangles of the entire mesh, then subdivides each box into 2 smaller boxes.  It continues until it reaches 1 triangle,
 			// which it then designates as a 'leaf'
-			BVH_Build_Recursive(totalWork, -1, false, 0); // '-1' signifies no parent for the Root node
+			BVH_Build_Iterative(totalWork);
 			//console.log(buildnodes);
-
+			//return;
 
 			// Copy the buildnodes array into the aabb_array
 			for (let n = 0; n < buildnodes.length; n++) {
