@@ -597,15 +597,13 @@ void SetupScene(void)
 		// but not mandatory, to find the section below entitled 'different Model Settings'
 		// and uncomment the matching settings for the model that you want to load
 		var objectLoader = new THREE.OBJLoader();
-		//objectLoader.load("models/crane.obj", function (meshGroup) { // Triangles: 36
+		
 		//objectLoader.load("models/tree.obj", function (meshGroup) { // Triangles: 500
 		//objectLoader.load("models/monkey.obj", function (meshGroup) { // Triangles: 968
 		//objectLoader.load("models/UtahTeapot.obj", function (meshGroup) { // Triangles: 992
 		//objectLoader.load("models/male02.obj", function (meshGroup) { // Triangles: 2,270
 		//objectLoader.load("models/f16.obj", function (meshGroup) { // Triangles: 4,056
 		objectLoader.load("models/stanford-bunny.obj", function (meshGroup) { // Triangles: 30,338
-		//objectLoader.load("models/bull-statue.obj", function (meshGroup) { // Triangles: 61,872
-		//objectLoader.load("models/woolly-mammoth-skeleton.obj", function (meshGroup) { // Triangles: 99,998
 		//objectLoader.load("models/stanford-dragon.obj", function (meshGroup) { // Triangles: 100,000
 		//objectLoader.load("models/stanford-buddha.obj", function (meshGroup) { // Triangles: 100,000
 		//objectLoader.load("models/stanford-asian-dragon.obj", function (meshGroup) { // Triangles: 199,845
@@ -801,14 +799,6 @@ void SetupScene(void)
 			// settings for stanford-bunny model
 			modelScale = 0.04;
 			modelPositionOffset.set(0, 27.5, -40);
-
-			// settings for bull-statue model
-			//modelScale = 2.0;
-			//modelPositionOffset.set(0, 18.1, -40);
-
-			// settings for woolly-mammoth-skeleton model
-			//modelScale = 0.009;
-			//modelPositionOffset.set(0, 33.5, -40);
 
 			// settings for stanford-dragon model
 			//modelScale = 3.0;
