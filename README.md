@@ -108,6 +108,14 @@ Rendering spheres, boxes and mathematical shapes is nice, but most modern graphi
 
 * [BVH WebGL 2.0 Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/BVH_WebGL_2.html)<br>
 
+Now that models can be loaded and path traced, I'm currently working on developing a material system (w.i.p.) for my path tracing engine to read, so that OBJ models that have MTL files, or for example GLTF models with their binary vertex data and material assets, can all be imported.  All that is required of the user is just including the appropriate loader format script at the top of their html file, i.e. OBJLoader.js, MTLLoader.js, or GLTFLoader.js, or FBXLoader.js, etc.  Then just enter the file name and call the desired loader's 'load' function.  In other words, the path tracing engine is loader format-agnostic: it doesn't care which format you choose, it just loads it in using the handy three.js loaders (thanks three.js team!) and creates a THREE.Mesh object that has geometry and materials, which the path tracer then intercepts and places that data all on a GPU texture.  As proof of concept, here is a OBJ+MTL format loader example: <br>
+
+* [BVH OBJ MTL Loader Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/BVH_OBJ_MTL_Models_Example.html)<br>
+
+And here is a GLTF format loader example - note, all I did was just uncomment the different loader's 'load' function.  All the other code remains the same!
+
+* [BVH GLTF Loader Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/BVH_GLTF_Models_Example.html)<br>
+
 Some pretty interesting shapes can be obtained by deforming objects and/or warping the ray space (position and direction).  This demo applies a twist warp to the spheres and mirror box and randomizes the object space of the top purple sphere, creating an acceptable representation of a cloud (for free - no extra processing time for volumetrics!) <br>
 
 * [Ray/Object Warping Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Ray_Warping.html)<br>
