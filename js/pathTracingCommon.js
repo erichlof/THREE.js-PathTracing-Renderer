@@ -975,13 +975,13 @@ float BoundingBoxIntersect( vec3 minCorner, vec3 maxCorner, vec3 rayOrigin, vec3
 	float t0 = max( max(tmin.x, tmin.y), tmin.z);
 	float t1 = min( min(tmax.x, tmax.y), tmax.z);
 
-	float result = INFINITY;
-	if (t1 < t0) return result;
+	if (t1 < t0) return INFINITY;
 
+	float result;
 	if (t1 > 0.0) result = t1;
 	if (t0 > 0.0) result = t0;
 
-	return result;
+	return result;	
 }
 
 `;
@@ -997,7 +997,8 @@ float TriangleIntersect( vec3 v0, vec3 v1, vec3 v2, Ray r )
 	vec3 pvec = cross(r.direction, edge2);
 	float det = 1.0 / dot(edge1, pvec);
 
-	// comment out the following line if double-sided triangles are wanted
+	// comment out the following line if double-sided triangles are wanted, or
+	// uncomment the following line if back-face culling is desired (single-sided triangles)
 	//if (det <= 0.0) return INFINITY;
 
 	vec3 tvec = r.origin - v0;
@@ -1028,9 +1029,10 @@ float BVH_TriangleIntersect( vec3 v0, vec3 v1, vec3 v2, Ray r, out float u, out 
 	vec3 pvec = cross(r.direction, edge2);
 	float det = 1.0 / dot(edge1, pvec);
 
-	// uncomment the following line if back-face culling is desired, otherwise
-	// comment out the following line if double-sided triangles are wanted
-	//if (det <= 0.0) return INFINITY;
+	
+	// comment out the following line if double-sided triangles are wanted, or
+	// uncomment the following line if back-face culling is desired (single-sided triangles)
+	if (det <= 0.0) return INFINITY;
 
 	vec3 tvec = r.origin - v0;
 	u = dot(tvec, pvec) * det;
