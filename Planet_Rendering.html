@@ -86,6 +86,8 @@
 			var movementX = 0;
 			var movementY = 0;			
 			var onMouseMove = function ( event ) {
+				if (isPaused)
+					return;
 				movementX = event.movementX || event.mozMovementX || 0;
 				movementY = event.movementY || event.mozMovementY || 0;
 				/// yawObject.rotation.y -= movementX * 0.002;
