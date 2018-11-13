@@ -135,11 +135,11 @@ out vec4 out_FragColor;
 #define DIFF 1
 #define REFR 2
 #define SPEC 3
-#define CHECK 4
-#define COAT 5
-#define CARCOAT 6
-#define TRANSLUCENT 7
-#define SPECSUB 8
+#define COAT 4
+#define CARCOAT 5
+#define TRANSLUCENT 6
+#define SPECSUB 7
+#define CHECK 8
 #define WATER 9
 #define WOOD 10
 #define SEAFLOOR 11
