@@ -23,6 +23,9 @@ var FirstPersonCameraControls = function ( camera ) {
 			
 	var onMouseMove = function ( event ) {
 
+		if (isPaused)
+			return;
+		
 		movementX = event.movementX || event.mozMovementX || 0;
 		movementY = event.movementY || event.mozMovementY || 0;
 
