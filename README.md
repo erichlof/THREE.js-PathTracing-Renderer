@@ -40,13 +40,11 @@ Along the left wall, a study in Box vs. Cone CSG: [CSG_Museum Demo #4](https://e
 
 Important note! - There is a hidden Easter Egg in one of the 4 Museum demo rooms.  Happy hunting!
 
-<h3>Materials Demos</h3>
+<h3>Materials Demo</h3>
 
-These demos showcase different materials possibilities: <br>
-[Materials Demo #1](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Materials_Showcase_1.html) Refractive (glass/water) and Car clearCoat (colored metal with clear coat) materials <br>
-[Materials Demo #2](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Materials_Showcase_2.html) Diffuse (matte wall paint/chalk) and Specular (aluminum mirror) materials <br>
-[Materials Demo #3](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Materials_Showcase_3.html) ClearCoat (billiard ball, plastic, porcelain) and Translucent (skin/balloons,etc.) materials <br>
-[Materials Demo #4](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Materials_Showcase_4.html) Metallic (Gold) and shiny SubSurface scattering (polished Jade/wax candles) materials <br> <br>
+The following demo showcases different materials possibilities. The materials that are feautured are: Diffuse (matte wall paint/chalk), Refractive (glass/water), Specular (aluminum mirror), ClearCoat (billiard ball, plastic, porcelain), Car clearCoat (colored metal with clear coat), Translucent (skin/balloons, etc.), and shiny SubSurface scattering (polished Jade/wax candles) <br>
+[Switching Materials Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Switching_Materials.html) <br>
+<br>
 
 * <h4>Classic Scenes</h4>
 In 1986 James T. Kajiya published his famous paper The Rendering Equation, in which he presented an elegant unifying integral equation that generalizes a variety of previously known rendering algorithms.  Since the equation is infinitely recursive and hopelessly multidimensional, he suggests using Monte Carlo integration (sampling and averaging) to converge on a solution.  Thus Monte Carlo path tracing was born, which this repo follows fairly closely.  At the end of his paper he included an image that demonstrates global illumination through path tracing:
