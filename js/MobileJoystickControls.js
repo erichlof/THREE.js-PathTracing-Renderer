@@ -43,12 +43,14 @@ var _baseY;
 var _stickX;
 var _stickY;
 var _container;
+var guiDomElement;
 
 
 
 var MobileJoystickControls = function( opts ) {
 	
 	opts = opts || {};
+	guiDomElement = opts.guiDomElement || null;
 	_container = document.body;
 	//_container.style.position = "relative";
 	joystickPressed = false;
@@ -655,9 +657,13 @@ function _onButton6Up() {
 
 function _onTouchStart( event ) {
 
-	event.preventDefault();
-	
+	if (guiDomElement == undefined) {
+		event.preventDefault();
+	}
+
 	_testTouch = event.changedTouches[0];
+	
+
 	if (_testTouch.target == button1Element) {
 		return _onButton1Down();
 	}
@@ -728,9 +734,12 @@ function _onTouchStart( event ) {
 
 function _onTouchEnd( event ) {
   
-	event.preventDefault();
-	
+	if (guiDomElement == undefined) {
+		event.preventDefault();
+	}
+
 	_testTouch = event.changedTouches[0];
+
 	if (_testTouch.target == button1Element) 
 		return _onButton1Up();
 	else if (_testTouch.target == button2Element) 
