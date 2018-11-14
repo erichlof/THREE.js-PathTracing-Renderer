@@ -1136,7 +1136,9 @@ void SetupScene(void)
                                                 pathTracingUniforms.uLeftSphereColor.value.setRGB(0.6, 1.0, 0.9); 
                                         }
                                         if (matType == 3) { // SPEC
-                                                pathTracingUniforms.uLeftSphereColor.value.setRGB(0.913183, 0.921494, 0.924524);   
+						pathTracingUniforms.uLeftSphereColor.value.setRGB(1.000000, 0.765557, 0.336057); // Gold
+						// other metals
+						// Aluminum: (0.913183, 0.921494, 0.924524) / Copper: (0.955008, 0.637427, 0.538163) / Silver: (0.971519, 0.959915, 0.915324)   
                                         }
                                         if (matType == 4) { // COAT
                                                 pathTracingUniforms.uLeftSphereColor.value.setRGB(1.0, 1.0, 1.0);   
@@ -1145,10 +1147,10 @@ void SetupScene(void)
                                                 pathTracingUniforms.uLeftSphereColor.value.setRGB(0.7, 0.0, 0.0);   
                                         }
                                         if (matType == 6) { // TRANSLUCENT
-                                                pathTracingUniforms.uLeftSphereColor.value.setRGB(0.0, 0.18, 0.2); //absorptionCoefficient 
+                                                pathTracingUniforms.uLeftSphereColor.value.setRGB(0.5, 0.1, 0.0); //absorptionCoefficient 
                                         }
                                         if (matType == 7) { // SPECSUB
-                                                pathTracingUniforms.uLeftSphereColor.value.setRGB(2.0, 0.01, 0.2); //absorptionCoefficient   
+                                                pathTracingUniforms.uLeftSphereColor.value.setRGB(0.01, 0.01, 0.04); //absorptionCoefficient   
                                         }
                 
                                         cameraIsMoving = true;
@@ -1168,22 +1170,24 @@ void SetupScene(void)
                                                 pathTracingUniforms.uRightSphereColor.value.setRGB(1.0, 1.0, 1.0);   
                                         }
                                         if (matType == 2) { // REFR
-                                                pathTracingUniforms.uRightSphereColor.value.setRGB(0.6, 1.0, 0.9);
+                                                pathTracingUniforms.uRightSphereColor.value.setRGB(1.0, 1.0, 1.0);
                                         }
                                         if (matType == 3) { // SPEC
-                                                pathTracingUniforms.uRightSphereColor.value.setRGB(0.913183, 0.921494, 0.924524);     
+						pathTracingUniforms.uRightSphereColor.value.setRGB(0.913183, 0.921494, 0.924524); // Aluminum
+						// other metals
+						// Gold: (1.000000, 0.765557, 0.336057) / Copper: (0.955008, 0.637427, 0.538163) / Silver: (0.971519, 0.959915, 0.915324)   
                                         }
                                         if (matType == 4) { // COAT
-                                                pathTracingUniforms.uRightSphereColor.value.setRGB(1.0, 1.0, 1.0);   
+                                                pathTracingUniforms.uRightSphereColor.value.setRGB(1.0, 1.0, 0.0);   
                                         }
                                         if (matType == 5) { // CARCOAT
-                                                pathTracingUniforms.uRightSphereColor.value.setRGB(0.7, 0.0, 0.0);  
+                                                pathTracingUniforms.uRightSphereColor.value.setRGB(0.2, 0.25, 0.3);  
                                         }
                                         if (matType == 6) { // TRANSLUCENT
                                                 pathTracingUniforms.uRightSphereColor.value.setRGB(0.0, 0.18, 0.2); //absorptionCoefficient
                                         }
                                         if (matType == 7) { // SPECSUB
-                                                pathTracingUniforms.uRightSphereColor.value.setRGB(2.0, 0.01, 0.2); //absorptionCoefficient    
+                                                pathTracingUniforms.uRightSphereColor.value.setRGB(1.0, 0.01, 0.2); //absorptionCoefficient    
                                         }
                 
                                         cameraIsMoving = true;
