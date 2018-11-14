@@ -42,7 +42,8 @@
 		<script src="js/FirstPersonCameraControls.js"> </script>
 		<script src="js/MobileJoystickControls.js"> </script>
                 <script src="js/stats.min.js"> </script>
-                <script src='js/dat.gui.min.js'></script>
+		<script src='js/dat.gui.min.js'></script>
+		
 		
 		
 		<script id="pathTracingVertexShader" type="x-shader/x-vertex">
@@ -522,37 +523,61 @@ void SetupScene(void)
                         // a list of material types and their corresponding numbers are found in the 'pathTracingCommon.js' file
                                 this.type = 1; // default is '1': diffuse type
                                 this.color = new THREE.Color(1.0, 1.0, 1.0);
-                                this.emission = new THREE.Color(0.0, 0.0, 0.0);   
+                                //this.emission = new THREE.Color(0.0, 0.0, 0.0);   
                         }
 			
 			
 			init();
 			
 			
-		     // function init( meshes ) {
 			function init() {
 				
+				materialController = {
+                                        LSphereMaterial: 1,
+                                        RSphereMaterial: 3
+                                };
+
+                                function leftMatChanger() {
+                                        changeLeftSphereMaterial = true;
+                                }
+                                
+                                function rightMatChanger() {
+                                        changeRightSphereMaterial = true;
+                                }
+
+				gui = new dat.GUI();
+				
+				gui.add( materialController, 'LSphereMaterial', 1, 7, 1 ).onChange( leftMatChanger );
+				gui.add( materialController, 'RSphereMaterial', 1, 7, 1 ).onChange( rightMatChanger );
+				
+				leftMatChanger();
+				rightMatChanger();
+
+				gui.domElement.style.webkitUserSelect = "none";
+				gui.domElement.style.MozUserSelect = "none";
+				
+
 				if ( 'ontouchstart' in window ) {
 					mouseControl = false;
+					// if on mobile device, unpause the app because there is no ESC key and no mouse capture to do
+					isPaused = false;
 					pixelRatio = 0.5;
+					ableToEngagePointerLock = true;
 
 					mobileJoystickControls = new MobileJoystickControls ({
 						//showJoystick: true,
+						guiDomElement: gui.domElement,
 						enableMultiTouch: true
 					});	
 				}
-
-				// if on mobile device, unpause the app because there is no ESC key and no mouse capture to do
-				if ( !mouseControl )
-					isPaused = false;
 
 				if (mouseControl) {
 
 					window.addEventListener( 'wheel', onMouseWheel, false );
 
-					//window.addEventListener("click", function(event) {
-					//	event.preventDefault();	
-					//}, false);
+					window.addEventListener("click", function(event) {
+						event.preventDefault();	
+					}, false);
 					window.addEventListener("dblclick", function(event) {
 						event.preventDefault();	
                                         }, false);
@@ -585,6 +610,15 @@ void SetupScene(void)
 					document.addEventListener( 'mozpointerlockchange', pointerlockChange, false );
 					document.addEventListener( 'webkitpointerlockchange', pointerlockChange, false );
 
+				}
+
+				if (mouseControl) {
+					gui.domElement.addEventListener("mouseenter", function(event) {
+							ableToEngagePointerLock = false;	
+					}, false);
+					gui.domElement.addEventListener("mouseleave", function(event) {
+							ableToEngagePointerLock = true;
+					}, false);
 				}
 				
 				canvas = document.createElement( 'canvas' );
@@ -784,33 +818,7 @@ void SetupScene(void)
 				});
                                 */
                                 
-                                materialController = {
-                                        LSphereMaterial: 1,
-                                        RSphereMaterial: 3
-                                };
-
-                                function leftMatChanger() {
-                                        changeLeftSphereMaterial = true;
-                                }
                                 
-                                function rightMatChanger() {
-                                        changeRightSphereMaterial = true;
-                                }
-
-                                gui = new dat.GUI();
-                                gui.domElement.style.webkitUserSelect = "none";
-                                gui.domElement.style.MozUserSelect = "none";
-                                gui.domElement.addEventListener("mouseenter", function(event) {
-                                                ableToEngagePointerLock = false;	
-                                }, false);
-                                gui.domElement.addEventListener("mouseleave", function(event) {
-                                                ableToEngagePointerLock = true;
-                                }, false);
-				gui.add( materialController, 'LSphereMaterial', 1, 7, 1 ).onChange( leftMatChanger );
-				gui.add( materialController, 'RSphereMaterial', 1, 7, 1 ).onChange( rightMatChanger );
-				
-				leftMatChanger();
-                                rightMatChanger();
                                 
 				// onWindowResize() must be at the end of the init() function
 				onWindowResize();
