@@ -284,15 +284,15 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
 			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
 			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
-			float randChoice = rand(seed);
+			
 			// choose either specular reflection, metallic, or diffuse
-			if( randChoice < Re )
+			if( rand(seed) < Re )
 			{	
 				r = Ray( x, reflect(r.direction, nl) );
 				r.origin += r.direction;
 				continue;	
 			}
-			else if (randChoice > 0.9)
+			if (rand(seed) > 0.8)
 			{
 				mask *= intersec.color;
 				r = Ray( x, reflect(r.direction, nl) );
@@ -1130,24 +1130,24 @@ void SetupScene(void)
                                         if (matType == 1) { // DIFF
                                                 pathTracingUniforms.uLeftSphereColor.value.setRGB(1.0, 1.0, 1.0);   
                                         }
-                                        if (matType == 2) { // REFR
+                                        else if (matType == 2) { // REFR
                                                 pathTracingUniforms.uLeftSphereColor.value.setRGB(0.6, 1.0, 0.9); 
                                         }
-                                        if (matType == 3) { // SPEC
+                                        else if (matType == 3) { // SPEC
 						pathTracingUniforms.uLeftSphereColor.value.setRGB(1.000000, 0.765557, 0.336057); // Gold
 						// other metals
 						// Aluminum: (0.913183, 0.921494, 0.924524) / Copper: (0.955008, 0.637427, 0.538163) / Silver: (0.971519, 0.959915, 0.915324)   
                                         }
-                                        if (matType == 4) { // COAT
+                                        else if (matType == 4) { // COAT
                                                 pathTracingUniforms.uLeftSphereColor.value.setRGB(1.0, 1.0, 1.0);   
                                         }
-                                        if (matType == 5) { // CARCOAT
-                                                pathTracingUniforms.uLeftSphereColor.value.setRGB(0.6, 0.0, 0.0);   
+                                        else if (matType == 5) { // CARCOAT
+                                                pathTracingUniforms.uLeftSphereColor.value.setRGB(0.7, 0.001, 0.001);   
                                         }
-                                        if (matType == 6) { // TRANSLUCENT
+                                        else if (matType == 6) { // TRANSLUCENT
                                                 pathTracingUniforms.uLeftSphereColor.value.setRGB(0.5, 0.1, 0.0); //absorptionCoefficient 
                                         }
-                                        if (matType == 7) { // SPECSUB
+                                        else if (matType == 7) { // SPECSUB
                                                 pathTracingUniforms.uLeftSphereColor.value.setRGB(0.01, 0.01, 0.04); //absorptionCoefficient   
                                         }
                 
@@ -1167,24 +1167,24 @@ void SetupScene(void)
                                         if (matType == 1) { // DIFF
                                                 pathTracingUniforms.uRightSphereColor.value.setRGB(1.0, 1.0, 1.0);   
                                         }
-                                        if (matType == 2) { // REFR
+                                        else if (matType == 2) { // REFR
                                                 pathTracingUniforms.uRightSphereColor.value.setRGB(1.0, 1.0, 1.0);
                                         }
-                                        if (matType == 3) { // SPEC
+                                        else if (matType == 3) { // SPEC
 						pathTracingUniforms.uRightSphereColor.value.setRGB(0.913183, 0.921494, 0.924524); // Aluminum
 						// other metals
 						// Gold: (1.000000, 0.765557, 0.336057) / Copper: (0.955008, 0.637427, 0.538163) / Silver: (0.971519, 0.959915, 0.915324)   
                                         }
-                                        if (matType == 4) { // COAT
+                                        else if (matType == 4) { // COAT
                                                 pathTracingUniforms.uRightSphereColor.value.setRGB(1.0, 1.0, 0.0);   
                                         }
-                                        if (matType == 5) { // CARCOAT
-						pathTracingUniforms.uRightSphereColor.value.setRGB(0.01, 0.02, 0.05);
+                                        else if (matType == 5) { // CARCOAT
+						pathTracingUniforms.uRightSphereColor.value.setRGB(0.1, 0.2, 0.45);
                                         }
-                                        if (matType == 6) { // TRANSLUCENT
+                                        else if (matType == 6) { // TRANSLUCENT
                                                 pathTracingUniforms.uRightSphereColor.value.setRGB(0.0, 0.18, 0.2); //absorptionCoefficient
                                         }
-                                        if (matType == 7) { // SPECSUB
+                                        else if (matType == 7) { // SPECSUB
                                                 pathTracingUniforms.uRightSphereColor.value.setRGB(1.0, 0.01, 0.2); //absorptionCoefficient    
                                         }
                 
