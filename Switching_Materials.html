@@ -271,7 +271,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			
 		} //end if (intersec.type == COAT)
 		
-		if (intersec.type == CARCOAT)  // Diffuse object underneath with ClearCoat on top
+		if (intersec.type == CARCOAT)  // Colored Metal or Fiberglass object underneath with ClearCoat on top
 		{
 			float nc = 1.0; // IOR of Air
 			float nt = 1.4; // IOR of Clear Coat
@@ -290,15 +290,13 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			{	
 				r = Ray( x, reflect(r.direction, nl) );
 				r.origin += r.direction;
-				//bounceIsSpecular = true;
 				continue;	
 			}
-			else if (randChoice > 0.8)
+			else if (randChoice > 0.9)
 			{
 				mask *= intersec.color;
 				r = Ray( x, reflect(r.direction, nl) );
 				r.origin += r.direction;
-				//bounceIsSpecular = true;
 				continue;
 			}
 			else
@@ -1144,7 +1142,7 @@ void SetupScene(void)
                                                 pathTracingUniforms.uLeftSphereColor.value.setRGB(1.0, 1.0, 1.0);   
                                         }
                                         if (matType == 5) { // CARCOAT
-                                                pathTracingUniforms.uLeftSphereColor.value.setRGB(0.7, 0.0, 0.0);   
+                                                pathTracingUniforms.uLeftSphereColor.value.setRGB(0.7, 0.001, 0.001);   
                                         }
                                         if (matType == 6) { // TRANSLUCENT
                                                 pathTracingUniforms.uLeftSphereColor.value.setRGB(0.5, 0.1, 0.0); //absorptionCoefficient 
@@ -1181,7 +1179,7 @@ void SetupScene(void)
                                                 pathTracingUniforms.uRightSphereColor.value.setRGB(1.0, 1.0, 0.0);   
                                         }
                                         if (matType == 5) { // CARCOAT
-                                                pathTracingUniforms.uRightSphereColor.value.setRGB(0.3, 0.4, 0.6);  
+						pathTracingUniforms.uRightSphereColor.value.setRGB(0.01, 0.02, 0.05);
                                         }
                                         if (matType == 6) { // TRANSLUCENT
                                                 pathTracingUniforms.uRightSphereColor.value.setRGB(0.0, 0.18, 0.2); //absorptionCoefficient
