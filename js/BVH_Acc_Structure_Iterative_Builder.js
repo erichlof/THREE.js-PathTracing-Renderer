@@ -20,6 +20,7 @@ var rightBranchCounter = 0;
 var leftBranchCounter = 0;
 var leftWorkCounter = 0;
 var rightWorkCounter = 0;
+var nullCodePathReached = false;
 var currentMinCorner = new THREE.Vector3();
 var currentMaxCorner = new THREE.Vector3();
 var testMinCorner = new THREE.Vector3();
@@ -32,7 +33,7 @@ var LTopCorner = new THREE.Vector3();
 var RBottomCorner = new THREE.Vector3();
 var RTopCorner = new THREE.Vector3();
 var k, value, side1, side2, side3, minCost, testSplit;
-var axis, start, stop, countLeft, countRight;
+var axis, countLeft, countRight;
 var lside1, lside2, lside3, rside1, rside2, rside3;
 var surfaceLeft, surfaceRight, totalCost;
 var currentList;
@@ -193,28 +194,6 @@ function BVH_Create_Node(workList, idParent, isLeftBranch) {
 
                         // we will try dividing the triangle AABBs based on the current axis
 
-                        // X-axis
-                        if (axis == 0) {
-                                start = currentMinCorner.x;
-                                stop  = currentMaxCorner.x;
-                        }
-                        // Y-axis
-                        else if (axis == 1) {
-                                start = currentMinCorner.y;
-                                stop  = currentMaxCorner.y;
-                        }
-                        // Z-axis
-                        else {
-                                start = currentMinCorner.z;
-                                stop  = currentMaxCorner.z;
-                        }
-
-                        // In that axis, do the bounding boxes in the workList queue "span" across, (meaning distributed over a reasonable distance)?
-                        // Or are they all already "packed" on the axis? Meaning that they are too close to each other
-                        if (Math.abs(stop - start) < 1e-4)
-                                continue; // go to next axis
-
-
                         // Create left and right bounding box
                         LBottomCorner.set(Infinity, Infinity, Infinity);
                         LTopCorner.set(-Infinity, -Infinity, -Infinity);
@@ -292,18 +271,59 @@ function BVH_Create_Node(workList, idParent, isLeftBranch) {
 
                 } // end for (let j = 0; j < 3; j++)
     
-                // if no bestSplit was found (bestSplit still equals null), bail out
+                // if no bestSplit was found (bestSplit still equals null), manually populate left/right lists later
                 if (bestSplit == null)
                 {
-                        console.log("bestSplit==null code path reached");
-                        console.log("failed to build BVH");
-                        return;
+                        nullCodePathReached = true;
+                        //console.log("bestSplit==null code path reached");
+                        //console.log("workList length: " + workList.length);
                 }
 
         } // end else if (workList.length > 2)
 
 
-        // the following code can only be reached if (workList.length > 2): other branches will 'return;' earlier
+        leftWorkCounter = 0;
+        rightWorkCounter = 0;
+
+        // manually populate the current leftWorkLists and rightWorklists
+        if (nullCodePathReached) {
+
+                nullCodePathReached = false;
+                // this loop is to count how many elements we need for the left branch and the right branch
+                for (let i = 0; i < workList.length; i++) {
+
+                        if (i % 2 == 0) {
+                                leftWorkCounter++;
+                        } else {
+                                rightWorkCounter++;
+                        }
+                }
+                
+                // now that the size of each branch is known, we can initialize the left and right arrays
+                leftWorkLists[stackptr] = new Uint32Array(leftWorkCounter);
+                rightWorkLists[stackptr] = new Uint32Array(rightWorkCounter);
+
+                // reset counters for the loop coming up
+                leftWorkCounter = 0;
+                rightWorkCounter = 0;
+
+                for (let i = 0; i < workList.length; i++) {
+                        k = workList[i];
+
+                        if (i % 2 == 0) {
+                                leftWorkLists[stackptr][leftWorkCounter] = k;
+                                leftWorkCounter++;
+                        } else {
+                                rightWorkLists[stackptr][rightWorkCounter] = k;
+                                rightWorkCounter++;
+                        }
+                }
+                
+                return; // bail out
+        }
+
+        // the following code can only be reached if (workList.length > 2) and bestSplit has been successfully set: 
+        // other branches will 'return;' earlier
 
         // distribute the triangle AABBs in the left or right child nodes
         leftWorkCounter = 0;
