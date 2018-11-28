@@ -298,7 +298,8 @@ var MobileJoystickControls = function( opts ) {
 	// options
 	_showJoystick = opts.showJoystick || false;
 	_showButtons = opts.showButtons || true;
-	if('createTouch' in document) _showButtons = true;
+	if ('ontouchstart' in window)
+                _showButtons = true;
 	_enableMultiTouch = opts.enableMultiTouch || false;
 	
 	_stationaryBase = opts.stationaryBase || false;
@@ -361,6 +362,7 @@ function _onButton1Down() {
 
 function _onButton1Up() {
 	button1Pressed = false;
+	joystickDeltaX = joystickDeltaY = 0;
 	
 	_Button1_ctx.clearRect(0, 0, _buttonCanvasWidth, _buttonCanvasWidth);
 	_Button1_ctx.strokeStyle = 'rgba(255,255,255,0.2)';
@@ -415,6 +417,7 @@ function _onButton2Down() {
 
 function _onButton2Up() {
 	button2Pressed = false;
+	joystickDeltaX = joystickDeltaY = 0;
 	
 	_Button2_ctx.clearRect(0, 0, _buttonCanvasWidth, _buttonCanvasWidth);
 	_Button2_ctx.strokeStyle = 'rgba(255,255,255,0.2)';
@@ -469,6 +472,7 @@ function _onButton3Down() {
 
 function _onButton3Up() {
 	button3Pressed = false;
+	joystickDeltaX = joystickDeltaY = 0;
 	
 	_Button3_ctx.clearRect(0, 0, _buttonCanvasWidth, _buttonCanvasWidth);
 	_Button3_ctx.strokeStyle = 'rgba(255,255,255,0.2)';
@@ -523,6 +527,7 @@ function _onButton4Down() {
 
 function _onButton4Up() {
 	button4Pressed = false;
+	joystickDeltaX = joystickDeltaY = 0;
 	
 	_Button4_ctx.clearRect(0, 0, _buttonCanvasWidth, _buttonCanvasWidth);
 	_Button4_ctx.strokeStyle = 'rgba(255,255,255,0.2)';
@@ -576,6 +581,7 @@ function _onButton5Down() {
 
 function _onButton5Up() {
 	button5Pressed = false;
+	joystickDeltaX = joystickDeltaY = 0;
 	
 	_Button5_ctx.clearRect(0, 0, _smallButtonCanvasWidth, _smallButtonCanvasWidth);
 	_Button5_ctx.strokeStyle = 'rgba(255,255,255,0.2)';
@@ -629,6 +635,7 @@ function _onButton6Down() {
 
 function _onButton6Up() {
 	button6Pressed = false;
+	joystickDeltaX = joystickDeltaY = 0;
 	
 	_Button6_ctx.clearRect(0, 0, _smallButtonCanvasWidth, _smallButtonCanvasWidth);
 	_Button6_ctx.strokeStyle = 'rgba(255,255,255,0.2)';
@@ -663,7 +670,6 @@ function _onTouchStart( event ) {
 
 	_testTouch = event.changedTouches[0];
 	
-
 	if (_testTouch.target == button1Element) {
 		return _onButton1Down();
 	}
@@ -686,24 +692,16 @@ function _onTouchStart( event ) {
 	_touches = event.touches;
 	joystickPressed = true;
 
-	if (_touches.length == 1) {
-		_stickX = _testTouch.pageX;
-		_stickY = _testTouch.pageY;
-	}
-	if (_touches.length == 2) {
-		
-		_stickX = _testTouch.pageX;
-		_stickY = _testTouch.pageY;
-		
-		joystickDeltaX = _stickX - _baseX;
-		joystickDeltaY = _stickY - _baseY;
-	
-	}
+	_stickX = _testTouch.pageX;
+	_stickY = _testTouch.pageY;
 	
 	if (!_stationaryBase) {
+
 		joystickDeltaX = joystickDeltaY = 0;
+
 		_baseX = _stickX;
 		_baseY = _stickY;
+
 		if (_showJoystick) {
 			baseElement.style.display = "";
 			_move(baseElement.style, (_baseX - baseElement.width / 2), (_baseY - baseElement.height / 2));
@@ -732,6 +730,7 @@ function _onTouchStart( event ) {
 		
 }
 
+
 function _onTouchEnd( event ) {
   
 	if (guiDomElement == undefined) {
@@ -759,8 +758,10 @@ function _onTouchEnd( event ) {
 	_touches = event.touches;
 	
 	if (_stationaryBase) {
+
 		_stickX = _baseX;
 		_stickY = _baseY;
+
 		if (_touches.length > 1) {
 				
 			_stickX = _touches[1].pageX;
@@ -770,15 +771,13 @@ function _onTouchEnd( event ) {
 	}
 	
 	if (!_stationaryBase) {
+
 		baseElement.style.display = "none";
 		stickElement.style.display = "none";
+
+		_stickX = _baseX = _touches[0].pageX;
+		_stickY = _baseY = _touches[0].pageY;
 		
-		if (_touches.length > 1) {
-				
-			_stickX = _baseX = _touches[1].pageX;
-			_stickY = _baseY = _touches[1].pageY;
-			
-		}
 	}
 	
 	if (_showJoystick) {
@@ -787,29 +786,24 @@ function _onTouchEnd( event ) {
 	
 }
 
+
 function _onTouchMove( event ) {
 
 	event.preventDefault();
 	
 	_testTouch = event.changedTouches[0];
 
-	if ( _testTouch.target == button1Element || _testTouch.target == button2Element || 
-	     _testTouch.target == button3Element || _testTouch.target == button4Element ||
-	     _testTouch.target == button5Element || _testTouch.target == button6Element ) {
-
-		return;
-	}
 	_touches = event.touches;
 	
 	if (_touches.length == 1) {
+
 		if ( _touches[0].target != button1Element && _touches[0].target != button2Element && 
 		     _touches[0].target != button3Element && _touches[0].target != button4Element && 
 		     _touches[0].target != button5Element && _touches[0].target != button6Element ) {
 
-			_stickX = _touches[0].pageX;
-			_stickY = _touches[0].pageY;
+			_stickX = _testTouch.pageX;
+			_stickY = _testTouch.pageY;
 		}
-
 	}
 	if (_touches.length == 2) {
 		
@@ -833,10 +827,10 @@ function _onTouchMove( event ) {
 			pinchWidthY = Math.abs(_touches[1].pageY - _touches[0].pageY);
 			
 		}
-		
 	}
 	
 	if (_limitStickTravel) {
+
 		_stickDistance = Math.sqrt((joystickDeltaX * joystickDeltaX) + (joystickDeltaY * joystickDeltaY));
 		
 		if (_stickDistance > _stickRadius) {
