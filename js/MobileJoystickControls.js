@@ -770,19 +770,23 @@ function _onTouchEnd( event ) {
 	else if (_testTouch.target == button6Element) 
 		return _onButton6Up();
 
+	
 	joystickPressed = false;
-	joystickDeltaX = joystickDeltaY = 0;
-	
-	if (_stationaryBase) {
 
-		_stickX = _baseX;
-		_stickY = _baseY;
-	}
-	
+	_stickX = _baseX;
+	_stickY = _baseY;
+
+	joystickDeltaX = joystickDeltaY = 0;
+
+	_touches = event.touches;
+
 	if (!_stationaryBase) {
 
 		baseElement.style.display = "none";
 		stickElement.style.display = "none";
+
+		_stickX = _baseX = _touches[0].pageX;
+		_stickY = _baseY = _touches[0].pageY;
 	}
 	
 	if (_showJoystick) {
@@ -842,7 +846,7 @@ function _onTouchMove( event ) {
 	joystickDeltaY = _stickY - _baseY;
 
 	if (_stationaryBase) {
-		
+
 		_stickDistance = Math.sqrt((joystickDeltaX * joystickDeltaX) + (joystickDeltaY * joystickDeltaY));
 		
 		if (_stickDistance > 150) {
