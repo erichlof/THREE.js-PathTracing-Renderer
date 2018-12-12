@@ -130,7 +130,7 @@ out vec4 out_FragColor;
 #define E                2.71828182845904524
 #define INFINITY         1000000.0
 
-
+#define POINT_LIGHT -1
 #define LIGHT 0
 #define DIFF 1
 #define REFR 2
@@ -195,8 +195,7 @@ float PlaneIntersect( vec4 pla, Ray r )
 	float denom = dot(n, r.direction);
 
 	// uncomment the following if single-sided plane is desired
-	//if (denom >= 0.0) 
-	//	return INFINITY;
+	//if (denom >= 0.0) return INFINITY;
 	
         vec3 pOrO = (pla.w * n) - r.origin; 
         float result = dot(pOrO, n) / denom;
@@ -215,12 +214,11 @@ float DiskIntersect( vec3 diskPos, vec3 normal, float radius, Ray r )
 	vec3 pOrO = diskPos - r.origin;
 	float denom = dot(n, r.direction);
 	// use the following for one-sided disk
-	//if (denom <= 0.0)
-	//	return INFINITY;
+	//if (denom <= 0.0) return INFINITY;
 	
         float result = dot(pOrO, n) / denom;
-	if (result < 0.0)
-		return INFINITY;
+	if (result < 0.0) return INFINITY;
+
         vec3 intersectPos = r.origin + r.direction * result;
 	vec3 v = intersectPos - diskPos;
 	float d2 = dot(v,v);
@@ -229,6 +227,34 @@ float DiskIntersect( vec3 diskPos, vec3 normal, float radius, Ray r )
 		return INFINITY;
 		
 	return result;
+}
+
+`;
+
+THREE.ShaderChunk[ 'pathtracing_rectangle_intersect' ] = `
+
+//------------------------------------------------------------------------------------
+float RectangleIntersect( vec3 pos, vec3 normal, float radiusU, float radiusV, Ray r )
+//------------------------------------------------------------------------------------
+{
+	float dt = dot(-normal, r.direction);
+
+	// use the following for one-sided rectangle
+	if (dt < 0.0) return INFINITY;
+
+	float t = dot(-normal, pos - r.origin) / dt;
+	if (t < 0.0) return INFINITY;
+	
+	vec3 hit = r.origin + r.direction * t;
+	vec3 vi = hit - pos;
+
+	vec3 u = normalize(cross( abs(normal.y) < 0.9 ? vec3(0, 1, 0) : vec3(0, 0, 1), normal));
+	vec3 v = cross(normal, u);
+
+	if (abs(dot(u, vi)) > radiusU) return INFINITY;
+	if (abs(dot(v, vi)) > radiusV) return INFINITY;
+	
+	return t;
 }
 
 `;
@@ -975,7 +1001,14 @@ float BoundingBoxIntersect( vec3 minCorner, vec3 maxCorner, vec3 rayOrigin, vec3
 	float t0 = max( max(tmin.x, tmin.y), tmin.z);
 	float t1 = min( min(tmax.x, tmax.y), tmax.z);
 
-	return (t0 > t1) ? INFINITY : t0;	
+	if (t0 > t1) return INFINITY;
+	
+	float result = INFINITY;
+	
+	if (t1 > 0.0) result = t1;
+	if (t0 > 0.0) result = t0;
+	
+	return result;
 }
 
 `;
@@ -1023,22 +1056,19 @@ float BVH_TriangleIntersect( vec3 v0, vec3 v1, vec3 v2, Ray r, out float u, out 
 	vec3 pvec = cross(r.direction, edge2);
 	float det = 1.0 / dot(edge1, pvec);
 
-	
 	// comment out the following line if double-sided triangles are wanted, or
 	// uncomment the following line if back-face culling is desired (single-sided triangles)
-	if (det <= 0.0) return INFINITY;
+	//if (det < 0.0) return INFINITY;
 
 	vec3 tvec = r.origin - v0;
 	u = dot(tvec, pvec) * det;
 
-	if (u < 0.0 || u > 1.0)
-		return INFINITY;
+	if (u < 0.0 || u > 1.0) return INFINITY;
 
 	vec3 qvec = cross(tvec, edge1);
 	v = dot(r.direction, qvec) * det;
 
-	if (v < 0.0 || u + v > 1.0)
-		return INFINITY;
+	if (v < 0.0 || u + v > 1.0) return INFINITY;
 
 	return dot(edge2, qvec) * det;
 }
@@ -1147,9 +1177,9 @@ vec3 randomDirectionInHemisphere( vec3 nl, inout uvec2 seed )
 	float up = rand(seed); // unbiased
     	float over = sqrt(1.0 - up * up);
 	float around = rand(seed) * TWO_PI;
-	vec3 u = normalize( cross( abs(nl.x) > 0.1 ? vec3(0, 1, 0) : vec3(1, 0, 0), nl ) );
-	vec3 v = normalize( cross(nl, u) );
-	return cos(around) * over * u + sin(around) * over * v + up * nl;
+	vec3 u = normalize( cross( abs(nl.y) < 0.9 ? vec3(0, 1, 0) : vec3(0, 0, 1), nl ) );
+	vec3 v = cross(nl, u);
+	return normalize(cos(around) * over * u + sin(around) * over * v + up * nl);
 }
 
 vec3 randomCosWeightedDirectionInHemisphere( vec3 nl, inout uvec2 seed )
@@ -1157,9 +1187,9 @@ vec3 randomCosWeightedDirectionInHemisphere( vec3 nl, inout uvec2 seed )
 	float up = sqrt(rand(seed)); // weighted
     	float over = sqrt(1.0 - up * up);
 	float around = rand(seed) * TWO_PI;
-	vec3 u = normalize( cross( abs(nl.x) > 0.1 ? vec3(0, 1, 0) : vec3(1, 0, 0), nl ) );
-	vec3 v = normalize( cross(nl, u) );
-	return cos(around) * over * u + sin(around) * over * v + up * nl;
+	vec3 u = normalize( cross( abs(nl.y) < 0.9 ? vec3(0, 1, 0) : vec3(0, 0, 1), nl ) );
+	vec3 v = cross(nl, u);
+	return normalize(cos(around) * over * u + sin(around) * over * v + up * nl);
 }
 
 `;
@@ -1176,9 +1206,9 @@ vec3 calcDirectLightingSphere(vec3 mask, vec3 x, vec3 nl, Sphere light, inout uv
 	vec3 srDir = normalize(ld - x);
 		
 	Ray shadowRay = Ray(x, srDir);
-	shadowRay.origin += nl * 2.0;
+	shadowRay.origin += nl;
 	float st = SceneIntersect(shadowRay, shadowIntersec);
-	if ( shadowIntersec.type == LIGHT )
+	if ( shadowIntersec.type == light.type )
 	{
 		float r2 = light.radius * light.radius;
 		vec3 d = light.position - shadowRay.origin;
