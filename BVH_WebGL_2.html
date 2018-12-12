@@ -426,9 +426,6 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			float c = 1.0 - ddn;
 			float Re = R0 + (1.0 - R0) * c * c * c * c * c;
 			
-			// choose random sample vector for diffuse material underneath ClearCoat
-			vec3 d = randomCosWeightedDirectionInHemisphere( nl, seed );
-			
 			// choose either specular reflection or diffuse
 			if( rand(seed) < Re )
 			{	
