@@ -334,6 +334,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
         Intersection intersec;
 	float epsIntersect = 0.01;
 	
+	// we need up to 20 bounces to get through all the possible yellow glass boxes
 	for (int depth = 0; depth < 20; depth++)
 	{
 		
@@ -636,7 +637,7 @@ void SetupScene(void)
 
 			gui = new dat.GUI();
 			
-			gui.add( BVH_LevelController, 'BVH_NodeDepth', 0, 30, 1 ).onChange( BVH_LevelChanger );
+			gui.add( BVH_LevelController, 'BVH_NodeDepth', 0, 24, 1 ).onChange( BVH_LevelChanger );
 			
 			BVH_LevelChanger();
 
@@ -650,6 +651,7 @@ void SetupScene(void)
 
 				mobileJoystickControls = new MobileJoystickControls({
 					//showJoystick: true,
+					guiDomElement: gui.domElement,
 					enableMultiTouch: true
 				});
 			}
@@ -760,7 +762,7 @@ void SetupScene(void)
 			pathTracingScene.add(cameraControlsObject);
 
 			// for flyCam
-			cameraControlsObject.position.set(0, 40, 50);
+			cameraControlsObject.position.set(0, 40, 40);
 
 			// look slightly downward
 			cameraControlsPitchObject.rotation.x = -0.2;
