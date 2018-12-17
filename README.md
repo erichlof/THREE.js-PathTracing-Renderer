@@ -111,6 +111,10 @@ And here is a GLTF format loader example - note, all I did was just uncomment th
 
 * [BVH GLTF Loader Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/BVH_GLTF_Models_Example.html)<br>
 
+The following demo lets you peek under the hood of the BVH acceleration structure and see how the various axis-aligned bounding boxes are built all the way from the large surrounding root node box (level 0), to the small leaf node boxes (level 14+), to the individual triangles of the model that are contained within those leaf node boxes.
+
+* [BVH Visualizer Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/BVH_Visualizer.html)<br>
+
 Some pretty interesting shapes can be obtained by deforming objects and/or warping the ray space (position and direction).  This demo applies a twist warp to the spheres and mirror box and randomizes the object space of the top purple sphere, creating an acceptable representation of a cloud (for free - no extra processing time for volumetrics!) <br>
 
 * [Ray/Object Warping Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Ray_Warping.html)<br>
