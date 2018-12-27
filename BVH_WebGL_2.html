@@ -102,6 +102,8 @@ Box boxes[N_BOXES];
 
 #include <pathtracing_random_functions>
 
+#include <pathtracing_calc_fresnel_reflectance>
+
 #include <pathtracing_sphere_intersect>
 
 #include <pathtracing_box_intersect>
@@ -303,17 +305,21 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 //-----------------------------------------------------------------------
 {
+        Intersection intersec;
 	vec3 accumCol = vec3(0.0);
         vec3 mask = vec3(1.0);
 	vec3 checkCol0 = vec3(1);
 	vec3 checkCol1 = vec3(0.5);
-        Intersection intersec;
+        vec3 tdir;
+	
+	float nc, nt, Re;
+        float epsIntersect = 0.01;
+        
 	bool bounceIsSpecular = true;
-	int sampleDiffuseBudget = 3;
+        
 	
         for (int depth = 0; depth < 5; depth++)
 	{
-		sampleDiffuseBudget -= 1;
 		
 		float t = SceneIntersect(r, intersec);
 		
@@ -351,10 +357,6 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			
 			mask *= intersec.color;
 			bounceIsSpecular = false;
-			//accumCol += calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
-			
-			sampleDiffuseBudget -= 1;
-			//if (sampleDiffuseBudget < 0) break;
 
 			// Russian Roulette
 			float p = max(mask.r, max(mask.g, mask.b));
@@ -369,14 +371,14 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			
 			// choose random Diffuse sample vector
 			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
-			r.origin += r.direction * 2.0;
+			r.origin += r.direction * epsIntersect;
 			continue;	
                 }
 		
                 if (intersec.type == SPEC)  // Ideal SPECULAR reflection
                 {
 			r = Ray( x, reflect(r.direction, nl) );
-			r.origin += r.direction * 2.0;
+			r.origin += r.direction * epsIntersect;
 			mask *= intersec.color;
 			bounceIsSpecular = true;
                         continue;
@@ -384,53 +386,40 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
                 if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
-			float nc = 1.0; // IOR of Air
-			float nt = 1.5; // IOR of common Glass
-			float nnt = dot(r.direction, n) <= 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
-			vec3 tdir = refract(r.direction, nl, nnt);
-				
-			// Original Fresnel equations
-			float cosThetaInc = dot(nl, r.direction);
-			float cosThetaTra = dot(nl, tdir);
-			float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
-			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
-			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
-			float Tr = 1.0 - Re;
+			nc = 1.0; // IOR of Air
+			nt = 1.5; // IOR of common Glass
+			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
+
+			//if (diffuseCount < 2)
+				bounceIsSpecular = true;
 			
 			if (rand(seed) < Re) // reflect ray from surface
 			{
 				r = Ray( x, reflect(r.direction, nl) );
-			    	r.origin += r.direction * 2.0;
-				bounceIsSpecular = true;
+				r.origin += r.direction * epsIntersect;
 			    	continue;	
 			}
 			else // transmit ray through surface
 			{
 				mask *= intersec.color;
 				r = Ray(x, tdir);
-				r.origin += r.direction * 2.0;
-				bounceIsSpecular = true;
+				r.origin += r.direction * epsIntersect;
 				continue;
 			}
-			
+
 		} // end if (intersec.type == REFR)
 		
 		if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top (like car, or shiny pool ball)
 		{
-			// Schlick Fresnel approx.
-			float ddn = dot(-r.direction, nl);
-			float nc = 1.0; // IOR of air
-			float nt = 1.5; // IOR of ClearCoat 
-			float R0 = (nc - nt) / (nc + nt);
-			R0 *= R0;
-			float c = 1.0 - ddn;
-			float Re = R0 + (1.0 - R0) * c * c * c * c * c;
+			nc = 1.0; // IOR of Air
+			nt = 1.4; // IOR of ClearCoat
+			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
 			
 			// choose either specular reflection or diffuse
 			if( rand(seed) < Re )
 			{	
 				r = Ray( x, reflect(r.direction, nl) );
-				r.origin += r.direction * 2.0;
+				r.origin += r.direction * epsIntersect;
 				bounceIsSpecular = true;
 				continue;	
 			}
@@ -441,7 +430,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 					mask *= texture(tMarbleTexture, intersec.uv).rgb;
 				//accumCol += calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
-				r.origin += r.direction * 2.0;
+				r.origin += r.direction * epsIntersect;
 				bounceIsSpecular = false;
 				continue;
 			}
