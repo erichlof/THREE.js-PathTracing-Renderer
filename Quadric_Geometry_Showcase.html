@@ -107,7 +107,7 @@ struct CappedCylinder { float radius; vec3 cap1pos; vec3 cap2pos; vec3 emission;
 struct Cone { vec3 pos0; float radius0; vec3 pos1; float radius1; vec3 emission; vec3 color; int type; };
 struct Capsule { vec3 pos0; float radius0; vec3 pos1; float radius1; vec3 emission; vec3 color; int type; };
 struct Torus { float radius0; float radius1; vec3 emission; vec3 color; int type; };
-struct Disk { float radiusSq; vec3 pos; vec3 normal; vec3 emission; vec3 color; int type; };
+struct Disk { float radius; vec3 pos; vec3 normal; vec3 emission; vec3 color; int type; };
 struct Intersection { vec3 normal; vec3 emission; vec3 color; int type; };
 
 Sphere spheres[N_SPHERES];
@@ -125,9 +125,13 @@ Disk disks[N_DISKS];
 
 #include <pathtracing_random_functions>
 
+#include <pathtracing_calc_fresnel_reflectance>
+
 #include <pathtracing_sphere_intersect>
 
 #include <pathtracing_ellipsoid_intersect>
+
+#include <pathtracing_disk_intersect>
 
 #include <pathtracing_opencylinder_intersect>
 
@@ -140,6 +144,8 @@ Disk disks[N_DISKS];
 #include <pathtracing_paraboloid_intersect>
 
 #include <pathtracing_torus_intersect>
+
+#include <pathtracing_sample_sphere_light>
 
 
 //-------------------------------------------------------------------------------
@@ -300,138 +306,131 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.type = ellipsoids[i].type;
 		}
 	}
-	
-	for (int i = 0; i < N_PARABOLOIDS; i++)
-        {
-		d = ParaboloidIntersect( paraboloids[i].rad, paraboloids[i].height, paraboloids[i].pos, r, n );
-		if (d < t)
-		{
-			t = d;
-			intersec.normal = normalize(n);
-			intersec.emission = paraboloids[i].emission;
-			intersec.color = paraboloids[i].color;
-			intersec.type = paraboloids[i].type;
-		}
+
+	d = DiskIntersect( disks[0].radius, disks[0].pos, disks[0].normal, r );
+	if (d < t)
+	{
+		t = d;
+		intersec.normal = normalize(disks[0].normal);
+		intersec.emission = disks[0].emission;
+		intersec.color = disks[0].color;
+		intersec.type = disks[0].type;
 	}
 	
-	for (int i = 0; i < N_HYPERBOLICPARABOLOIDS; i++)
-        {
-		d = HyperbolicParaboloidIntersect( hyperbolicParaboloids[i].rad, hyperbolicParaboloids[i].height, hyperbolicParaboloids[i].pos, r, n );
-		if (d < t)
-		{
-			t = d;
-			intersec.normal = normalize(n);
-			intersec.emission = hyperbolicParaboloids[i].emission;
-			intersec.color = hyperbolicParaboloids[i].color;
-			intersec.type = hyperbolicParaboloids[i].type;
-		}
+	d = ParaboloidIntersect( paraboloids[0].rad, paraboloids[0].height, paraboloids[0].pos, r, n );
+	if (d < t)
+	{
+		t = d;
+		intersec.normal = normalize(n);
+		intersec.emission = paraboloids[0].emission;
+		intersec.color = paraboloids[0].color;
+		intersec.type = paraboloids[0].type;
 	}
 	
-	for (int i = 0; i < N_HYPERBOLOIDS; i++)
-        {
-		d = HyperboloidIntersect( hyperboloids[i].rad, hyperboloids[i].height, hyperboloids[i].pos, r, n );
-		if (d < t)
-		{
-			t = d;
-			intersec.normal = normalize(n);
-			intersec.emission = hyperboloids[i].emission;
-			intersec.color = hyperboloids[i].color;
-			intersec.type = hyperboloids[i].type;
-		}
+	d = HyperbolicParaboloidIntersect( hyperbolicParaboloids[0].rad, hyperbolicParaboloids[0].height, hyperbolicParaboloids[0].pos, r, n );
+	if (d < t)
+	{
+		t = d;
+		intersec.normal = normalize(n);
+		intersec.emission = hyperbolicParaboloids[0].emission;
+		intersec.color = hyperbolicParaboloids[0].color;
+		intersec.type = hyperbolicParaboloids[0].type;
 	}
 	
-	for (int i = 0; i < N_OPENCYLINDERS; i++)
-        {
-		d = OpenCylinderIntersect( openCylinders[i].position, openCylinders[i].position + vec3(0,30,30), openCylinders[i].radius, r, n );
-		if (d < t)
-		{
-			t = d;
-			intersec.normal = normalize(n);
-			intersec.emission = openCylinders[i].emission;
-			intersec.color = openCylinders[i].color;
-			intersec.type = openCylinders[i].type;
-		}
-        }
+	d = HyperboloidIntersect( hyperboloids[0].rad, hyperboloids[0].height, hyperboloids[0].pos, r, n );
+	if (d < t)
+	{
+		t = d;
+		intersec.normal = normalize(n);
+		intersec.emission = hyperboloids[0].emission;
+		intersec.color = hyperboloids[0].color;
+		intersec.type = hyperboloids[0].type;
+	}
 	
-	for (int i = 0; i < N_CAPPEDCYLINDERS; i++)
-        {
-		d = CappedCylinderIntersect( cappedCylinders[i].cap1pos, cappedCylinders[i].cap2pos, cappedCylinders[i].radius, r, n);
-		if (d < t)
-		{
-			t = d;
-			intersec.normal = normalize(n);
-			intersec.emission = cappedCylinders[i].emission;
-			intersec.color = cappedCylinders[i].color;
-			intersec.type = cappedCylinders[i].type;
-		}
-        }
 	
-	for (int i = 0; i < N_CONES; i++)
-        {
-		d = ConeIntersect( cones[i].pos0, cones[i].radius0, cones[i].pos1, cones[i].radius1, r, n );
-		if (d < t)
-		{
-			t = d;
-			intersec.normal = normalize(n);
-			intersec.emission = cones[i].emission;
-			intersec.color = cones[i].color;
-			intersec.type = cones[i].type;
-		}
-        }
+	d = OpenCylinderIntersect( openCylinders[0].position, openCylinders[0].position + vec3(0,30,30), openCylinders[0].radius, r, n );
+	if (d < t)
+	{
+		t = d;
+		intersec.normal = normalize(n);
+		intersec.emission = openCylinders[0].emission;
+		intersec.color = openCylinders[0].color;
+		intersec.type = openCylinders[0].type;
+	}
 	
-	for (int i = 0; i < N_CAPSULES; i++)
-        {
-		d = CapsuleIntersect( capsules[i].pos0, capsules[i].radius0, capsules[i].pos1, capsules[i].radius1, r, n );
-		if (d < t)
-		{
-			t = d;
-			intersec.normal = normalize(n);
-			intersec.emission = capsules[i].emission;
-			intersec.color = capsules[i].color;
-			intersec.type = capsules[i].type;
-		}
-        }
+	d = CappedCylinderIntersect( cappedCylinders[0].cap1pos, cappedCylinders[0].cap2pos, cappedCylinders[0].radius, r, n);
+	if (d < t)
+	{
+		t = d;
+		intersec.normal = normalize(n);
+		intersec.emission = cappedCylinders[0].emission;
+		intersec.color = cappedCylinders[0].color;
+		intersec.type = cappedCylinders[0].type;
+	}
+	
+	d = ConeIntersect( cones[0].pos0, cones[0].radius0, cones[0].pos1, cones[0].radius1, r, n );
+	if (d < t)
+	{
+		t = d;
+		intersec.normal = normalize(n);
+		intersec.emission = cones[0].emission;
+		intersec.color = cones[0].color;
+		intersec.type = cones[0].type;
+	}
+	
+	d = CapsuleIntersect( capsules[0].pos0, capsules[0].radius0, capsules[0].pos1, capsules[0].radius1, r, n );
+	if (d < t)
+	{
+		t = d;
+		intersec.normal = normalize(n);
+		intersec.emission = capsules[0].emission;
+		intersec.color = capsules[0].color;
+		intersec.type = capsules[0].type;
+	}
 	
 	Ray rObj;
 	// transform ray into Torus's object space
 	rObj.origin = vec3( uTorusInvMatrix * vec4(r.origin, 1.0) );
 	rObj.direction = vec3( uTorusInvMatrix * vec4(r.direction, 0.0) );
-	
-	for (int i = 0; i < N_TORII; i++)
-        {	
-		d = TorusIntersect( torii[i].radius0, torii[i].radius1, rObj );
-		if (d < t)
-		{
-			t = d;
-			vec3 hit = rObj.origin + rObj.direction * t;
-			intersec.normal = calcNormal_Torus(hit);
-			// transfom normal back into world space
-			intersec.normal = vec3(uTorusNormalMatrix * intersec.normal);
-			intersec.emission = torii[i].emission;
-			intersec.color = torii[i].color;
-			intersec.type = torii[i].type;
-		}
-        }
+		
+	d = TorusIntersect( torii[0].radius0, torii[0].radius1, rObj );
+	if (d < t)
+	{
+		t = d;
+		vec3 hit = rObj.origin + rObj.direction * t;
+		intersec.normal = calcNormal_Torus(hit);
+		// transfom normal back into world space
+		intersec.normal = vec3(uTorusNormalMatrix * intersec.normal);
+		intersec.emission = torii[0].emission;
+		intersec.color = torii[0].color;
+		intersec.type = torii[0].type;
+	}
+        
 	
 	return t;
 	
 } // end float SceneIntersect( Ray r, inout Intersection intersec )
 
 
-#include <pathtracing_direct_lighting_sphere>
-
-
 //-----------------------------------------------------------------------
 vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 //-----------------------------------------------------------------------
 {
+	Intersection intersec;
+
 	vec3 accumCol = vec3(0.0);
 	vec3 mask = vec3(1.0);
 	vec3 checkCol0 = vec3(1);
 	vec3 checkCol1 = vec3(0.5);
-	Intersection intersec;
+	vec3 dirToLight;
+	vec3 tdir;
+	
+	float nc, nt, Re;
+	float weight;
+	
+	int diffuseCount = 0;
 	bool bounceIsSpecular = true;
-	int sampleDiffuseBudget = 3;
+
 	Sphere lightChoice;
 	
 	float randChoose = rand(seed);
@@ -441,9 +440,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		lightChoice = spheres[1];
 	else lightChoice = spheres[2];
 	
-	for (int depth = 0; depth < 5; depth++)
+	for (int depth = 0; depth < 6; depth++)
 	{
-		sampleDiffuseBudget -= 1;
 		
 		float t = SceneIntersect(r, intersec);
 		
@@ -458,7 +456,6 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		// if we reached something bright, don't spawn any more rays
 		if (intersec.type == LIGHT)
 		{	
-
 			if (bounceIsSpecular)
 			{
 				accumCol = mask * intersec.emission;
@@ -466,7 +463,6 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			
 			break;
 		}
-		
 		
 		// useful data 
 		vec3 n = intersec.normal;
@@ -481,53 +477,67 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				float q = clamp( mod( dot( floor(x.xz * 0.04), vec2(1.0) ), 2.0 ) , 0.0, 1.0 );
 				intersec.color = checkCol0 * q + checkCol1 * (1.0 - q);	
 			}
-			mask *= intersec.color;
-			accumCol += calcDirectLightingSphere(mask, x, nl, lightChoice, seed);
-			bounceIsSpecular = false;
 
-			sampleDiffuseBudget -= 1;
-			if (sampleDiffuseBudget < 0) break;
-			
-			// choose random Diffuse sample vector
-			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
-			r.origin += r.direction;
-			
-			continue;
+			diffuseCount++;
+
+			mask *= intersec.color;
+
+			// Russian Roulette
+			float p = max(mask.r, max(mask.g, mask.b));
+			if (depth > 0)
+			{
+				if (rand(seed) < p)
+					mask *= 1.0 / p;
+				else
+					break;
+			}
+
+			if (rand(seed) < 0.5)
+			{
+				// choose random Diffuse sample vector
+				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+				r.origin += r.direction;
+				
+				bounceIsSpecular = false;
+				continue;
+			}
+			else
+			{
+				weight = sampleSphereLight(x, nl, dirToLight, lightChoice, seed);
+				
+				r = Ray( x, dirToLight );
+				r.origin += nl;
+				
+				mask *= clamp(weight, 0.0, 1.0);
+				
+				bounceIsSpecular = true;
+				continue;
+			}
 		}
 		
 		if (intersec.type == SPEC)  // Ideal SPECULAR reflection
 		{
 			mask *= intersec.color;
-			
 			r = Ray( x, reflect(r.direction, nl) );
 			r.origin += r.direction;
 
-			bounceIsSpecular = true;
+			bounceIsSpecular = (diffuseCount < 2) ? true : false;
+				
 			continue;
 		}
 		
 		if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
-			sampleDiffuseBudget += 1;
+			nc = 1.0; // IOR of Air
+			nt = 1.5; // IOR of common Glass
+			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
 			
-			float nc = 1.0; // IOR of Air
-			float nt = 1.5; // IOR of common Glass
-			float nnt = dot(r.direction, n) <= 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
-			vec3 tdir = refract(r.direction, nl, nnt);
-				
-			// Original Fresnel equations
-			float cosThetaInc = dot(nl, r.direction);
-			float cosThetaTra = dot(nl, tdir);
-			float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
-			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
-			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
-			//float Tr = 1.0 - Re;
+			bounceIsSpecular = (diffuseCount < 2) ? true : false;
 			
 			if (rand(seed) < Re) // reflect ray from surface
 			{
 				r = Ray( x, reflect(r.direction, nl) );
 					r.origin += r.direction;
-				//bounceIsSpecular = true;
 					continue;	
 			}
 			else // transmit ray through surface
@@ -535,7 +545,6 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				mask *= intersec.color;
 				r = Ray(x, tdir);
 				r.origin += r.direction;
-				bounceIsSpecular = true;
 				continue;
 			}
 			
@@ -543,40 +552,48 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		
 		if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top
 		{
-			float nc = 1.0; // IOR of Air
-			float nt = 1.4; // IOR of Clear Coat
-			float nnt = dot(r.direction, n) <= 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
-			vec3 tdir = refract(r.direction, nl, nnt);
-				
-			// Original Fresnel equations
-			float cosThetaInc = dot(nl, r.direction);
-			float cosThetaTra = dot(nl, tdir);
-			float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
-			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
-			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
+			nc = 1.0; // IOR of Air
+			nt = 1.4; // IOR of Clear Coat
+			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
+
+			bounceIsSpecular = (diffuseCount < 2) ? true : false;
 			
 			// choose either specular reflection or diffuse
 			if( rand(seed) < Re )
 			{	
 				r = Ray( x, reflect(r.direction, nl) );
 				r.origin += r.direction;
-				//bounceIsSpecular = true;
 				continue;	
+			}
+			
+			if (rand(seed) < 0.5)
+			{
+				diffuseCount++;
+				mask *= intersec.color;
+
+				// choose random Diffuse sample vector
+				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+				r.origin += r.direction;
+				
+				bounceIsSpecular = false;
+				continue;
 			}
 			else
 			{
 				mask *= intersec.color;
-				accumCol += calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
-				// choose random sample vector for diffuse material underneath ClearCoat
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
-				r.origin += r.direction;
-				bounceIsSpecular = false;
+				weight = sampleSphereLight(x, nl, dirToLight, spheres[0], seed);
+				mask *= clamp(weight, 0.0, 1.0);
+				
+				r = Ray( x, dirToLight );
+				r.origin += nl;
+				
+				bounceIsSpecular = true;
 				continue;
 			}
 			
 		} //end if (intersec.type == COAT)
 		
-	} // end for (int depth = 0; depth < 5; depth++)
+	} // end for (int depth = 0; depth < 6; depth++)
 	
 	return accumCol;      
 }
@@ -587,39 +604,37 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0.0);          
-	vec3 L1 = vec3(1.0, 1.0, 1.0) * 10.0;// White light
-	vec3 L2 = vec3(1.0, 0.8, 0.2) * 10.0;// Yellow light
+	vec3 L1 = vec3(1.0, 1.0, 1.0) * 18.0;// White light
+	vec3 L2 = vec3(1.0, 0.8, 0.2) * 15.0;// Yellow light
 	vec3 L3 = vec3(0.1, 0.7, 1.0) * 10.0;// Blue light
 		
-        spheres[0] = Sphere(150.0, vec3(-400.0, 900.0, 200.0), L1, z, LIGHT);//spherical white Light1 
-	spheres[1] = Sphere(100.0, vec3(300.0, 400.0, -300.0), L2, z, LIGHT);//spherical yellow Light2
-	spheres[2] = Sphere( 50.0, vec3(500.0, 250.0, -100.0), L3, z, LIGHT);//spherical blue Light3
+        spheres[0] = Sphere(150.0, vec3(-400, 900, 200), L1, z, LIGHT);//spherical white Light1 
+	spheres[1] = Sphere(100.0, vec3(300, 400, -300), L2, z, LIGHT);//spherical yellow Light2
+	spheres[2] = Sphere( 50.0, vec3(500, 250, -100), L3, z, LIGHT);//spherical blue Light3
 	
-	spheres[3] = Sphere(1000.0, vec3(  0.0, 1000.0,  0.0), z, vec3(1.0, 1.0, 1.0),       CHECK);//Checkered Floor Huge Sphere       
-        spheres[4] = Sphere(  15.0, vec3( 32.0,   16.0, 30.0), z, vec3(1.0, 1.0, 1.0),        REFR);//Glass sphere
+	spheres[3] = Sphere(1000.0, vec3(  0, 1000,  0), z, vec3(1.0, 1.0, 1.0), CHECK);//Checkered Floor Huge Sphere       
+        spheres[4] = Sphere(  15.0, vec3( 32,   16, 30), z, vec3(1.0, 1.0, 1.0),  REFR);//Glass sphere
 	
-	ellipsoids[0] = Ellipsoid(  vec3(30,40,16), vec3(90,5,-30), z, vec3(1.0, 0.765557, 0.336057), SPEC);//metallic gold ellipsoid
-	ellipsoids[1] = Ellipsoid(  vec3(5,16,28), vec3(-25,16.5,5), z, vec3(0.9, 0.9, 0.9), SPEC);//Mirror ellipsoid
+	disks[0] = Disk( 15.0, vec3(-100, 18,-10), vec3( 1.0,-1.0,0.0 ), z, vec3(0.01,0.3,0.7), DIFF);//BlueDisk Left
+
+	ellipsoids[0] = Ellipsoid( vec3(30, 40, 16), vec3(90, 5, -30),  z, vec3(1.0, 0.765557, 0.336057), SPEC);//metallic gold ellipsoid
+	ellipsoids[1] = Ellipsoid( vec3(5, 16, 28), vec3(-25, 16.5, 5), z, vec3(0.9, 0.9, 0.9), SPEC);//Mirror ellipsoid
 	
-	paraboloids[0] = Paraboloid( 20.0, 15.0, vec3(20,2,-50), z, vec3(1.0, 0.2, 0.7), REFR);//paraboloid
+	paraboloids[0] = Paraboloid( 20.0, 15.0, vec3(20, 2, -50), z, vec3(1.0, 0.2, 0.7), REFR);//paraboloid
 	
-	hyperbolicParaboloids[0] = HyperbolicParaboloid( 40.0, 40.0, vec3(20,70,-50), z, vec3(1.0, 0.2, 0.7), CHECK);//hyperbolic paraboloid
+	hyperbolicParaboloids[0] = HyperbolicParaboloid( 40.0, 40.0, vec3(20, 70, -50), z, vec3(1.0, 0.2, 0.7), CHECK);//hyperbolic paraboloid
 	
-	//hyperboloids[0] = Hyperboloid( 4.0, 15.0, vec3(-15,22,-100), z, vec3(0.0, 0.2, 0.4), SPEC);//hyperboloid
-	hyperboloids[0] = Hyperboloid( 4.0, 15.0, vec3(-15,22,-100), z, vec3(0.3, 0.7, 0.5), REFR);//hyperboloid
+	hyperboloids[0] = Hyperboloid( 4.0, 15.0, vec3(-15, 22, -100), z, vec3(0.3, 0.7, 0.5), REFR);//hyperboloid
 	
-	openCylinders[0] = OpenCylinder( 15.0, 30.0, vec3(-70,7,-80), z, vec3(0.7,0.01,0.01), REFR);//red glass open Cylinder
-	cappedCylinders[0] = CappedCylinder( 14.0, vec3(-60,0,20), vec3(-60,14,20), z, vec3(0.05,0.05,0.05), COAT);//dark gray capped Cylinder
+	openCylinders[0] = OpenCylinder( 15.0, 30.0, vec3(-70, 7, -80), z, vec3(0.7, 0.01, 0.01), REFR);//red glass open Cylinder
+	cappedCylinders[0] = CappedCylinder( 14.0, vec3(-60, 0, 20), vec3(-60, 14, 20), z, vec3(0.05, 0.05, 0.05), COAT);//dark gray capped Cylinder
 	
-	cones[0] = Cone( vec3(1,20,-12), 15.0, vec3(1,0,-12), 0.0, z, vec3(0.01,0.1,0.5), REFR);//blue Cone
+	cones[0] = Cone( vec3(1, 20, -12), 15.0, vec3(1, 0, -12), 0.0, z, vec3(0.01, 0.1, 0.5), REFR);//blue Cone
 	
-	capsules[0] = Capsule( vec3(80,13,15), 10.0, vec3(110,15.8,15), 10.0, z, vec3(1.0,1.0,1.0), COAT);//white Capsule
+	capsules[0] = Capsule( vec3(80, 13, 15), 10.0, vec3(110, 15.8, 15), 10.0, z, vec3(1.0,1.0,1.0), COAT);//white Capsule
 	
 	torii[0] = Torus( 10.0, 1.5, z, vec3(0.955008, 0.637427, 0.538163), SPEC);//copper Torus
-	
-	/*
-	disks[0] = Disk( 190.0, vec3(-100.0,18.0,-10.0), vec3( 1.0,-1.0,0.0 ), z, vec3(0.9,0.01,0.01), DIFF);//RedDisk Left
-	*/	
+		
 }
 
 
