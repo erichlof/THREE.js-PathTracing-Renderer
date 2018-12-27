@@ -105,6 +105,8 @@ Box boxes[N_BOXES];
 
 #include <pathtracing_random_functions>
 
+#include <pathtracing_calc_fresnel_reflectance>
+
 #include <pathtracing_sphere_intersect>
 
 #include <pathtracing_box_intersect>
@@ -327,12 +329,19 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 //-----------------------------------------------------------------------
 {
+	Intersection intersec;
 	vec3 accumCol = vec3(0.0);
         vec3 mask = vec3(1.0);
 	vec3 checkCol0 = vec3(1);
 	vec3 checkCol1 = vec3(0.5);
-        Intersection intersec;
-	float epsIntersect = 0.01;
+        vec3 tdir;
+	
+	float nc, nt, Re;
+        float epsIntersect = 0.01;
+        
+	bool bounceIsSpecular = true;
+	
+        
 	
 	// we need up to 20 bounces to get through all the possible yellow glass boxes
 	for (int depth = 0; depth < 20; depth++)
@@ -395,18 +404,12 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
                 if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
-			float nc = 1.0; // IOR of Air
-			float nt = 1.5; // IOR of common Glass
-			//nt = 1.0; // for TEST
-			float nnt = dot(r.direction, n) <= 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
-			vec3 tdir = refract(r.direction, nl, nnt);
-				
-			// Original Fresnel equations
-			float cosThetaInc = dot(nl, r.direction);
-			float cosThetaTra = dot(nl, tdir);
-			float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
-			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
-			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
+			nc = 1.0; // IOR of Air
+			nt = 1.5; // IOR of common Glass
+			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
+
+			//if (diffuseCount < 2)
+				bounceIsSpecular = true;
 			
 			if (rand(seed) < Re) // reflect ray from surface
 			{
@@ -421,19 +424,14 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				r.origin += r.direction * epsIntersect;
 				continue;
 			}
-			
+
 		} // end if (intersec.type == REFR)
 		
 		if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top (like car, or shiny pool ball)
 		{
-			// Schlick Fresnel approx.
-			float ddn = dot(-r.direction, nl);
-			float nc = 1.0; // IOR of air
-			float nt = 1.5; // IOR of ClearCoat 
-			float R0 = (nc - nt) / (nc + nt);
-			R0 *= R0;
-			float c = 1.0 - ddn;
-			float Re = R0 + (1.0 - R0) * c * c * c * c * c;
+			nc = 1.0; // IOR of Air
+			nt = 1.4; // IOR of ClearCoat
+			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
 			
 			// choose either specular reflection or diffuse
 			if( rand(seed) < Re )
