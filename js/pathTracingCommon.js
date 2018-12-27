@@ -207,11 +207,11 @@ float PlaneIntersect( vec4 pla, Ray r )
 THREE.ShaderChunk[ 'pathtracing_disk_intersect' ] = `
 
 //-----------------------------------------------------------------------
-float DiskIntersect( vec3 diskPos, vec3 normal, float radius, Ray r )
+float DiskIntersect( float radius, vec3 pos, vec3 normal, Ray r )
 //-----------------------------------------------------------------------
 {
 	vec3 n = normalize(-normal);
-	vec3 pOrO = diskPos - r.origin;
+	vec3 pOrO = pos - r.origin;
 	float denom = dot(n, r.direction);
 	// use the following for one-sided disk
 	//if (denom <= 0.0) return INFINITY;
@@ -220,7 +220,7 @@ float DiskIntersect( vec3 diskPos, vec3 normal, float radius, Ray r )
 	if (result < 0.0) return INFINITY;
 
         vec3 intersectPos = r.origin + r.direction * result;
-	vec3 v = intersectPos - diskPos;
+	vec3 v = intersectPos - pos;
 	float d2 = dot(v,v);
 	float radiusSq = radius * radius;
 	if (d2 > radiusSq)
@@ -967,8 +967,9 @@ float BoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r, out vec3 normal )
 	float t0 = max( max(tmin.x, tmin.y), tmin.z);
 	float t1 = min( min(tmax.x, tmax.y), tmax.z);
 	
+	if (t0 > t1) return INFINITY;
+
 	float result = INFINITY;
-	if (t1 < t0) return result;
 	
 	if (t1 > 0.0) // if we are inside the box
 	{
@@ -1202,8 +1203,8 @@ vec3 calcDirectLightingSphere(vec3 mask, vec3 x, vec3 nl, Sphere light, inout uv
 	Intersection shadowIntersec;
 	
 	// cast shadow ray from intersection point
-	vec3 ld = light.position + (randomSphereDirection(seed) * light.radius);
-	vec3 srDir = normalize(ld - x);
+	vec3 randPointOnLight = light.position + (randomSphereDirection(seed) * light.radius);
+	vec3 srDir = normalize(randPointOnLight - x);
 		
 	Ray shadowRay = Ray(x, srDir);
 	shadowRay.origin += nl;
@@ -1211,11 +1212,11 @@ vec3 calcDirectLightingSphere(vec3 mask, vec3 x, vec3 nl, Sphere light, inout uv
 	if ( shadowIntersec.type == light.type )
 	{
 		float r2 = light.radius * light.radius;
-		vec3 d = light.position - shadowRay.origin;
-		float d2 = dot(d,d);
-		float cos_a_max = sqrt(1. - clamp( r2 / d2, 0., 1.));
-                float weight = 2. * (1. - cos_a_max);
-                dirLight = mask * light.emission * weight * max(0.01, dot(srDir, nl));
+		vec3 d = randPointOnLight - x;
+		float d2 = dot(d, d);
+		float cos_a_max = sqrt(1.0 - clamp( r2 / d2, 0.0, 1.0));
+                float weight = 2.0 * (1.0 - cos_a_max);
+                dirLight = mask * light.emission * weight * max(0.0, dot(srDir, nl));
 	}
 	
 	return dirLight;
@@ -1234,22 +1235,80 @@ vec3 calcDirectLightingQuad(vec3 mask, vec3 x, vec3 nl, Quad light, inout uvec2 
 	randPointOnLight.y = light.v0.y;
 	randPointOnLight.z = mix(light.v0.z, light.v3.z, rand(seed));
 	vec3 srDir = normalize(randPointOnLight - x);
-	float nlDotSrDir = max(dot(nl, srDir), 0.01);
 		
 	// cast shadow ray from intersection point	
 	Ray shadowRay = Ray(x, srDir);
-	shadowRay.origin += nl * 2.0; // larger dimensions of this scene require greater offsets
+	shadowRay.origin += nl;
 	float st = SceneIntersect(shadowRay, shadowIntersec);
 	if ( shadowIntersec.type == LIGHT )
 	{
 		float r2 = distance(light.v0, light.v1) * distance(light.v0, light.v3);
-		vec3 d = randPointOnLight - shadowRay.origin;
+		vec3 d = randPointOnLight - x;
 		float d2 = dot(d, d);
-		float weight = dot(-srDir, normalize(shadowIntersec.normal)) * r2 / d2;
+		float weight = -dot(srDir, normalize(shadowIntersec.normal)) * r2 / d2;
+		float nlDotSrDir = max(dot(nl, srDir), 0.0);
 		dirLight = mask * light.emission * nlDotSrDir * clamp(weight, 0.0, 1.0);
 	}
 
 	return dirLight;
+}
+
+`;
+
+THREE.ShaderChunk[ 'pathtracing_sample_sphere_light' ] = `
+
+float sampleSphereLight(vec3 x, vec3 nl, out vec3 dirToLight, Sphere light, inout uvec2 seed)
+{
+	vec3 randPointOnLight = light.position + (randomSphereDirection(seed) * light.radius);
+	dirToLight = randPointOnLight - x;
+	
+	float r2 = light.radius * light.radius;
+	float d2 = dot(dirToLight, dirToLight);
+	float cos_a_max = sqrt(1.0 - clamp( r2 / d2, 0.0, 1.0));
+
+	dirToLight = normalize(dirToLight);
+	float dotNlRayDir = max(0.0, dot(nl, dirToLight));
+	
+	return 2.0 * (1.0 - cos_a_max) * dotNlRayDir;
+}
+
+`;
+
+THREE.ShaderChunk[ 'pathtracing_sample_quad_light' ] = `
+
+float sampleQuadLight(vec3 x, vec3 nl, out vec3 dirToLight, Quad light, inout uvec2 seed)
+{
+	vec3 randPointOnLight;
+	randPointOnLight.x = mix(light.v0.x, light.v1.x, rand(seed));
+	randPointOnLight.y = light.v0.y;
+	randPointOnLight.z = mix(light.v0.z, light.v3.z, rand(seed));
+	dirToLight = randPointOnLight - x;
+	float r2 = distance(light.v0, light.v1) * distance(light.v0, light.v3);
+	float d2 = dot(dirToLight, dirToLight);
+	float cos_a_max = sqrt(1.0 - clamp( r2 / d2, 0.0, 1.0));
+
+	dirToLight = normalize(dirToLight);
+	float dotNlRayDir = max(0.0, dot(nl, dirToLight)); 
+	float weight = 2.0 * (1.0 - cos_a_max) * max(0.0, -dot(dirToLight, light.normal)) * dotNlRayDir;
+	return clamp(weight, 0.0, 1.0); 
+}
+
+`;
+
+THREE.ShaderChunk[ 'pathtracing_calc_fresnel_reflectance' ] = `
+
+float calcFresnelReflectance(vec3 n, vec3 nl, vec3 rayDirection, float nc, float nt, out vec3 tdir)
+{
+	float nnt = dot(rayDirection, n) <= 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
+	tdir = refract(rayDirection, nl, nnt);
+		
+	// Original Fresnel equations
+	float cosThetaInc = dot(nl, rayDirection);
+	float cosThetaTra = dot(nl, tdir);
+	float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
+	float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
+
+	return ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
 }
 
 `;
