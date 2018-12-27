@@ -286,6 +286,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	else if (randChoose < 0.66)
 		lightChoice = spheres[1];
 	else lightChoice = spheres[2];
+
 	
 	for (int depth = 0; depth < 5; depth++)
 	{
