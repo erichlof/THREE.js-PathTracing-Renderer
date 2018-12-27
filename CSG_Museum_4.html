@@ -70,16 +70,10 @@ precision highp float;
 precision highp int;
 precision highp sampler2D;
 
-uniform mat4 uShortBoxInvMatrix;
-uniform mat3 uShortBoxNormalMatrix;
-uniform mat4 uTallBoxInvMatrix;
-uniform mat3 uTallBoxNormalMatrix;
-
 #include <pathtracing_uniforms_and_defines>
 
 #define N_SPHERES 2
 #define N_PLANES 4
-#define N_DISKS 3
 #define N_QUADS 2
 #define N_BOXES 2
 
@@ -89,22 +83,26 @@ uniform mat3 uTallBoxNormalMatrix;
 struct Ray { vec3 origin; vec3 direction; };
 struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; int type; };
 struct Plane { vec4 pla; vec3 emission; vec3 color; int type; };
-struct Disk { float radiusSq; vec3 pos; vec3 normal; vec3 emission; vec3 color; int type; };
 struct Quad { vec3 normal; vec3 v0; vec3 v1; vec3 v2; vec3 v3; vec3 emission; vec3 color; int type; };
 struct Box { vec3 minCorner; vec3 maxCorner; vec3 emission; vec3 color; int type; };
 struct Intersection { vec3 normal; vec3 emission; vec3 color; int type; };
 
 Sphere spheres[N_SPHERES];
 Plane planes[N_PLANES];
-Disk disks[N_DISKS];
 Quad quads[N_QUADS];
 Box boxes[N_BOXES];
 
 #include <pathtracing_random_functions>
 
+#include <pathtracing_calc_fresnel_reflectance>
+
 #include <pathtracing_plane_intersect>
 
+#include <pathtracing_quad_intersect>
+
 #include <pathtracing_sphere_intersect>
+
+#include <pathtracing_sample_quad_light>
 
 //----------------------------------------------------------------------------------------------
 float CSG_SphereIntersect( float rad, vec3 pos, Ray r, out vec3 n1, out vec3 n2, out float far )
@@ -182,70 +180,7 @@ float CSG_EllipsoidIntersect( vec3 radii, vec3 pos, Ray r, out vec3 n1, out vec3
 	return result;	
 }
 
-/*
-//------------------------------------------------------------------------------------------------------------
-float CSG_OpenCylinderIntersect( vec3 p0, vec3 p1, float rad, Ray r, out vec3 n1, out vec3 n2, out float far )
-//------------------------------------------------------------------------------------------------------------
-{
-	float r2=rad*rad;
-	
-	vec3 dp=p1-p0;
-	vec3 dpt=dp/dot(dp,dp);
-	
-	vec3 ao=r.origin-p0;
-	vec3 aoxab=cross(ao,dpt);
-	vec3 vxab=cross(r.direction,dpt);
-	float ab2=dot(dpt,dpt);
-	float a=2.0*dot(vxab,vxab);
-	float ra=1.0/a;
-	float b=2.0*dot(vxab,aoxab);
-	float c=dot(aoxab,aoxab)-r2*ab2;
-	
-	float det=b*b-2.0*a*c;
-	
-	if(det<0.0)
-	return INFINITY;
-	
-	det=sqrt(det);
-	float t0=(-b-det)*ra;
-	float t1=(-b+det)*ra;
-	
-	vec3 ip;
-	vec3 lp;
-	float ct;
-	float result = INFINITY;
-	
-	if (t1 > 0.0)
-	{
-		ip=r.origin+r.direction*t1;
-		lp=ip-p0;
-		ct=dot(lp,dpt);
-		if((ct>0.0)&&(ct<1.0))
-		{
-			result = t1;
-			far = INFINITY;
-		     	n2=(p0+dp*ct)-ip;
-		}
-		
-	}
-	
-	if (t0 > 0.0)
-	{
-		ip=r.origin+r.direction*t0;
-		lp=ip-p0;
-		ct=dot(lp,dpt);
-		if((ct>0.0)&&(ct<1.0))
-		{
-			result = t0;
-			far = t1;
-			n1=ip-(p0+dp*ct);
-		}
-		
-	}
-	
-	return result;
-}
-*/
+
 
 //-------------------------------------------------------------------------------------------------------------
 float CSG_ConeIntersect( vec3 p0, float r0, vec3 p1, float r1, Ray r, out vec3 n1, out vec3 n2, out float far )
@@ -400,34 +335,6 @@ float CSG_PlaneIntersect( vec4 pla, Ray r, out vec3 n1, out vec3 n2, out float f
 	return result;
 }
 
-/*
-//-----------------------------------------------------------------------
-float DiskIntersect( vec3 diskPos, vec3 normal, float radius, Ray r )
-//-----------------------------------------------------------------------
-{
-	vec3 n = normalize(-normal);
-	vec3 pOrO = diskPos - r.origin;
-	float denom = dot(n, r.direction);
-	// use the following for one-sided disk
-	//if (denom < 0.0)
-	//	return INFINITY;
-	
-        float result = dot(pOrO, n) / denom;
-	if (result < 0.0)
-		return INFINITY;
-        vec3 intersectPos = r.origin + r.direction * result;
-	vec3 v = intersectPos - diskPos;
-	float d2 = dot(v,v);
-	float radiusSq = radius * radius;
-	if (d2 > radiusSq)
-		return INFINITY;
-		
-	return result;
-}
-*/
-
-#include <pathtracing_quad_intersect>
-
 
 // CSG (Constructive Solid Geometry) functions ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -499,98 +406,7 @@ float operation_SolidA_Plus_SolidB( float A_near, float A_far, float B_near, flo
 	return result;
 }
 
-/*
-// hollow object A and solid object B are fused together (A + B)
-float operation_HollowA_Plus_SolidB( float A_near, float A_far, float B_near, float B_far, vec3 A_n1, vec3 A_n2, vec3 B_n1, vec3 B_n2, out vec3 n )
-{
-	float result = INFINITY;
-	
-	// Missed hollow object A
-	if (A_near == INFINITY)
-	{
-		// Missed solid object B also, early out
-		if (B_near == INFINITY) 
-			return INFINITY;
-		// Outside solid object B
-		if (B_far < INFINITY)
-		{
-			n = B_n1;
-			result = B_near;
-		}
-		// Inside solid object B
-		if (B_far == INFINITY)
-		{
-			n = B_n2;
-			result = 0.1;
-		}	
-	}
-	
-	// Outside hollow object A
-	if (A_near < INFINITY && A_far < INFINITY)
-	{
-		// Missed object B
-		if (B_near == INFINITY) 
-		{
-			n = A_n1;
-			result = A_near;
-		}
-		// Outside solid object B
-		if (B_far < INFINITY)
-		{
-			if (A_near < B_near)
-			{
-				n = A_n1;
-				result = A_near;
-			}
-			else
-			{
-				n = B_n1;
-				result = B_near;
-			}
-		}
-		// Inside solid object B
-		if (B_near < INFINITY && B_far == INFINITY)
-		{
-			n = B_n2;
-			result = 0.1;
-		}
-		
-	}
-	
-	// Inside hollow object A
-	if (A_near < INFINITY && A_far == INFINITY)
-	{	
-		// Missed object B
-		if (B_near == INFINITY) 
-		{
-			n = A_n2;
-			result = A_near;
-		}
-		// Outside solid object B
-		if (B_far < INFINITY)
-		{
-			if (B_near < A_near)
-			{
-				n = B_n1;
-				result = B_near;
-			}
-			else
-			{
-				n = A_n2;
-				result = A_near;
-			}
-		}
-		// Inside solid object B
-		if (B_near < INFINITY && B_far == INFINITY)
-		{
-			n = B_n2;
-			result = 0.1;
-		}
-	}
-	
-	return result;
-}
-*/
+
 
 // hollow object A and hollow object B are fused together (A + B)
 float operation_HollowA_Plus_HollowB( float A_near, float A_far, float B_near, float B_far, vec3 A_n1, vec3 A_n2, vec3 B_n1, vec3 B_n2, out vec3 n )
@@ -1096,21 +912,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		intersec.color = spheres[0].color;
 		intersec.type = spheres[0].type;
 	}
-        /*
-	for (int i = 0; i < N_BOXES; i++)
-        {
-	
-		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, r, n );
-		if (d < t)
-		{
-			t = d;
-			intersec.normal = normalize(n);
-			intersec.emission = boxes[i].emission;
-			intersec.color = boxes[i].color;
-			intersec.type = boxes[i].type;
-		}
-        }
-	*/
+        
 	for (int i = 0; i < N_PLANES; i++)
         {
 		d = PlaneIntersect( planes[i].pla, r );
@@ -1123,20 +925,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.type = planes[i].type;
 		}
         }
-	/*
-	for (int i = 0; i < N_DISKS; i++)
-        {
-		d = DiskIntersect( disks[i].pos, disks[i].normal, disks[i].radiusSq, r );
-		if (d < t)
-		{
-			t = d;
-			intersec.normal = normalize(disks[i].normal);
-			intersec.emission = disks[i].emission;
-			intersec.color = disks[i].color;
-			intersec.type = disks[i].type;
-		}
-        }
-	*/
+	
 	
 	// now intersect all CSG objects
 	// dark glass sculpture in center of room
@@ -1152,122 +941,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		intersec.type = REFR;
 	}
 	
-        /*
-	// Blue Glass Sphere-Boxes along back wall
-	A_near = CSG_SphereIntersect( 20.0, vec3(-100, 20, -200), r, A_n1, A_n2, A_far);
-	B_near = CSG_BoxIntersect( vec3(-115, 6, -215), vec3(-85, 36, -185), r, B_n1, B_n2, B_far );
-	d = operation_HollowA_Plus_HollowB( A_near, A_far, B_near, B_far, A_n1, A_n2, B_n1, B_n2, n );
-	if (d < t)
-	{
-		t = d;
-		intersec.normal = normalize(n);
-		intersec.emission = vec3(0);
-		intersec.color = vec3(0.0, 0.4, 1.0);
-		intersec.type = REFR;
-	}
-	
-	A_near = CSG_SphereIntersect( 20.0, vec3(0, 20, -200), r, A_n1, A_n2, A_far);
-	B_near = CSG_BoxIntersect( vec3(-15, 6, -215), vec3(15, 36, -185), r, B_n1, B_n2, B_far );
-	d = operation_HollowA_Minus_SolidB( A_near, A_far, B_near, B_far, A_n1, A_n2, B_n1, B_n2, n );
-	if (d < t)
-	{
-		t = d;
-		intersec.normal = normalize(n);
-		intersec.emission = vec3(0);
-		intersec.color = vec3(0.3, 0.8, 1.0);
-		intersec.type = REFR;
-	}
-	
-	A_near = CSG_SphereIntersect( 20.0, vec3(100, 20, -200), r, A_n1, A_n2, A_far);
-	B_near = CSG_BoxIntersect( vec3(85, 0, -215), vec3(115, 36, -185), r, B_n1, B_n2, B_far );
-	d = operation_HollowA_Overlap_HollowB( A_near, A_far, B_near, B_far, A_n1, A_n2, B_n1, B_n2, n );
-	if (d < t)
-	{
-		t = d;
-		intersec.normal = normalize(n);
-		intersec.emission = vec3(0);
-		intersec.color = vec3(0.1, 0.6, 1.0);
-		intersec.type = SPECSUB;
-	}
-	*/
-	
-	/*
-	// pink and blue sphere-cylinders along right wall
-	A_near = CSG_SphereIntersect( 20.0, vec3(250, 20.5, 30), r, A_n1, A_n2, A_far);
-	B_near = CSG_OpenCylinderIntersect( vec3(-INFINITY, 20, 30), vec3(INFINITY, 20, 30), 8.0, r, B_n1, B_n2, B_far );
-	d = operation_SolidA_Minus_SolidB( A_near, A_far, B_near, B_far, A_n1, A_n2, B_n1, B_n2, n );
-	if (d < t)
-	{
-		t = d;
-		intersec.normal = normalize(n);
-		intersec.emission = vec3(0);
-		intersec.color = vec3(0.8,0.4,0.65);
-		intersec.type = COAT;
-	}
-	
-	A_near = CSG_OpenCylinderIntersect( vec3(220, 20, 115), vec3(295, 20, 115), 8.0, r, A_n1, A_n2, A_far );
-	B_near = CSG_SphereIntersect( 20.0, vec3(250, 21, 115), r, B_n1, B_n2, B_far);
-	d = operation_HollowA_Minus_SolidB( A_near, A_far, B_near, B_far, A_n1, A_n2, B_n1, B_n2, n );
-	if (d < t)
-	{
-		t = d;
-		intersec.normal = normalize(n);
-		intersec.emission = vec3(0);
-		intersec.color = vec3(0.1,0.5,0.9);
-		intersec.type = COAT;
-	}
-	
-	A_near = CSG_SphereIntersect( 20.0, vec3(250, 21, 200), r, A_n1, A_n2, A_far);
-	B_near = CSG_OpenCylinderIntersect( vec3(220, 20, 200), vec3(280, 20, 200), 8.0, r, B_n1, B_n2, B_far );
-	d = operation_HollowA_Plus_HollowB( A_near, A_far, B_near, B_far, A_n1, A_n2, B_n1, B_n2, n );
-	if (d < t)
-	{
-		t = d;
-		intersec.normal = normalize(n);
-		intersec.emission = vec3(0);
-		intersec.color = vec3(1.0,0.0,0.7);
-		intersec.type = REFR;
-	}
-	*/
-	
-	/*
-	// mirror ellipsoid-spheres along wall behind camera
-	A_near = CSG_EllipsoidIntersect( vec3(40, 10, 15), vec3(150, 10, 240), r, A_n1, A_n2, A_far);
-	B_near = CSG_SphereIntersect( 18.0, vec3(150, 21, 240), r, B_n1, B_n2, B_far);
-	d = operation_SolidA_Plus_SolidB( A_near, A_far, B_near, B_far, A_n1, A_n2, B_n1, B_n2, n );
-	if (d < t)
-	{
-		t = d;
-		intersec.normal = normalize(n);
-		intersec.emission = vec3(0);
-		intersec.color = vec3(0.971519, 0.959915, 0.915324) * 0.8; // silver
-		intersec.type = SPEC;
-	}
-	
-	A_near = CSG_EllipsoidIntersect( vec3(40, 10, 15), vec3(0, 10, 240), r, A_n1, A_n2, A_far);
-	B_near = CSG_SphereIntersect( 18.0, vec3(0, 21, 240), r, B_n1, B_n2, B_far);
-	d = operation_SolidA_Minus_SolidB( A_near, A_far, B_near, B_far, A_n1, A_n2, B_n1, B_n2, n );
-	if (d < t)
-	{
-		t = d;
-		intersec.normal = normalize(n);
-		intersec.emission = vec3(0);
-		intersec.color = vec3(0.955008, 0.637427, 0.538163); // copper
-		intersec.type = SPEC;
-	}
-	
-	A_near = CSG_EllipsoidIntersect( vec3(40, 10, 15), vec3(-130, 10, 240), r, A_n1, A_n2, A_far);
-	B_near = CSG_SphereIntersect( 20.0, vec3(-130, 20, 240), r, B_n1, B_n2, B_far);
-	d = operation_SolidA_Overlap_SolidB( A_near, A_far, B_near, B_far, A_n1, A_n2, B_n1, B_n2, n );
-	if (d < t)
-	{
-		t = d;
-		intersec.normal = normalize(n);
-		intersec.emission = vec3(0);
-		intersec.color = vec3(1.000000, 0.765557, 0.336057); // gold
-		intersec.type = SPEC;
-	}
-	*/
 	
 	// Dark and Light Gray Box-Cones along left wall
 	A_near = CSG_BoxIntersect( vec3(-260, 0, 195), vec3(-230, 40, 225), r, A_n1, A_n2, A_far );
@@ -1336,17 +1009,20 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 } // end float SceneIntersect( Ray r, inout Intersection intersec )
 
 
-#include <pathtracing_direct_lighting_quad>
-
-
 //-----------------------------------------------------------------------
 vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 //-----------------------------------------------------------------------
 {
 	vec3 accumCol = vec3(0.0);
 	vec3 mask = vec3(1.0);
+	vec3 tdir;
+	vec3 randPointOnLight, dirToLight;
+	
+	float weight;
+	float nc, nt, Re;
+
 	Intersection intersec;
-	int sampleDiffuseBudget = 3;
+	int diffuseCount = 0;
 	bool bounceIsSpecular = true;
 	Quad lightChoice;
 	
@@ -1355,9 +1031,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	else lightChoice = quads[1];
 	
 	
-	for (int depth = 0; depth < 4; depth++)
+	for (int depth = 0; depth < 6; depth++)
 	{
-		sampleDiffuseBudget -= 1;
 		
 		float t = SceneIntersect(r, intersec);
 		
@@ -1390,50 +1065,62 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		if (intersec.type == DIFF ) // Ideal DIFFUSE reflection
 		{
 			mask *= intersec.color;
-			accumCol += calcDirectLightingQuad(mask, x, nl, lightChoice, seed);
-			bounceIsSpecular = false;
+
+			// Russian Roulette
+			float p = max(mask.r, max(mask.g, mask.b));
+			if (depth > 0)
+			{
+				if (rand(seed) < p)
+					mask *= 1.0 / p;
+				else
+					break;
+			}
 			
-			sampleDiffuseBudget -= 1;
-			if (sampleDiffuseBudget < 0 || rand(seed) < 0.5) break;
-			
-			// choose random Diffuse sample vector
-			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
-			r.origin += r.direction;
-			
-			continue;
+			if (rand(seed) < 0.5)
+			{
+				// choose random Diffuse sample vector
+				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+				r.origin += r.direction;
+				
+				bounceIsSpecular = false;
+				continue;
+			}
+			else
+			{
+				weight = sampleQuadLight(x, nl, dirToLight, lightChoice, seed);
+				mask *= clamp(weight, 0.0, 1.0);
+
+				r = Ray( x, dirToLight );
+				r.origin += nl;
+				
+				bounceIsSpecular = true;
+				continue;
+			}
 		}
 		
 		if (intersec.type == SPEC)  // Ideal SPECULAR reflection
 		{	
-			//sampleDiffuseBudget += 1;
 			mask *= intersec.color;
 			
 			r = Ray( x, reflect(r.direction, nl) );
 			r.origin += r.direction;
-			//bounceIsSpecular = true;
+			bounceIsSpecular = true;
 			continue;
 		}
 		
 		if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
-			float nc = 1.0; // IOR of Air
-			float nt = 1.5; // IOR of common Glass
-			float nnt = dot(r.direction, n) <= 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
-			vec3 tdir = refract(r.direction, nl, nnt);
-				
-			// Original Fresnel equations
-			float cosThetaInc = dot(nl, r.direction);
-			float cosThetaTra = dot(nl, tdir);
-			float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
-			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
-			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
+			nc = 1.0; // IOR of Air
+			nt = 1.5; // IOR of common Glass
+			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
 			
+			if (diffuseCount < 2)
+				bounceIsSpecular = true;
+				
 			if (rand(seed) < Re) // reflect ray from surface
 			{
-				//sampleDiffuseBudget += 1;
 				r = Ray( x, reflect(r.direction, nl) );
 					r.origin += r.direction;
-				//bounceIsSpecular = true;
 					continue;	
 			}
 			else // transmit ray through surface
@@ -1441,7 +1128,6 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				mask *= intersec.color;
 				r = Ray(x, tdir);
 				r.origin += r.direction;
-				//bounceIsSpecular = true;
 				continue;
 			}
 			
@@ -1450,9 +1136,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		if (intersec.type == COAT || intersec.type == CHECK)  // Diffuse object underneath with ClearCoat on top
 		{	
 			float roughness = 0.0;
-			float iOR = 1.4;
 			float maskFactor = 1.0;
-			
+			nt = 1.4; // IOR of Clear Coat
+
 			if( intersec.type == CHECK )
 			{
 				vec3 checkCol0 = vec3(0.3, 0.1, 0.0);
@@ -1464,78 +1150,98 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				
 				maskFactor = 0.05;
 				roughness = 0.05;
-				iOR = 1.1;
+				nt = 1.1;
 			}
 			
-			float nc = 1.0; // IOR of Air
-			float nt = iOR; // IOR of Clear Coat
-			float nnt = dot(r.direction, n) <= 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
-			vec3 tdir = refract(r.direction, nl, nnt);
-				
-			// Original Fresnel equations
-			float cosThetaInc = dot(nl, r.direction);
-			float cosThetaTra = dot(nl, tdir);
-			float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
-			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
-			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
+			nc = 1.0; // IOR of Air
+			
+			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
 			
 			// choose either specular reflection or diffuse
 			if ( rand(seed) < Re )
 			{	
-				//sampleDiffuseBudget += 1;
 				mask *= maskFactor;
 				vec3 reflectVec = reflect(r.direction, nl);
 				vec3 randVec = vec3(rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0);
 				r = Ray( x, mix( reflectVec, normalize(nl + randVec), roughness) );
 				r.origin += r.direction;
-				//bounceIsSpecular = true;
+				bounceIsSpecular = true;
 				continue;	
+			}
+			if (rand(seed) < 0.5)
+			{
+				mask *= intersec.color;
+
+				// choose random Diffuse sample vector
+				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+				r.origin += r.direction;
+				
+				bounceIsSpecular = false;
+				continue;
 			}
 			else
 			{
 				mask *= intersec.color;
-				accumCol += calcDirectLightingQuad(mask, x, nl, lightChoice, seed);
-				sampleDiffuseBudget -= 1;
-				// choose random sample vector for diffuse material underneath ClearCoat
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
-				r.origin += r.direction;
-				bounceIsSpecular = false;
+				weight = sampleQuadLight(x, nl, dirToLight, lightChoice, seed);
+				mask *= clamp(weight, 0.0, 1.0);
+
+				r = Ray( x, dirToLight );
+				r.origin += nl;
+				
+				bounceIsSpecular = true;
 				continue;
 			}
 			
 		} //end if (intersec.type == COAT)
+
 		
 		if (intersec.type == TRANSLUCENT)  // Translucent Sub-Surface Scattering material
 		{
 			float translucentDensity = 0.05;
 			float scatteringDistance = -log(rand(seed)) / translucentDensity;
 			vec3 absorptionCoefficient = vec3(0.01);
-			vec3 d;
+
+			// transmission?
 			if (scatteringDistance > t) 
 			{
-				mask *= exp(-absorptionCoefficient * t); // transmission
-				d = r.direction;
-				//bounceIsSpecular = false; // not set, in order to see lights through thin material
+				mask *= exp(-absorptionCoefficient * t);
+				
+				r.origin = x;
+				r.origin += r.direction * scatteringDistance;
+
+				bounceIsSpecular = true;
+				continue;
 			}
-			else
-			{
-				// Compute how much light was absorbed along the ray before it was scattered:
-				mask *= exp(-absorptionCoefficient * scatteringDistance); // scattering
-				d = (randomSphereDirection(seed)); // true Isotropic scattering
+
+			// else scattering
+			mask *= exp(-absorptionCoefficient * scatteringDistance);
+			
+			if (rand(seed) < 0.5)
+                        {
+                                // choose random Diffuse sample vector
+				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+				r.origin += r.direction * scatteringDistance;
+				
 				bounceIsSpecular = false;
-			}
-			
-			x = x + d * scatteringDistance;
-			accumCol += calcDirectLightingQuad(mask, x, nl, lightChoice, seed);
-			sampleDiffuseBudget -= 1;
-			r = Ray( x, d );
-			
-			continue;	
+				continue;
+                        }
+                        else
+                        {
+				weight = sampleQuadLight(x, nl, dirToLight, lightChoice, seed);
+				
+                                r = Ray( x, dirToLight );
+				r.origin += r.direction * scatteringDistance;
+				
+				mask *= clamp(weight, 0.0, 1.0);
+				
+				bounceIsSpecular = true;
+				continue;
+                        }
 			
 		} // end if (intersec.type == TRANSLUCENT)
 		
 		
-	} // end for (int depth = 0; depth < 4; depth++)
+	} // end for (int depth = 0; depth < 6; depth++)
 	
 	return accumCol;      
 }
@@ -1565,9 +1271,6 @@ void SetupScene(void)
 	planes[2] = Plane( vec4(-1,0,0,  -300.0), z, vec3(0.15,0.05,0.15), DIFF);//Purple Wall on the right
 	planes[3] = Plane( vec4( 0,-1,0, -301.0), z, vec3(0.7), DIFF);//Ceiling
 	
-	disks[0] = Disk( 8.0, vec3(220, 20, 115), vec3(-1,0,0), z, vec3(0.2,0.5,1.0), COAT);
-	disks[1] = Disk( 8.0, vec3(220, 20, 200), vec3(-1,0,0), z, vec3(1.0,0.0,0.7), REFR);
-	disks[2] = Disk( 8.0, vec3(280, 20, 200), vec3( 1,0,0), z, vec3(1.0,0.0,0.7), REFR);	
 }
 
 
