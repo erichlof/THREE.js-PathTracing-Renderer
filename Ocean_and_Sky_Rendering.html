@@ -1101,12 +1101,12 @@ void main( void )
 				screenTextureRenderTarget.texture.generateMipmaps = false;
 				
 				
-				PerlinNoiseTexture = new THREE.TextureLoader().load( 'textures/perlin_noise_512.png' );
+				PerlinNoiseTexture = new THREE.TextureLoader().load( 'textures/perlin256.png' );
 				PerlinNoiseTexture.wrapS = THREE.RepeatWrapping;
 				PerlinNoiseTexture.wrapT = THREE.RepeatWrapping;
 				PerlinNoiseTexture.flipY = false;
-				PerlinNoiseTexture.minFilter = THREE.NearestFilter;//THREE.LinearFilter;
-				PerlinNoiseTexture.magFilter = THREE.NearestFilter;//THREE.LinearFilter;
+				PerlinNoiseTexture.minFilter = THREE.LinearFilter;
+				PerlinNoiseTexture.magFilter = THREE.LinearFilter;
 				PerlinNoiseTexture.generateMipmaps = false;
 				
 				
