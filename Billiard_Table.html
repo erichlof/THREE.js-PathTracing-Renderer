@@ -237,7 +237,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	else lightChoice = quads[1];
 	
 	
-        for (int depth = 0; depth < 6; depth++)
+        for (int depth = 0; depth < 5; depth++)
 	{
 		
 		float t = SceneIntersect(r, intersec);
@@ -267,11 +267,14 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		
                 if (intersec.type == DIFF || intersec.type == CLOTH ) // Ideal DIFFUSE reflection
 		{
+			diffuseCount++;
+
 			if (intersec.type == CLOTH)
 				intersec.color *= texture2D(tClothTexture, (10.0 * x.xz) / 512.0).rgb;
 			
 			mask *= intersec.color;
 
+			/*
 			// Russian Roulette
 			float p = max(mask.r, max(mask.g, mask.b));
 			if (depth > 0)
@@ -281,7 +284,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                         	else
                                 	break;
 			}
-			
+			*/
+
 			if (rand(seed) < 0.5)
                         {
                                 // choose random Diffuse sample vector
@@ -315,7 +319,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			{	
 				r = Ray( x, reflect(r.direction, nl) );
 				r.origin += r.direction;
-				bounceIsSpecular = true;
+				bounceIsSpecular = (diffuseCount < 2);
 				continue;	
 			}
 			if (rand(seed) < 0.5)
