@@ -288,7 +288,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	bool bounceIsSpecular = true;
 	
 	
-        for (int depth = 0; depth < 6; depth++)
+        for (int depth = 0; depth < 5; depth++)
 	{
 		
 		float t = SceneIntersect(r, intersec, seed);
@@ -321,6 +321,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 			mask *= intersec.color;
 			
+			/*
 			// Russian Roulette
 			float p = max(mask.r, max(mask.g, mask.b));
 			if (depth > 0)
@@ -330,7 +331,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                         	else
                                 	break;
 			}
-                        
+                        */
+			
                         if (rand(seed) < 0.5)
                         {
                                 // choose random Diffuse sample vector
@@ -363,8 +365,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
                         r.origin += r.direction;
                         
-                        if (diffuseCount < 2)
-                                bounceIsSpecular = true;
+                        bounceIsSpecular = (diffuseCount < 2);
 			
                         continue;
 		}
@@ -375,8 +376,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			nt = 1.5; // IOR of common Glass
 			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
 			
-			if (diffuseCount < 2)
-				bounceIsSpecular = true;
+			bounceIsSpecular = (diffuseCount < 2);
 				
 			if (rand(seed) < Re) // reflect ray from surface
 			{
@@ -405,7 +405,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			{	
 				r = Ray( x, reflect(r.direction, nl) );
 				r.origin += r.direction;
-				bounceIsSpecular = true;
+				bounceIsSpecular = (diffuseCount < 2);
+				
 				continue;	
 			}
 			if (rand(seed) < 0.5)
