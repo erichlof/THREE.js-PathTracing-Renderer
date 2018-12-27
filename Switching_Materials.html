@@ -94,9 +94,13 @@ Sphere spheres[N_SPHERES];
 
 #include <pathtracing_random_functions>
 
+#include <pathtracing_calc_fresnel_reflectance>
+
 #include <pathtracing_sphere_intersect>
 
 #include <pathtracing_quad_intersect>
+
+#include <pathtracing_sample_sphere_light>
 
 
 //-----------------------------------------------------------------------
@@ -136,23 +140,29 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 }
 
 
-#include <pathtracing_direct_lighting_sphere>
-
-
 //-----------------------------------------------------------------------
 vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 //-----------------------------------------------------------------------
 {
+	Intersection intersec;
+	Sphere light = spheres[0];
+
 	vec3 accumCol = vec3(0.0);
-        vec3 mask = vec3(1.0);
-        Intersection intersec;
-	int sampleDiffuseBudget = 3;
+	vec3 mask = vec3(1.0);
+	vec3 n, nl, x;
+	vec3 dirToLight;
+	vec3 tdir;
+	
+	float nc, nt, Re;
+        float weight;
+	
+	int diffuseCount = 0;
+
 	bool bounceIsSpecular = true;
 	
 	
-        for (int depth = 0; depth < 4; depth++)
+        for (int depth = 0; depth < 6; depth++)
 	{
-		sampleDiffuseBudget -= 1;
 		
 		float t = SceneIntersect(r, intersec);
 		
@@ -173,117 +183,139 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		}
 		
 		// useful data 
-		vec3 n = intersec.normal;
-                vec3 nl = dot(n,r.direction) <= 0.0 ? normalize(n) : normalize(n * -1.0);
-		vec3 x = r.origin + r.direction * t;
+		n = normalize(intersec.normal);
+                nl = dot(n, r.direction) <= 0.0 ? normalize(n) : normalize(n * -1.0);
+		x = r.origin + r.direction * t;
 		
 		    
                 if (intersec.type == DIFF) // Ideal DIFFUSE reflection
                 {
+			diffuseCount++;
+
 			mask *= intersec.color;
-			accumCol += calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
-                        bounceIsSpecular = false;
 			
-			sampleDiffuseBudget -= 1;
-			if (sampleDiffuseBudget < 0) break;
+			// Russian Roulette
+			float p = max(mask.r, max(mask.g, mask.b));
+			if (depth > 0)
+			{
+				if (rand(seed) < p)
+                                	mask *= 1.0 / p;
+                        	else
+                                	break;
+			}
+                        
+                        if (rand(seed) < 0.5)
+                        {
+                                // choose random Diffuse sample vector
+				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+				r.origin += r.direction;
 				
-			// choose random Diffuse sample vector
-			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
-			r.origin += r.direction * 2.0;
-			continue;	
+				bounceIsSpecular = false;
+				continue;
+                        }
+                        else
+                        {
+				weight = sampleSphereLight(x, nl, dirToLight, light, seed);
+				
+                                r = Ray( x, dirToLight );
+				r.origin += nl;
+				
+				mask *= clamp(weight, 0.0, 1.0);
+				
+				bounceIsSpecular = true;
+				continue;
+                        }
+				
                 }
 		
+
                 if (intersec.type == SPEC)  // Ideal SPECULAR reflection
                 {
 			mask *= intersec.color;
-			r = Ray( x, reflect(r.direction, nl) );
-			r.origin += r.direction * 2.0;
-			//bounceIsSpecular = true;
-                        continue;
-                }
 
-                if (intersec.type == REFR)  // Ideal dielectric REFRACTION
+			r = Ray( x, reflect(r.direction, nl) );
+
+                        r.origin += r.direction;
+                        
+                        if (diffuseCount < 2)
+                                bounceIsSpecular = true;
+			
+                        continue;
+		}
+		
+
+		if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
-			sampleDiffuseBudget += 1;
+			nc = 1.0; // IOR of Air
+			nt = 1.5; // IOR of common Glass
+			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
 			
-			float nc = 1.0; // IOR of Air
-			float nt = 1.5; // IOR of common Glass
-			float nnt = dot(r.direction, n) <= 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
-			vec3 tdir = refract(r.direction, nl, nnt);
+			if (diffuseCount < 2)
+				bounceIsSpecular = true;
 				
-			// Original Fresnel equations
-			float cosThetaInc = dot(nl, r.direction);
-			float cosThetaTra = dot(nl, tdir);
-			float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
-			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
-			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
-			
 			if (rand(seed) < Re) // reflect ray from surface
 			{
 				r = Ray( x, reflect(r.direction, nl) );
-			    	r.origin += r.direction * 2.0;
-				//bounceIsSpecular = true;
+			    	r.origin += r.direction;
 			    	continue;	
 			}
 			else // transmit ray through surface
 			{
 				mask *= intersec.color;
 				r = Ray(x, tdir);
-				r.origin += r.direction * 2.0;
-				bounceIsSpecular = true;
+				r.origin += r.direction;
 				continue;
 			}
 			
                 } // end if (intersec.type == REFR)
-                
+		
+		
                 if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top
 		{
-			float nc = 1.0; // IOR of Air
-			float nt = 1.4; // IOR of Clear Coat
-			float nnt = dot(r.direction, n) <= 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
-			vec3 tdir = refract(r.direction, nl, nnt);
-				
-			// Original Fresnel equations
-			float cosThetaInc = dot(nl, r.direction);
-			float cosThetaTra = dot(nl, tdir);
-			float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
-			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
-			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
+			nc = 1.0; // IOR of Air
+			nt = 1.4; // IOR of Clear Coat
+			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
 			
 			// choose either specular reflection or diffuse
 			if( rand(seed) < Re )
 			{	
 				r = Ray( x, reflect(r.direction, nl) );
 				r.origin += r.direction;
-				//bounceIsSpecular = true;
+				bounceIsSpecular = true;
 				continue;	
 			}
-			else
-			{
+			if (rand(seed) < 0.5)
+                        {
 				mask *= intersec.color;
-				accumCol += calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
-				// choose random sample vector for diffuse material underneath ClearCoat
+
+                                // choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 				r.origin += r.direction;
+				
 				bounceIsSpecular = false;
 				continue;
-			}
+                        }
+                        else
+                        {
+				mask *= intersec.color;
+				weight = sampleSphereLight(x, nl, dirToLight, light, seed);
+				mask *= clamp(weight, 0.0, 1.0);
+
+                                r = Ray( x, dirToLight );
+				r.origin += nl;
+				
+				bounceIsSpecular = true;
+				continue;
+                        }
 			
 		} //end if (intersec.type == COAT)
 		
+		
 		if (intersec.type == CARCOAT)  // Colored Metal or Fiberglass object underneath with ClearCoat on top
 		{
-			float nc = 1.0; // IOR of Air
-			float nt = 1.4; // IOR of Clear Coat
-			float nnt = dot(r.direction, n) <= 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
-			vec3 tdir = refract(r.direction, nl, nnt);
-				
-			// Original Fresnel equations
-			float cosThetaInc = dot(nl, r.direction);
-			float cosThetaTra = dot(nl, tdir);
-			float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
-			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
-			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
+			nc = 1.0; // IOR of Air
+			nt = 1.4; // IOR of Clear Coat
+			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
 			
 			// choose either specular reflection, metallic, or diffuse
 			if( rand(seed) < Re )
@@ -299,96 +331,139 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				r.origin += r.direction;
 				continue;
 			}
-			else
-			{
+			if (rand(seed) < 0.5)
+                        {
 				mask *= intersec.color;
-				accumCol += calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
-				// choose random sample vector for diffuse material underneath ClearCoat
+
+                                // choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 				r.origin += r.direction;
+				
 				bounceIsSpecular = false;
 				continue;
-			}
+                        }
+                        else
+                        {
+				mask *= intersec.color;
+				weight = sampleSphereLight(x, nl, dirToLight, light, seed);
+				mask *= clamp(weight, 0.0, 1.0);
+
+                                r = Ray( x, dirToLight );
+				r.origin += nl;
+				
+				bounceIsSpecular = true;
+				continue;
+                        }
 			
                 } //end if (intersec.type == CARCOAT)
 
+
+		if (intersec.type == TRANSLUCENT)  // Translucent Sub-Surface Scattering material
+		{
+			float translucentDensity = 0.25;
+			float scatteringDistance = -log(rand(seed)) / translucentDensity;
+			vec3 absorptionCoefficient = intersec.color;
+
+			// transmission?
+			if (scatteringDistance > t) 
+			{
+				mask *= exp(-absorptionCoefficient * t);
+				
+				r.origin = x;
+				r.origin += r.direction * scatteringDistance;
+
+				bounceIsSpecular = true;
+				continue;
+			}
+
+			// else scattering
+			mask *= exp(-absorptionCoefficient * scatteringDistance);
+			
+			if (rand(seed) < 0.5)
+                        {
+                                // choose random Diffuse sample vector
+				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+				r.origin += r.direction * scatteringDistance;
+				
+				bounceIsSpecular = false;
+				continue;
+                        }
+                        else
+                        {
+				weight = sampleSphereLight(x, nl, dirToLight, light, seed);
+				
+                                r = Ray( x, dirToLight );
+				r.origin += r.direction * scatteringDistance;
+				
+				mask *= clamp(weight, 0.0, 1.0);
+				
+				bounceIsSpecular = true;
+				continue;
+                        }
+			
+		} // end if (intersec.type == TRANSLUCENT)
+
+		
                 if (intersec.type == SPECSUB)  // Shiny(specular) coating over Sub-Surface Scattering material
 		{
-			float nc = 1.0; // IOR of Air
-			float nt = 1.3; // IOR of clear coating (for polished jade)
-			float nnt = dot(r.direction, n) <= 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
-			vec3 tdir = refract(r.direction, nl, nnt);
-				
-			// Original Fresnel equations
-			float cosThetaInc = dot(nl, r.direction);
-			float cosThetaTra = dot(nl, tdir);
-			float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
-			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
-			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
+			nc = 1.0; // IOR of Air
+			nt = 1.3; // IOR of clear coating (for polished jade)
+			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
 			
 			// choose either specular reflection or translucent subsurface scattering/transmission
 			if( rand(seed) < Re )
 			{
 				r = Ray( x, reflect(r.direction, nl) );
-				r.origin += r.direction * 2.0;
-				//bounceIsSpecular = true;
+				r.origin += r.direction;
+				bounceIsSpecular = true;
 				continue;
 			}
 			
 			vec3 absorptionCoefficient = intersec.color;
 			float translucentDensity = 0.1;
 			float scatteringDistance = -log(rand(seed)) / translucentDensity;
-			vec3 d;
 			
-			if (scatteringDistance < t) 
-			{
-				mask *= exp(-absorptionCoefficient * scatteringDistance); // scattering
-				d = (randomSphereDirection(seed)); // true Isotropic scattering
-				bounceIsSpecular = false;
-			}
-			else
-			{
-				mask *= exp(-absorptionCoefficient * t); // transmission
-				d = r.direction;
-				bounceIsSpecular = false;
-			}
-			
-			x = x + d * scatteringDistance;
-			accumCol += calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
-			r = Ray( x, d );
-			
-			continue;
-			
-		} // end if (intersec.type == SPECSUB)
-                
-                if (intersec.type == TRANSLUCENT)  // Translucent Sub-Surface Scattering material
-		{
-			float translucentDensity = 0.25;
-			float scatteringDistance = -log(rand(seed)) / translucentDensity;
-			vec3 absorptionCoefficient = intersec.color;
-			vec3 d;
+			// transmission?
 			if (scatteringDistance > t) 
 			{
-				mask *= exp(-absorptionCoefficient * t); // transmission
-				d = r.direction;
-				//bounceIsSpecular = false; // not set, in order to see lights through thin material
+				mask *= exp(-absorptionCoefficient * t);
+
+				r.origin = x;
+				r.origin += r.direction * scatteringDistance;
+
+				bounceIsSpecular = true;
+				continue;
 			}
-			else
-			{
-				// Compute how much light was absorbed along the ray before it was scattered:
-				mask *= exp(-absorptionCoefficient * scatteringDistance); // scattering
-				d = randomSphereDirection(seed); // true Isotropic scattering
-				bounceIsSpecular = false;	
-			}
+
+			// else scattering
+			mask *= exp(-absorptionCoefficient * scatteringDistance);
 			
-			x = x + d * scatteringDistance;
-			accumCol += calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
-			r = Ray( x, d );
-			continue;	
+			if (rand(seed) < 0.5)
+                        {
+                                // choose random Diffuse sample vector
+				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+				r.origin += r.direction * scatteringDistance;
+				
+				bounceIsSpecular = false;
+				continue;
+                        }
+                        else
+                        {
+				weight = sampleSphereLight(x, nl, dirToLight, light, seed);
+				
+                                r = Ray( x, dirToLight );
+				r.origin += r.direction * scatteringDistance;
+				
+				mask *= clamp(weight, 0.0, 1.0);
+				
+				bounceIsSpecular = true;
+				continue;
+                        }
 			
-		} // end if (intersec.type == TRANSLUCENT)
+		} // end if (intersec.type == SPECSUB)
 		
-	} // end for (int depth = 0; depth < 4; depth++)
+                
+	} // end for (int depth = 0; depth < 6; depth++)
 	
 	
 	return accumCol;      
@@ -399,7 +474,7 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0);// No color value, Black        
-	vec3 L1 = vec3(1.0, 1.0, 1.0) * 2.0;// Bright light
+	vec3 L1 = vec3(1.0, 1.0, 1.0) * 4.0;// Bright light
 		    
 	spheres[0] = Sphere( 200.0, vec3(275.0, 620.0, -280.0), L1, z, LIGHT);// Light Sphere
 	spheres[1] = Sphere(  90.0, vec3(150.0,  91.0, -200.0),  z, uLeftSphereColor, int(uLeftSphereMaterialType));// Sphere Left
@@ -531,8 +606,8 @@ void SetupScene(void)
 			function init() {
 				
 				materialController = {
-                                        LSphereMaterial: 1,
-                                        RSphereMaterial: 3
+                                        LSphereMaterial: 4,
+                                        RSphereMaterial: 2
                                 };
 
                                 function leftMatChanger() {
@@ -671,7 +746,7 @@ void SetupScene(void)
 				pathTracingScene.add( cameraControlsObject );
 
 				// for flyCam
-				cameraControlsObject.position.set(278, 170, 300);
+				cameraControlsObject.position.set(278, 170, 320);
 				///cameraControlsYawObject.rotation.y = 0.0;
 				// look slightly upward
 				cameraControlsPitchObject.rotation.x = 0.005;
