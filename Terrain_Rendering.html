@@ -5,7 +5,6 @@
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1">
 		<style>
-
 			html, body {
 				width: 100%;
 				height: 100%;
@@ -47,18 +46,14 @@
 		
 		<script id="pathTracingVertexShader" type="x-shader/x-vertex">
 #version 300 es
-
 precision highp float;
 precision highp int;
-
 out vec2 vUv;
-
 void main()
 {
 	vUv = uv;
 	gl_Position = vec4( position, 1.0 );
 }
-
 		</script>
 		
 		
@@ -70,27 +65,23 @@ precision highp float;
 precision highp int;
 precision highp sampler2D;
 
+#include <pathtracing_uniforms_and_defines>
+#include <pathtracing_skymodel_defines>
+
 uniform float uCameraUnderWater;
 uniform float uWaterLevel;
 uniform vec3 uSunDirection;
-
-#include <pathtracing_uniforms_and_defines>
-
 uniform sampler2D t_PerlinNoise;
 uniform float uTerrain_eps;
-
-#include <pathtracing_skymodel_defines>
-
-
-//-----------------------------------------------------------------------
 
 struct Ray { vec3 origin; vec3 direction; };
 struct Quad { vec3 v0; vec3 v1; vec3 v2; vec3 v3; vec3 emission; vec3 color; int type; };
 struct Box { vec3 minCorner; vec3 maxCorner; vec3 emission; vec3 color; int type; };
 struct Intersection { vec3 normal; vec3 emission; vec3 color; vec2 uv; int type; };
 
-
 #include <pathtracing_random_functions>
+
+#include <pathtracing_calc_fresnel_reflectance>
 
 #include <pathtracing_sphere_intersect>
 
@@ -99,7 +90,7 @@ struct Intersection { vec3 normal; vec3 emission; vec3 color; vec2 uv; int type;
 #include <pathtracing_box_intersect>
 
 #include <pathtracing_physical_sky_functions>
-
+	
 
 //---------------------------------------------------------------------------------------------------------
 float DisplacementBoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r )
@@ -131,10 +122,8 @@ float DisplacementBoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r )
 	return INFINITY;
 }
 
-
 // WATER
 /* Credit: some of the following water code is borrowed from https://www.shadertoy.com/view/Ms2SD1 posted by user 'TDM' */
-
 #define WATER_SAMPLE_SCALE 0.05 
 #define WATER_WAVE_HEIGHT 2.0 // max height of water waves   
 #define WATER_FREQ        1.0 // wave density: lower = spread out, higher = close together
@@ -178,7 +167,6 @@ float getOceanWaterHeight( vec3 p )
 	vec2 uv = p.xz * WATER_SAMPLE_SCALE; 
 	uv.x *= 0.75;
 	float d, h = 0.0;
-
 	d =  sea_octave((uv + sea_time) * freq, choppy);
 	d += sea_octave((uv - sea_time) * freq, choppy);
 	h += d * amp;        
@@ -204,14 +192,11 @@ float getOceanWaterHeight_Detail( vec3 p )
 		uv *= OCTAVE_M; freq *= 1.9; amp *= 0.22;
 		choppy = mix(choppy, 1.0, 0.2);
 	}
-
 	return h * WATER_WAVE_HEIGHT + uWaterLevel;
 }
 
-
 // CLOUDS
 /* Credit: some of the following cloud code is borrowed from https://www.shadertoy.com/view/XtBXDw posted by user 'valentingalea' */
-
 #define THICKNESS      25.0
 #define ABSORPTION     0.45
 #define N_MARCH_STEPS  12
@@ -241,7 +226,6 @@ float cloud_density( vec3 pos, float cov )
 {
 	float dens = fbm(pos * 0.002);
 	dens *= smoothstep(cov, cov + 0.05, dens);
-
 	return clamp(dens, 0.0, 1.0);	
 }
 
@@ -258,7 +242,6 @@ float cloud_light( vec3 pos, vec3 dir_step, float cov )
 		T *= T_i;
 		pos += dir_step;
 	}
-
 	return T;
 }
 
@@ -281,7 +264,6 @@ vec4 render_clouds( Ray eye, vec3 p, vec3 sunDirection )
 	for (int i = 0; i < N_MARCH_STEPS; i++)
 	{
 		dens = cloud_density(pos, coverage);
-
 		T_i = exp(-ABSORPTION * dens * march_step);
 		T *= T_i;
 		cloudLight = cloud_light(pos, light_step, coverage);
@@ -294,9 +276,7 @@ vec4 render_clouds( Ray eye, vec3 p, vec3 sunDirection )
 	return vec4(C, alpha);
 }
 
-
 // TERRAIN
-
 #define TERRAIN_HEIGHT 2000.0
 #define TERRAIN_SAMPLE_SCALE 0.00004 
 #define TERRAIN_LIFT -1000.0 // how much to lift or drop the entire terrain
@@ -308,7 +288,6 @@ float lookup_Heightmap( in vec3 pos )
 	uv *= TERRAIN_SAMPLE_SCALE;
 	float h = 0.0;
 	float mult = 1.0;
-
 	for (int i = 0; i < 3; i ++)
 	{
 		h += mult * texture2D(t_PerlinNoise, uv + 0.5).x;
@@ -324,7 +303,6 @@ float lookup_Normal( in vec3 pos )
 	uv *= TERRAIN_SAMPLE_SCALE;
 	float h = 0.0;
 	float mult = 1.0;
-
 	for (int i = 0; i < 9; i ++)
 	{
 		h += mult * texture2D(t_PerlinNoise, uv + 0.5).x;
@@ -350,14 +328,12 @@ bool isLightSourceVisible( vec3 pos, vec3 n, vec3 dirToLight)
 	float terrainHeight = TERRAIN_HEIGHT * 1.5 + TERRAIN_LIFT;
 	pos += n * 2.0; // large outdoor scene requires moving away from surface a lot, 
 	// otherwise, black patches from incorrect self-shadowing occur on mobile due to less precision
-
 	for(int i = 0; i < 300; i++)
 	{
 		h = pos.y - lookup_Heightmap(pos);
 		pos += dirToLight * h;
 		if ( pos.y > terrainHeight || h < 0.0) break;
 	}
-
 	return h >= 0.0;
 }
 
@@ -373,7 +349,6 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkWater )
 	vec3 hitPos;
 	float terrainHeight;
 	float waterWaveHeight;
-
 	// Terrain
 	vec3 pos = r.origin;
 	vec3 dir = (r.direction);
@@ -388,7 +363,6 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkWater )
 	}
 	hitPos = pos;
 	if (h >= 1.0) d = INFINITY;
-
 	if (d > TERRAIN_FAR)
 	{
 		dp = PlaneIntersect( vec4(0, 1, 0, uWaterLevel), r );
@@ -400,7 +374,6 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkWater )
 		}
 		
 	}
-
 	if (d < t)
 	{
 		t = d;
@@ -417,7 +390,6 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkWater )
 	dir = r.direction; // reset dir
 	h = 0.0; // reset h
 	d = 0.0; // reset d
-
 	for(int i = 0; i < 50; i++)
 	{
 		h = abs(pos.y - getOceanWaterHeight(pos));
@@ -476,8 +448,11 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
         vec3 mask = vec3(1.0);
 	vec3 n, nl, x;
 	vec3 firstX = vec3(0);
-        
+	vec3 tdir;
+	
+	float nc, nt, Re;
 	float t = INFINITY;
+
 	int previousIntersecType = -1;
 	bool checkWater = true;
 	bool skyHit = false;
@@ -488,7 +463,6 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 	{
 		
 		t = SceneIntersect(r, intersec, checkWater);
-
 		// ray hits sky first
 		if (t == INFINITY && depth == 0 )
 		{
@@ -524,6 +498,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 		// ray hits terrain
 		if (intersec.type == TERRAIN)
 		{
+			previousIntersecType = TERRAIN;
 			firstX = x;
 			float rockNoise = texture2D(t_PerlinNoise, (0.001 * x.xz)).x;
 			vec3 rockColor0 = vec3(0.2, 0.2, 0.2) * 0.01 * rockNoise;
@@ -535,7 +510,6 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 			vec3 sunColor = clamp(Get_Sky_Color(Ray(x, normalize(sunDirection + (randVec * 0.02))), sunDirection), 0.0, 1.0);
 			vec3 ambientColor;
 			float terrainLayer = clamp( (x.y + (rockNoise * 300.0) * n.y) / (TERRAIN_HEIGHT * 1.5 + TERRAIN_LIFT), 0.0, 1.0 );
-
 			if (terrainLayer > 0.7 && terrainLayer > 1.0 - n.y)
 			{
 				intersec.color = snowColor;
@@ -549,7 +523,6 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 			}		
 			
 			accumCol = ambientColor;
-
 			vec3 shadowRayDirection = normalize(sunDirection + (randomSkyVec * max(dot(sunDirection, up), 0.1)));						
 			if ( isLightSourceVisible(x, n, shadowRayDirection) ) // in direct sunlight
 			{
@@ -561,33 +534,24 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 		
 		if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
+			previousIntersecType = REFR;
 			checkWater = false;
 			
-			float nc = 1.0; // IOR of air
-			float nt = 1.33; // IOR of water
-			float nnt = dot(r.direction, n) <= 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
-			vec3 tdir = refract(r.direction, nl, nnt);
-				
-			// Original Fresnel equations
-			float cosThetaInc = dot(nl, r.direction);
-			float cosThetaTra = dot(nl, tdir);
-			float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
-			float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
-			float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
+			nc = 1.0; // IOR of air
+			nt = 1.33; // IOR of water
+			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
 			
 			if (rand(seed) < Re) // reflect ray from surface
 			{
 				r = Ray( x, reflect(r.direction, nl) );
-				r.origin += r.direction * 2.0;
-				previousIntersecType = REFR;
+				r.origin += r.direction;
 				continue;	
 			}
 			else // transmit ray through surface
 			{
 				mask *= intersec.color;
 				r = Ray(x, tdir);
-				r.origin += r.direction * 2.0;
-				previousIntersecType = REFR;
+				r.origin += r.direction;
 				continue;
 			}
 		} // end if (intersec.type == REFR)
@@ -613,7 +577,6 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 	{
 		hitDistance = distance(cameraRay.origin, firstX);
 		accumCol = mix( initialSkyColor, accumCol, clamp( exp2( -log(hitDistance * 0.00008) ), 0.0, 1.0 ) );
-
 		// underwater fog effect
 		hitDistance = distance(cameraRay.origin, firstX);
 		hitDistance *= uCameraUnderWater;
@@ -645,7 +608,6 @@ void main( void )
 	
 	// seed for rand(seed) function
 	uvec2 seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord);
-
 	float r1 = 2.0 * rand(seed);
 	float r2 = 2.0 * rand(seed);
 	
@@ -671,10 +633,8 @@ void main( void )
 	vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
     
 	Ray ray = Ray( camPos + randomAperturePos, finalRayDir );
-
 	// not needed in this demo, all objects are procedurally generated
 	//SetupScene(); 
-
 	// perform path tracing and get resulting pixel color
 	vec3 pixelColor = CalculateRadiance( ray, uSunDirection, seed );
 	
@@ -694,7 +654,6 @@ void main( void )
 	
 	out_FragColor = vec4( pixelColor + previousColor, 1.0 );	
 }
-
 		</script>
 		
 		
@@ -762,7 +721,6 @@ void main( void )
 			var cameraControlsObject;//for positioning and moving the camera itself
 			var cameraControlsYawObject;//allows access to control camera's left/right movements through mobile input
 			var cameraControlsPitchObject;//allows access to control camera's up/down movements through mobile input
-
 			var PI_2 = Math.PI / 2;//used by controls below
 			
 			var infoElement = document.getElementById( 'info' );
@@ -779,10 +737,8 @@ void main( void )
 			
 			
 			function onMouseWheel( event ) {
-
 				event.preventDefault();
 				event.stopPropagation();
-
 				if ( event.deltaY > 0 ) {
 					
 					increaseFOV = true;
@@ -792,7 +748,6 @@ void main( void )
 					decreaseFOV = true;
 					
 				}
-
 			}
 			
 			
@@ -812,48 +767,33 @@ void main( void )
 						enableMultiTouch: true
 					});	
 				}
-
 				// if on mobile device, unpause the app because there is no ESC key and no mouse capture to do
 				if ( !mouseControl )
 					isPaused = false;
-
 				if (mouseControl) {
-
 					window.addEventListener( 'wheel', onMouseWheel, false );
-
 					document.body.addEventListener("click", function() {
 						this.requestPointerLock = this.requestPointerLock || this.mozRequestPointerLock;
 						this.requestPointerLock();
 					}, false);
-
 					window.addEventListener("click", function(event) {
 						event.preventDefault();	
 					}, false);
 					window.addEventListener("dblclick", function(event) {
 						event.preventDefault();	
 					}, false);
-
-
 					var pointerlockChange = function ( event ) {
-
 						if ( document.pointerLockElement === document.body || 
 						    document.mozPointerLockElement === document.body || document.webkitPointerLockElement === document.body ) {
-
 							isPaused = false;
-
 						} else {
-
 							isPaused = true;
-
 						}
-
 					};
-
 					// Hook pointer lock state change events
 					document.addEventListener( 'pointerlockchange', pointerlockChange, false );
 					document.addEventListener( 'mozpointerlockchange', pointerlockChange, false );
 					document.addEventListener( 'webkitpointerlockchange', pointerlockChange, false );
-
 				}
 				
 				canvas = document.createElement( 'canvas' );
@@ -906,7 +846,6 @@ void main( void )
 				cameraControlsPitchObject = controls.getPitchObject();
 				
 				pathTracingScene.add( cameraControlsObject );
-
 				cameraControlsObject.position.set(-837, 1350, 2156);
 				cameraControlsYawObject.rotation.y = 0.8;
 				cameraControlsPitchObject.rotation.x = 0.0;
@@ -938,7 +877,6 @@ void main( void )
 				} );
 				screenTextureRenderTarget.texture.generateMipmaps = false;
 				
-
 				PerlinNoiseTexture = new THREE.TextureLoader().load( 'textures/perlin256.png' );
 				PerlinNoiseTexture.wrapS = THREE.RepeatWrapping;
 				PerlinNoiseTexture.wrapT = THREE.RepeatWrapping;
@@ -949,7 +887,6 @@ void main( void )
 				
 				
 				pathTracingGeometry = new THREE.PlaneBufferGeometry( 2, 2 );
-
 				pathTracingUniforms = {
 					
 					tPreviousTexture: { type: "t", value: screenTextureRenderTarget.texture },
@@ -993,7 +930,6 @@ void main( void )
 				        depthTest: false,
                                         depthWrite: false
                                 } );
-
 				pathTracingMesh = new THREE.Mesh( pathTracingGeometry, pathTracingMaterial );
 				pathTracingScene.add( pathTracingMesh );
 				
@@ -1038,13 +974,11 @@ void main( void )
 				screenOutputMesh = new THREE.Mesh(screenOutputGeometry, screenOutputMaterial);
 				screenOutputScene.add(screenOutputMesh);
 				
-
 				/*
 				// Fullscreen API
 				document.addEventListener("click", function() {
 					
 					if ( !document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement ) {
-
 						if (document.documentElement.requestFullscreen) {
 							document.documentElement.requestFullscreen();
 							
@@ -1055,7 +989,6 @@ void main( void )
 							document.documentElement.webkitRequestFullscreen();
 						
 						}
-
 					}
 				});
 				*/
@@ -1116,7 +1049,6 @@ void main( void )
 						button4Element.style.right = 16 + "%";
 						button5Element.style.right = 3 + "%";
 						button6Element.style.right = 3 + "%";
-
 						button1Element.style.bottom = 5 + "%";
 						button2Element.style.bottom = 5 + "%";
 						button3Element.style.bottom = 13 + "%";
@@ -1133,7 +1065,6 @@ void main( void )
 						button4Element.style.right = 11 + "%";
 						button5Element.style.right = 3 + "%";
 						button6Element.style.right = 3 + "%";
-
 						button1Element.style.bottom = 10 + "%";
 						button2Element.style.bottom = 10 + "%";
 						button3Element.style.bottom = 26 + "%";
@@ -1178,7 +1109,6 @@ void main( void )
 			
 				// if not playing on desktop, get input from the mobileJoystickControls
 				if ( !mouseControl ) {
-
 					newDeltaX = joystickDeltaX;
 					
 					if (newDeltaX) {
@@ -1252,39 +1182,32 @@ void main( void )
 				cameraDirectionVector.normalize();
 				controls.getUpVector(cameraUpVector);
 				controls.getRightVector(cameraRightVector);
-
 				// the following gives us a rotation quaternion (4D vector), which will be useful for 
 				// rotating scene objects to match the camera's rotation
 				worldCamera.getWorldQuaternion(cameraWorldQuaternion);
 				
 				// allow flying camera
 				if ( (keyboard.pressed('W') || button3Pressed) && !(keyboard.pressed('S') || button4Pressed) ) {
-
 					cameraControlsObject.position.add(cameraDirectionVector.multiplyScalar(camFlightSpeed * frameTime));
 					cameraIsMoving = true;
 				}
 				if ( (keyboard.pressed('S') || button4Pressed) && !(keyboard.pressed('W') || button3Pressed) ) {
-
 					cameraControlsObject.position.sub(cameraDirectionVector.multiplyScalar(camFlightSpeed * frameTime));
 					cameraIsMoving = true;
 				}
 				if ( (keyboard.pressed('A') || button1Pressed) && !(keyboard.pressed('D') || button2Pressed) ) {
-
 					cameraControlsObject.position.sub(cameraRightVector.multiplyScalar(camFlightSpeed * frameTime));
 					cameraIsMoving = true;
 				}
 				if ( (keyboard.pressed('D') || button2Pressed) && !(keyboard.pressed('A') || button1Pressed) ) {
-
 					cameraControlsObject.position.add(cameraRightVector.multiplyScalar(camFlightSpeed * frameTime));
 					cameraIsMoving = true;
 				}
 				if ( keyboard.pressed('Q') && !keyboard.pressed('Z') ) {
-
 					cameraControlsObject.position.add(cameraUpVector.multiplyScalar(camFlightSpeed * frameTime));
 					cameraIsMoving = true;
 				}
 				if ( keyboard.pressed('Z') && !keyboard.pressed('Q') ) {
-
 					cameraControlsObject.position.sub(cameraUpVector.multiplyScalar(camFlightSpeed * frameTime));
 					cameraIsMoving = true;
 				}
@@ -1380,7 +1303,6 @@ void main( void )
 					frameCounter  += 1.0;
 					if (cameraRecentlyMoving)
 						frameCounter = 1.0;
-
 					cameraRecentlyMoving = false;
 					
 				}
@@ -1392,7 +1314,6 @@ void main( void )
 				sunAngle = (elapsedTime * 0.03) % Math.PI;
 				sunDirection.set(Math.cos(sunAngle) * 1.2, Math.sin(sunAngle), -Math.cos(sunAngle) * 3.0);
 				sunDirection.normalize();
-
 				pathTracingUniforms.uCameraUnderWater.value = cameraUnderWater;
 				pathTracingUniforms.uWaterLevel.value = waterLevel;
 				pathTracingUniforms.uSunDirection.value.copy(sunDirection);
@@ -1431,7 +1352,6 @@ void main( void )
 					
 				
 			} // end function animate()
-
 		</script>
 
 	</body>
