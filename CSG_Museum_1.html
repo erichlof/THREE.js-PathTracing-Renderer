@@ -970,6 +970,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		    
                 if (intersec.type == DIFF ) // Ideal DIFFUSE reflection
 		{
+			diffuseCount++;
+			
 			mask *= intersec.color;
 
 			/*
