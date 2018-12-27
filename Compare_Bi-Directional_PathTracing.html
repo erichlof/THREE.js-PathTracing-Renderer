@@ -239,7 +239,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		if (intersec.type == DIFF) // Ideal DIFFUSE reflection
 		{
 			maskEyePath *= intersec.color;
-			eyeX = x + nl * 2.0;
+			eyeX = x + nl;
 			nlEyePath = nl;
 			if (depth == 0)
 				nlFirst = nl;
@@ -252,7 +252,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			
 			// choose random Diffuse sample vector
 			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
-			r.origin += r.direction * 2.0;
+			r.origin += r.direction;
 			eyeX = r.origin;
 			bounceIsSpecular = false;
 			continue;
@@ -262,7 +262,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		{
 			maskEyePath *= intersec.color;
 			r = Ray( x, reflect(r.direction, nl) );
-			r.origin += r.direction * 2.0;
+			r.origin += r.direction;
 			bounceIsSpecular = true;
 
 			continue;
@@ -281,14 +281,14 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	randPointOnLight.x = mix(quads[5].v0.x, quads[5].v1.x, rand(seed));
 	randPointOnLight.y = quads[5].v0.y;
 	randPointOnLight.z = mix(quads[5].v0.z, quads[5].v3.z, rand(seed));
-	vec3 randLightDir = randomDirectionInHemisphere(quads[5].normal, seed);
+	vec3 randLightDir = randomCosWeightedDirectionInHemisphere(quads[5].normal, seed);
 	randLightDir = normalize(randLightDir);
 	bool diffuseReached = false;
 	r = Ray( randPointOnLight, randLightDir );
-	r.origin += r.direction * 2.0;
+	r.origin += r.direction;
 	lightX = r.origin;
 	nlLightPath = quads[5].normal;
-	maskLightPath = quads[5].emission * max(0.0, dot(r.direction, nlLightPath));
+	maskLightPath = quads[5].emission;
 	
 	for (int depth = 0; depth < LIGHTPATH_LENGTH; depth++)
 	{
@@ -316,7 +316,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		{
 			maskLightPath *= intersec.color;
 			
-			lightX = x + nl * 2.0;
+			lightX = x + nl;
 			nlLightPath = nl;
 			diffuseReached = true;
 
@@ -326,7 +326,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			// choose random Diffuse sample vector
 			r = Ray( x, randomDirectionInHemisphere(nl, seed) );
 			maskLightPath *= max(0.0, dot(r.direction, nl));
-			r.origin += r.direction * 2.0;
+			r.origin += r.direction;
 			lightX = r.origin;
 			continue;
 		}
