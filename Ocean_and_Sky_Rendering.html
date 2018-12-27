@@ -615,7 +615,8 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 			checkOcean = false;
 			
 			mask *= intersec.color;
-			
+
+			/*
 			// Russian Roulette
 			float p = max(mask.r, max(mask.g, mask.b));
 			if (depth > 0)
@@ -625,6 +626,8 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
                         	else
                                 	break;
 			}
+			*/
+
                         if (rand(seed) < 0.5)
                         {
                                 // choose random Diffuse sample vector
@@ -655,7 +658,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 			r.origin += r.direction;
 			previousIntersecType = SPEC;
 
-			bounceIsSpecular = (diffuseCount < 1) ? true : false;
+			bounceIsSpecular = (diffuseCount < 2);
                         continue;
                 }
 		
@@ -668,7 +671,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 			nt = 1.33; // IOR of water
 			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
 
-			bounceIsSpecular = (diffuseCount < 1) ? true : false;
+			bounceIsSpecular = (diffuseCount < 2);
 				
 			if (rand(seed) < Re) // reflect ray from surface
 			{
@@ -703,7 +706,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 				r.origin += r.direction;
 				previousIntersecType = REFR;
 
-				bounceIsSpecular = (diffuseCount < 2) ? true : false;
+				bounceIsSpecular = (diffuseCount < 2);
 				
 				continue;	
 			}
