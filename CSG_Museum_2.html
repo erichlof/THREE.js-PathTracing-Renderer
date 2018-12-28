@@ -1030,7 +1030,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	else lightChoice = quads[1];
 	
 	
-	for (int depth = 0; depth < 5; depth++)
+	for (int depth = 0; depth < 4; depth++)
 	{
 		
 		float t = SceneIntersect(r, intersec);
@@ -1122,8 +1122,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			if (rand(seed) < Re) // reflect ray from surface
 			{
 				r = Ray( x, reflect(r.direction, nl) );
-					r.origin += r.direction;
-					continue;	
+				r.origin += r.direction;
+				continue;	
 			}
 			else // transmit ray through surface
 			{
@@ -1257,7 +1257,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		} // end if (intersec.type == SPECSUB)
 		
 		
-	} // end for (int depth = 0; depth < 6; depth++)
+	} // end for (int depth = 0; depth < 4; depth++)
 	
 	return accumCol;      
 }
