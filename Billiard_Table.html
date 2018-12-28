@@ -237,7 +237,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	else lightChoice = quads[1];
 	
 	
-        for (int depth = 0; depth < 5; depth++)
+        for (int depth = 0; depth < 4; depth++)
 	{
 		
 		float t = SceneIntersect(r, intersec);
@@ -360,7 +360,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				vec3 reflectVec = reflect(r.direction, nl);
 				r = Ray( x, mix( reflectVec, normalize(nl + randVec), intersec.roughness) );
 				r.origin += r.direction;
-				bounceIsSpecular = true;
+				bounceIsSpecular = (diffuseCount < 2);
 				continue;	
 			}
 			else
@@ -446,7 +446,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		} //end if (intersec.type == LIGHTWOOD || intersec.type == DARKWOOD)
 		
 		
-	} // end for (int depth = 0; depth < 6; depth++)
+	} // end for (int depth = 0; depth < 4; depth++)
 	
 	return accumCol;      
 }
