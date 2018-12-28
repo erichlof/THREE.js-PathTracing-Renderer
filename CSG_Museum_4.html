@@ -1031,7 +1031,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	else lightChoice = quads[1];
 	
 	
-	for (int depth = 0; depth < 5; depth++)
+	for (int depth = 0; depth < 4; depth++)
 	{
 		
 		float t = SceneIntersect(r, intersec);
@@ -1245,7 +1245,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		} // end if (intersec.type == TRANSLUCENT)
 		
 		
-	} // end for (int depth = 0; depth < 6; depth++)
+	} // end for (int depth = 0; depth < 4; depth++)
 	
 	return accumCol;      
 }
