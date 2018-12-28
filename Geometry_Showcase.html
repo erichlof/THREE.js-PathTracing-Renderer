@@ -288,7 +288,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	else lightChoice = spheres[2];
 
 	
-	for (int depth = 0; depth < 5; depth++)
+	for (int depth = 0; depth < 6; depth++)
 	{
 		
 		float t = SceneIntersect(r, intersec);
@@ -330,7 +330,6 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 			mask *= intersec.color;
 
-			/*
 			// Russian Roulette
 			float p = max(mask.r, max(mask.g, mask.b));
 			if (depth > 0)
@@ -340,8 +339,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                         	else
                                 	break;
 			}
-			*/
-
+			
 			if (rand(seed) < 0.5)
                         {
                                 // choose random Diffuse sample vector
@@ -371,7 +369,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			r = Ray( x, reflect(r.direction, nl) );
 			r.origin += r.direction;
 
-			bounceIsSpecular = (diffuseCount < 2);
+			bounceIsSpecular = (diffuseCount < 1);
 				
 			continue;
 		}
