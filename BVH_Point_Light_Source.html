@@ -372,9 +372,20 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		}
 		
 		// if we reached something bright, don't spawn any more rays
+
 		if (intersec.type == LIGHT)
 		{	
 			if (bounceIsSpecular)
+			{
+				accumCol = mask * intersec.emission;
+			}
+			
+			break;
+		}
+
+		if (intersec.type == POINT_LIGHT)
+		{	
+			if (bounceIsSpecular && depth < 2)
 			{
 				accumCol = mask * intersec.emission;
 			}
@@ -393,7 +404,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                 {
 			diffuseCount++;
 
-			if( intersec.type == CHECK )
+			if ( intersec.type == CHECK )
 			{
 				float q = clamp( mod( dot( floor(x.xz * 0.04), vec2(1.0) ), 2.0 ) , 0.0, 1.0 );
 				intersec.color = checkCol0 * q + checkCol1 * (1.0 - q);	
@@ -418,7 +429,6 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				mask *= albedoSample;
 			}
 			
-
 			/*
 			// Russian Roulette
 			float p = max(mask.r, max(mask.g, mask.b));
@@ -430,6 +440,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                                 	break;
 			}
 			*/
+
                         if (rand(seed) < 0.5)
                         {
                                 // choose random Diffuse sample vector
@@ -498,7 +509,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			nc = 1.0; // IOR of Air
 			nt = 1.4; // IOR of Clear Coat
 			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
-			
+
 			// choose either specular reflection or diffuse
 			if( rand(seed) < Re )
 			{	
@@ -510,6 +521,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			}
 			if (rand(seed) < 0.5)
                         {
+				diffuseCount++;
 				mask *= intersec.color;
 
                                 // choose random Diffuse sample vector
@@ -521,6 +533,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                         }
                         else
                         {
+				diffuseCount++;
 				mask *= intersec.color;
 				weight = sampleSphereLight(x, nl, dirToLight, light, seed);
 				mask *= clamp(weight, 0.0, 1.0);
@@ -546,11 +559,11 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0);
-	vec3 L1 = vec3(1.0, 0.9, 0.8) * 30.0;// Bright white light bulb
-	vec3 L2 = vec3(0.5, 0.7, 1.0) * 0.01;// 0.9 // Blueish sky light
+	vec3 L1 = vec3(0.5, 0.7, 1.0) * 0.05;// 0.9 // Blueish sky light
+	vec3 L2 = vec3(1.0, 0.9, 0.8) * 100.0;// Bright white light bulb
 	
-	spheres[0] = Sphere( 10000.0, vec3(0, 0, 0), L2, z, LIGHT);//large spherical sky light
-	spheres[1] = Sphere( 0.5, vec3(-10, 40, 5), L1, z, LIGHT);//small spherical point light
+	spheres[0] = Sphere( 10000.0, vec3(0, 0, 0), L1, z, LIGHT);//large spherical sky light
+	spheres[1] = Sphere( 0.5, vec3(-10, 35, -10), L2, z, POINT_LIGHT);//small spherical point light
 	spheres[2] = Sphere( 4000.0, vec3(0, -4000, 0), z, vec3(0.4, 0.4, 0.4), CHECK);//Checkered Floor
 		
 	boxes[0] = Box( vec3(-20.0, 11.0, -110.0), vec3(70.0, 18.0, -20.0), z, vec3(0.2, 0.9, 0.7), REFR);//Glass Box
@@ -704,6 +717,8 @@ void SetupScene(void)
 		//gltfLoader.load("models/room-preset.gltf", function( meshGroup ) { // Triangles:
 		//gltfLoader.load("models/tronTank.gltf", function( meshGroup ) { // Triangles:
 		//gltfLoader.load("models/studentRoom.gltf", function( meshGroup ) { // Triangles: 2,365
+		//gltfLoader.load("models/conference.gltf", function( meshGroup ) { // Triangles: 331,179
+
 			if (meshGroup.scene) 
 				meshGroup = meshGroup.scene;
 
