@@ -1315,31 +1315,70 @@ float calcFresnelReflectance(vec3 n, vec3 nl, vec3 rayDirection, float nc, float
 
 THREE.ShaderChunk[ 'pathtracing_main' ] = `
 
+// tentFilter from Peter Shirley's 'Realistic Ray Tracing (2nd Edition)' book, pg. 60		
+float tentFilter(float x)
+{
+	if (x < 0.5) 
+		return sqrt(2.0 * x) - 1.0;
+	else return 1.0 - sqrt(2.0 - (2.0 * x));
+}
+
+// cubicSplineFilter from Peter Shirley's 'Realistic Ray Tracing (2nd Edition)' book, pg. 58
+float solve(float r)
+{
+	float u = r;
+	for (int i = 0; i < 5; i++)
+	{
+		u = (11.0 * r + u * u * (6.0 + u * (8.0 - 9.0 * u))) /
+			(4.0 + 12.0 * u * (1.0 + u * (1.0 - u)));
+	}
+	return u;
+}
+
+float cubicFilter(float x)
+{
+	if (x < 1.0 / 24.0)
+		return pow(24.0 * x, 0.25) - 2.0;
+	else if (x < 0.5)
+		return solve(24.0 * (x - 1.0 / 24.0) / 11.0) - 1.0;
+	else if (x < 23.0 / 24.0)
+		return 1.0 - solve(24.0 * (23.0 / 24.0 - x) / 11.0);
+	else return 2.0 - pow(24.0 * (1.0 - x), 0.25);
+}
+
 void main( void )
 {
 	// not needed, three.js has a built-in uniform named cameraPosition
 	//vec3 camPos     = vec3( uCameraMatrix[3][0],  uCameraMatrix[3][1],  uCameraMatrix[3][2]);
 	
-    	vec3 camRight   = vec3( uCameraMatrix[0][0],  uCameraMatrix[0][1],  uCameraMatrix[0][2]);
-    	vec3 camUp      = vec3( uCameraMatrix[1][0],  uCameraMatrix[1][1],  uCameraMatrix[1][2]);
+	vec3 camRight   = vec3( uCameraMatrix[0][0],  uCameraMatrix[0][1],  uCameraMatrix[0][2]);
+	vec3 camUp      = vec3( uCameraMatrix[1][0],  uCameraMatrix[1][1],  uCameraMatrix[1][2]);
 	vec3 camForward = vec3(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]);
 	
 	// seed for rand(seed) function
 	uvec2 seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord);
 
-	float r1 = 2.0 * rand(seed);
-	float r2 = 2.0 * rand(seed);
-	
 	vec2 pixelPos = vec2(0);
-	vec2 offset = vec2(0);
-	if ( !uCameraIsMoving ) 
+	vec2 pixelOffset = vec2(0);
+	
+	float x = rand(seed);
+	float y = rand(seed);
+
+	if (!uCameraIsMoving)
 	{
-		offset.x = r1 < 1.0 ? sqrt(r1) - 1.0 : 1.0 - sqrt(2.0 - r1);
-        	offset.y = r2 < 1.0 ? sqrt(r2) - 1.0 : 1.0 - sqrt(2.0 - r2);
+		//pixelOffset.x = tentFilter(x);
+		//pixelOffset.y = tentFilter(y);
+		pixelOffset.x = cubicFilter(x);
+		pixelOffset.y = cubicFilter(y);
 	}
 	
-	offset /= (uResolution);
-	pixelPos = (2.0 * (vUv + offset) - 1.0);
+	// pixelOffset ranges from -1.0 to +1.0, so only need to divide by half resolution
+	pixelOffset /= (uResolution * 0.5);
+
+	// vUv comes in the range 0.0 to 1.0, so we must map it to the range -1.0 to +1.0
+	pixelPos = vUv * 2.0 - 1.0;
+	pixelPos += pixelOffset;
+
 	vec3 rayDir = normalize( pixelPos.x * camRight * uULen + pixelPos.y * camUp * uVLen + camForward );
 	
 	// depth of field
@@ -1353,7 +1392,7 @@ void main( void )
 	Ray ray = Ray( cameraPosition + randomAperturePos , finalRayDir );
 
 	SetupScene();
-	     		
+				
 	// perform path tracing and get resulting pixel color
 	vec3 pixelColor = CalculateRadiance( ray, seed );
 	
