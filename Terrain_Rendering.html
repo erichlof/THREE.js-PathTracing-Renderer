@@ -598,9 +598,18 @@ void SetupScene(void)
 }
 */
 
+// tentFilter from Peter Shirley's 'Realistic Ray Tracing (2nd Edition)' book, pg. 60		
+float tentFilter(float x)
+{
+	if (x < 0.5) 
+		return sqrt(2.0 * x) - 1.0;
+	else return 1.0 - sqrt(2.0 - (2.0 * x));
+}
+
 void main( void )
 {
-	vec3 camPos     = vec3( uCameraMatrix[3][0],  uCameraMatrix[3][1],  uCameraMatrix[3][2]);
+	// not needed, three.js has a built-in uniform named cameraPosition
+	//vec3 camPos   = vec3( uCameraMatrix[3][0],  uCameraMatrix[3][1],  uCameraMatrix[3][2]);
 	
     	vec3 camRight   = vec3( uCameraMatrix[0][0],  uCameraMatrix[0][1],  uCameraMatrix[0][2]);
     	vec3 camUp      = vec3( uCameraMatrix[1][0],  uCameraMatrix[1][1],  uCameraMatrix[1][2]);
@@ -608,20 +617,26 @@ void main( void )
 	
 	// seed for rand(seed) function
 	uvec2 seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord);
-	float r1 = 2.0 * rand(seed);
-	float r2 = 2.0 * rand(seed);
-	
+
 	vec2 pixelPos = vec2(0);
-	vec2 offset = vec2(0);
+	vec2 pixelOffset = vec2(0);
 	
-	//if ( !uCameraIsMoving ) 
+	float x = rand(seed);
+	float y = rand(seed);
+
+	//if (!uCameraIsMoving)
 	{
-		offset.x = r1 < 1.0 ? sqrt(r1) - 1.0 : 1.0 - sqrt(2.0 - r1);
-        	offset.y = r2 < 1.0 ? sqrt(r2) - 1.0 : 1.0 - sqrt(2.0 - r2);
+		pixelOffset.x = tentFilter(x);
+		pixelOffset.y = tentFilter(y);
 	}
 	
-	offset /= (uResolution);
-	pixelPos = (2.0 * (vUv + offset) - 1.0);
+	// pixelOffset ranges from -1.0 to +1.0, so only need to divide by half resolution
+	pixelOffset /= (uResolution * 0.5);
+
+	// vUv comes in the range 0.0 to 1.0, so we must map it to the range -1.0 to +1.0
+	pixelPos = vUv * 2.0 - 1.0;
+	pixelPos += pixelOffset;
+
 	vec3 rayDir = normalize( pixelPos.x * camRight * uULen + pixelPos.y * camUp * uVLen + camForward );
 	
 	// depth of field
@@ -632,9 +647,10 @@ void main( void )
 	// point on aperture to focal point
 	vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
     
-	Ray ray = Ray( camPos + randomAperturePos, finalRayDir );
-	// not needed in this demo, all objects are procedurally generated
+	Ray ray = Ray( cameraPosition + randomAperturePos, finalRayDir );
+
 	//SetupScene(); 
+
 	// perform path tracing and get resulting pixel color
 	vec3 pixelColor = CalculateRadiance( ray, uSunDirection, seed );
 	
@@ -654,6 +670,7 @@ void main( void )
 	
 	out_FragColor = vec4( pixelColor + previousColor, 1.0 );	
 }
+
 		</script>
 		
 		
