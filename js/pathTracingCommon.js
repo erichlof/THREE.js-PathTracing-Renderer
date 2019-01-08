@@ -1366,10 +1366,10 @@ void main( void )
 
 	if (!uCameraIsMoving)
 	{
-		//pixelOffset.x = tentFilter(x);
-		//pixelOffset.y = tentFilter(y);
-		pixelOffset.x = cubicFilter(x);
-		pixelOffset.y = cubicFilter(y);
+		pixelOffset.x = tentFilter(x);
+		pixelOffset.y = tentFilter(y);
+		//pixelOffset.x = cubicFilter(x);
+		//pixelOffset.y = cubicFilter(y);
 	}
 	
 	// pixelOffset ranges from -1.0 to +1.0, so only need to divide by half resolution
