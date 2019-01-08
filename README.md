@@ -119,9 +119,9 @@ Some pretty interesting shapes can be obtained by deforming objects and/or warpi
 
 * [Ray/Object Warping Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Ray_Warping.html)<br>
 
-I had the code to the following demo lying around in my code editor for months.  It's a work in progress (W.I.P.) real-time rendering of an Artic Circle environment.  I was experimenting with my ray marching engine and what types of environments I could get out of it by just altering some parameters.  I'm still trying to figure out how to render the blueish color deep inside polar ice, but I've been working on other things for this repo like the BVH demos instead. So far it's pretty cool though - when the scene first opens, it's almost like you're transported to the far north! As path tracing gets faster in the future, this is how we will travel!  ;-) <br>
+I had the code to the following demo lying around in my code editor for months.  It's a work in progress (W.I.P.) real-time rendering of an Arctic Circle environment.  I was experimenting with my ray marching engine and what types of environments I could get out of it by just altering some parameters.  I'm still trying to figure out how to render the blueish color deep inside polar ice, but I've been working on other things for this repo like the BVH demos instead. So far it's pretty cool though - when the scene first opens, it's almost like you're transported to the far north! As path tracing gets faster in the future, this is how we will travel!  ;-) <br>
 
-* [Artic Circle Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Artic_Circle.html)<br>
+* [Arctic Circle Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Arctic_Circle.html)<br>
 
 
 <h2>Updates</h2>
