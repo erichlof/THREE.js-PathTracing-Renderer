@@ -95,6 +95,8 @@ Box boxes[N_BOXES];
 
 #include <pathtracing_sphere_intersect>
 
+#include <pathtracing_cappedcylinder_intersect>
+
 #include <pathtracing_quad_intersect>
 
 #include <pathtracing_box_intersect>
@@ -140,19 +142,7 @@ mat4 makeRotateZ(float rot)
 		0,  0, 0, 1
 	);
 }
-/*
-mat4 inverse( in mat4 m )
-{
-	return mat4(
-        m[0][0], m[1][0], m[2][0], 0.0,
-        m[0][1], m[1][1], m[2][1], 0.0,
-        m[0][2], m[1][2], m[2][2], 0.0,
-        -dot(m[0].xyz,m[3].xyz),
-        -dot(m[1].xyz,m[3].xyz),
-        -dot(m[2].xyz,m[3].xyz),
-        1.0 );
-}
-*/
+
 
 //--------------------------------------------------------------------------
 float SceneIntersect( Ray r, inout Intersection intersec, inout uvec2 seed )
@@ -164,8 +154,62 @@ float SceneIntersect( Ray r, inout Intersection intersec, inout uvec2 seed )
 	vec3 intersectionPoint;
 	vec3 offset;
 	Ray warpedRay;
-	
+
+	/*
         for (int i = 0; i < N_SPHERES; i++)
+        {
+		if (i == 0) // Sphere Light
+		{
+			d = SphereIntersect( spheres[i].radius, spheres[i].position, r );
+			offset = vec3(0);
+		}
+		else if (i == 1 || i == 2) // Twisted Spheres
+		{
+			warpedRay = r;
+
+			float torusThickness = 10.0;
+			d = CappedCylinderIntersect( spheres[i].position - vec3(0, 0, torusThickness), spheres[i].position + vec3(0, 0, torusThickness), spheres[i].radius, warpedRay, n);
+			if (d == INFINITY) continue;
+
+			vec3 hitPos = warpedRay.origin + warpedRay.direction * d;
+			vec3 hitVec = (hitPos - spheres[i].position);
+			hitVec.z = 0.0;
+			hitVec = normalize(hitVec);
+			
+			vec3 spherePos = spheres[i].position + (hitVec * (90.0 - torusThickness));
+
+			d = SphereIntersect( torusThickness, spherePos, warpedRay );
+			if (d < t)
+			{
+				t = d;
+				intersectionPoint = warpedRay.origin + warpedRay.direction * d;
+				intersec.normal = normalize(intersectionPoint - spherePos);
+				intersec.emission = spheres[i].emission;
+				intersec.color = spheres[i].color;
+				intersec.type = spheres[i].type;
+			}
+		}
+		else if (i == 3) // Cloudy Sphere
+		{
+			float dense = 1.0 + rand(seed);
+			offset = (spheres[i].radius*0.5) * (vec3(rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0));
+			d = SphereIntersect( spheres[i].radius * dense, spheres[i].position + offset, r);
+		}
+		
+		if (d < t)
+		{
+			t = d;
+			intersectionPoint = r.origin + r.direction * d;
+			vec3 tempNormal = (intersectionPoint - (spheres[i].position + offset));
+			intersec.normal = normalize(tempNormal);
+			intersec.emission = spheres[i].emission;
+			intersec.color = spheres[i].color;
+			intersec.type = spheres[i].type;
+		}
+        }
+	*/
+
+	for (int i = 0; i < N_SPHERES; i++)
         {
 		if (i == 0) // Sphere Light
 		{
@@ -200,51 +244,32 @@ float SceneIntersect( Ray r, inout Intersection intersec, inout uvec2 seed )
 			intersec.color = spheres[i].color;
 			intersec.type = spheres[i].type;
 		}
-        }
+	}
 	
 	for (int i = 0; i < N_BOXES; i++)
         {
-		/*
-		// algo #1
-		//d = BoxIntersect( boxes[i].minCorner - 100.0, boxes[i].maxCorner + 100.0, r, n1 );
-		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, r, n1 );
-		if (d==INFINITY) continue;
-		intersectionPoint = r.origin + r.direction * d;
-		float angle = mod(intersectionPoint.y*0.05, TWO_PI);
-		mat4 m = makeRotateY(angle);
-		vec3 o = ( m * vec4(intersectionPoint, 1.0) ).xyz;
-		intersectionPoint = o;
-		//d = BoxIntersect( boxes[i].minCorner + (offset), boxes[i].maxCorner + (offset), r, n2 );
-		n2 = n1;
-		d = distance(r.origin, intersectionPoint);
-		*/
-		
-		/*
-		// algo #2
 		warpedRay = r;
-		float angle = mod(r.origin.y*0.005, TWO_PI);
+                warpedRay.origin.x -= 200.0;
+                warpedRay.origin.y -= 200.0;
+                warpedRay.origin.z += 300.0;
+                
+                d = BoxIntersect( boxes[i].minCorner * vec3(1.5, 1.0, 1.5), boxes[i].maxCorner * vec3(1.5, 1.0, 1.5), warpedRay, n );
+                if (d == INFINITY) continue;
+            	
+                vec3 hitPos = warpedRay.origin + warpedRay.direction * d;
+                //float angle = 0.25 * PI;
+		float angle = mod(hitPos.y * 0.015, TWO_PI);
 		mat4 m = makeRotateY(angle);
-		warpedRay.direction = normalize( m * vec4(r.origin, 0.0) ).xyz;
-		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, warpedRay, n2 );
-		n2 = n1;
-		*/
-		
-		// algo #3
-		warpedRay = r;
-		warpedRay.origin.x += 100.0;
-		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, warpedRay, n1 );
-		if (d == INFINITY) continue;
-		intersectionPoint = warpedRay.origin + warpedRay.direction * d;
-		float angle = mod(intersectionPoint.y*0.1, TWO_PI);
-		mat4 m = makeRotateY(angle);
-		vec3 o = ( m * vec4(intersectionPoint, 1.0) ).xyz;
-		offset = o * 0.1;
-		d = BoxIntersect( boxes[i].minCorner + offset, boxes[i].maxCorner + offset, warpedRay, n1 );
-		
+                m = inverse(m);
+                warpedRay.origin = vec3( m * vec4(warpedRay.origin, 1.0) );
+		warpedRay.direction = normalize(vec3( m * vec4(warpedRay.direction, 0.0) ));
+                
+		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, warpedRay, n );
 		if (d < t)
 		{
 			t = d;
-			intersec.normal = normalize(n1);
+			intersec.normal = normalize(n);
+                        intersec.normal = normalize(vec3( transpose(m) * vec4(intersec.normal, 0.0) ));
 			intersec.emission = boxes[i].emission;
 			intersec.color = boxes[i].color;
 			intersec.type = boxes[i].type;
@@ -277,18 +302,21 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 	vec3 accumCol = vec3(0.0);
 	vec3 mask = vec3(1.0);
+	vec3 n, nl, x;
 	vec3 dirToLight;
 	vec3 tdir;
 	
 	float nc, nt, Re;
-        float weight;
-	
+	float weight;
+	float diffuseColorBleeding = 0.4; // range: 0.0 - 0.5, amount of color bleeding between surfaces
+
 	int diffuseCount = 0;
 
 	bool bounceIsSpecular = true;
+	bool sampleLight = false;
 	
 	
-        for (int depth = 0; depth < 5; depth++)
+        for (int bounces = 0; bounces < 5; bounces++)
 	{
 		
 		float t = SceneIntersect(r, intersec, seed);
@@ -301,18 +329,21 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		// if we reached something bright, don't spawn any more rays
 		if (intersec.type == LIGHT)
 		{	
-			if (bounceIsSpecular)
+			if (bounceIsSpecular || sampleLight)
 			{
 				accumCol = mask * intersec.emission;
 			}
 			
 			break;
 		}
+
+		// reset sampleLight flag
+		sampleLight = false;
 		
 		// useful data 
-		vec3 n = intersec.normal;
-                vec3 nl = dot(n,r.direction) <= 0.0 ? normalize(n) : normalize(n * -1.0);
-		vec3 x = r.origin + r.direction * t;
+		n = normalize(intersec.normal);
+                nl = dot(n, r.direction) <= 0.0 ? normalize(n) : normalize(n * -1.0);
+		x = r.origin + r.direction * t;
 		
 		    
                 if (intersec.type == DIFF) // Ideal DIFFUSE reflection
@@ -320,81 +351,84 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			diffuseCount++;
 
 			mask *= intersec.color;
-			
+
 			/*
-			// Russian Roulette
+			// Russian Roulette - if needed, this speeds up the framerate, at the cost of some dark noise
 			float p = max(mask.r, max(mask.g, mask.b));
-			if (depth > 0)
+			if (bounces > 0)
 			{
 				if (rand(seed) < p)
                                 	mask *= 1.0 / p;
                         	else
                                 	break;
 			}
-                        */
-			
-                        if (rand(seed) < 0.5)
+			*/
+
+			bounceIsSpecular = false;
+
+                        if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
                         {
                                 // choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 				r.origin += r.direction;
-				
-				bounceIsSpecular = false;
 				continue;
                         }
                         else
                         {
 				weight = sampleSphereLight(x, nl, dirToLight, light, seed);
-				
+				mask *= clamp(weight, 0.0, 1.0);
+
                                 r = Ray( x, dirToLight );
 				r.origin += nl;
-				
-				mask *= clamp(weight, 0.0, 1.0);
-				
-				bounceIsSpecular = true;
+
+				sampleLight = true;
 				continue;
                         }
 				
                 }
 		
+
                 if (intersec.type == SPEC)  // Ideal SPECULAR reflection
-                {
+		{
 			mask *= intersec.color;
 
 			r = Ray( x, reflect(r.direction, nl) );
+			r.origin += r.direction;
 
-                        r.origin += r.direction;
-                        
-                        bounceIsSpecular = (diffuseCount < 2);
-			
-                        continue;
+			//bounceIsSpecular = true; // turn on mirror caustics
+			continue;
 		}
+		
 
-                if (intersec.type == REFR)  // Ideal dielectric REFRACTION
+		if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
 			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
-			
-			bounceIsSpecular = (diffuseCount < 2);
-				
+
 			if (rand(seed) < Re) // reflect ray from surface
 			{
 				r = Ray( x, reflect(r.direction, nl) );
-			    	r.origin += r.direction;
+				r.origin += r.direction;
+
+				//bounceIsSpecular = true; // turn on reflecting caustics, useful for water
 			    	continue;	
 			}
 			else // transmit ray through surface
 			{
 				mask *= intersec.color;
+				
 				r = Ray(x, tdir);
 				r.origin += r.direction;
+
+				bounceIsSpecular = true; // turn on refracting caustics
 				continue;
 			}
 			
-                } // end if (intersec.type == REFR)
+		} // end if (intersec.type == REFR)
 		
-		if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top
+		
+                if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top
 		{
 			nc = 1.0; // IOR of Air
 			nt = 1.4; // IOR of Clear Coat
@@ -405,42 +439,39 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			{	
 				r = Ray( x, reflect(r.direction, nl) );
 				r.origin += r.direction;
-				bounceIsSpecular = (diffuseCount < 2);
-				
 				continue;	
 			}
-			if (rand(seed) < 0.5)
-                        {
-				mask *= intersec.color;
 
+			mask *= intersec.color;
+			
+			bounceIsSpecular = false;
+
+			if (bounces < 2 && rand(seed) < diffuseColorBleeding)
+                        {
                                 // choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 				r.origin += r.direction;
-				
-				bounceIsSpecular = false;
 				continue;
                         }
                         else
                         {
-				mask *= intersec.color;
 				weight = sampleSphereLight(x, nl, dirToLight, light, seed);
 				mask *= clamp(weight, 0.0, 1.0);
-
+				
                                 r = Ray( x, dirToLight );
 				r.origin += nl;
-				
-				bounceIsSpecular = true;
+
+				sampleLight = true;
 				continue;
                         }
 			
 		} //end if (intersec.type == COAT)
-		
-	} // end for (int depth = 0; depth < 6; depth++)
+                
+	} // end for (int bounces = 0; bounces < 5; bounces++)
+	
 	
 	return accumCol;      
 }
-
-
 
 //-----------------------------------------------------------------------
 void SetupScene(void)
@@ -455,7 +486,7 @@ void SetupScene(void)
 	spheres[2] = Sphere( 90.0, vec3(400.0,  91.0, -200.0),  z, vec3(1.0, 1.0, 1.0),  COAT);// Sphere Right
 	spheres[3] = Sphere( 60.0, vec3(450.0, 380.0, -300.0),  z, vec3(1.0, 0.0, 1.0),  DIFF);// Cloud Sphere Top Right
 	
-	boxes[0]  = Box( vec3(200.0,0.0, -460.0), vec3(364.0,340.0, -300.0), z, vec3(1.0, 1.0, 1.0), SPEC);// Tall Mirror Box Left
+	boxes[0]  = Box( vec3(-82, -170, -80), vec3(82, 170, 80), z, vec3(1.0, 1.0, 1.0), SPEC);// Tall Mirror Box Left
 	
 	quads[0] = Quad( vec3( 0.0, 0.0, 1.0), vec3(  0.0,   0.0,-559.2), vec3(549.6,   0.0,-559.2), vec3(549.6, 548.8,-559.2), vec3(  0.0, 548.8,-559.2), z, vec3( 1.0,  1.0,  1.0), DIFF);// Back Wall
 	quads[1] = Quad( vec3( 1.0, 0.0, 0.0), vec3(  0.0,   0.0,   0.0), vec3(  0.0,   0.0,-559.2), vec3(  0.0, 548.8,-559.2), vec3(  0.0, 548.8,   0.0), z, vec3( 0.7, 0.05, 0.05), DIFF);// Left Wall Red
