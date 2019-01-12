@@ -193,7 +193,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	bool bounceIsSpecular = true;
 	
 	// depth of 4 is required for higher quality glass refraction
-        for (int depth = 0; depth < 4; depth++)
+        for (int bounces = 0; bounces < 4; bounces++)
 	{
 		
 		float u = rand(seed);
@@ -201,7 +201,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		t = SceneIntersect(r, intersec);
 		
 		// on first loop iteration, save intersection distance along camera ray (t) into camt variable for use below
-		if (depth == 0) 
+		if (bounces == 0) 
 			camt = t;
 
 		// sample along intial ray from camera into the scene
@@ -255,7 +255,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			/*
 			// Russian Roulette
 			float p = max(mask.r, max(mask.g, mask.b));
-			if (depth > 0)
+			if (bounces > 0)
 			{
 				if (rand(seed) < p)
 					mask *= 1.0 / p;
@@ -264,7 +264,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			}
 			*/
 
-			if (rand(seed) < 0.5)
+			if (diffuseCount == 1 && rand(seed) < 0.5)
 			{
 				// choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
@@ -294,7 +294,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
                         r.origin += r.direction;
                         
-                        bounceIsSpecular = (diffuseCount < 2);
+                        //bounceIsSpecular = true; // turn on mirror caustics
 			
                         continue;
                 }
@@ -304,20 +304,23 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
 			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
-			
-			bounceIsSpecular = (diffuseCount < 2);
 
 			if (rand(seed) < Re) // reflect ray from surface
 			{
 				r = Ray( x, reflect(r.direction, nl) );
-			    	r.origin += r.direction;
+				r.origin += r.direction;
+				    
+				//bounceIsSpecular = true; // turn on reflecting caustics, useful for water
 			    	continue;	
 			}
 			else // transmit ray through surface
 			{
 				mask *= intersec.color;
+
 				r = Ray(x, tdir);
 				r.origin += r.direction;
+
+				//bounceIsSpecular = true; // turn on refracting caustics
 				continue;
 			}
 		} // end if (intersec.type == REFR)
@@ -333,14 +336,15 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			{	
 				r = Ray( x, reflect(r.direction, nl) );
 				r.origin += r.direction;
-				bounceIsSpecular = (diffuseCount < 2);
 				continue;	
 			}
 
-			if (rand(seed) < 0.5)
-                        {
-				mask *= intersec.color;
+			bounceIsSpecular = false;
 
+			mask *= intersec.color;
+
+			if (bounces == 0 && rand(seed) < 0.5)
+                        {
                                 // choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 				r.origin += r.direction;
@@ -350,7 +354,6 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                         }
                         else
                         {
-				mask *= intersec.color;
 				weight = sampleSphereLight(x, nl, dirToLight, spheres[0], seed);
 				mask *= clamp(weight, 0.0, 1.0);
 
@@ -363,7 +366,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			
 		} //end if (intersec.type == COAT)
 		
-        } // end for (int depth = 0; depth < 4; depth++)
+        } // end for (int bounces = 0; bounces < 4; bounces++)
 	
 	// Now we go hunting for volumetric caustics! A previously created particle (vray) is chosen
 	// as a starting point, the ray origin. Next, Randomize the ray direction based on glass sphere's radius.
@@ -374,7 +377,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	mask = vec3(1.0); // reset color mask for this particle
 
 	// depth of 3 needed to possibly travel into glass sphere, out of it, and then find light = 3 iterations
-	for (int depth = 0; depth < 3; depth++)
+	for (int bounces = 0; bounces < 3; bounces++)
 	{
 		
 		t = SceneIntersect(r, intersec);
@@ -417,7 +420,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		{	
 			// if we have just traveled through a refractive surface(REFR) like glass, then 
 			// allow particle to be lit, producing volumetric caustics
-			if (prevIntersecType == REFR && depth == 2)
+			if (prevIntersecType == REFR && bounces == 2)
 			{
 				trans = exp( -((d + xx) * FOG_DENSITY) );
 				accumCol += FOG_COLOR * mask * intersec.emission * trans;
@@ -426,7 +429,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			break;
 		}
 
-        } // end for (int depth = 0; depth < 3; depth++)
+        } // end for (int bounces = 0; bounces < 3; bounces++)
 
 
 	return accumCol;      
