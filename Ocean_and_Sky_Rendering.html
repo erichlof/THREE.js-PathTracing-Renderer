@@ -211,7 +211,7 @@ float getOceanWaterHeight( vec3 p )
 	d += sea_octave((uv - sea_time) * freq, choppy);
 	h += d * amp;        
 	
-	return 50.0 * h;
+	return 50.0 * h - 10.0;
 }
 
 float getOceanWaterHeight_Detail( vec3 p )
@@ -233,7 +233,7 @@ float getOceanWaterHeight_Detail( vec3 p )
 		uv *= OCTAVE_M; freq *= 1.9; amp *= 0.22;
 		choppy = mix(choppy, 1.0, 0.2);
 	}
-	return 50.0 * h;
+	return 50.0 * h - 10.0;
 }
 
 
@@ -527,12 +527,12 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 	bool bounceIsSpecular = true;
 	
 	
-        for (int depth = 0; depth < 5; depth++)
+        for (int bounces = 0; bounces< 5; bounces++)
 	{
 		t = SceneIntersect(r, intersec, checkOcean);
 		
 		// ray hits sky first
-		if (t == INFINITY && depth == 0 )
+		if (t == INFINITY && bounces == 0 )
 		{
 			skyHit = true;
 			firstX = skyPos;
@@ -562,7 +562,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 			if (bounceIsSpecular) // prevents sun 'fireflies' on diffuse surfaces
 				accumCol = mask * Get_Sky_Color(r, sunDirection);
 			
-			if (depth == 1) // reflection of sky in tall mirror box
+			if (bounces == 1) // reflection of sky in tall mirror box
 			{
 				initialSkyColor = Get_Sky_Color(Ray(r.origin, vec3(r.direction.x, abs(r.direction.y), r.direction.z)), sunDirection);
 				skyRay = Ray(r.origin * 0.01, normalize(vec3(r.direction.x, abs(r.direction.y), r.direction.z)) );
@@ -595,7 +595,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
                 nl = dot(n,r.direction) <= 0.0 ? normalize(n) : normalize(n * -1.0);
 		x = r.origin + r.direction * t;
 		
-		if (depth == 0) 
+		if (bounces == 0) 
 			firstX = x;
 			
 		if (intersec.type == SEAFLOOR)
@@ -619,7 +619,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 			/*
 			// Russian Roulette
 			float p = max(mask.r, max(mask.g, mask.b));
-			if (depth > 0)
+			if (bounces> 0)
 			{
 				if (rand(seed) < p)
                                 	mask *= 1.0 / p;
@@ -628,7 +628,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 			}
 			*/
 
-                        if (rand(seed) < 0.5)
+                        if (diffuseCount == 1 && rand(seed) < 0.5)
                         {
                                 // choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
@@ -658,7 +658,6 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 			r.origin += r.direction;
 			previousIntersecType = SPEC;
 
-			bounceIsSpecular = (diffuseCount < 2);
                         continue;
                 }
 		
@@ -671,7 +670,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 			nt = 1.33; // IOR of water
 			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
 
-			bounceIsSpecular = (diffuseCount < 2);
+			//bounceIsSpecular = (diffuseCount < 2);
 				
 			if (rand(seed) < Re) // reflect ray from surface
 			{
@@ -743,7 +742,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 			
 		} //end if (intersec.type == WOOD)
 		
-	} // end for (int depth = 0; depth < 5; depth++)
+	} // end for (int bounces = 0; bounces< 5; bounces++)
 	
 
 	// atmospheric haze effect (aerial perspective)
