@@ -1175,22 +1175,22 @@ vec3 randomSphereDirection( inout uvec2 seed )
 
 vec3 randomDirectionInHemisphere( vec3 nl, inout uvec2 seed )
 {
-	float up = rand(seed); // unbiased
-    	float over = sqrt(1.0 - up * up);
+	float up = rand(seed); 
+    	float over = sqrt(1.0 - up * up); //uniform distribution
 	float around = rand(seed) * TWO_PI;
 	vec3 u = normalize( cross( abs(nl.y) < 0.9 ? vec3(0, 1, 0) : vec3(0, 0, 1), nl ) );
 	vec3 v = cross(nl, u);
-	return normalize(cos(around) * over * u + sin(around) * over * v + up * nl);
+	return normalize(cos(around) * over * u + sin(around) * over * v + up * nl); //uniform distribution
 }
 
 vec3 randomCosWeightedDirectionInHemisphere( vec3 nl, inout uvec2 seed )
 {
-	float up = sqrt(rand(seed)); // weighted
-    	float over = sqrt(1.0 - up * up);
+	float up = rand(seed); 
+	float over = sqrt(1.0 - up); //weighted distribution
 	float around = rand(seed) * TWO_PI;
 	vec3 u = normalize( cross( abs(nl.y) < 0.9 ? vec3(0, 1, 0) : vec3(0, 0, 1), nl ) );
 	vec3 v = cross(nl, u);
-	return normalize(cos(around) * over * u + sin(around) * over * v + up * nl);
+	return normalize(cos(around) * over * u + sin(around) * over * v + sqrt(up) * nl); //weighted distribution
 }
 
 `;
@@ -1289,8 +1289,7 @@ float sampleQuadLight(vec3 x, vec3 nl, out vec3 dirToLight, Quad light, inout uv
 
 	dirToLight = normalize(dirToLight);
 	float dotNlRayDir = max(0.0, dot(nl, dirToLight)); 
-	float weight = 2.0 * (1.0 - cos_a_max) * max(0.0, -dot(dirToLight, light.normal)) * dotNlRayDir;
-	return clamp(weight, 0.0, 1.0); 
+	return 2.0 * (1.0 - cos_a_max) * max(0.0, -dot(dirToLight, light.normal)) * dotNlRayDir; 
 }
 
 `;
