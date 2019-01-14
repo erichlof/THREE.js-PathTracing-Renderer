@@ -1112,11 +1112,13 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				continue;	
 			}
 
+			diffuseCount++;
+
 			mask *= intersec.color;
 			
 			bounceIsSpecular = false;
 
-			if (bounces < 1 && rand(seed) < diffuseColorBleeding)
+			if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
                         {
                                 // choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
@@ -1136,63 +1138,6 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                         }
 			
 		} //end if (intersec.type == COAT)
-
-		
-		if (intersec.type == SPECSUB)  // Shiny(specular) coating over Sub-Surface Scattering material
-		{
-			float nc = 1.0; // IOR of Air
-			float nt = 1.4; // IOR of Clear Coat
-			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
-			
-			// choose either specular reflection or translucent subsurface scattering/transmission
-			if( rand(seed) < Re )
-			{
-				r = Ray( x, reflect(r.direction, nl) );
-				r.origin += r.direction;
-				continue;
-			}
-			
-			bounceIsSpecular = false;
-
-			vec3 absorptionCoefficient = vec3(0.8, 0.4, 0.0);
-			float translucentDensity = 0.4;
-			float scatteringDistance = -log(rand(seed)) / translucentDensity;
-			
-			// transmission?
-			if (scatteringDistance > t) 
-			{
-				mask *= exp(-absorptionCoefficient * t);
-
-				r.origin = x;
-				r.origin += r.direction * scatteringDistance;
-
-				continue;
-			}
-
-			// else scattering
-			mask *= exp(-absorptionCoefficient * scatteringDistance);
-			
-			if (bounces < 1 && rand(seed) < diffuseColorBleeding)
-                        {
-                                // choose random Diffuse sample vector
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
-				r.origin += r.direction * scatteringDistance;
-				
-				continue;
-                        }
-                        else
-                        {
-				weight = sampleQuadLight(x, nl, dirToLight, lightChoice, seed);
-				mask *= clamp(weight, 0.0, 1.0);
-
-                                r = Ray( x, dirToLight );
-				r.origin += r.direction * scatteringDistance;
-				
-				sampleLight = true;
-				continue;
-                        }
-			
-		} // end if (intersec.type == SPECSUB)
 		
 		
 	} // end for (int bounces = 0; bounces < 4; bounces++)
