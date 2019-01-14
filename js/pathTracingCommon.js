@@ -1185,12 +1185,21 @@ vec3 randomDirectionInHemisphere( vec3 nl, inout uvec2 seed )
 
 vec3 randomCosWeightedDirectionInHemisphere( vec3 nl, inout uvec2 seed )
 {
-	float up = rand(seed); 
-	float over = sqrt(1.0 - up); //weighted distribution
-	float around = rand(seed) * TWO_PI;
-	vec3 u = normalize( cross( abs(nl.y) < 0.9 ? vec3(0, 1, 0) : vec3(0, 0, 1), nl ) );
-	vec3 v = cross(nl, u);
-	return normalize(cos(around) * over * u + sin(around) * over * v + sqrt(up) * nl); //weighted distribution
+	vec2 uv = vec2(rand(seed), rand(seed));
+	float r1 = TWO_PI * uv.x;
+	float r2 = uv.y;
+	float r2s = sqrt(r2);
+
+	vec3 w = nl;
+	vec3 u;
+	if (abs(w.x) > 0.1)
+		u = cross(vec3( 0.0f, 1.0f, 0.0f ), w);
+	else
+		u = cross(vec3( 1.0f, 0.0f, 0.0f ), w);
+
+	u = normalize(u);
+	vec3 v = cross(w, u);
+	return normalize(u*cos(r1)*r2s + v*sin(r1)*r2s + w*sqrt(1.0 - r2));
 }
 
 `;
