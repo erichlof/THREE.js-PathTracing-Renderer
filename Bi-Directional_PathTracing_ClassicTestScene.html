@@ -274,7 +274,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	
 	float nc, nt, Re;
 	float t = INFINITY;
-	int diffuseSampleCount = 0;
+	int diffuseCount = 0;
 	int previousIntersecType = -1;
 	bool bounceIsSpecular = true;
 
@@ -284,7 +284,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	
 	// Eye path tracing (from Camera) ///////////////////////////////////////////////////////////////////////////
 	
-	for (int depth = 0; depth < EYE_PATH_LENGTH; depth++)
+	for (int bounces = 0; bounces < EYE_PATH_LENGTH; bounces++)
 	{
 	
 		t = SceneIntersect(r, intersec);
@@ -319,8 +319,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			nlEyePath = nl;
 			skipConnectionLightPath = false;
 			
-			diffuseSampleCount += 1;
-			if (diffuseSampleCount > 1 || rand(seed) < 0.5)
+			diffuseCount++;
+			if (diffuseCount > 1 || rand(seed) < 0.5)
 			{
 				break;
 			}
@@ -375,7 +375,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			}	
 		} // end if (intersec.type == REFR)
 		
-	} // end for (int depth = 0; depth < EYE_PATH_LENGTH; depth++)
+	} // end for (int bounces = 0; bounces < EYE_PATH_LENGTH; bounces++)
 	
 	
 	if (skipConnectionLightPath)
@@ -415,7 +415,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	}
 	
 	r = Ray( randPointOnLight, randLightDir );
-	r.origin += r.direction * 4.0; // move light ray out to prevent self-intersection with light
+	r.origin += r.direction * 2.0; // move light ray out to prevent self-intersection with light
 	vec3 originalLightPos = r.origin;
 	lightX = originalLightPos;
 	vec3 originalLightMask = maskLightPath;
@@ -425,7 +425,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	// the light sources to escape their blockers and find a diffuse surface (like a nearby wall) to illuminate.
 	// For more hidden lights however, 2 depth iterations might be needed to get the light out and into the scene.
 	
-	for (int depth = 0; depth < LIGHT_PATH_LENGTH; depth++)
+	for (int bounces = 0; bounces < LIGHT_PATH_LENGTH; bounces++)
 	{
 	
 		t = SceneIntersect(r, intersec);
@@ -449,7 +449,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			break;
 		}
 		
-	} // end for (int depth = 0; depth < LIGHT_PATH_LENGTH; depth++)
+	} // end for (int bounces = 0; bounces < LIGHT_PATH_LENGTH; bounces++)
 	
 	
 	// Connect Camera path and Light path ////////////////////////////////////////////////////////////
