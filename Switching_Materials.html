@@ -294,7 +294,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			
 			bounceIsSpecular = false;
 
-			if (bounces < 2 && rand(seed) < diffuseColorBleeding)
+			if (bounces == 0 && rand(seed) < diffuseColorBleeding)
                         {
                                 // choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
@@ -341,7 +341,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 			bounceIsSpecular = false;
 
-			if (bounces < 2 && rand(seed) < diffuseColorBleeding)
+			if (bounces == 0 && rand(seed) < diffuseColorBleeding)
                         {
                                 // choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
@@ -385,7 +385,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			mask *= exp(-absorptionCoefficient * scatteringDistance);
 			bounceIsSpecular = false;
 			
-			if (bounces < 2 && rand(seed) < diffuseColorBleeding)
+			if (bounces == 0 && rand(seed) < diffuseColorBleeding)
                         {
                                 // choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
@@ -442,7 +442,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			// else scattering
 			mask *= exp(-absorptionCoefficient * scatteringDistance);
 			
-			if (bounces < 2 && rand(seed) < diffuseColorBleeding)
+			if (bounces == 0 && rand(seed) < diffuseColorBleeding)
                         {
                                 // choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
