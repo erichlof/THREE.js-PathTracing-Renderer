@@ -415,7 +415,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	}
 	
 	r = Ray( randPointOnLight, randLightDir );
-	r.origin += r.direction * 2.0; // move light ray out to prevent self-intersection with light
+	r.origin += r.direction * 3.0; // move light ray out to prevent self-intersection with light
 	vec3 originalLightPos = r.origin;
 	lightX = originalLightPos;
 	vec3 originalLightMask = maskLightPath;
@@ -423,7 +423,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	
 	// the following loop only performs 1 iteration because of the relative ease of this particular scene for
 	// the light sources to escape their blockers and find a diffuse surface (like a nearby wall) to illuminate.
-	// For more hidden lights however, 2 depth iterations might be needed to get the light out and into the scene.
+	// For more hidden lights however, 2 bounces might be needed to get the light out and into the scene.
 	
 	for (int bounces = 0; bounces < LIGHT_PATH_LENGTH; bounces++)
 	{
