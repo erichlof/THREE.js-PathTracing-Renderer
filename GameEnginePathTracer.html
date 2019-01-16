@@ -331,6 +331,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			previousIntersecType = DIFF;
 			diffuseCount++;
 
+			if (diffuseCount > 2)
+				break;
+
 			if( intersec.type == CHECK )
 			{
 				float q = clamp( mod( dot( floor(x.xz * 0.04), vec2(1.0) ), 2.0 ) , 0.0, 1.0 );
@@ -353,13 +356,14 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 			bounceIsSpecular = false;
 
+			
 			if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
                         {
                                 // choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 				r.origin += r.direction;
 				continue;
-                        }
+			}
                         else
                         {
 				weight = sampleSphereLight(x, nl, dirToLight, lightChoice, seed);
@@ -370,7 +374,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 				sampleLight = true;
 				continue;
-                        }
+			}
+			
 		}
 		
 		if (intersec.type == SPEC)  // Ideal SPECULAR reflection
@@ -397,7 +402,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				r.origin += r.direction;
 
 				previousIntersecType = REFR;
-				bounceIsSpecular = true; // turn on reflecting caustics, useful for water
+				//bounceIsSpecular = true; // turn on reflecting caustics, useful for water
 			    	continue;	
 			}
 			else // transmit ray through surface
