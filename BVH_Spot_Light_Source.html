@@ -452,14 +452,18 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			break;
 		}
 		
+		// if we reached this point and sampleLight failed to find a light above, exit early
+		if (sampleLight)
+		{
+			break;
+		}
+		
 		
 		// useful data 
 		vec3 n = intersec.normal;
                 vec3 nl = dot(n,r.direction) <= 0.0 ? normalize(n) : normalize(n * -1.0);
 		vec3 x = r.origin + r.direction * t;
 		
-		// reset sampleLight flag
-		sampleLight = false;
 		    
                 if (intersec.type == DIFF || intersec.type == CHECK) // Ideal DIFFUSE reflection
                 {
