@@ -308,10 +308,8 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		intersec.emission = vec3(1, 0, 1); // use this if intersec.type will be LIGHT
 		intersec.color = vd6.yzw;
 		intersec.uv = triangleW * vec2(vd4.zw) + triangleU * vec2(vd5.xy) + triangleV * vec2(vd5.zw);
-		//intersec.type = int(vd6.x);
-		intersec.type = DIFF;
+		intersec.type = int(vd6.x);
 		intersec.albedoTextureID = int(vd7.x);
-		//intersec.albedoTextureID = -1;
 	}
 
 	return t;
@@ -337,7 +335,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	bool bounceIsSpecular = true;
         
 	
-        for (int depth = 0; depth < 3; depth++)
+        for (int depth = 0; depth < 4; depth++)
 	{
 
 		float t = SceneIntersect(r, intersec);
@@ -443,6 +441,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			else
 			{
 				mask *= intersec.color;
+
+				/*
 				int id = intersec.albedoTextureID;
 				if (id > -1)
 				{
@@ -458,7 +458,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 					mask *= albedoSample;
 				}
-				
+				*/
+
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 				r.origin += r.direction * epsIntersect;
 				bounceIsSpecular = false;
@@ -556,6 +557,7 @@ void SetupScene(void)
 		var albedoTexture;
 		var total_number_of_triangles = 0;
 		var triangle_array;
+		var materialNumber = 0;
 		var triangleMaterialMarkers = [];
 		var pathTracingMaterialList = [];
 		var uniqueMaterialTextures = [];
@@ -626,104 +628,6 @@ void SetupScene(void)
 			this.refractiveIndex = 1.0; // 1.0=air, 1.33=water, 1.4=clearCoat, 1.5=glass, etc.
 		}
 		
-
-		/*
-		// when you uncomment a different model loading directive, it is suggested
-		// to uncomment the matching settings for the model that you want to load
-		var objLoader = new THREE.OBJLoader();
-		var mtlLoader = new THREE.MTLLoader();
-
-		//mtlLoader.load('models/materials/classic-1982-tron-cycle/classic-1982-tron-cycle.mtl', onLoadMtl);
-		mtlLoader.load('models/materials/male02/male02.mtl', onLoadMtl);
-
-		function onLoadMtl(materials) {
-
-			materials.preload();
-			objLoader.setMaterials(materials);
-
-			//objLoader.load("models/classic-1982-tron-cycle.obj", function( meshGroup ) { // Triangles: 2,342
-			objLoader.load("models/male02.obj", function( meshGroup ) { // Triangles: 5,004
-
-				if (meshGroup.scene) 
-					meshGroup = meshGroup.scene;
-
-				meshGroup.traverse( function ( child ) {
-
-					if ( child.isMesh ) {
-						
-						let mat = new MaterialObject();
-						mat.type = 5;
-						mat.color.copy(child.material.color);
-						mat.albedoTextureID = -1;
-						mat.roughness = 0.0;
-						mat.metalness = 0.0;
-						mat.opacity = 1.0;
-						mat.refractiveIndex = 1.0;
-						pathTracingMaterialList.push(mat);
-						triangleMaterialMarkers.push(child.geometry.attributes.position.array.length / 9);
-						meshList.push(child);
-					}
-				} );
-
-				modelMesh = meshList[0].clone();
-
-				for (let i = 1; i < triangleMaterialMarkers.length; i++) {
-					triangleMaterialMarkers[i] += triangleMaterialMarkers[i-1];
-				}
-				
-				var geoList = [];
-				for (let i = 0; i < meshList.length; i++) {
-					geoList.push(meshList[i].geometry);
-				}
-				
-				modelMesh.geometry = THREE.BufferGeometryUtils.mergeBufferGeometries(geoList);
-				if (modelMesh.geometry.index)
-					modelMesh.geometry = modelMesh.geometry.toNonIndexed();
-				
-				for (let i = 0; i < meshList.length; i++) {
-					if (meshList[i].material.map != undefined)
-						uniqueMaterialTextures.push(meshList[i].material.map);		
-				}
-
-				for (let i = 0; i < uniqueMaterialTextures.length; i++) {
-					for (let j = i + 1; j < uniqueMaterialTextures.length; j++) {
-						if (uniqueMaterialTextures[i].image.src == uniqueMaterialTextures[j].image.src) {
-							uniqueMaterialTextures.splice(j, 1);
-							j -= 1;
-						}
-					}	
-				}
-				
-				for (let i = 0; i < meshList.length; i++) {
-					if (meshList[i].material.map != undefined) {
-						for (let j = 0; j < uniqueMaterialTextures.length; j++) {
-							if (meshList[i].material.map.image.src == uniqueMaterialTextures[j].image.src) {
-								pathTracingMaterialList[i].albedoTextureID = j;
-							}
-						}
-					}
-								
-				}
-
-				// ********* different OBJ Model Settings **********
-
-				// settings for classic 1982 Tron cycle model
-				//modelScale = 27.0;
-				//modelMesh.geometry.rotateY(Math.PI);
-				//modelMesh.geometry.rotateX(-0.02);
-				//modelPositionOffset.set(-70, -0.8, -70);
-
-				// settings for male02 model
-				modelScale = 0.3;
-				modelPositionOffset.set(-50, 0, -40);
-
-				
-				// now that the models have been loaded, we can init everything else
-				init();
-			});
-		} // end function onLoadMtl(materials)
-		*/
-		
 		
 		
 		// when you uncomment a different model loading directive, it is suggested
@@ -738,7 +642,9 @@ void SetupScene(void)
 				
             let matrixStack = [];
             let parent;
-            matrixStack.push(new THREE.Matrix4());
+	    matrixStack.push(new THREE.Matrix4());
+	    let totalGeometryCount = 0;
+
             meshGroup.traverse( function ( child ) {
                 if ( child.isMesh ) {
                     let hasUVs = child.geometry.attributes.uv !== undefined ? 3 : 0
@@ -751,17 +657,22 @@ void SetupScene(void)
                     }
                     
                     child.geometry.applyMatrix( child.matrix.multiply( matrixStack[matrixStack.length - 1] ) );
-                    let mat = new MaterialObject();
+		    let mat = new MaterialObject();
+
+		    // note: '4' means clearCoat material over diffuse material.  the clearCoat portion will have an IoR of around 1.4
                     let materialType = child.material.opacity < 1 ? 2 : 4; // 2 = glossy transparent, 4 = glossy opaque
                     mat.type = materialType;
                     mat.color.copy(child.material.color);
                     mat.roughness = child.material.roughness || 0.0;
                     mat.metalness = child.material.metalness || 0.0;
                     mat.opacity = child.material.opacity || 1.0;
-                    mat.refractiveIndex = materialType == 4 ? 1.0 : 1.52; // glass
-                    console.log((3 + hasUVs + hasNormals));
-                    pathTracingMaterialList.push(mat);
-                    triangleMaterialMarkers.push(child.geometry.attributes.position.array.length / 9);
+                    mat.refractiveIndex = materialType == 4 ? 1.4 : 1.52; // IoR of clearCoat = 1.4, glass = 1.5
+                    //console.log((3 + hasUVs + hasNormals));
+		    pathTracingMaterialList.push(mat);
+		    //console.log(child.geometry.attributes.position.array);
+		    totalGeometryCount += Math.floor(child.geometry.attributes.position.array.length / 3);
+		    console.log(totalGeometryCount);
+                    triangleMaterialMarkers.push(totalGeometryCount);
                     meshList.push(child);
                 }
                 else if ( child.isObject3D ) {
@@ -775,19 +686,15 @@ void SetupScene(void)
             } );
 
 			modelMesh = meshList[0].clone();
-
-			for (let i = 1; i < triangleMaterialMarkers.length; i++) {
-				triangleMaterialMarkers[i] += triangleMaterialMarkers[i-1];
-			}
 			
-            var geoList = [];
+            		var geoList = [];
 			for (let i = 0; i < meshList.length; i++) {
 				geoList.push(meshList[i].geometry);
 			}
 			
-            modelMesh.geometry = THREE.BufferGeometryUtils.mergeBufferGeometries(geoList);
-            if (modelMesh.geometry.index)
-                modelMesh.geometry = modelMesh.geometry.toNonIndexed();
+            		modelMesh.geometry = THREE.BufferGeometryUtils.mergeBufferGeometries(geoList);
+			if (modelMesh.geometry.index)
+				modelMesh.geometry = modelMesh.geometry.toNonIndexed();
 				
 			for (let i = 0; i < meshList.length; i++) {
 				if (meshList[i].material.map != undefined)
@@ -816,8 +723,8 @@ void SetupScene(void)
 			// ********* different GLTF Model Settings **********
 
 			// settings for Duck model
-			//modelScale = 0.1;
-			//modelPositionOffset.set(0, 20, -80);
+			//modelScale = 0.5;
+			//modelPositionOffset.set(0, 0, 0);
 
 			// settings for damagedHelmet model
 			//modelScale = 10.0;
@@ -826,11 +733,11 @@ void SetupScene(void)
 
 			// settings for scene model
 			modelScale = 10.0;
-			//modelMesh.geometry.rotateY(Math.PI);
-			//modelPositionOffset.set(0, 4, -100);
+			//modelMesh.geometry.rotateY(-Math.PI * 0.95);
+			modelPositionOffset.set(0, 0, 0);
 			
 			// now that the models have been loaded, we can init everything else
-            init();
+            		init();
 	
 		});
 		
@@ -944,7 +851,7 @@ void SetupScene(void)
 			pathTracingScene.add(cameraControlsObject);
 
 			// for flyCam
-			cameraControlsObject.position.set(30, 40, 50);
+			cameraControlsObject.position.set(30, 40, 20);
 
 			// look slightly downward
 			cameraControlsPitchObject.rotation.x = -0.2;
@@ -992,51 +899,6 @@ void SetupScene(void)
 			
 			
 			
-
-			// settings for monkey model
-			//modelScale = 10.0;
-			//modelPositionOffset.set(0, 30, -40);
-
-			// settings for UtahTeapot model
-			//modelScale = 1.0;
-			//modelPositionOffset.set(10, 26, -30);
-
-			
-
-			// settings for f16 model
-			//modelScale = 16.0;
-			//modelPositionOffset.set(0, 30, -40);
-
-			// settings for stanford-bunny model
-			//modelScale = 0.04;
-			//modelPositionOffset.set(0, 27.5, -40);
-
-
-			// settings for modern Tron cycle model
-			//modelScale = 25.0;
-			//modelMesh.geometry.rotateX(-Math.PI * 0.5);
-			//modelMesh.geometry.lookAt(new THREE.Vector3(-1000, -500, -500));
-			//modelPositionOffset.set(-70, 0, -80);
-
-			// settings for stanford-dragon model
-			//modelScale = 3.0;
-			//modelPositionOffset.set(0, 18, -40);
-
-			// settings for stanford-buddha model
-			//modelScale = 3.0;
-			//modelPositionOffset.set(0, 18, -40);
-
-			// settings for sponza model
-			//modelScale = 0.1;
-			//modelPositionOffset.set(0, 0, -100);
-
-			// settings for stanford-angelLucy model (might take 10 seconds to compile)
-			//modelScale = 0.05;
-			//modelMesh.geometry.lookAt(new THREE.Vector3(1000, 0, 0));
-			//modelPositionOffset.set(0, 17.3, -40);
-
-
-			
 			var triangle_b_box_min = new THREE.Vector3();
 			var triangle_b_box_max = new THREE.Vector3();
 			var triangle_b_box_centroid = new THREE.Vector3();
@@ -1054,19 +916,12 @@ void SetupScene(void)
 				modelHasUVs = true;
 			}
 				
-			var materialNumber = 0;
+			
 
 			for (let i = 0; i < total_number_of_triangles; i++) {
 			
 				triangle_b_box_min.set(Infinity, Infinity, Infinity);
 				triangle_b_box_max.set(-Infinity, -Infinity, -Infinity);
-
-				for (let j = 0; j < pathTracingMaterialList.length; j++) {
-					if (i < triangleMaterialMarkers[j]) {
-						materialNumber = j;
-						break;
-					}
-				}
 
 				// record vertex texture coordinates (UVs)
 				if (modelHasUVs) {
@@ -1136,12 +991,15 @@ void SetupScene(void)
 
 				// the remaining slots are used for PBR material properties
 
+				if (i >= Math.floor(triangleMaterialMarkers[materialNumber] * 16))
+					materialNumber++;
+
 				//slot 6
 				triangle_array[32 * i + 24] = pathTracingMaterialList[materialNumber].type; // r or x 
 				triangle_array[32 * i + 25] = pathTracingMaterialList[materialNumber].color.r; // g or y
 				triangle_array[32 * i + 26] = pathTracingMaterialList[materialNumber].color.g; // b or z
 				triangle_array[32 * i + 27] = pathTracingMaterialList[materialNumber].color.b; // a or w
-
+				
 				//slot 7
 				triangle_array[32 * i + 28] = pathTracingMaterialList[materialNumber].albedoTextureID; // r or x
 				triangle_array[32 * i + 29] = 0; // g or y
@@ -1170,7 +1028,8 @@ void SetupScene(void)
 				aabb_array[9 * i + 8] = triangle_b_box_centroid.z;
 
 				totalWork[i] = i;
-			}
+				
+			} // end for (let i = 0; i < total_number_of_triangles; i++)
 
 
 			// Build the BVH acceleration structure, which places a bounding box ('root' of the tree) around all of the 
