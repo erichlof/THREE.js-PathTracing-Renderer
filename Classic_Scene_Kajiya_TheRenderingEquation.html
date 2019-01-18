@@ -245,8 +245,11 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			break;
 		}
 
-		// reset sampleLight flag
-		sampleLight = false;
+		// if we reached this point and sampleLight failed to find a light above, exit early
+		if (sampleLight)
+		{
+			break;
+		}
 		
 		// useful data 
 		vec3 n = intersec.normal;
