@@ -627,52 +627,42 @@ void SetupScene(void)
 			this.opacity = 1.0;   // 0.0 to 1.0 range, fully transparent to fully opaque
 			this.refractiveIndex = 1.0; // 1.0=air, 1.33=water, 1.4=clearCoat, 1.5=glass, etc.
 		}
-		
-		
-		
-		// when you uncomment a different model loading directive, it is suggested
-		// to uncomment the matching settings for the model that you want to load
+
+		console.time("LoadingGltf");
+
 		var gltfLoader = new THREE.GLTFLoader();
 
-		//gltfLoader.load("models/Duck.gltf", function( meshGroup ) { // Triangles: 4,212
-		//gltfLoader.load("models/damagedHelmet.gltf", function( meshGroup ) { // Triangles: 15,452
-		gltfLoader.load("models/scene.glb", function( meshGroup ) { // Triangles: 93,431
+		gltfLoader.load("models/scene.gltf", function( meshGroup ) { // Triangles: 93,431
 			if (meshGroup.scene)
 				meshGroup = meshGroup.scene;
 				
             let matrixStack = [];
             let parent;
-	    matrixStack.push(new THREE.Matrix4());
-	    let totalGeometryCount = 0;
-
+			let totalTriangleCount = 0;
+            matrixStack.push(new THREE.Matrix4());
             meshGroup.traverse( function ( child ) {
                 if ( child.isMesh ) {
-                    let hasUVs = child.geometry.attributes.uv !== undefined ? 3 : 0
-                    let hasNormals = child.geometry.attributes.normal !== undefined ? 3 : 0
-                    //console.log(3 + hasUVs + hasNormals);
-                    
                     if ( parent !== undefined && parent.name !== child.parent.name ) {
                         matrixStack.pop();
                         parent = undefined;
                     }
                     
                     child.geometry.applyMatrix( child.matrix.multiply( matrixStack[matrixStack.length - 1] ) );
-		    let mat = new MaterialObject();
 
-		    // note: '4' means clearCoat material over diffuse material.  the clearCoat portion will have an IoR of around 1.4
-                    let materialType = child.material.opacity < 1 ? 2 : 4; // 2 = glossy transparent, 4 = glossy opaque
+					// note: '4' means clearCoat material over diffuse material.  the clearCoat portion will have an IoR of around 1.4
+					let materialType = child.material.opacity < 1 ? 2 : 4; // 2 = glossy transparent, 4 = glossy opaque
+                    let mat = new MaterialObject();
                     mat.type = materialType;
                     mat.color.copy(child.material.color);
                     mat.roughness = child.material.roughness || 0.0;
                     mat.metalness = child.material.metalness || 0.0;
                     mat.opacity = child.material.opacity || 1.0;
-                    mat.refractiveIndex = materialType == 4 ? 1.4 : 1.52; // IoR of clearCoat = 1.4, glass = 1.5
-                    //console.log((3 + hasUVs + hasNormals));
-		    pathTracingMaterialList.push(mat);
-		    //console.log(child.geometry.attributes.position.array);
-		    totalGeometryCount += Math.floor(child.geometry.attributes.position.array.length / 3);
-		    console.log(totalGeometryCount);
-                    triangleMaterialMarkers.push(totalGeometryCount);
+                    mat.refractiveIndex = materialType == 4 ? 1.4 : 1.5; // IoR of clearCoat = 1.4, glass = 1.5
+                    pathTracingMaterialList.push(mat);
+
+					totalTriangleCount += child.geometry.index.count / 3; // TODO this might only work if one mesh uses a single material, so multi material meshes are probably supported yet.
+					triangleMaterialMarkers.push(totalTriangleCount);
+
                     meshList.push(child);
                 }
                 else if ( child.isObject3D ) {
@@ -685,16 +675,13 @@ void SetupScene(void)
                 }
             } );
 
-			modelMesh = meshList[0].clone();
-			
-            		var geoList = [];
-			for (let i = 0; i < meshList.length; i++) {
+            var geoList = [];
+			for (let i = 0; i < meshList.length; i++)
 				geoList.push(meshList[i].geometry);
-			}
-			
-            		modelMesh.geometry = THREE.BufferGeometryUtils.mergeBufferGeometries(geoList);
-			if (modelMesh.geometry.index)
-				modelMesh.geometry = modelMesh.geometry.toNonIndexed();
+
+			modelMesh = new THREE.Mesh(THREE.BufferGeometryUtils.mergeBufferGeometries(geoList));
+            if (modelMesh.geometry.index != undefined)
+                modelMesh.geometry = modelMesh.geometry.toNonIndexed(); // why do we need NonIndexed geometry?
 				
 			for (let i = 0; i < meshList.length; i++) {
 				if (meshList[i].material.map != undefined)
@@ -720,22 +707,12 @@ void SetupScene(void)
 				}				
 			}
 
-			// ********* different GLTF Model Settings **********
-
-			// settings for Duck model
-			//modelScale = 0.5;
-			//modelPositionOffset.set(0, 0, 0);
-
-			// settings for damagedHelmet model
-			//modelScale = 10.0;
-			//modelMesh.geometry.rotateY(Math.PI);
-			//modelPositionOffset.set(0, 30, -50);
-
 			// settings for scene model
 			modelScale = 10.0;
 			//modelMesh.geometry.rotateY(-Math.PI * 0.95);
-			modelPositionOffset.set(0, 0, 0);
-			
+			//modelPositionOffset.set(0, 4, -100);
+
+			console.timeEnd("LoadingGltf");
 			// now that the models have been loaded, we can init everything else
             		init();
 	
@@ -746,6 +723,8 @@ void SetupScene(void)
 
 		function init() {
 
+			//#region "Init Three.js"
+			console.time("InitThree");
 			if ('ontouchstart' in window) {
 				mouseControl = false;
 				pixelRatio = 0.5;
@@ -851,10 +830,13 @@ void SetupScene(void)
 			pathTracingScene.add(cameraControlsObject);
 
 			// for flyCam
-			cameraControlsObject.position.set(30, 40, 20);
+			cameraControlsObject.position.set(30, 40, 50);
+			//cameraControlsObject.position.set(25, 15, -130);
 
 			// look slightly downward
 			cameraControlsPitchObject.rotation.x = -0.2;
+			// look at house object
+			//cameraControlsPitchObject.rotation.y = Math.PI + 0.5;
 
 			oldYawRotation = cameraControlsYawObject.rotation.y;
 			oldPitchRotation = cameraControlsPitchObject.rotation.x;
@@ -872,7 +854,7 @@ void SetupScene(void)
 				depthBuffer: false,
 				stencilBuffer: false
 			});
-			pathTracingRenderTarget.texture.generateMipmaps = false;
+			// pathTracingRenderTarget.texture.generateMipmaps = false; // defaults to false since r99
 
 			screenTextureRenderTarget = new THREE.WebGLRenderTarget((window.innerWidth * pixelRatio), (window.innerHeight *
 				pixelRatio), {
@@ -883,12 +865,16 @@ void SetupScene(void)
 				depthBuffer: false,
 				stencilBuffer: false
 			});
-			screenTextureRenderTarget.texture.generateMipmaps = false;
+			// screenTextureRenderTarget.texture.generateMipmaps = false; // defaults to false since r99
 
+			console.timeEnd("InitThree");
+			//#endregion "Init Three.js"
 
+			// divide by 9 because of nonIndexed geometry (each triangle has 3 floats with each float constisting of 3 components)
 			total_number_of_triangles = modelMesh.geometry.attributes.position.array.length / 9;
-			console.log("Triangle count:" + total_number_of_triangles);
+			console.log("Triangle count: " + total_number_of_triangles);
 
+			console.time("BvhGeneration");
 			totalWork = new Uint32Array(total_number_of_triangles);
 
 			triangle_array = new Float32Array(2048 * 2048 * 4);
@@ -991,7 +977,7 @@ void SetupScene(void)
 
 				// the remaining slots are used for PBR material properties
 
-				if (i >= Math.floor(triangleMaterialMarkers[materialNumber] * 16))
+				if (i >= triangleMaterialMarkers[materialNumber])
 					materialNumber++;
 
 				//slot 6
@@ -1089,6 +1075,7 @@ void SetupScene(void)
 			aabbDataTexture.generateMipmaps = false;
 			aabbDataTexture.needsUpdate = true;
 
+			console.timeEnd("BvhGeneration");
 			/*
 			albedoTexture = new THREE.TextureLoader().load( 'textures/uvGrid.jpg' );
 			albedoTexture.wrapS = THREE.RepeatWrapping;
@@ -1210,7 +1197,7 @@ void SetupScene(void)
 
 
 		function onWindowResize(event) {
-
+			// TODO fix the incremental rendering result's brightness being lower then before resize
 			SCREEN_WIDTH = window.innerWidth;
 			SCREEN_HEIGHT = window.innerHeight;
 
