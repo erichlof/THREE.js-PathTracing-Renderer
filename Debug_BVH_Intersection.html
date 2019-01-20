@@ -442,7 +442,6 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			{
 				mask *= intersec.color;
 
-				/*
 				int id = intersec.albedoTextureID;
 				if (id > -1)
 				{
@@ -458,7 +457,6 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 					mask *= albedoSample;
 				}
-				*/
 
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 				r.origin += r.direction * epsIntersect;
@@ -628,6 +626,19 @@ void SetupScene(void)
 			this.refractiveIndex = 1.0; // 1.0=air, 1.33=water, 1.4=clearCoat, 1.5=glass, etc.
 		}
 
+		function storeMaterial(material) {
+			// note: '4' means clearCoat material over diffuse material.  the clearCoat portion will have an IoR of around 1.4
+			let materialType = material.opacity < 1 ? 2 : 4; // 2 = glossy transparent, 4 = glossy opaque
+			let mat = new MaterialObject();
+			mat.type = materialType;
+			mat.color.copy(material.color);
+			mat.roughness = material.roughness || 0.0;
+			mat.metalness = material.metalness || 0.0;
+			mat.opacity = material.opacity || 1.0;
+			mat.refractiveIndex = materialType == 4 ? 1.4 : 1.5; // IoR of clearCoat = 1.4, glass = 1.5
+			pathTracingMaterialList.push(mat);
+		};
+
 		console.time("LoadingGltf");
 
 		var gltfLoader = new THREE.GLTFLoader();
@@ -646,29 +657,32 @@ void SetupScene(void)
                         matrixStack.pop();
                         parent = undefined;
                     }
-                    
+
                     child.geometry.applyMatrix( child.matrix.multiply( matrixStack[matrixStack.length - 1] ) );
 
-					// note: '4' means clearCoat material over diffuse material.  the clearCoat portion will have an IoR of around 1.4
-					let materialType = child.material.opacity < 1 ? 2 : 4; // 2 = glossy transparent, 4 = glossy opaque
-                    let mat = new MaterialObject();
-                    mat.type = materialType;
-                    mat.color.copy(child.material.color);
-                    mat.roughness = child.material.roughness || 0.0;
-                    mat.metalness = child.material.metalness || 0.0;
-                    mat.opacity = child.material.opacity || 1.0;
-                    mat.refractiveIndex = materialType == 4 ? 1.4 : 1.5; // IoR of clearCoat = 1.4, glass = 1.5
-                    pathTracingMaterialList.push(mat);
+					if (child.material.length > 0) {
+						for (let i = 0; i < child.material.length; i++)
+							storeMaterial(child.material[i]);
+					} else {
+						storeMaterial(child.material);
+					}
 
-					totalTriangleCount += child.geometry.index.count / 3; // TODO this might only work if one mesh uses a single material, so multi material meshes are probably supported yet.
-					triangleMaterialMarkers.push(totalTriangleCount);
+					if (child.geometry.groups.length > 0) {
+						for (let i = 0; i < child.geometry.groups.length; i++) {
+							totalTriangleCount += child.geometry.groups[i].count / 3;
+							triangleMaterialMarkers.push(totalTriangleCount);
+						}
+					} else {
+						totalTriangleCount += child.geometry.index.count / 3;
+						triangleMaterialMarkers.push(totalTriangleCount);
+					}
 
                     meshList.push(child);
                 }
                 else if ( child.isObject3D ) {
                     if ( parent !== undefined )
                         matrixStack.pop();
-                    
+
                     let matrixPeek = new THREE.Matrix4().copy( matrixStack[matrixStack.length - 1] ).multiply( child.matrix );
                     matrixStack.push( matrixPeek );
                     parent = child;
@@ -684,21 +698,33 @@ void SetupScene(void)
                 modelMesh.geometry = modelMesh.geometry.toNonIndexed(); // why do we need NonIndexed geometry?
 				
 			for (let i = 0; i < meshList.length; i++) {
-				if (meshList[i].material.map != undefined)
-					uniqueMaterialTextures.push(meshList[i].material.map);		
-			}
-			
-			for (let i = 0; i < uniqueMaterialTextures.length; i++) {
-				for (let j = i + 1; j < uniqueMaterialTextures.length; j++) {
-					if (uniqueMaterialTextures[i].image.src == uniqueMaterialTextures[j].image.src) {
-						uniqueMaterialTextures.splice(j, 1);
-						j -= 1;
+				if (meshList[i].material.length > 0) {
+					for (let j = 0; j < meshList[i].material.length; j++) {
+						if (meshList[i].material[j].map != undefined)
+							uniqueMaterialTextures.push(meshList[i].material[j].map);
 					}
-				}	
+				}
+				else if (meshList[i].material.map != undefined) {
+						uniqueMaterialTextures.push(meshList[i].material.map);
+				}
 			}
-			
+
+			// Remove duplicate entries
+			uniqueMaterialTextures = Array.from(new Set(uniqueMaterialTextures));
+
 			for (let i = 0; i < meshList.length; i++) {
-				if (meshList[i].material.map != undefined) {
+				if (meshList[i].material.length > 0) {
+					for (let j = 0; j < meshList[i].material.length; j++) {
+						if (meshList[i].material[j].map != undefined) {
+							for (let k = 0; k < uniqueMaterialTextures.length; k++) {
+								if (meshList[i].material[j].map.image.src == uniqueMaterialTextures[k].image.src) {
+									pathTracingMaterialList[i].albedoTextureID = k;
+								}
+							}
+						}
+					}
+				}
+				else if (meshList[i].material.map != undefined) {
 					for (let j = 0; j < uniqueMaterialTextures.length; j++) {
 						if (meshList[i].material.map.image.src == uniqueMaterialTextures[j].image.src) {
 							pathTracingMaterialList[i].albedoTextureID = j;
