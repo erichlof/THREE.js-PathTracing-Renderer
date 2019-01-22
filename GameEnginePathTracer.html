@@ -607,13 +607,13 @@ void main( void )
 	}
 	else if ( uCameraIsMoving || rayHitIsDynamic )
 	{
-		previousColor *= 0.85; // motion-blur trail amount (old image)
-		pixelColor *= 0.15; // brightness of new image (noisy)
+		previousColor *= 0.78; // motion-blur trail amount (old image)
+		pixelColor *= 0.22; // brightness of new image (noisy)
 	}
 	else 
 	{
-		previousColor *= 0.96; // motion-blur trail amount (old image)
-		pixelColor *= 0.04; // brightness of new image (noisy)
+		previousColor *= 0.94; // motion-blur trail amount (old image)
+		pixelColor *= 0.06; // brightness of new image (noisy)
 	}
 	
 	
