@@ -524,6 +524,7 @@ void SetupScene(void)
 		var increaseFocusDist = false;
 		var decreaseFocusDist = false;
 		var pixelRatio = 0.5; // 1;
+		var windowIsBeingResized = false;
 		var TWO_PI = Math.PI * 2;
 		var randomVector = new THREE.Vector3();
 		var sampleCounter = 1.0;
@@ -1223,7 +1224,7 @@ void SetupScene(void)
 
 
 		function onWindowResize(event) {
-			// TODO fix the incremental rendering result's brightness being lower then before resize
+			
 			SCREEN_WIDTH = window.innerWidth;
 			SCREEN_HEIGHT = window.innerHeight;
 
@@ -1250,6 +1251,8 @@ void SetupScene(void)
 			fovScale = worldCamera.fov * 0.5 * (Math.PI / 180.0);
 			pathTracingUniforms.uVLen.value = Math.tan(fovScale);
 			pathTracingUniforms.uULen.value = pathTracingUniforms.uVLen.value * worldCamera.aspect;
+			
+			windowIsBeingResized = true;
 
 			if (!mouseControl) {
 
@@ -1310,6 +1313,11 @@ void SetupScene(void)
 
 			// reset flags
 			cameraIsMoving = false;
+			if (windowIsBeingResized) {
+				cameraIsMoving = true;
+				windowIsBeingResized = false;
+			}
+			
 			cameraJustStartedMoving = false;
 
 			// check user controls
