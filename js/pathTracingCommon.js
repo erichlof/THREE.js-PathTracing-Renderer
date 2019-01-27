@@ -141,13 +141,14 @@ out vec4 out_FragColor;
 #define SPECSUB 7
 #define CHECK 8
 #define WATER 9
-#define WOOD 10
-#define SEAFLOOR 11
-#define TERRAIN 12
-#define CLOTH 13
-#define LIGHTWOOD 14
-#define DARKWOOD 15
-#define PAINTING 16
+#define PBR_MATERIAL 10
+#define WOOD 11
+#define SEAFLOOR 12
+#define TERRAIN 13
+#define CLOTH 14
+#define LIGHTWOOD 15
+#define DARKWOOD 16
+#define PAINTING 17
 
 `;
 
@@ -1001,7 +1002,7 @@ float BoundingBoxIntersect( vec3 minCorner, vec3 maxCorner, vec3 rayOrigin, vec3
 	
 	float t0 = max( max(tmin.x, tmin.y), tmin.z);
 	float t1 = min( min(tmax.x, tmax.y), tmax.z);
-
+	
 	if (t0 > t1) return INFINITY;
 	
 	float result = INFINITY;
@@ -1009,7 +1010,7 @@ float BoundingBoxIntersect( vec3 minCorner, vec3 maxCorner, vec3 rayOrigin, vec3
 	if (t1 > 0.0) result = t1;
 	if (t0 > 0.0) result = t0;
 	
-	return result;
+	return result;	
 }
 
 `;
@@ -1057,9 +1058,9 @@ float BVH_TriangleIntersect( vec3 v0, vec3 v1, vec3 v2, Ray r, out float u, out 
 	vec3 pvec = cross(r.direction, edge2);
 	float det = 1.0 / dot(edge1, pvec);
 
-	// comment out the following line if double-sided triangles are wanted, or
-	// uncomment the following line if back-face culling is desired (single-sided triangles)
-	//if (det < 0.0) return INFINITY;
+	// comment out the following line if double-sided triangles are wanted, or ...
+	// uncomment the following line if back-face culling is desired (front-facing triangles only)
+	if (det < 0.0) return INFINITY;
 
 	vec3 tvec = r.origin - v0;
 	u = dot(tvec, pvec) * det;
