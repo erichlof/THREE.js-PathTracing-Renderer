@@ -1090,7 +1090,7 @@ void main( void )
 			pathTracingScene.add(cameraControlsObject);
 
 			// for flyCam
-			cameraControlsObject.position.set(0, 40, 50);
+			cameraControlsObject.position.set(0, 40, 100);
 
 			// look slightly downward
 			cameraControlsPitchObject.rotation.x = -0.2;
@@ -1796,7 +1796,7 @@ void main( void )
                         //GLTF_Model_Mesh.scale.set(1, 1, 1); // Math.cos(animationTimer * 1.0) + 2
 			//GLTF_Model_Mesh.rotation.set(-Math.PI * 0.5, 0, 0);
                         GLTF_Model_Mesh.rotateOnWorldAxis(animationAxis, 0.1 * frameTime);
-			GLTF_Model_Mesh.position.set(100 * Math.cos(animationTimer * 0.05), 20 * (Math.sin(animationTimer * 0.2) + 1.5), 120 * Math.sin(animationTimer * 0.05) );
+			GLTF_Model_Mesh.position.set(100 * Math.cos(animationTimer * 0.05), 20 * (Math.sin(animationTimer * 0.2) + 1.5), 120 * Math.sin(animationTimer * 0.05) - 50 );
                         //GLTF_Model_Mesh.position.set(0,1,0);
 
 			GLTF_Model_Mesh.updateMatrixWorld(true); // 'true' forces immediate matrix update
