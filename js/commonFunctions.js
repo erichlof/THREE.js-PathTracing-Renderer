@@ -48,7 +48,6 @@ var oldPinchWidthX = 0;
 var oldPinchWidthY = 0;
 var pinchDeltaX = 0;
 var pinchDeltaY = 0;
-var camFlightSpeed = 60;
 var fontAspect;
 
 // the following variables will be used to calculate rotations and directions from the camera
@@ -309,7 +308,7 @@ function initTHREEjs() {
         pathTracingScene.add(cameraControlsObject);
 
         
-
+        // setup render targets...
         pathTracingRenderTarget = new THREE.WebGLRenderTarget((window.innerWidth * pixelRatio), (window.innerHeight * pixelRatio), {
                 minFilter: THREE.NearestFilter,
                 magFilter: THREE.NearestFilter,
@@ -331,13 +330,17 @@ function initTHREEjs() {
         screenTextureRenderTarget.texture.generateMipmaps = false;
 
 
+        // setup scene/demo-specific objects, variables, and data
+        initSceneData();
+
+
+        // setup screen-size quad geometry and shaders....
+
         // this full-screen quad mesh performs the path tracing operations and produces a screen-sized image
         pathTracingGeometry = new THREE.PlaneBufferGeometry(2, 2);
-
         initPathTracingShaders();
 
-        
-        // this full-screen quad mesh copies the image output of the pathtracing shader above and feeds it back in to that shader as a 'previousTexture'
+        // this full-screen quad mesh copies the image output of the pathtracing shader and feeds it back in to that shader as a 'previousTexture'
         screenTextureGeometry = new THREE.PlaneBufferGeometry(2, 2);
 
         screenTextureMaterial = new THREE.ShaderMaterial({
@@ -370,7 +373,6 @@ function initTHREEjs() {
 
         screenOutputMesh = new THREE.Mesh(screenOutputGeometry, screenOutputMaterial);
         screenOutputScene.add(screenOutputMesh);
-
 
 } // end function initTHREEjs()
 
@@ -604,21 +606,22 @@ function animate() {
 
         }
 
-        if (!cameraIsMoving) {
-
-                sampleCounter += 1.0;
-                frameCounter += 1.0;
+        if ( !cameraIsMoving ) {
+        
+                sampleCounter += 1.0; // for progressive refinement of image
+                if (sceneIsDynamic)
+                        sampleCounter = 1.0; // for continuous updating of image
+                
+                frameCounter  += 1.0;
                 if (cameraRecentlyMoving)
                         frameCounter = 1.0;
 
                 cameraRecentlyMoving = false;
-
+                
         }
 
 
-        updateUniforms();
-
-        cameraInfoElement.innerHTML = "FOV: " + worldCamera.fov + " / Aperture: " + apertureSize.toFixed(2) + " / FocusDistance: " + focusDistance + "<br>" + "Samples: " + sampleCounter;
+        updateVariablesAndUniforms();
 
 
         // RENDERING in 3 steps
@@ -641,5 +644,3 @@ function animate() {
         stats.update();
 
 } // end function animate()
-
-
