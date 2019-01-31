@@ -1003,14 +1003,9 @@ float BoundingBoxIntersect( vec3 minCorner, vec3 maxCorner, vec3 rayOrigin, vec3
 	float t0 = max( max(tmin.x, tmin.y), tmin.z);
 	float t1 = min( min(tmax.x, tmax.y), tmax.z);
 	
-	if (t0 > t1) return INFINITY;
+	if (t0 > t1 || t1 < 0.0) return INFINITY;
 	
-	float result = INFINITY;
-	
-	if (t1 > 0.0) result = t1;
-	if (t0 > 0.0) result = t0;
-	
-	return result;	
+	return t0;	
 }
 
 `;
