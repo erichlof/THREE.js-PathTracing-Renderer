@@ -289,7 +289,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	while (true)
         {
 
-		if ( currentStackData.rayT < t + 0.0 ) // 65.0 is the magic number for this scene 
+		if (currentStackData.rayT < t)
                 {
                         
                         if (currentBoxNode.branch_A_Index >= 0.0) // signifies this is a branch
