@@ -1,6 +1,12 @@
-// scene/demo-specific three.js objects/variables setup goes here
+// scene/demo-specific variables go here
+var sceneIsDynamic = false;
+var camFlightSpeed = 60;
 var torusObject;
+
+// called automatically from within initTHREEjs() function
 function initSceneData() {
+        
+        // scene/demo-specific three.js objects setup goes here
         
         // Torus Object
         torusObject = new THREE.Object3D();
@@ -97,21 +103,25 @@ function createPathTracingMaterial() {
 
 
 // called automatically from within the animate() function
-function updateUniforms() {
+function updateVariablesAndUniforms() {
         
         pathTracingUniforms.uCameraIsMoving.value = cameraIsMoving;
         pathTracingUniforms.uCameraJustStartedMoving.value = cameraJustStartedMoving;
         pathTracingUniforms.uSampleCounter.value = sampleCounter;
         pathTracingUniforms.uFrameCounter.value = frameCounter;
         pathTracingUniforms.uRandomVector.value = randomVector.set(Math.random(), Math.random(), Math.random());
+        
         // TORUS
         torusObject.updateMatrixWorld(true); // 'true' forces immediate matrix update
         pathTracingUniforms.uTorusInvMatrix.value.getInverse(torusObject.matrixWorld);
         pathTracingUniforms.uTorusNormalMatrix.value.getNormalMatrix(torusObject.matrixWorld);
+        
         // CAMERA
         cameraControlsObject.updateMatrixWorld(true);
         pathTracingUniforms.uCameraMatrix.value.copy(worldCamera.matrixWorld);
         screenOutputMaterial.uniforms.uOneOverSampleCounter.value = 1.0 / sampleCounter;
+
+        cameraInfoElement.innerHTML = "FOV: " + worldCamera.fov + " / Aperture: " + apertureSize.toFixed(2) + " / FocusDistance: " + focusDistance + "<br>" + "Samples: " + sampleCounter;
 
 } // end function updateUniforms()
 
@@ -119,9 +129,7 @@ function updateUniforms() {
 
 initWindowAndControls(); // boilerplate: init handlers for window, mouse / mobile controls
 
-initTHREEjs(); // boilerplate: init necessary three.js items
-
-initSceneData(); // scene/demo-specific setup happens here
+initTHREEjs(); // boilerplate: init necessary three.js items and scene/demo-specific objects
 
 onWindowResize(); // this 'jumpstarts' the initial dimensions and parameters for the window and renderer
 
