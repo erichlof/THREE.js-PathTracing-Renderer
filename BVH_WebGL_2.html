@@ -1060,7 +1060,7 @@ void SetupScene(void)
 				depthTest: false
 			});
 
-			screenTextureMaterial.uniforms.tTexture0.value = pathTracingRenderTarget.texture;
+			screenTextureMaterial.uniforms.tPathTracedImageTexture.value = pathTracingRenderTarget.texture;
 
 			screenTextureMesh = new THREE.Mesh(screenTextureGeometry, screenTextureMaterial);
 			screenTextureScene.add(screenTextureMesh);
@@ -1077,7 +1077,7 @@ void SetupScene(void)
 				depthTest: false
 			});
 
-			screenOutputMaterial.uniforms.tTexture0.value = pathTracingRenderTarget.texture;
+			screenOutputMaterial.uniforms.tPathTracedImageTexture.value = pathTracingRenderTarget.texture;
 
 			screenOutputMesh = new THREE.Mesh(screenOutputGeometry, screenOutputMaterial);
 			screenOutputScene.add(screenOutputMesh);
