@@ -320,13 +320,13 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 					nodeA = tnp;
 				} // branch 'b' now has the larger rayT value of 'a' and 'b'
 
-				if (slDataB.rayT < INFINITY) // see if branch 'b' (the larger rayT) needs to be processed
+				if (slDataB.rayT < t) // see if branch 'b' (the larger rayT) needs to be processed
 				{
 					currentStackData = slDataB;
 					currentBoxNode = nodeB;
 					skip = true; // this will prevent the stackptr from decreasing by 1
 				}
-				if (slDataA.rayT < INFINITY) // see if branch 'a' (the smaller rayT) needs to be processed 
+				if (slDataA.rayT < t) // see if branch 'a' (the smaller rayT) needs to be processed 
 				{
 					if (skip == true) // if larger branch 'b' needed to be processed also,
 						stackLevels[int(stackptr++)] = slDataB; // cue larger branch 'b' for future round
