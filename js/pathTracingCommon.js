@@ -3,7 +3,7 @@ var screenTextureShader = {
         uniforms: THREE.UniformsUtils.merge( [
 		
                 {
-                        tTexture0: { type: "t", value: null }
+                        tPathTracedImageTexture: { type: "t", value: null }
                 }
 		
         ] ),
@@ -31,13 +31,13 @@ var screenTextureShader = {
 		'precision highp int;',
 		'precision highp sampler2D;',
 
-                'uniform sampler2D tTexture0;',
-                'in vec2 vUv;',
+                'uniform sampler2D tPathTracedImageTexture;',
+		'in vec2 vUv;',
                 'out vec4 out_FragColor;',
 		
 		'void main()',
 		'{',	
-			'out_FragColor = texture(tTexture0, vUv);',	
+			'out_FragColor = texture(tPathTracedImageTexture, vUv);',	
 		'}'
 		
         ].join( '\n' )
@@ -50,7 +50,7 @@ var screenOutputShader = {
 		
                 {
                         uOneOverSampleCounter: { type: "f", value: 0.0 },
-			tTexture0: { type: "t", value: null }
+			tPathTracedImageTexture: { type: "t", value: null }
                 }
 		
         ] ),
@@ -79,15 +79,15 @@ var screenOutputShader = {
 		'precision highp sampler2D;',
 
                 'uniform float uOneOverSampleCounter;',
-		'uniform sampler2D tTexture0;',
+		'uniform sampler2D tPathTracedImageTexture;',
 		'in vec2 vUv;',
                 'out vec4 out_FragColor;',
 		
 		'void main()',
 		'{',
-			'vec4 pixelColor = texture(tTexture0, vUv) * uOneOverSampleCounter;',
+			'vec4 pixelColor = texture(tPathTracedImageTexture, vUv) * uOneOverSampleCounter;',
 
-			'out_FragColor = sqrt(pixelColor);',	
+			'out_FragColor = pow(pixelColor, vec4(0.4545));',	
 		'}'
 		
         ].join( '\n' )
