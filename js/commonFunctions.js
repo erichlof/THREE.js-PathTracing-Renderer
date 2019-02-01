@@ -594,33 +594,6 @@ function animate() {
         }
 
 
-        if (cameraIsMoving) {
-
-                sampleCounter = 1.0;
-                frameCounter += 1.0;
-
-                if (!cameraRecentlyMoving) {
-                        cameraJustStartedMoving = true;
-                        cameraRecentlyMoving = true;
-                }
-
-        }
-
-        if ( !cameraIsMoving ) {
-        
-                sampleCounter += 1.0; // for progressive refinement of image
-                if (sceneIsDynamic)
-                        sampleCounter = 1.0; // for continuous updating of image
-                
-                frameCounter  += 1.0;
-                if (cameraRecentlyMoving)
-                        frameCounter = 1.0;
-
-                cameraRecentlyMoving = false;
-                
-        }
-
-
         updateVariablesAndUniforms();
 
 
