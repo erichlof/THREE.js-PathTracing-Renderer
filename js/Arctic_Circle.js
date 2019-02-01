@@ -116,7 +116,29 @@ function updateVariablesAndUniforms() {
         
         sunAngle = (elapsedTime * 0.03) % Math.PI;
         sunDirection.set(Math.cos(sunAngle) * 1.2, Math.sin(sunAngle), -Math.cos(sunAngle) * 3.0);
-        sunDirection.normalize();	
+        sunDirection.normalize();
+        
+        if (cameraIsMoving) {
+                sampleCounter = 1.0;
+                frameCounter += 1.0;
+
+                if (!cameraRecentlyMoving) {
+                        cameraJustStartedMoving = true;
+                        cameraRecentlyMoving = true;
+                }
+        }
+
+        if ( !cameraIsMoving ) {
+                sampleCounter += 1.0; // for progressive refinement of image
+                if (sceneIsDynamic)
+                        sampleCounter = 1.0; // reset for continuous updating of image
+                
+                frameCounter  += 1.0;
+                if (cameraRecentlyMoving)
+                        frameCounter = 1.0;
+
+                cameraRecentlyMoving = false;  
+        }
         
         // scene/demo-specific uniforms
         pathTracingUniforms.uWaterLevel.value = waterLevel;
