@@ -7,12 +7,45 @@ html, body {
         margin: 0px;
         overflow: hidden;
         touch-action: none;
+        cursor: default;
 }
 
 #info {
-        position: absolute;
+        position: fixed;
         top: 5px;
         width: 100%;
         text-align: center;
         color: #ffffff;
+        cursor: default;
+        user-select: none;
+}
+
+#cameraInfo {
+        position: fixed;
+        left: 3%;
+        bottom: 2%;
+        font-family: Arial;
+        color: #ffffff;
+        cursor: default;
+        user-select: none;
+}
+
+.toggleButton {
+        position:fixed;
+        background-color: gray;
+        border: none;
+        color: white;
+        top: 5px;
+        right: 5px;
+        padding: 10px 20px;
+        text-align: center;
+        text-decoration: none;
+        font-size: 14px;
+        margin: 4px 2px;
+        cursor: pointer;
+        user-select: none;
+        z-index: 11;
+}
+#timePauseButton {
+        top: 50px;
 }
