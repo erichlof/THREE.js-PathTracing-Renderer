@@ -312,9 +312,9 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		intersec.color = vd6.yzw;
 		intersec.uv = triangleW * vec2(vd4.zw) + triangleU * vec2(vd5.xy) + triangleV * vec2(vd5.zw);
 		//intersec.type = int(vd6.x);
-		intersec.type = DIFF;
-		intersec.albedoTextureID = int(vd7.x);
-		//intersec.albedoTextureID = -1;
+		//intersec.albedoTextureID = int(vd7.x);
+		intersec.type = COAT;
+		intersec.albedoTextureID = -1;
 	}
 
 	return t;
@@ -362,20 +362,22 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		// if we reached something bright, don't spawn any more rays
 		if (intersec.type == LIGHT)
 		{	
-			//if (sampleLight || bounceIsSpecular)
-			{
+			//if (bounceIsSpecular)
 				accumCol = mask * intersec.emission;
-			}
 			
 			break;
 		}
 
-		if (intersec.type == POINT_LIGHT)
+		if (intersec.type == SPOT_LIGHT)
 		{	
 			
-			if (sampleLight || (bounceIsSpecular && bounces < 2))
+			if (sampleLight)
 			{
 				accumCol = mask * intersec.emission;
+			}
+			else if (bounceIsSpecular && bounces < 2)
+			{
+				accumCol = mask * clamp(intersec.emission, 0.0, 5.0);
 			}
 
 			break;
@@ -463,6 +465,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			r = Ray( x, reflect(r.direction, nl) );
 			r.origin += r.direction * epsIntersect;
 
+			if (bounces > 0)
+				bounceIsSpecular = false;
+
 			//bounceIsSpecular = true; // turn on mirror caustics
 			continue;
 		}
@@ -473,6 +478,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
 			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
+
+			if (bounces > 0)
+				bounceIsSpecular = false;
 
 			if (rand(seed) < Re) // reflect ray from surface
 			{
@@ -490,6 +498,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				r.origin += r.direction * epsIntersect;
 
 				bounceIsSpecular = true; // turn on refracting caustics
+				
 				continue;
 			}
 			
@@ -502,11 +511,17 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			nt = 1.4; // IOR of Clear Coat
 			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
 
+			if (bounces > 0)
+				bounceIsSpecular = false;
+
 			// choose either specular reflection or diffuse
 			if( rand(seed) < Re )
 			{	
 				r = Ray( x, reflect(r.direction, nl) );
 				r.origin += r.direction * epsIntersect;
+				if (bounces > 0)
+					bounceIsSpecular = false;
+
 				continue;	
 			}
 
@@ -549,14 +564,14 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0);
-	vec3 L1 = vec3(0.5, 0.7, 1.0) * 0.02;// Blueish sky light
-	vec3 L2 = vec3(1.0, 1.0, 1.0) * 800.0;// Bright white light bulb
+	vec3 L1 = vec3(0.5, 0.7, 1.0) * 0.01;// Blueish sky light
+	vec3 L2 = vec3(1.0, 1.0, 1.0) * 500.0;// Bright white light bulb
 	
 	spheres[0] = Sphere( 10000.0, vec3(0, 0, 0), L1, z, LIGHT);//large spherical sky light
-	spheres[1] = Sphere( 3.0, vec3(-10, 100, -50), L2, z, POINT_LIGHT);//small spherical point light
+	spheres[1] = Sphere( 3.0, vec3(-10, 100, -50), L2, z, SPOT_LIGHT);//small spherical light
 	spheres[2] = Sphere( 4000.0, vec3(0, -4000, 0), z, vec3(0.4, 0.4, 0.4), CHECK);//Checkered Floor
 	vec3 spotLightPos = spheres[1].position;
-	vec3 spotLightDir = normalize(vec3(5, 20, -25) - spotLightPos);
+	vec3 spotLightDir = normalize(vec3(5, 20, -35) - spotLightPos);
 	openCylinders[0] = OpenCylinder( spotLightPos - (spotLightDir * spheres[1].radius) * 2.0, spotLightPos + (spotLightDir * spheres[1].radius) * 5.0, 
 					   spheres[1].radius * 1.5, z, vec3(1), SPEC);//metal open Cylinder
 	disks[0] = Disk( spheres[1].radius * 1.5, spotLightPos - (spotLightDir * spheres[1].radius * 2.0), spotLightDir, z, vec3(0.9, 0.9, 0.9), SPEC);//metal disk
