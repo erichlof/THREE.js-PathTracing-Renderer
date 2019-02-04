@@ -129,10 +129,9 @@ To my knowledge, this is just about as fast as I can push the path tracing engin
 
 <h2>TODO</h2>
 
-* Add support for layered texture materials (diffuse, normal map, specular map, emissive map, etc.)
+* Add support for multiple BVH models in the same scene, which will require a BVH for the BVH's! ;-)
 * Instead of scene description hard-coded in the path tracing shader, let the scene be defined using the Three.js library
-* Continue to improve on BVH under WebGL 2.0 which is now supprted by three.js, yay!
-* Dynamic Scene description/BVH updating and streaming into the GPU path tracer on each animation frame via LBVH (which requires bit manipulations, Morton codes, and Z-order curves). This would allow real-time path tracing of scenes with complex, animating triangle geometry<br>
+* Dynamic Scene description/BVH rigged model animation streamed real-time to the GPU path tracer<br>
 
 <h2>ABOUT</h2>
 
