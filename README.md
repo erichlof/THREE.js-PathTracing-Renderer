@@ -29,6 +29,8 @@ For comparison, here is a real photograph of the original Cornell Box vs. a rend
 
 * [Quadric Geometry Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Quadric_Geometry_Showcase.html) showing different quadric (mathematical) shapes (Warning: this may take 7-10 seconds to load/compile!)
 
+* [BVH Visualizer Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/BVH_Visualizer.html)<br> Lets you peek under the hood of the BVH acceleration structure and see how the various axis-aligned bounding boxes are built all the way from the large surrounding root node box (level 0), to the small leaf node boxes (level 14+), to the individual triangles of the model that are contained within those leaf node boxes.
+
 <h3>Constructive Solid Geometry(CSG) Museum Demos</h3>
 
 The following demos showcase different techniques in Constructive Solid Geometry - taking one 3D shape and either adding, removing, or overlapping a second shape. (Warning: these demos may take 10 seconds to load/compile!) <br>
@@ -100,22 +102,6 @@ Enter Bi-Directional path tracing to the rescue!:
 <h3>Experimental Works in Progress (W.I.P.)</h3>
 
 The following demos show what I have been experimenting with most recently.  They might not work 100% and might have small visual artifacts that I am trying to fix.  I just wanted to share some more possible areas in the world of path tracing! :-) <br>
-
-Rendering spheres, boxes and mathematical shapes is nice, but most modern graphics models are built out of triangles.  The following demo uses the three.js .obj-Loader to load a model in .obj format (list of triangle data) from disk or served as a static file. It then builds a BVH acceleration structure (hierarchy of bounding boxes around all the triangles) and then places the object in the scene to be path traced. With recent support for WebGL 2.0 from three.js (thanks mrdoob!), I have successfully implemented traversal of the BVH entirely on the GPU (which wasn't possible under WebGL 1.0).  The initial results are promising:  Handles low-poly up to 500,000 triangle models (I tested up to that amount so far) and renders at 30-60fps! Update: Mobile devices lose rendering context when trying to load the .obj files and build the BVH GPU data texture - Investigating that...  But for now, on desktop it works great! <br>
-
-* [BVH WebGL 2.0 Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/BVH_WebGL_2.html)<br>
-
-Now that models can be loaded and path traced, I'm currently working on developing a material system (w.i.p.) for my path tracing engine to read, so that OBJ models that have MTL files, or for example GLTF models with their binary vertex data and material assets, can all be imported.  All that is required of the user is just including the appropriate loader format script at the top of their html file, i.e. OBJLoader.js, MTLLoader.js, or GLTFLoader.js, or FBXLoader.js, etc.  Then just enter the file name and call the desired loader's 'load' function.  In other words, the path tracing engine is loader format-agnostic: it doesn't care which format you choose, it just loads it in using the handy three.js loaders (thanks three.js team!) and creates a THREE.Mesh object that has geometry and materials, which the path tracer then intercepts and places that data all on a GPU texture.  As proof of concept, here is a OBJ+MTL format loader example: <br>
-
-* [BVH OBJ MTL Loader Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/BVH_OBJ_MTL_Models_Example.html)<br>
-
-And here is a GLTF format loader example - note, all I did was just uncomment the different loader's 'load' function.  All the other code remains the same!
-
-* [BVH GLTF Loader Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/BVH_GLTF_Models_Example.html)<br>
-
-The following demo lets you peek under the hood of the BVH acceleration structure and see how the various axis-aligned bounding boxes are built all the way from the large surrounding root node box (level 0), to the small leaf node boxes (level 14+), to the individual triangles of the model that are contained within those leaf node boxes.
-
-* [BVH Visualizer Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/BVH_Visualizer.html)<br>
 
 Some pretty interesting shapes can be obtained by deforming objects and/or warping the ray space (position and direction).  This demo applies a twist warp to the spheres and mirror box and randomizes the object space of the top purple sphere, creating an acceptable representation of a cloud (for free - no extra processing time for volumetrics!) <br>
 
