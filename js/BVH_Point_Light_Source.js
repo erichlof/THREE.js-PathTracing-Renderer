@@ -43,7 +43,7 @@ function load_GLTF_Model() {
 
         var gltfLoader = new THREE.GLTFLoader();
 
-        gltfLoader.load("models/StanfordBunny.gltf", function( meshGroup ) { // Triangles: 30,338
+        gltfLoader.load("models/StanfordBunny.glb", function( meshGroup ) { // Triangles: 30,338
 
                 if (meshGroup.scene) 
                         meshGroup = meshGroup.scene;
