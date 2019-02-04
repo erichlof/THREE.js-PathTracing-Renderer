@@ -43,7 +43,7 @@ function load_GLTF_Model() {
 
         var gltfLoader = new THREE.GLTFLoader();
 
-        gltfLoader.load("models/Duck.gltf", function( meshGroup ) { // Triangles: 4,212
+        gltfLoader.load("models/StanfordBunny.gltf", function( meshGroup ) { // Triangles: 30,338
 
                 if (meshGroup.scene) 
                         meshGroup = meshGroup.scene;
@@ -109,8 +109,12 @@ function load_GLTF_Model() {
                 // ********* different GLTF Model Settings **********
 
                 // settings for Duck model
-                modelScale = 0.1;
-                modelPositionOffset.set(0, 20, -30);
+                //modelScale = 0.1;
+                //modelPositionOffset.set(0, 20, -30);
+
+                // settings for StanfordBunny model
+		modelScale = 0.04;
+		modelPositionOffset.set(0, 27.5, -40);
                 
                 // now that the models have been loaded, we can init 
                 init();
@@ -386,7 +390,7 @@ function initPathTracingShaders() {
 // called automatically from within initPathTracingShaders() function above
 function createPathTracingMaterial() {
 
-        fileLoader.load('shaders/BVH_Point_Light_Source_Fragment.glsl', function (shaderText) {
+        fileLoader.load('shaders/BVH_Spot_Light_Source_Fragment.glsl', function (shaderText) {
                 
                 pathTracingFragmentShader = shaderText;
 
