@@ -227,11 +227,4 @@ function updateVariablesAndUniforms() {
 
 
 
-initWindowAndControls_GUI(); // boilerplate: init handlers for window, mouse / mobile controls + GUI
-
-initTHREEjs(); // boilerplate: init necessary three.js items and scene/demo-specific objects
-
-onWindowResize(); // this 'jumpstarts' the initial dimensions and parameters for the window and renderer
-
-// everything is set up, now we can start animating
-animate();
+init_GUI(); // init app and start animating
