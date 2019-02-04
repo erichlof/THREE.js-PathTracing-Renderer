@@ -511,9 +511,6 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			nt = 1.4; // IOR of Clear Coat
 			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
 
-			if (bounces > 0)
-				bounceIsSpecular = false;
-
 			// choose either specular reflection or diffuse
 			if( rand(seed) < Re )
 			{	
