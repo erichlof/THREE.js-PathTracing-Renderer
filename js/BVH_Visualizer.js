@@ -151,7 +151,8 @@ function load_GLTF_Model() {
 
         var gltfLoader = new THREE.GLTFLoader();
 
-        gltfLoader.load("models/StanfordBunny.glb", function( meshGroup ) { // Triangles: 30,338
+        //gltfLoader.load("models/StanfordBunny.glb", function( meshGroup ) { // Triangles: 30,338
+        gltfLoader.load("models/StanfordDragon.glb", function( meshGroup ) { // Triangles: 100,000
 
                 if (meshGroup.scene) 
                         meshGroup = meshGroup.scene;
@@ -221,8 +222,12 @@ function load_GLTF_Model() {
                 //modelPositionOffset.set(0, 20, -30);
 
                 // settings for StanfordBunny model
-		modelScale = 0.04;
-		modelPositionOffset.set(0, 28, -40);
+		//modelScale = 0.04;
+                //modelPositionOffset.set(0, 28, -40);
+                
+                // settings for StanfordDragon model
+		modelScale = 3.0;
+		modelPositionOffset.set(0, 18.2, -40);
                 
                 // now that the models have been loaded, we can init (with GUI for this demo)
                 init_GUI();
@@ -244,7 +249,7 @@ function initSceneData() {
         // position and orient camera
         cameraControlsObject.position.set(0, 30, 40);
         // look slightly downward
-        cameraControlsPitchObject.rotation.x = -0.2;
+        //cameraControlsPitchObject.rotation.x = -0.2;
 
         total_number_of_triangles = modelMesh.geometry.attributes.position.array.length / 9;
         console.log("Triangle count:" + total_number_of_triangles);
