@@ -5,7 +5,7 @@ Real-time PathTracing with global illumination and progressive rendering, all on
 
 * [Geometry Showcase Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Geometry_Showcase.html) demonstrating some primitive shapes for ray tracing.
 
-* [Animated BVH Model Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Animated_BVH_Model.html) not only loads and renders a 15,000+ triangle GLTF model with correct PBR materials (albedo, emmisive, metallicRoughness, and normal maps), but it also translates and rotates the entire model and its BVH structure in real time at 60 fps!  Loading animations for rigged models is W.I.P. still under investigation, but getting the models to move, rotate, and scale arbitrarily was a huge step forward for the path tracing engine!
+* [Animated BVH Model Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/BVH_Animated_Model.html) not only loads and renders a 15,000+ triangle GLTF model with correct PBR materials (albedo, emmisive, metallicRoughness, and normal maps), but it also translates and rotates the entire model and its BVH structure in real time at 60 fps!  Loading animations for rigged models is W.I.P. still under investigation, but getting the models to move, rotate, and scale arbitrarily was a huge step forward for the path tracing engine!
 
 * [Ocean and Sky Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Ocean_And_Sky_Rendering.html) which models an enormous calm ocean underneath a realistic physical sky. Now has more photo-realistic procedural clouds!
 
