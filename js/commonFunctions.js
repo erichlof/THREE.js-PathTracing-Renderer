@@ -174,7 +174,7 @@ function onWindowResize(event) {
 
 
 
-function initWindowAndControls() {
+function init() {
 
         window.addEventListener('resize', onWindowResize, false);
 
@@ -251,10 +251,12 @@ function initWindowAndControls() {
         });
         */
 
-} // end function initWindowAndControls()
+        initTHREEjs(); // boilerplate: init necessary three.js items and scene/demo-specific objects
+
+} // end function init()
 
 
-function initWindowAndControls_GUI() {
+function init_GUI() {
 
         materialController = {
                 LSphereMaterial: 4,
@@ -367,7 +369,9 @@ function initWindowAndControls_GUI() {
         });
         */
 
-} // end function initWindowAndControls_GUI()
+        initTHREEjs(); // boilerplate: init necessary three.js items and scene/demo-specific objects
+
+} // end function init_GUI()
 
 
 function initTHREEjs() {
@@ -488,6 +492,12 @@ function initTHREEjs() {
 
         screenOutputMesh = new THREE.Mesh(screenOutputGeometry, screenOutputMaterial);
         screenOutputScene.add(screenOutputMesh);
+
+
+        onWindowResize(); // this 'jumpstarts' the initial dimensions and parameters for the window and renderer
+
+        // everything is set up, now we can start animating
+        animate();
 
 } // end function initTHREEjs()
 
