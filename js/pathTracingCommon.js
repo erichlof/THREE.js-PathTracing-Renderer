@@ -130,6 +130,7 @@ out vec4 out_FragColor;
 #define E                2.71828182845904524
 #define INFINITY         1000000.0
 
+#define SPOT_LIGHT -2
 #define POINT_LIGHT -1
 #define LIGHT 0
 #define DIFF 1
