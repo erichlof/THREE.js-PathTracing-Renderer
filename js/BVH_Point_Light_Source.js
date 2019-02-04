@@ -390,7 +390,7 @@ function initPathTracingShaders() {
 // called automatically from within initPathTracingShaders() function above
 function createPathTracingMaterial() {
 
-        fileLoader.load('shaders/BVH_Spot_Light_Source_Fragment.glsl', function (shaderText) {
+        fileLoader.load('shaders/BVH_Point_Light_Source_Fragment.glsl', function (shaderText) {
                 
                 pathTracingFragmentShader = shaderText;
 
