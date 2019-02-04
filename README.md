@@ -82,18 +82,18 @@ Enter Bi-Directional path tracing to the rescue!:
 
 <h2>FEATURES</h2>
 
-* Real-time interactive Path Tracing in your Chrome browser - even on your smartphone! ( What?! )
+* Real-time interactive Path Tracing in your browser - even on your smartphone! ( What?! )
 * First-Person camera navigation through the 3D scene.
 * When camera is still, switches to progressive rendering mode and converges on a photo-realistic result!
-* The accumulated render image will converge at around 1,000-2,000 samples (lower for simple scenes, higher for complex scenes).
-* Direct lighting now makes images render/converge almost instantly!
+* The accumulated render image will converge at around 500-3,000 samples (lower for simple scenes, higher for complex scenes).
+* Randomized Direct Light sampling now makes images render/converge almost instantly!
 * Both Uni-Directional (normal) and Bi-Directional path tracing approaches available for different lighting situations.
 * Support for: Spheres, Planes, Discs, Quads, Triangles, and quadrics such as Cylinders, Cones, Ellipsoids, Paraboloids, Hyperboloids, Capsules, and Rings/Torii. Parametric/procedural surfaces (i.e. terrain, clouds, waves, etc.) are handled through Raymarching.
 * Constructive Solid Geometry(CSG) allows you to combine 2 shapes using operations like addition, subtraction, and overlap.
-* Support for loading models in .obj format
-* BVH (Bounding Volume Hierarchy) greatly speeds up rendering of triangle models in .obj format (tested up to 500,000 triangles!)
+* Support for loading models in .gltf and .glb formats
+* BVH (Bounding Volume Hierarchy) greatly speeds up rendering of triangle models in gltf/glb format (tested up to 500,000 triangles!)
 * Current material options: Metallic (mirrors, gold, etc.), Refractive (glass, water, etc.), Diffuse(matte, chalk, etc), ClearCoat(cars, plastic, billiard balls, etc.), Translucent (skin, leaves, cloth, etc.), Subsurface w/ shiny coat (jelly beans, cherries, teeth, polished Jade, etc.)
-* Materials can now use Texture images which can be loaded, applied, and manipulated in the path tracer       
+* Support for PBR materials on models in gltf format (albedo diffuse, emissive, metallicRoughness, and normal maps)        
 * Diffuse/Matte objects use Monte Carlo integration (a random process, hence the visual noise) to sample the unit-hemisphere oriented around the normal of the ray-object hitpoint and collects any light that is being received.  This is the key-difference between path tracing and simple old-fashioned ray tracing.  This is what produces realistic global illumination effects such as color bleeding/sharing between diffuse objects and refractive caustics from specular/glass/water objects.
 * Camera has Depth of Field with real-time adjustable Focal Distance and Aperture Size settings for a still-photography or cinematic look.
 * SuperSampling gives beautiful, clean Anti-Aliasing (no jagged edges!)
