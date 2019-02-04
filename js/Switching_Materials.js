@@ -8,6 +8,126 @@ var matType = 0;
 var changeLeftSphereMaterial = false;
 var changeRightSphereMaterial = false;
 
+
+function init_GUI() {
+
+        materialController = {
+                LSphereMaterial: 4,
+                RSphereMaterial: 2
+        };
+
+        function leftMatChanger() {
+                changeLeftSphereMaterial = true;
+        }
+        
+        function rightMatChanger() {
+                changeRightSphereMaterial = true;
+        } 
+
+        gui = new dat.GUI();
+        
+        gui.add( materialController, 'LSphereMaterial', 1, 7, 1 ).onChange( leftMatChanger );
+        gui.add( materialController, 'RSphereMaterial', 1, 7, 1 ).onChange( rightMatChanger );
+        
+        leftMatChanger();
+        rightMatChanger();
+
+        gui.domElement.style.webkitUserSelect = "none";
+        gui.domElement.style.MozUserSelect = "none";
+        
+        window.addEventListener('resize', onWindowResize, false);
+
+        if ( 'ontouchstart' in window ) {
+                mouseControl = false;
+                // if on mobile device, unpause the app because there is no ESC key and no mouse capture to do
+                isPaused = false;
+                pixelRatio = 0.5;
+                ableToEngagePointerLock = true;
+
+                mobileJoystickControls = new MobileJoystickControls ({
+                        //showJoystick: true,
+                        guiDomElement: gui.domElement,
+                        enableMultiTouch: true
+                });	
+        }
+
+        if (mouseControl) {
+
+                window.addEventListener( 'wheel', onMouseWheel, false );
+
+                window.addEventListener("click", function(event) {
+                        event.preventDefault();	
+                }, false);
+                window.addEventListener("dblclick", function(event) {
+                        event.preventDefault();	
+                }, false);
+                
+                document.body.addEventListener("click", function(event) {
+                        if (!ableToEngagePointerLock)
+                                return;
+                        this.requestPointerLock = this.requestPointerLock || this.mozRequestPointerLock;
+                        this.requestPointerLock();
+                }, false);
+
+
+                var pointerlockChange = function ( event ) {
+
+                        if ( document.pointerLockElement === document.body || 
+                            document.mozPointerLockElement === document.body || document.webkitPointerLockElement === document.body ) {
+
+                                isPaused = false;
+
+                        } else {
+
+                                isPaused = true;
+
+                        }
+
+                };
+
+                // Hook pointer lock state change events
+                document.addEventListener( 'pointerlockchange', pointerlockChange, false );
+                document.addEventListener( 'mozpointerlockchange', pointerlockChange, false );
+                document.addEventListener( 'webkitpointerlockchange', pointerlockChange, false );
+
+        }
+
+        if (mouseControl) {
+                gui.domElement.addEventListener("mouseenter", function(event) {
+                                ableToEngagePointerLock = false;	
+                }, false);
+                gui.domElement.addEventListener("mouseleave", function(event) {
+                                ableToEngagePointerLock = true;
+                }, false);
+        }
+
+        /*
+        // Fullscreen API
+        document.addEventListener("click", function() {
+        	
+        	if ( !document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement ) {
+
+        		if (document.documentElement.requestFullscreen) {
+        			document.documentElement.requestFullscreen();
+        			
+        		} else if (document.documentElement.mozRequestFullScreen) {
+        			document.documentElement.mozRequestFullScreen();
+        		
+        		} else if (document.documentElement.webkitRequestFullscreen) {
+        			document.documentElement.webkitRequestFullscreen();
+        		
+        		}
+
+        	}
+        });
+        */
+
+        initTHREEjs(); // boilerplate: init necessary three.js items and scene/demo-specific objects
+
+} // end function init_GUI()
+
+
+
 function MaterialObject() {
 // a list of material types and their corresponding numbers are found in the 'pathTracingCommon.js' file
         this.type = 1; // default is '1': diffuse type
