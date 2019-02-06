@@ -85,9 +85,8 @@ var screenOutputShader = {
 		
 		'void main()',
 		'{',
-			'vec4 pixelColor = texture(tPathTracedImageTexture, vUv) * uOneOverSampleCounter;',
-
-			'out_FragColor = pow(pixelColor, vec4(0.4545));',	
+			'vec3 pixelColor = texture(tPathTracedImageTexture, vUv).rgb * uOneOverSampleCounter;',
+			'out_FragColor = vec4( pow(pixelColor, vec3(0.4545)), 1.0 );',	
 		'}'
 		
         ].join( '\n' )
