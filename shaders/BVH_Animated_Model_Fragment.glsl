@@ -140,6 +140,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.color = spheres[i].color;
 			intersec.type = spheres[i].type;
 			intersec.textureID = -1;
+			intersec.isDynamic = false;
 			triangleLookupNeeded = false;
 		}
 	}
@@ -155,6 +156,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.color = boxes[i].color;
 			intersec.type = boxes[i].type;
 			intersec.textureID = -1;
+			intersec.isDynamic = false;
 			triangleLookupNeeded = false;
 		}
         }
@@ -179,6 +181,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.type = DIFF;
 		}
 		intersec.textureID = -1;
+		intersec.isDynamic = false;
 		triangleLookupNeeded = false;
 	}
 
@@ -202,6 +205,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.type = DIFF;
 		}
 		intersec.textureID = -1;
+		intersec.isDynamic = false;
 		triangleLookupNeeded = false;
         }
         
@@ -342,7 +346,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 
 
 //--------------------------------------------------------------------------------------------------------
-vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic, inout bool rayHitIsSpecular )
+vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 //--------------------------------------------------------------------------------------------------------
 {
         Intersection intersec;
@@ -378,23 +382,29 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic, ino
                         break;
 		}
 		
+		if (bounces == 0 && intersec.isDynamic)
+			rayHitIsDynamic = true;
+
+		// if (bounces > 0 && !intersec.isDynamic)
+		// 	rayHitIsDynamic = false;
+
 		// if we reached something bright, don't spawn any more rays
 		if (intersec.type == LIGHT)
 		{	
-			//if (sampleLight || bounceIsSpecular)
-			{
-				accumCol = mask * intersec.emission;
-			}
+			accumCol = mask * intersec.emission;
 			
 			break;
 		}
 
-		if (intersec.type == POINT_LIGHT)
+		if (intersec.type == SPOT_LIGHT)
 		{	
-			
-			if (sampleLight || (bounceIsSpecular && bounces < 2))
+			if (sampleLight)
 			{
 				accumCol = mask * intersec.emission;
+			}
+			else if (bounceIsSpecular && bounces < 2)
+			{
+				accumCol = mask * clamp(intersec.emission, 0.0, 1.0);
 			}
 
 			break;
@@ -577,7 +587,7 @@ void SetupScene(void)
 	vec3 L2 = vec3(1.0, 1.0, 1.0) * 800.0;// Bright white light bulb
 	
 	spheres[0] = Sphere( 10000.0,     vec3(0, 0, 0), L1, z, LIGHT, false);//spherical white Light1
-	spheres[1] = Sphere( 3.0, vec3(-10, 100, -50), L2, z, POINT_LIGHT, false);//small spherical point light
+	spheres[1] = Sphere( 3.0, vec3(-10, 100, -50), L2, z, SPOT_LIGHT, false);//spotlight
 	spheres[2] = Sphere( 4000.0, vec3(0, -4000, 0), z, vec3(0.4, 0.4, 0.4), CHECK, false);//Checkered Floor
         
         vec3 spotLightTarget = uGLTF_Model_Position;
@@ -616,7 +626,7 @@ void main( void )
 
         vec2 pixelPos = vec2(0);
         vec2 pixelOffset = vec2(0);
-        
+
         float x = rand(seed);
         float y = rand(seed);
 
@@ -649,29 +659,32 @@ void main( void )
         SetupScene(); 
 
         bool rayHitIsDynamic = false;
-        bool rayHitIsSpecular = false;
+
         // perform path tracing and get resulting pixel color
-        vec3 pixelColor = CalculateRadiance( ray, seed, rayHitIsDynamic, rayHitIsSpecular );
+        vec3 pixelColor = CalculateRadiance( ray, seed, rayHitIsDynamic );
         
-        vec3 previousColor = texture2D(tPreviousTexture, vUv).rgb;
-        
-        // clears out the motion-blur trail left behind by lights
-        if (!rayHitIsSpecular && (previousColor.r > 1.0 || previousColor.g > 1.0 || previousColor.b > 1.0))
-        {
+        vec4 previousImage = texture2D(tPreviousTexture, vUv);
+	vec3 previousColor = previousImage.rgb;
+
+	
+	if (previousImage.a == 1.0)
+	{
+		previousColor *= 0.5; // motion-blur trail amount (old image)
+                pixelColor *= 0.5; // brightness of new image (noisy)
+	}
+	else if (uCameraIsMoving)
+	{
                 previousColor *= 0.5; // motion-blur trail amount (old image)
                 pixelColor *= 0.5; // brightness of new image (noisy)
         }
-        else if ( uCameraIsMoving || rayHitIsDynamic )
-        {
-                previousColor *= 0.78; // motion-blur trail amount (old image)
-                pixelColor *= 0.22; // brightness of new image (noisy)
+	else
+	{
+                previousColor *= 0.9; // motion-blur trail amount (old image)
+                pixelColor *= 0.1; // brightness of new image (noisy)
         }
-        else 
-        {
-                previousColor *= 0.94; // motion-blur trail amount (old image)
-                pixelColor *= 0.06; // brightness of new image (noisy)
-        }
+	
+	
         
         
-        out_FragColor = vec4( pixelColor + previousColor, 1.0 );	
+        out_FragColor = vec4( pixelColor + previousColor, rayHitIsDynamic? 1.0 : 0.0 );	
 }
