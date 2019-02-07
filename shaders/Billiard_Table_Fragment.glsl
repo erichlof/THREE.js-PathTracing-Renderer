@@ -212,7 +212,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			diffuseCount++;
 
 			if (intersec.type == CLOTH)
-				intersec.color *= texture2D(tClothTexture, (10.0 * x.xz) / 512.0).rgb;
+				intersec.color *= texture(tClothTexture, (10.0 * x.xz) / 512.0).rgb;
 			
 			mask *= intersec.color;
 
@@ -352,13 +352,13 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				    	isSpot = true;
 				
 				if (intersec.type == DARKWOOD)
-					intersec.color *= texture2D(tDarkWoodTexture, 3.5 * x.xz / 512.0).rgb;
+					intersec.color *= texture(tDarkWoodTexture, 3.5 * x.xz / 512.0).rgb;
 					
 				if (isSpot)
 					intersec.color = clamp(intersec.color + 0.5, 0.0, 1.0);
 					
 				if (intersec.type == LIGHTWOOD)
-					intersec.color *= texture2D(tLightWoodTexture, 6.0 * x.xz / 512.0).rgb;
+					intersec.color *= texture(tLightWoodTexture, 6.0 * x.xz / 512.0).rgb;
 					
 			}
 
