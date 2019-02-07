@@ -63,7 +63,7 @@ float lookup_Heightmap( in vec3 pos )
 
 	for (int i = 0; i < 2; i ++)
 	{
-		h += mult * texture2D(t_PerlinNoise, uv + 0.5).x;
+		h += mult * texture(t_PerlinNoise, uv + 0.5).x;
 		mult *= 0.5;
 		scaleAccum += mult;
 		uv *= 2.0;
@@ -81,7 +81,7 @@ float lookup_Normal( in vec3 pos )
 
 	for (int i = 0; i < 9; i ++)
 	{
-		h += mult * texture2D(t_PerlinNoise, uv + 0.5).x;
+		h += mult * texture(t_PerlinNoise, uv + 0.5).x;
 		mult *= 0.5;
 		scaleAccum += mult;
 		uv *= 2.0;
@@ -383,7 +383,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 		if (intersec.type == TERRAIN)
 		{
 			firstX = x;
-			float rockNoise = texture2D(t_PerlinNoise, (0.0001 * x.xz) + 0.5).x;
+			float rockNoise = texture(t_PerlinNoise, (0.0001 * x.xz) + 0.5).x;
 			vec3 rockColor0 = vec3(0.2, 0.2, 0.2) * 0.01 * rockNoise;
 			vec3 rockColor1 = vec3(0.2, 0.2, 0.2) * rockNoise;
 			vec3 snowColor = vec3(0.7);
@@ -536,8 +536,8 @@ void main( void )
 	// pixelOffset ranges from -1.0 to +1.0, so only need to divide by half resolution
 	pixelOffset /= (uResolution * 0.5);
 
-	// vUv comes in the range 0.0 to 1.0, so we must map it to the range -1.0 to +1.0
-	pixelPos = vUv * 2.0 - 1.0;
+	// we must map pixelPos into the range -1.0 to +1.0
+	pixelPos = (gl_FragCoord.xy / uResolution) * 2.0 - 1.0;
 	pixelPos += pixelOffset;
 
 	vec3 rayDir = normalize( pixelPos.x * camRight * uULen + pixelPos.y * camUp * uVLen + camForward );
@@ -557,12 +557,12 @@ void main( void )
 	// perform path tracing and get resulting pixel color
 	vec3 pixelColor = CalculateRadiance( ray, uSunDirection, seed );
 	
-	vec3 previousColor = texture2D(tPreviousTexture, vUv).rgb;
+	vec3 previousColor = texelFetch(tPreviousTexture, ivec2(gl_FragCoord.xy), 0).rgb;
 	
 	if ( uCameraIsMoving )
 	{
-		previousColor *= 0.85; // motion-blur trail amount (old image)
-		pixelColor *= 0.15; // brightness of new image (noisy)
+		previousColor *= 0.8; // motion-blur trail amount (old image)
+		pixelColor *= 0.2; // brightness of new image (noisy)
 	}
 	else
 	{
