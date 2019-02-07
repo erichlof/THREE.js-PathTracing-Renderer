@@ -143,7 +143,7 @@ float getOceanWaterHeight_Detail( vec3 p )
 
 float noise3D( in vec3 p )
 {
-	return texture2D(t_PerlinNoise, p.xz).x;
+	return texture(t_PerlinNoise, p.xz).x;
 }
 
 const mat3 m = 1.21 * mat3( 0.00,  0.80,  0.60,
@@ -229,7 +229,7 @@ float lookup_Heightmap( in vec3 pos )
 	float mult = 1.0;
 	for (int i = 0; i < 3; i ++)
 	{
-		h += mult * texture2D(t_PerlinNoise, uv + 0.5).x;
+		h += mult * texture(t_PerlinNoise, uv + 0.5).x;
 		mult *= 0.5;
 		uv *= 2.0;
 	}
@@ -244,7 +244,7 @@ float lookup_Normal( in vec3 pos )
 	float mult = 1.0;
 	for (int i = 0; i < 9; i ++)
 	{
-		h += mult * texture2D(t_PerlinNoise, uv + 0.5).x;
+		h += mult * texture(t_PerlinNoise, uv + 0.5).x;
 		mult *= 0.5;
 		uv *= 2.0;
 	}
@@ -439,7 +439,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 		{
 			previousIntersecType = TERRAIN;
 			firstX = x;
-			float rockNoise = texture2D(t_PerlinNoise, (0.001 * x.xz)).x;
+			float rockNoise = texture(t_PerlinNoise, (0.001 * x.xz)).x;
 			vec3 rockColor0 = vec3(0.2, 0.2, 0.2) * 0.01 * rockNoise;
 			vec3 rockColor1 = vec3(0.2, 0.2, 0.2) * rockNoise;
 			vec3 snowColor = vec3(0.7);
@@ -573,8 +573,8 @@ void main( void )
 	// pixelOffset ranges from -1.0 to +1.0, so only need to divide by half resolution
 	pixelOffset /= (uResolution * 0.5);
 
-	// vUv comes in the range 0.0 to 1.0, so we must map it to the range -1.0 to +1.0
-	pixelPos = vUv * 2.0 - 1.0;
+	// we must map pixelPos into the range -1.0 to +1.0
+	pixelPos = (gl_FragCoord.xy / uResolution) * 2.0 - 1.0;
 	pixelPos += pixelOffset;
 
 	vec3 rayDir = normalize( pixelPos.x * camRight * uULen + pixelPos.y * camUp * uVLen + camForward );
@@ -594,12 +594,12 @@ void main( void )
 	// perform path tracing and get resulting pixel color
 	vec3 pixelColor = CalculateRadiance( ray, uSunDirection, seed );
 	
-	vec3 previousColor = texture2D(tPreviousTexture, vUv).rgb;
+	vec3 previousColor = texelFetch(tPreviousTexture, ivec2(gl_FragCoord.xy), 0).rgb;
 	
 	if ( uCameraIsMoving )
 	{
-		previousColor *= 0.85; // motion-blur trail amount (old image)
-		pixelColor *= 0.15; // brightness of new image (noisy)
+		previousColor *= 0.8; // motion-blur trail amount (old image)
+		pixelColor *= 0.2; // brightness of new image (noisy)
 	}
 	else
 	{
