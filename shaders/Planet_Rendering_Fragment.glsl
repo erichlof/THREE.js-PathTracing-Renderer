@@ -170,7 +170,7 @@ float getTerrainHeight( in vec3 pos )
 
 	for (int i = 0; i < 4; i ++)
 	{
-		h += amp * texture2D(t_PerlinNoise, uv + 0.5).x;
+		h += amp * texture(t_PerlinNoise, uv + 0.5).x;
 		amp *= 0.5;
 		uv *= 2.0;
 	}
@@ -188,7 +188,7 @@ float getTerrainHeight_Detail( in vec3 pos )
 
 	for (int i = 0; i < 12; i ++)
 	{
-		h += amp * texture2D(t_PerlinNoise, uv + 0.5).x;
+		h += amp * texture(t_PerlinNoise, uv + 0.5).x;
 		amp *= 0.5;
 		uv *= 2.0;
 	}
@@ -547,7 +547,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, vec3 starRayDir )
 			uv.x = (1.0 + atan(mn.z, mn.x) / PI) * 0.5;
 			uv.y = acos(mn.y) / PI;
 			uv.x *= 2.5;
-			float rockNoise = clamp(texture2D(t_PerlinNoise, uv).x, 0.2, 1.0);
+			float rockNoise = clamp(texture(t_PerlinNoise, uv).x, 0.2, 1.0);
 			intersec.color = clamp(intersec.color * rockNoise, 0.0, 1.0);
 			vec3 sampleSkyCol = computeIncidentLight(r, 0.0, tMax);
 			accumCol = mix(intersec.color, sampleSkyCol, clamp(0.7 * (sampleSkyCol.r + sampleSkyCol.b), 0.0, 1.0));
@@ -564,7 +564,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, vec3 starRayDir )
 			vec2 uv;
 			uv.x = dot(x, uCameraFrameRight);
 			uv.y = dot(x, uCameraFrameForward);
-			float rockNoise = texture2D(t_PerlinNoise, (0.2 * uv)).x;
+			float rockNoise = texture(t_PerlinNoise, (0.2 * uv)).x;
 			vec3 rockColor0 = vec3(0.2, 0.2, 0.2) * 0.01 * rockNoise;
 			vec3 rockColor1 = vec3(0.2, 0.2, 0.2) * rockNoise;
 			vec3 snowColor = vec3(0.7);
@@ -720,8 +720,8 @@ void main( void )
 	// pixelOffset ranges from -1.0 to +1.0, so only need to divide by half resolution
 	pixelOffset /= (uResolution * 0.5);
 
-	// vUv comes in the range 0.0 to 1.0, so we must map it to the range -1.0 to +1.0
-	pixelPos = vUv * 2.0 - 1.0;
+	// we must map pixelPos into the range -1.0 to +1.0
+	pixelPos = (gl_FragCoord.xy / uResolution) * 2.0 - 1.0;
 	vec2 starPixelPos = pixelPos;
 	pixelPos += pixelOffset;
 
@@ -743,7 +743,7 @@ void main( void )
 	// perform path tracing and get resulting pixel color
 	vec3 pixelColor = CalculateRadiance( ray, seed, starRayDir );
 	
-	vec3 previousColor = texture2D(tPreviousTexture, vUv).rgb;
+	vec3 previousColor = texelFetch(tPreviousTexture, ivec2(gl_FragCoord.xy), 0).rgb;
 	
 	if ( uCameraIsMoving )
 	{
