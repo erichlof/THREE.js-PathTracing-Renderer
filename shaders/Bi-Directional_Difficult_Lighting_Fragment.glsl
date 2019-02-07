@@ -253,17 +253,17 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				if (abs(nl.x) > 0.5) uv = vec2(x.z, x.y);
 				else if (abs(nl.y) > 0.5) uv = vec2(x.x, x.z);
 				else uv = vec2(x.x, x.y);
-				intersec.color *= texture2D(tLightWoodTexture, uv * 0.01).rgb;
+				intersec.color *= texture(tLightWoodTexture, uv * 0.01).rgb;
 			}
 			else if (intersec.type == DARKWOOD)
 			{
 				vec2 uv = vec2( uTallBoxInvMatrix * vec4(x, 1.0) );
-				intersec.color *= texture2D(tDarkWoodTexture, uv * vec2(0.01,0.005)).rgb;
+				intersec.color *= texture(tDarkWoodTexture, uv * vec2(0.01,0.005)).rgb;
 			}
 			else if (intersec.type == PAINTING)
 			{
 				vec2 uv = vec2((55.0 + x.x) / 110.0, (x.y - 20.0) / 44.0);
-				intersec.color *= texture2D(tPaintingTexture, uv).rgb;
+				intersec.color *= texture(tPaintingTexture, uv).rgb;
 			}
 					
 			maskEyePath *= intersec.color;
@@ -361,7 +361,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 					// spherical coordinates
 					uv.x = (1.0 + atan(nl.z, nl.x) / PI) * 0.5;
 					uv.y = acos(nl.y) / PI;
-					intersec.color = texture2D(tMarbleTexture, uv).rgb;
+					intersec.color = texture(tMarbleTexture, uv).rgb;
 				}
 				
 				diffuseCount++;
