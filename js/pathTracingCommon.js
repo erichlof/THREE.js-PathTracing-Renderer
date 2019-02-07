@@ -1371,8 +1371,8 @@ void main( void )
 	// pixelOffset ranges from -1.0 to +1.0, so only need to divide by half resolution
 	pixelOffset /= (uResolution * 0.5);
 
-	// vUv comes in the range 0.0 to 1.0, so we must map it to the range -1.0 to +1.0
-	pixelPos = vUv * 2.0 - 1.0;
+	// we must map pixelPos into the range -1.0 to +1.0
+	pixelPos = (gl_FragCoord.xy / uResolution) * 2.0 - 1.0;
 	pixelPos += pixelOffset;
 
 	vec3 rayDir = normalize( pixelPos.x * camRight * uULen + pixelPos.y * camUp * uVLen + camForward );
