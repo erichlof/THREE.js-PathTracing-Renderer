@@ -168,7 +168,7 @@ float getTerrainHeight( in vec3 pos )
 	float h = 0.0;
 	float amp = TERRAIN_HEIGHT;
 
-	for (int i = 0; i < 5; i ++)
+	for (int i = 0; i < 4; i ++)
 	{
 		h += amp * texture2D(t_PerlinNoise, uv + 0.5).x;
 		amp *= 0.5;
@@ -186,7 +186,7 @@ float getTerrainHeight_Detail( in vec3 pos )
 	float h = 0.0;
 	float amp = TERRAIN_HEIGHT;
 
-	for (int i = 0; i < 15; i ++)
+	for (int i = 0; i < 12; i ++)
 	{
 		h += amp * texture2D(t_PerlinNoise, uv + 0.5).x;
 		amp *= 0.5;
@@ -244,7 +244,7 @@ float TerrainIntersect( Ray r )
 	vec3 dir = r.direction;
 	float h = 0.0;
 	float t = 0.0;
-	float precisionFactor = 0.5;
+	float precisionFactor = 0.4;
 	
 	for (int i = 0; i < 300; i++)
 	{
@@ -747,8 +747,8 @@ void main( void )
 	
 	if ( uCameraIsMoving )
 	{
-		previousColor *= 0.85; // motion-blur trail amount (old image)
-		pixelColor *= 0.15; // brightness of new image (noisy)
+		previousColor *= 0.8; // motion-blur trail amount (old image)
+		pixelColor *= 0.2; // brightness of new image (noisy)
 	}
 	else
 	{
