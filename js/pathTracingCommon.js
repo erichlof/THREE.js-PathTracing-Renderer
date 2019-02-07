@@ -1392,7 +1392,7 @@ void main( void )
 	// perform path tracing and get resulting pixel color
 	vec3 pixelColor = CalculateRadiance( ray, seed );
 	
-	vec3 previousColor = texture(tPreviousTexture, vUv).rgb;
+	vec3 previousColor = texelFetch(tPreviousTexture, ivec2(gl_FragCoord.xy), 0).rgb;
 	
 	if ( uCameraJustStartedMoving )
 	{
