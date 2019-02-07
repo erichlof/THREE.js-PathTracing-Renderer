@@ -75,12 +75,13 @@ BoxNode GetBoxNode(const in float i)
 	float iX2 = (i * 2.0);
 	// (iX2 + 0.0) corresponds to .x: idLeftChild, .y: aabbMin.x, .z: aabbMin.y, .w: aabbMin.z 
 	// (iX2 + 1.0) corresponds to .x: idRightChild .y: aabbMax.x, .z: aabbMax.y, .w: aabbMax.z 
-	
-	vec2 uv0 = vec2( (mod(iX2 + 0.0, 2048.0)), floor((iX2 + 0.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
-	vec2 uv1 = vec2( (mod(iX2 + 1.0, 2048.0)), floor((iX2 + 1.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
 
-	vec4 aabbNodeData0 = texture( tAABBTexture, uv0 );
-	vec4 aabbNodeData1 = texture( tAABBTexture, uv1 );
+	ivec2 uv0 = ivec2( mod(iX2 + 0.0, 2048.0), floor((iX2 + 0.0) * INV_TEXTURE_WIDTH) );
+	ivec2 uv1 = ivec2( mod(iX2 + 1.0, 2048.0), floor((iX2 + 1.0) * INV_TEXTURE_WIDTH) );
+	
+	vec4 aabbNodeData0 = texelFetch(tAABBTexture, uv0, 0);
+	vec4 aabbNodeData1 = texelFetch(tAABBTexture, uv1, 0);
+	
 
 	BoxNode BN = BoxNode( aabbNodeData0.x,
 			      aabbNodeData0.yzw,
@@ -104,7 +105,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	vec3 aabbMin, aabbMax;
 	vec3 inverseDir = 1.0 / r.direction;
 	vec3 hitPos, toLightBulb;
-	vec2 uv0, uv1, uv2, uv3, uv4, uv5, uv6, uv7;
+	ivec2 uv0, uv1, uv2, uv3, uv4, uv5, uv6, uv7;
 
         float stackptr = 0.0;	
 	float bc, bd;
@@ -211,13 +212,14 @@ float SceneIntersect( Ray r, inout Intersection intersec )
                         {
 				// each triangle's data is encoded in 8 rgba(or xyzw) texture slots
 				id = 8.0 * (-currentBoxNode.branch_A_Index - 1.0);
-				uv0 = vec2( (mod(id + 0.0, 2048.0)), floor((id + 0.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
-				uv1 = vec2( (mod(id + 1.0, 2048.0)), floor((id + 1.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
-				uv2 = vec2( (mod(id + 2.0, 2048.0)), floor((id + 2.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
+
+				uv0 = ivec2( mod(id + 0.0, 2048.0), floor((id + 0.0) * INV_TEXTURE_WIDTH) );
+				uv1 = ivec2( mod(id + 1.0, 2048.0), floor((id + 1.0) * INV_TEXTURE_WIDTH) );
+				uv2 = ivec2( mod(id + 2.0, 2048.0), floor((id + 2.0) * INV_TEXTURE_WIDTH) );
 				
-				vd0 = texture( tTriangleTexture, uv0 );	      
-				vd1 = texture( tTriangleTexture, uv1 );	      
-				vd2 = texture( tTriangleTexture, uv2 );
+				vd0 = texelFetch(tTriangleTexture, uv0, 0);
+				vd1 = texelFetch(tTriangleTexture, uv1, 0);
+				vd2 = texelFetch(tTriangleTexture, uv2, 0);
 
 				d = BVH_TriangleIntersect( vec3(vd0.xyz), vec3(vd0.w, vd1.xy), vec3(vd1.zw, vd2.x), r, tu, tv );
 
@@ -284,23 +286,23 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 
 	if (triangleLookupNeeded)
 	{
-		uv0 = vec2( (mod(triangleID + 0.0, 2048.0)), floor((triangleID + 0.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
-		uv1 = vec2( (mod(triangleID + 1.0, 2048.0)), floor((triangleID + 1.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
-		uv2 = vec2( (mod(triangleID + 2.0, 2048.0)), floor((triangleID + 2.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
-		uv3 = vec2( (mod(triangleID + 3.0, 2048.0)), floor((triangleID + 3.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
-		uv4 = vec2( (mod(triangleID + 4.0, 2048.0)), floor((triangleID + 4.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
-		uv5 = vec2( (mod(triangleID + 5.0, 2048.0)), floor((triangleID + 5.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
-		uv6 = vec2( (mod(triangleID + 6.0, 2048.0)), floor((triangleID + 6.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
-		uv7 = vec2( (mod(triangleID + 7.0, 2048.0)), floor((triangleID + 7.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
+		uv0 = ivec2( mod(triangleID + 0.0, 2048.0), floor((triangleID + 0.0) * INV_TEXTURE_WIDTH) );
+		uv1 = ivec2( mod(triangleID + 1.0, 2048.0), floor((triangleID + 1.0) * INV_TEXTURE_WIDTH) );
+		uv2 = ivec2( mod(triangleID + 2.0, 2048.0), floor((triangleID + 2.0) * INV_TEXTURE_WIDTH) );
+		uv3 = ivec2( mod(triangleID + 3.0, 2048.0), floor((triangleID + 3.0) * INV_TEXTURE_WIDTH) );
+		uv4 = ivec2( mod(triangleID + 4.0, 2048.0), floor((triangleID + 4.0) * INV_TEXTURE_WIDTH) );
+		uv5 = ivec2( mod(triangleID + 5.0, 2048.0), floor((triangleID + 5.0) * INV_TEXTURE_WIDTH) );
+		uv6 = ivec2( mod(triangleID + 6.0, 2048.0), floor((triangleID + 6.0) * INV_TEXTURE_WIDTH) );
+		uv7 = ivec2( mod(triangleID + 7.0, 2048.0), floor((triangleID + 7.0) * INV_TEXTURE_WIDTH) );
 		
-		vd0 = texture( tTriangleTexture, uv0 );	      
-		vd1 = texture( tTriangleTexture, uv1 );	      
-		vd2 = texture( tTriangleTexture, uv2 );
-		vd3 = texture( tTriangleTexture, uv3 );	      
-		vd4 = texture( tTriangleTexture, uv4 );
-		vd5 = texture( tTriangleTexture, uv5 );
-		vd6 = texture( tTriangleTexture, uv6 );
-		vd7 = texture( tTriangleTexture, uv7 );
+		vd0 = texelFetch(tTriangleTexture, uv0, 0);
+		vd1 = texelFetch(tTriangleTexture, uv1, 0);
+		vd2 = texelFetch(tTriangleTexture, uv2, 0);
+		vd3 = texelFetch(tTriangleTexture, uv3, 0);
+		vd4 = texelFetch(tTriangleTexture, uv4, 0);
+		vd5 = texelFetch(tTriangleTexture, uv5, 0);
+		vd6 = texelFetch(tTriangleTexture, uv6, 0);
+		vd7 = texelFetch(tTriangleTexture, uv7, 0);
 
 		// face normal for flat-shaded polygon look
 		//intersec.normal = normalize( cross(vec3(vd0.w, vd1.xy) - vec3(vd0.xyz), vec3(vd1.zw, vd2.x) - vec3(vd0.xyz)) );
