@@ -250,7 +250,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 		// if we reached something bright, don't spawn any more rays
 		if (intersec.type == LIGHT)
 		{	
-			if (sampleLight)// || bounceIsSpecular)
+			if (sampleLight)
 			{
 				accumCol = mask * intersec.emission;
 			}
@@ -442,9 +442,9 @@ void SetupScene(void)
 	vec3 L2 = vec3(1.0, 0.8, 0.2) * 15.0;// Yellow light
 	vec3 L3 = vec3(0.1, 0.7, 1.0) * 10.0;// Blue light
 		
-        spheres[0] = Sphere(150.0, vec3(-400, 900, 200), L1, z, LIGHT, false);//spherical white Light1 
-	spheres[1] = Sphere(100.0, vec3( 300, 400,-300), L2, z, LIGHT, false);//spherical yellow Light2
-	spheres[2] = Sphere( 50.0, vec3( 500, 250,-100), L3, z, LIGHT, false);//spherical blue Light3
+        spheres[0] = Sphere(150.0, vec3(-400, 900, 200), L1, z, LIGHT, true);//spherical white Light1 
+	spheres[1] = Sphere(100.0, vec3( 300, 400,-300), L2, z, LIGHT, true);//spherical yellow Light2
+	spheres[2] = Sphere( 50.0, vec3( 500, 250,-100), L3, z, LIGHT, true);//spherical blue Light3
 	
 	spheres[3] = Sphere(1000.0, vec3(  0.0, 1000.0,  0.0), z, vec3(1.0, 1.0, 1.0), CHECK, false);//Checkered Floor
         spheres[4] = Sphere(  16.5, vec3(-26.0,   17.2,  5.0), z, vec3(0.95, 0.95, 0.95), SPEC, false);//Mirror sphere
@@ -507,8 +507,8 @@ void main( void )
 	// pixelOffset ranges from -1.0 to +1.0, so only need to divide by half resolution
 	pixelOffset /= (uResolution * 0.5);
 
-	// vUv comes in the range 0.0 to 1.0, so we must map it to the range -1.0 to +1.0
-	pixelPos = vUv * 2.0 - 1.0;
+	// we must map pixelPos into the range -1.0 to +1.0
+	pixelPos = (gl_FragCoord.xy / uResolution) * 2.0 - 1.0;
 	pixelPos += pixelOffset;
 
 	vec3 rayDir = normalize( pixelPos.x * camRight * uULen + pixelPos.y * camUp * uVLen + camForward );
@@ -530,10 +530,9 @@ void main( void )
 	// perform path tracing and get resulting pixel color
 	vec3 pixelColor = CalculateRadiance( ray, seed, rayHitIsDynamic );
 	
-	vec4 previousImage = texture2D(tPreviousTexture, vUv);
+	vec4 previousImage = texelFetch(tPreviousTexture, ivec2(gl_FragCoord.xy), 0);
 	vec3 previousColor = previousImage.rgb;
 
-	
 	if (uCameraIsMoving || previousImage.a > 0.0)
 	{
                 previousColor *= 0.55; // motion-blur trail amount (old image)
