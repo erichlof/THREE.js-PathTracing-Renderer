@@ -667,24 +667,16 @@ void main( void )
 	vec3 previousColor = previousImage.rgb;
 
 	
-	if (previousImage.a == 1.0)
+	if (uCameraIsMoving || previousImage.a > 0.0)
 	{
-		previousColor *= 0.5; // motion-blur trail amount (old image)
-                pixelColor *= 0.5; // brightness of new image (noisy)
-	}
-	else if (uCameraIsMoving)
-	{
-                previousColor *= 0.5; // motion-blur trail amount (old image)
-                pixelColor *= 0.5; // brightness of new image (noisy)
+                previousColor *= 0.55; // motion-blur trail amount (old image)
+                pixelColor *= 0.45; // brightness of new image (noisy)
         }
 	else
 	{
-                previousColor *= 0.9; // motion-blur trail amount (old image)
-                pixelColor *= 0.1; // brightness of new image (noisy)
+                previousColor *= 0.93; // motion-blur trail amount (old image)
+                pixelColor *= 0.07; // brightness of new image (noisy)
         }
 	
-	
-        
-        
         out_FragColor = vec4( pixelColor + previousColor, rayHitIsDynamic? 1.0 : 0.0 );	
 }
