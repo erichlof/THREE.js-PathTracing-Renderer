@@ -65,12 +65,13 @@ BoxNode GetBoxNode(const in float i)
 	float iX2 = (i * 2.0);
 	// (iX2 + 0.0) corresponds to .x: idLeftChild, .y: aabbMin.x, .z: aabbMin.y, .w: aabbMin.z 
 	// (iX2 + 1.0) corresponds to .x: idRightChild .y: aabbMax.x, .z: aabbMax.y, .w: aabbMax.z 
-	
-	vec2 uv0 = vec2( (mod(iX2 + 0.0, 2048.0)), floor((iX2 + 0.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
-	vec2 uv1 = vec2( (mod(iX2 + 1.0, 2048.0)), floor((iX2 + 1.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
 
-	vec4 aabbNodeData0 = texture( tAABBTexture, uv0 );
-	vec4 aabbNodeData1 = texture( tAABBTexture, uv1 );
+	ivec2 uv0 = ivec2( mod(iX2 + 0.0, 2048.0), floor((iX2 + 0.0) * INV_TEXTURE_WIDTH) );
+	ivec2 uv1 = ivec2( mod(iX2 + 1.0, 2048.0), floor((iX2 + 1.0) * INV_TEXTURE_WIDTH) );
+	
+	vec4 aabbNodeData0 = texelFetch(tAABBTexture, uv0, 0);
+	vec4 aabbNodeData1 = texelFetch(tAABBTexture, uv1, 0);
+	
 
 	BoxNode BN = BoxNode( aabbNodeData0.x,
 			      aabbNodeData0.yzw,
@@ -94,7 +95,8 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	vec4 vd0, vd1, vd2, vd3, vd4, vd5, vd6, vd7;
 	vec3 aabbMin, aabbMax;
 	vec3 inverseDir = 1.0 / r.direction;
-	vec2 uv0, uv1, uv2, uv3, uv4, uv5, uv6, uv7;
+	ivec2 uv0, uv1, uv2, uv3, uv4, uv5, uv6, uv7;
+
 	float stackptr = 0.0;
 	float levelCounter = 0.0;
 	float savedLevel = INFINITY;
@@ -169,13 +171,14 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 				
 				// each triangle's data is encoded in 8 rgba(or xyzw) texture slots
 				id = 8.0 * (-currentBoxNode.branch_A_Index - 1.0);
-				uv0 = vec2( (mod(id + 0.0, 2048.0)), floor((id + 0.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
-				uv1 = vec2( (mod(id + 1.0, 2048.0)), floor((id + 1.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
-				uv2 = vec2( (mod(id + 2.0, 2048.0)), floor((id + 2.0) * INV_TEXTURE_WIDTH) ) * INV_TEXTURE_WIDTH;
+
+				uv0 = ivec2( mod(id + 0.0, 2048.0), floor((id + 0.0) * INV_TEXTURE_WIDTH) );
+				uv1 = ivec2( mod(id + 1.0, 2048.0), floor((id + 1.0) * INV_TEXTURE_WIDTH) );
+				uv2 = ivec2( mod(id + 2.0, 2048.0), floor((id + 2.0) * INV_TEXTURE_WIDTH) );
 				
-				vd0 = texture( tTriangleTexture, uv0 );	      
-				vd1 = texture( tTriangleTexture, uv1 );	      
-				vd2 = texture( tTriangleTexture, uv2 );
+				vd0 = texelFetch(tTriangleTexture, uv0, 0);
+				vd1 = texelFetch(tTriangleTexture, uv1, 0);
+				vd2 = texelFetch(tTriangleTexture, uv2, 0);
 
 				d = BVH_TriangleIntersect( vec3(vd0.xyz), vec3(vd0.w, vd1.xy), vec3(vd1.zw, vd2.x), r, tu, tv );
 				if (d < t && d > 0.0)
