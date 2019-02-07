@@ -14,11 +14,8 @@ var screenTextureShader = {
                 'precision highp float;',
 		'precision highp int;',
 
-		'out vec2 vUv;',
-
 		'void main()',
 		'{',
-			'vUv = uv;',
 			'gl_Position = vec4( position, 1.0 );',
 		'}'
 		
@@ -32,12 +29,11 @@ var screenTextureShader = {
 		'precision highp sampler2D;',
 
                 'uniform sampler2D tPathTracedImageTexture;',
-		'in vec2 vUv;',
                 'out vec4 out_FragColor;',
 		
 		'void main()',
 		'{',	
-			'out_FragColor = texture(tPathTracedImageTexture, vUv);',	
+			'out_FragColor = texelFetch(tPathTracedImageTexture, ivec2(gl_FragCoord.xy), 0);',	
 		'}'
 		
         ].join( '\n' )
@@ -61,11 +57,8 @@ var screenOutputShader = {
                 'precision highp float;',
 		'precision highp int;',
 
-		'out vec2 vUv;',
-
 		'void main()',
 		'{',
-			'vUv = uv;',
 			'gl_Position = vec4( position, 1.0 );',
 		'}'
 
@@ -80,12 +73,11 @@ var screenOutputShader = {
 
                 'uniform float uOneOverSampleCounter;',
 		'uniform sampler2D tPathTracedImageTexture;',
-		'in vec2 vUv;',
                 'out vec4 out_FragColor;',
 		
 		'void main()',
 		'{',
-			'vec3 pixelColor = texture(tPathTracedImageTexture, vUv).rgb * uOneOverSampleCounter;',
+			'vec3 pixelColor = texelFetch(tPathTracedImageTexture, ivec2(gl_FragCoord.xy), 0).rgb * uOneOverSampleCounter;',
 			'out_FragColor = vec4( pow(pixelColor, vec3(0.4545)), 1.0 );',	
 		'}'
 		
