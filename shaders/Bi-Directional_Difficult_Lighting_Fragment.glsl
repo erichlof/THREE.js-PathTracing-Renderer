@@ -253,17 +253,17 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				if (abs(nl.x) > 0.5) uv = vec2(x.z, x.y);
 				else if (abs(nl.y) > 0.5) uv = vec2(x.x, x.z);
 				else uv = vec2(x.x, x.y);
-				intersec.color *= texture(tLightWoodTexture, uv * 0.01).rgb;
+				intersec.color *= pow(texture(tLightWoodTexture, uv * 0.01).rgb, vec3(2.2));
 			}
 			else if (intersec.type == DARKWOOD)
 			{
 				vec2 uv = vec2( uTallBoxInvMatrix * vec4(x, 1.0) );
-				intersec.color *= texture(tDarkWoodTexture, uv * vec2(0.01,0.005)).rgb;
+				intersec.color *= pow(texture(tDarkWoodTexture, uv * vec2(0.01,0.005)).rgb, vec3(2.2));
 			}
 			else if (intersec.type == PAINTING)
 			{
 				vec2 uv = vec2((55.0 + x.x) / 110.0, (x.y - 20.0) / 44.0);
-				intersec.color *= texture(tPaintingTexture, uv).rgb;
+				intersec.color *= pow(texture(tPaintingTexture, uv).rgb, vec3(2.2));
 			}
 					
 			maskEyePath *= intersec.color;
@@ -362,6 +362,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 					uv.x = (1.0 + atan(nl.z, nl.x) / PI) * 0.5;
 					uv.y = acos(nl.y) / PI;
 					intersec.color = texture(tMarbleTexture, uv).rgb;
+					intersec.color = pow(intersec.color,vec3(2.2));
 				}
 				
 				diffuseCount++;
@@ -476,7 +477,7 @@ void SetupScene(void)
 	quads[5] = Quad( vec3(-350, 150,-300), vec3( 350, 150,-300), vec3( 350, 150, 200), vec3(-350, 150, 200),  z, vec3(1.0), 0.0,   DIFF);// Ceiling
 	quads[6] = Quad( vec3(-350,-100,-300), vec3(-350,-100, 200), vec3( 350,-100, 200), vec3( 350,-100,-300),  z, vec3(1.0), 0.0,  CHECK);// Floor
 	
-	quads[7] = Quad( vec3(-55, 20,-295), vec3( 55, 20,-295), vec3( 55, 65,-295), vec3(-55, 65,-295), z, vec3(0.9), 0.0, PAINTING);// Wall Painting
+	quads[7] = Quad( vec3(-55, 20,-295), vec3( 55, 20,-295), vec3( 55, 65,-295), vec3(-55, 65,-295), z, vec3(1.0), 0.0, PAINTING);// Wall Painting
 	
 	boxes[0] = Box( vec3(-100,-60,-230), vec3(100,-57,-130), z, vec3(1.0), 0.0, LIGHTWOOD);// Table Top
 	boxes[1] = Box( vec3(-90,-100,-150), vec3(-84,-60,-144), z, vec3(0.8, 0.85, 0.9),  0.1, SPEC);// Table leg left front
@@ -489,7 +490,7 @@ void SetupScene(void)
 	boxes[6] = Box( vec3( 172,-100,-302), vec3( 180,  98,-299), z, vec3(0.001), 0.3, SPEC);// Door Frame left
 	boxes[7] = Box( vec3( 280,-100,-302), vec3( 288,  98,-299), z, vec3(0.001), 0.3, SPEC);// Door Frame right
 	boxes[8] = Box( vec3( 172,  90,-302), vec3( 288,  98,-299), z, vec3(0.001), 0.3, SPEC);// Door Frame top
-	boxes[9] = Box( vec3(   0, -94,  -3), vec3( 101,  95,   3), z, vec3(1.0), 0.0, DARKWOOD);// Door
+	boxes[9] = Box( vec3(   0, -94,  -3), vec3( 101,  95,   3), z, vec3(0.7), 0.0, DARKWOOD);// Door
 	
 	openCylinders[0] = OpenCylinder( 1.5, vec3( 179,  64,-297), vec3( 179,  80,-297), z, brassColor, 0.2, SPEC);// Door Hinge upper
 	openCylinders[1] = OpenCylinder( 1.5, vec3( 179,  -8,-297), vec3( 179,   8,-297), z, brassColor, 0.2, SPEC);// Door Hinge middle
