@@ -45,7 +45,7 @@ function initSceneData() {
         paintingTexture.magFilter = THREE.LinearFilter;
         paintingTexture.generateMipmaps = false;
         
-        darkWoodTexture = new THREE.TextureLoader().load( 'textures/doorWood.jpg' );
+        darkWoodTexture = new THREE.TextureLoader().load( 'textures/darkWood.jpg' );
         darkWoodTexture.wrapS = THREE.RepeatWrapping;
         darkWoodTexture.wrapT = THREE.RepeatWrapping;
         darkWoodTexture.flipY = false;
