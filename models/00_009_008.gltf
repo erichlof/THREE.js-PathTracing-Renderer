@@ -1,0 +1,433 @@
+{
+  "accessors": [
+    {
+      "bufferView": 0,
+      "componentType": 5121,
+      "count": 72,
+      "type": "SCALAR",
+      "max": [
+        15.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 16,
+      "type": "VEC3",
+      "max": [
+        0.814,
+        -0.176,
+        -0.025
+      ],
+      "min": [
+        -0.792,
+        -2.291,
+        -0.049
+      ]
+    },
+    {
+      "bufferView": 2,
+      "componentType": 5121,
+      "count": 324,
+      "type": "SCALAR",
+      "max": [
+        53.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 3,
+      "componentType": 5126,
+      "count": 54,
+      "type": "VEC3",
+      "max": [
+        0.944,
+        -0.058,
+        -0.006
+      ],
+      "min": [
+        -0.9418,
+        -2.40900016,
+        -0.076
+      ]
+    },
+    {
+      "bufferView": 4,
+      "componentType": 5123,
+      "count": 1860,
+      "type": "SCALAR",
+      "max": [
+        315.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 5,
+      "componentType": 5126,
+      "count": 316,
+      "type": "VEC3",
+      "max": [
+        0.220999986,
+        -1.32474315,
+        0.05796445
+      ],
+      "min": [
+        0.046,
+        -1.51474321,
+        -0.139964446
+      ]
+    },
+    {
+      "bufferView": 6,
+      "componentType": 5121,
+      "count": 264,
+      "type": "SCALAR",
+      "max": [
+        63.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 7,
+      "componentType": 5126,
+      "count": 64,
+      "type": "VEC3",
+      "max": [
+        0.98999995,
+        7.10847255E-18,
+        5.72100776E-18
+      ],
+      "min": [
+        -0.98999995,
+        -2.422521,
+        -0.112
+      ]
+    },
+    {
+      "bufferView": 8,
+      "componentType": 5121,
+      "count": 156,
+      "type": "SCALAR",
+      "max": [
+        38.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 9,
+      "componentType": 5126,
+      "count": 39,
+      "type": "VEC3",
+      "max": [
+        0.98999995,
+        -2.401,
+        0.0
+      ],
+      "min": [
+        -0.98999995,
+        -2.481,
+        -0.112
+      ]
+    },
+    {
+      "bufferView": 10,
+      "componentType": 5121,
+      "count": 480,
+      "type": "SCALAR",
+      "max": [
+        63.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 11,
+      "componentType": 5126,
+      "count": 64,
+      "type": "VEC3",
+      "max": [
+        1.023,
+        2.514,
+        -0.022
+      ],
+      "min": [
+        -1.023,
+        -0.023,
+        -0.212
+      ]
+    }
+  ],
+  "asset": {
+    "copyright": "2019 (c) Smart2IT B.V.",
+    "generator": "Smart2IT Revit glTF Exporter v0.5",
+    "version": "2.0"
+  },
+  "buffers": [
+    {
+      "uri": "00_009_008.bin",
+      "byteLength": 11652
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteLength": 72,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 72,
+      "byteLength": 192,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 264,
+      "byteLength": 324,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 588,
+      "byteLength": 648,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 1236,
+      "byteLength": 3720,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 4956,
+      "byteLength": 3792,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 8748,
+      "byteLength": 264,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 9012,
+      "byteLength": 768,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 9780,
+      "byteLength": 156,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 9936,
+      "byteLength": 468,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 10404,
+      "byteLength": 480,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 10884,
+      "byteLength": 768,
+      "target": 34962
+    }
+  ],
+  "materials": [
+    {
+      "name": "o1_glas",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.627451,
+          0.627451,
+          0.627451,
+          0.25
+        ],
+        "metallicFactor": 0.0
+      },
+      "alphaMode": "BLEND"
+    },
+    {
+      "name": "n6_kunststof_RAL 6005",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.184313729,
+          0.270588249,
+          0.219607845,
+          1.0
+        ],
+        "metallicFactor": 0.0
+      }
+    },
+    {
+      "name": "h2_staal",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.847058833,
+          0.847058833,
+          0.8,
+          1.0
+        ],
+        "metallicFactor": 0.0
+      }
+    },
+    {
+      "name": "v2_RAL 9010",
+      "pbrMetallicRoughness": {
+        "metallicFactor": 0.0
+      }
+    },
+    {
+      "name": "n6_kunststof_DTS-basis black",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.160784319,
+          0.192156866,
+          0.2,
+          1.0
+        ],
+        "metallicFactor": 0.0
+      }
+    },
+    {
+      "name": "i2_naaldhout (vuren)",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.9019608,
+          0.8352941,
+          0.6745098,
+          1.0
+        ],
+        "metallicFactor": 0.0
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 1
+          },
+          "indices": 0,
+          "material": 0
+        },
+        {
+          "attributes": {
+            "POSITION": 3
+          },
+          "indices": 2,
+          "material": 1
+        },
+        {
+          "attributes": {
+            "POSITION": 5
+          },
+          "indices": 4,
+          "material": 2
+        },
+        {
+          "attributes": {
+            "POSITION": 7
+          },
+          "indices": 6,
+          "material": 3
+        },
+        {
+          "attributes": {
+            "POSITION": 9
+          },
+          "indices": 8,
+          "material": 4
+        }
+      ]
+    },
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 11
+          },
+          "indices": 10,
+          "material": 5
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "matrix": [
+        -1.0,
+        0.0,
+        -3.23108913E-15,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        3.23108913E-15,
+        0.0,
+        -1.0,
+        0.0,
+        4.153,
+        2.436,
+        -11.6,
+        1.0
+      ],
+      "mesh": 0,
+      "name": "[8704135]Merk J-001"
+    },
+    {
+      "matrix": [
+        -1.0,
+        0.0,
+        -3.23108913E-15,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        3.23108913E-15,
+        0.0,
+        -1.0,
+        0.0,
+        4.153,
+        -0.045,
+        -11.6,
+        1.0
+      ],
+      "mesh": 1,
+      "name": "[8704136]31_Stelkozijn-2"
+    }
+  ],
+  "scene": 0,
+  "scenes": [
+    {
+      "nodes": [
+        0,
+        1
+      ],
+      "name": "Cell"
+    }
+  ]
+}

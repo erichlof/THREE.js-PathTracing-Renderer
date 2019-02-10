@@ -1,0 +1,780 @@
+{
+  "accessors": [
+    {
+      "bufferView": 0,
+      "componentType": 5121,
+      "count": 648,
+      "type": "SCALAR",
+      "max": [
+        155.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 156,
+      "type": "VEC3",
+      "max": [
+        230.575012,
+        3.49233121E-13,
+        -60.0
+      ],
+      "min": [
+        225.125,
+        -0.07,
+        -71.4
+      ]
+    },
+    {
+      "bufferView": 2,
+      "componentType": 5121,
+      "count": 660,
+      "type": "SCALAR",
+      "max": [
+        161.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 3,
+      "componentType": 5126,
+      "count": 162,
+      "type": "VEC3",
+      "max": [
+        230.575012,
+        0.055,
+        -60.012
+      ],
+      "min": [
+        225.125,
+        3.449066E-14,
+        -71.388
+      ]
+    },
+    {
+      "bufferView": 4,
+      "componentType": 5121,
+      "count": 636,
+      "type": "SCALAR",
+      "max": [
+        103.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 5,
+      "componentType": 5126,
+      "count": 104,
+      "type": "VEC3",
+      "max": [
+        230.575012,
+        0.008,
+        -59.917
+      ],
+      "min": [
+        225.125,
+        3.49038534E-13,
+        -71.488
+      ]
+    },
+    {
+      "bufferView": 6,
+      "componentType": 5121,
+      "count": 108,
+      "type": "SCALAR",
+      "max": [
+        35.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 7,
+      "componentType": 5126,
+      "count": 36,
+      "type": "VEC3",
+      "max": [
+        230.13,
+        3.49233121E-13,
+        -59.9219971
+      ],
+      "min": [
+        225.786,
+        -0.03,
+        -71.478
+      ]
+    },
+    {
+      "bufferView": 8,
+      "componentType": 5121,
+      "count": 72,
+      "type": "SCALAR",
+      "max": [
+        15.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 9,
+      "componentType": 5126,
+      "count": 16,
+      "type": "VEC3",
+      "max": [
+        227.55,
+        2.62,
+        -60.09
+      ],
+      "min": [
+        227.48,
+        -0.07,
+        -64.67
+      ]
+    },
+    {
+      "bufferView": 10,
+      "componentType": 5121,
+      "count": 36,
+      "type": "SCALAR",
+      "max": [
+        7.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 11,
+      "componentType": 5126,
+      "count": 8,
+      "type": "VEC3",
+      "max": [
+        227.48,
+        2.62,
+        -64.6
+      ],
+      "min": [
+        226.344986,
+        -0.07,
+        -64.67
+      ]
+    },
+    {
+      "bufferView": 12,
+      "componentType": 5123,
+      "count": 53220,
+      "type": "SCALAR",
+      "max": [
+        16620.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 13,
+      "componentType": 5126,
+      "count": 16621,
+      "type": "VEC3",
+      "max": [
+        0.505,
+        2.62,
+        0.05
+      ],
+      "min": [
+        -0.505,
+        -8.004209E-25,
+        -0.05
+      ]
+    },
+    {
+      "bufferView": 14,
+      "componentType": 5123,
+      "count": 2052,
+      "type": "SCALAR",
+      "max": [
+        297.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 15,
+      "componentType": 5126,
+      "count": 298,
+      "type": "VEC3",
+      "max": [
+        0.44,
+        1.075,
+        0.127000049
+      ],
+      "min": [
+        0.265,
+        1.025,
+        -0.03299995
+      ]
+    },
+    {
+      "bufferView": 16,
+      "componentType": 5121,
+      "count": 84,
+      "type": "SCALAR",
+      "max": [
+        15.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 17,
+      "componentType": 5126,
+      "count": 16,
+      "type": "VEC3",
+      "max": [
+        0.477,
+        2.343,
+        0.06700005
+      ],
+      "min": [
+        -0.477,
+        0.028,
+        0.02700005
+      ]
+    },
+    {
+      "bufferView": 18,
+      "componentType": 5121,
+      "count": 36,
+      "type": "SCALAR",
+      "max": [
+        7.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 19,
+      "componentType": 5126,
+      "count": 8,
+      "type": "VEC3",
+      "max": [
+        0.466999978,
+        2.615,
+        0.03091102
+      ],
+      "min": [
+        -0.466999978,
+        2.37,
+        0.02691102
+      ]
+    }
+  ],
+  "asset": {
+    "copyright": "2019 (c) Smart2IT B.V.",
+    "generator": "Smart2IT Revit glTF Exporter v0.5",
+    "version": "2.0"
+  },
+  "buffers": [
+    {
+      "uri": "00_015_004.bin",
+      "byteLength": 321924
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteLength": 648,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 648,
+      "byteLength": 1872,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 2520,
+      "byteLength": 660,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 3180,
+      "byteLength": 1944,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 5124,
+      "byteLength": 636,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 5760,
+      "byteLength": 1248,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 7008,
+      "byteLength": 108,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 7116,
+      "byteLength": 432,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 7548,
+      "byteLength": 72,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 7620,
+      "byteLength": 192,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 7812,
+      "byteLength": 36,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 7848,
+      "byteLength": 96,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 7944,
+      "byteLength": 106440,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 114384,
+      "byteLength": 199452,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 313836,
+      "byteLength": 4104,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 317940,
+      "byteLength": 3576,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 321516,
+      "byteLength": 84,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 321600,
+      "byteLength": 192,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 321792,
+      "byteLength": 36,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 321828,
+      "byteLength": 96,
+      "target": 34962
+    }
+  ],
+  "materials": [
+    {
+      "name": "f2_beton_afwerkvloer",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.7490196,
+          0.698039234,
+          0.6784314,
+          1.0
+        ],
+        "metallicFactor": 0.0
+      }
+    },
+    {
+      "name": "i3_loofhout (hardhout)",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.945098042,
+          0.933333337,
+          0.8862745,
+          1.0
+        ],
+        "metallicFactor": 0.0
+      }
+    },
+    {
+      "name": "i3_vloerafwerking_parketvloer",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.8862745,
+          0.8,
+          0.6901961,
+          1.0
+        ],
+        "metallicFactor": 0.0
+      }
+    },
+    {
+      "name": "f4_gasbeton_Ytong_G4/600",
+      "pbrMetallicRoughness": {
+        "metallicFactor": 0.0
+      }
+    },
+    {
+      "name": "h2_staal",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.847058833,
+          0.847058833,
+          0.8,
+          1.0
+        ],
+        "metallicFactor": 0.0
+      }
+    },
+    {
+      "name": "Doors material#7F7F7FFF",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.498039216,
+          0.498039216,
+          0.498039216,
+          1.0
+        ],
+        "metallicFactor": 0.0
+      }
+    },
+    {
+      "name": "v2_RAL 9001",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.980392158,
+          0.956862748,
+          0.8901961,
+          1.0
+        ],
+        "metallicFactor": 0.0
+      }
+    },
+    {
+      "name": "o1_glas",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.627451,
+          0.627451,
+          0.627451,
+          0.25
+        ],
+        "metallicFactor": 0.0
+      },
+      "alphaMode": "BLEND"
+    }
+  ],
+  "meshes": [
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 1
+          },
+          "indices": 0,
+          "material": 0
+        }
+      ]
+    },
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 3
+          },
+          "indices": 2,
+          "material": 1
+        }
+      ]
+    },
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 5
+          },
+          "indices": 4,
+          "material": 2
+        }
+      ]
+    },
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 7
+          },
+          "indices": 6,
+          "material": 0
+        }
+      ]
+    },
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 9
+          },
+          "indices": 8,
+          "material": 3
+        }
+      ]
+    },
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 11
+          },
+          "indices": 10,
+          "material": 3
+        }
+      ]
+    },
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 13
+          },
+          "indices": 12,
+          "material": 4
+        },
+        {
+          "attributes": {
+            "POSITION": 15
+          },
+          "indices": 14,
+          "material": 5
+        },
+        {
+          "attributes": {
+            "POSITION": 17
+          },
+          "indices": 16,
+          "material": 6
+        },
+        {
+          "attributes": {
+            "POSITION": 19
+          },
+          "indices": 18,
+          "material": 7
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "matrix": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        -225.0,
+        0.0,
+        60.0,
+        1.0
+      ],
+      "mesh": 0,
+      "name": "[6724015]43_Afwerkvloer 70mm"
+    },
+    {
+      "matrix": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        -225.0,
+        0.0,
+        60.0,
+        1.0
+      ],
+      "mesh": 1,
+      "name": "[6724085]Railings 1"
+    },
+    {
+      "matrix": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        -225.0,
+        0.0,
+        60.0,
+        1.0
+      ],
+      "mesh": 2,
+      "name": "[6724139]43_VWN_vloerafwerking"
+    },
+    {
+      "matrix": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        -225.0,
+        0.0,
+        60.0,
+        1.0
+      ],
+      "mesh": 3,
+      "name": "[6724207]43_Afwerkvloer 30mm"
+    },
+    {
+      "matrix": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        -225.0,
+        0.0,
+        60.0,
+        1.0
+      ],
+      "mesh": 4,
+      "name": "[6724866]22_Gasbeton 70mm_Ytong G4/600"
+    },
+    {
+      "matrix": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        -225.0,
+        0.0,
+        60.0,
+        1.0
+      ],
+      "mesh": 5,
+      "name": "[6724867]22_Gasbeton 70mm_Ytong G4/600"
+    },
+    {
+      "matrix": [
+        1.61763451E-15,
+        0.0,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        1.61763451E-15,
+        0.0,
+        2.515,
+        3.338698E-13,
+        -3.6475,
+        1.0
+      ],
+      "mesh": 6,
+      "name": "[6724868]merk a.sp"
+    }
+  ],
+  "scene": 0,
+  "scenes": [
+    {
+      "nodes": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "name": "Cell"
+    }
+  ]
+}

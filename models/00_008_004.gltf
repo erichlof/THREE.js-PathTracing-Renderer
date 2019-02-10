@@ -18,23 +18,23 @@
       "count": 8,
       "type": "VEC3",
       "max": [
-        50.9299965,
-        3.0,
-        -51.28
+        0.469,
+        -0.0800000057,
+        -0.061499998
       ],
       "min": [
-        50.69,
-        0.0,
-        -51.3799973
+        -0.469,
+        -2.339,
+        -0.0854999945
       ]
     },
     {
       "bufferView": 2,
       "componentType": 5121,
-      "count": 36,
+      "count": 144,
       "type": "SCALAR",
       "max": [
-        7.0
+        34.0
       ],
       "min": [
         0.0
@@ -43,26 +43,26 @@
     {
       "bufferView": 3,
       "componentType": 5126,
-      "count": 8,
+      "count": 35,
       "type": "VEC3",
       "max": [
-        50.9299965,
-        3.0,
-        -51.0899963
+        0.548999965,
+        7.478767E-17,
+        1.675393E-18
       ],
       "min": [
-        50.69,
-        -0.07,
-        -51.2399979
+        -0.548999965,
+        -2.419,
+        -0.112
       ]
     },
     {
       "bufferView": 4,
       "componentType": 5121,
-      "count": 36,
+      "count": 204,
       "type": "SCALAR",
       "max": [
-        7.0
+        48.0
       ],
       "min": [
         0.0
@@ -71,26 +71,26 @@
     {
       "bufferView": 5,
       "componentType": 5126,
-      "count": 8,
+      "count": 49,
       "type": "VEC3",
       "max": [
-        50.9299965,
-        2.68,
-        -50.9899979
+        0.548999965,
+        -2.401,
+        0.0
       ],
       "min": [
-        50.69,
-        -0.07,
-        -51.0899963
+        -0.548999965,
+        -2.481,
+        -0.112
       ]
     },
     {
       "bufferView": 6,
       "componentType": 5121,
-      "count": 36,
+      "count": 480,
       "type": "SCALAR",
       "max": [
-        7.0
+        65.0
       ],
       "min": [
         0.0
@@ -99,45 +99,17 @@
     {
       "bufferView": 7,
       "componentType": 5126,
-      "count": 8,
+      "count": 66,
       "type": "VEC3",
       "max": [
-        50.79,
-        2.68,
-        -48.59
+        0.582,
+        2.514,
+        -0.022
       ],
       "min": [
-        50.69,
-        -0.07,
-        -50.9899979
-      ]
-    },
-    {
-      "bufferView": 8,
-      "componentType": 5121,
-      "count": 36,
-      "type": "SCALAR",
-      "max": [
-        7.0
-      ],
-      "min": [
-        0.0
-      ]
-    },
-    {
-      "bufferView": 9,
-      "componentType": 5126,
-      "count": 8,
-      "type": "VEC3",
-      "max": [
-        50.9299965,
-        2.68,
-        -48.59
-      ],
-      "min": [
-        50.829998,
-        -0.07,
-        -50.9899979
+        -0.582,
+        -0.023,
+        -0.212
       ]
     }
   ],
@@ -148,8 +120,8 @@
   },
   "buffers": [
     {
-      "uri": "00_003_002.bin",
-      "byteLength": 660
+      "uri": "00_008_004.bin",
+      "byteLength": 2760
     }
   ],
   "bufferViews": [
@@ -167,84 +139,79 @@
     {
       "buffer": 0,
       "byteOffset": 132,
-      "byteLength": 36,
+      "byteLength": 144,
       "target": 34963
     },
     {
       "buffer": 0,
-      "byteOffset": 168,
-      "byteLength": 96,
+      "byteOffset": 276,
+      "byteLength": 420,
       "target": 34962
     },
     {
       "buffer": 0,
-      "byteOffset": 264,
-      "byteLength": 36,
+      "byteOffset": 696,
+      "byteLength": 204,
       "target": 34963
     },
     {
       "buffer": 0,
-      "byteOffset": 300,
-      "byteLength": 96,
+      "byteOffset": 900,
+      "byteLength": 588,
       "target": 34962
     },
     {
       "buffer": 0,
-      "byteOffset": 396,
-      "byteLength": 36,
+      "byteOffset": 1488,
+      "byteLength": 480,
       "target": 34963
     },
     {
       "buffer": 0,
-      "byteOffset": 432,
-      "byteLength": 96,
-      "target": 34962
-    },
-    {
-      "buffer": 0,
-      "byteOffset": 528,
-      "byteLength": 36,
-      "target": 34963
-    },
-    {
-      "buffer": 0,
-      "byteOffset": 564,
-      "byteLength": 96,
+      "byteOffset": 1968,
+      "byteLength": 792,
       "target": 34962
     }
   ],
   "materials": [
     {
-      "name": "Metselwerk_oranje",
+      "name": "o1_glas_grijs",
       "pbrMetallicRoughness": {
         "baseColorFactor": [
-          0.384313732,
-          0.286274523,
-          0.254901975,
-          1.0
+          0.627451,
+          0.627451,
+          0.627451,
+          0.25
         ],
+        "metallicFactor": 0.0
+      },
+      "alphaMode": "BLEND"
+    },
+    {
+      "name": "n6_kunststof_RAL 9010",
+      "pbrMetallicRoughness": {
         "metallicFactor": 0.0
       }
     },
     {
-      "name": "Isolatie_glaswol",
+      "name": "n6_kunststof_DTS-basis black",
       "pbrMetallicRoughness": {
         "baseColorFactor": [
-          0.521568656,
-          0.478431374,
           0.160784319,
+          0.192156866,
+          0.2,
           1.0
         ],
         "metallicFactor": 0.0
       }
     },
     {
-      "name": "Kalkzandsteen",
+      "name": "i2_naaldhout (vuren)",
       "pbrMetallicRoughness": {
         "baseColorFactor": [
-          0.5764706,
-          0.572549045,
-          0.5686275,
+          0.9019608,
+          0.8352941,
+          0.6745098,
           1.0
         ],
         "metallicFactor": 0.0
@@ -260,22 +227,14 @@
           },
           "indices": 0,
           "material": 0
-        }
-      ]
-    },
-    {
-      "primitives": [
+        },
         {
           "attributes": {
             "POSITION": 3
           },
           "indices": 2,
           "material": 1
-        }
-      ]
-    },
-    {
-      "primitives": [
+        },
         {
           "attributes": {
             "POSITION": 5
@@ -292,18 +251,7 @@
             "POSITION": 7
           },
           "indices": 6,
-          "material": 2
-        }
-      ]
-    },
-    {
-      "primitives": [
-        {
-          "attributes": {
-            "POSITION": 9
-          },
-          "indices": 8,
-          "material": 2
+          "material": 3
         }
       ]
     }
@@ -311,113 +259,47 @@
   "nodes": [
     {
       "matrix": [
-        1.0,
+        -1.0,
         0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
+        -3.21964677E-15,
         0.0,
         0.0,
         1.0,
         0.0,
-        -45.0,
         0.0,
-        40.0,
+        3.21964677E-15,
+        0.0,
+        -1.0,
+        0.0,
+        1.322,
+        2.436,
+        -11.6,
         1.0
       ],
       "mesh": 0,
-      "name": "[3322541]21_metselwerk_oranje_100"
+      "name": "[8703606]Merk D-001"
     },
     {
       "matrix": [
-        1.0,
+        -1.0,
         0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
+        -3.21964677E-15,
         0.0,
         0.0,
         1.0,
         0.0,
-        -45.0,
         0.0,
-        40.0,
+        3.21964677E-15,
+        0.0,
+        -1.0,
+        0.0,
+        1.322,
+        -0.045,
+        -11.6,
         1.0
       ],
       "mesh": 1,
-      "name": "[3322542]21_isolatie_mineraal_150"
-    },
-    {
-      "matrix": [
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        -45.0,
-        0.0,
-        40.0,
-        1.0
-      ],
-      "mesh": 2,
-      "name": "[3322543]21_kalkzandsteen_100"
-    },
-    {
-      "matrix": [
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        -45.0,
-        0.0,
-        40.0,
-        1.0
-      ],
-      "mesh": 3,
-      "name": "[3322545]21_kalkzandsteen_100"
-    },
-    {
-      "matrix": [
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        -45.0,
-        0.0,
-        40.0,
-        1.0
-      ],
-      "mesh": 4,
-      "name": "[3322547]21_kalkzandsteen_100"
+      "name": "[8703607]DEL_Merk D"
     }
   ],
   "scene": 0,
@@ -425,10 +307,7 @@
     {
       "nodes": [
         0,
-        1,
-        2,
-        3,
-        4
+        1
       ],
       "name": "Cell"
     }

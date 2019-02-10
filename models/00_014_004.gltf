@@ -1,0 +1,216 @@
+{
+  "accessors": [
+    {
+      "bufferView": 0,
+      "componentType": 5123,
+      "count": 1860,
+      "type": "SCALAR",
+      "max": [
+        313.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 314,
+      "type": "VEC3",
+      "max": [
+        1.435767,
+        1.0117569,
+        1.24764669
+      ],
+      "min": [
+        1.260767,
+        0.8217569,
+        1.06571782
+      ]
+    },
+    {
+      "bufferView": 2,
+      "componentType": 5121,
+      "count": 348,
+      "type": "SCALAR",
+      "max": [
+        55.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 3,
+      "componentType": 5126,
+      "count": 56,
+      "type": "VEC3",
+      "max": [
+        2.400767,
+        2.345,
+        1.18764675
+      ],
+      "min": [
+        0.04076697,
+        -0.035,
+        1.12764668
+      ]
+    },
+    {
+      "bufferView": 4,
+      "componentType": 5121,
+      "count": 84,
+      "type": "SCALAR",
+      "max": [
+        15.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 5,
+      "componentType": 5126,
+      "count": 16,
+      "type": "VEC3",
+      "max": [
+        2.364267,
+        0.0255683679,
+        1.18764675
+      ],
+      "min": [
+        0.07726697,
+        -0.035,
+        1.12764668
+      ]
+    }
+  ],
+  "asset": {
+    "copyright": "2019 (c) Smart2IT B.V.",
+    "generator": "Smart2IT Revit glTF Exporter v0.5",
+    "version": "2.0"
+  },
+  "buffers": [
+    {
+      "uri": "00_014_004.bin",
+      "byteLength": 8784
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteLength": 3720,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 3720,
+      "byteLength": 3768,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 7488,
+      "byteLength": 348,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 7836,
+      "byteLength": 672,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 8508,
+      "byteLength": 84,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 8592,
+      "byteLength": 192,
+      "target": 34962
+    }
+  ],
+  "materials": [
+    {
+      "name": "n6_kunststof_wit",
+      "pbrMetallicRoughness": {
+        "metallicFactor": 0.0
+      }
+    },
+    {
+      "name": "n6_kunststof_RAL 9010",
+      "pbrMetallicRoughness": {
+        "metallicFactor": 0.0
+      }
+    },
+    {
+      "name": "v2_RAL 9010",
+      "pbrMetallicRoughness": {
+        "metallicFactor": 0.0
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 1
+          },
+          "indices": 0,
+          "material": 0
+        },
+        {
+          "attributes": {
+            "POSITION": 3
+          },
+          "indices": 2,
+          "material": 1
+        },
+        {
+          "attributes": {
+            "POSITION": 5
+          },
+          "indices": 4,
+          "material": 2
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "matrix": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        6.294233,
+        -0.03,
+        -6.877647,
+        1.0
+      ],
+      "mesh": 0,
+      "name": "[7316391]NT60_tweevleugelige openslaande deuren"
+    }
+  ],
+  "scene": 0,
+  "scenes": [
+    {
+      "nodes": [
+        0
+      ],
+      "name": "Cell"
+    }
+  ]
+}

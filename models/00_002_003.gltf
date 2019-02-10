@@ -1,0 +1,768 @@
+{
+  "accessors": [
+    {
+      "bufferView": 0,
+      "componentType": 5123,
+      "count": 2061,
+      "type": "SCALAR",
+      "max": [
+        387.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 388,
+      "type": "VEC3",
+      "max": [
+        0.095,
+        0.095,
+        0.08665066
+      ],
+      "min": [
+        -0.095,
+        -0.095,
+        -1.35827786E-24
+      ]
+    },
+    {
+      "bufferView": 2,
+      "componentType": 5121,
+      "count": 624,
+      "type": "SCALAR",
+      "max": [
+        101.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 3,
+      "componentType": 5126,
+      "count": 102,
+      "type": "VEC3",
+      "max": [
+        35.575,
+        2.617,
+        -45.0000038
+      ],
+      "min": [
+        30.125,
+        -0.05,
+        -45.09
+      ]
+    },
+    {
+      "bufferView": 4,
+      "componentType": 5121,
+      "count": 468,
+      "type": "SCALAR",
+      "max": [
+        73.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 5,
+      "componentType": 5126,
+      "count": 74,
+      "type": "VEC3",
+      "max": [
+        35.7,
+        2.84,
+        -44.869
+      ],
+      "min": [
+        30.0,
+        -0.36,
+        -45.0000038
+      ]
+    },
+    {
+      "bufferView": 6,
+      "componentType": 5121,
+      "count": 654,
+      "type": "SCALAR",
+      "max": [
+        189.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 7,
+      "componentType": 5126,
+      "count": 190,
+      "type": "VEC3",
+      "max": [
+        1.0165,
+        0.113,
+        0.008
+      ],
+      "min": [
+        -1.0165,
+        -0.003,
+        -0.082
+      ]
+    },
+    {
+      "bufferView": 8,
+      "componentType": 5121,
+      "count": 513,
+      "type": "SCALAR",
+      "max": [
+        142.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 9,
+      "componentType": 5126,
+      "count": 143,
+      "type": "VEC3",
+      "max": [
+        0.686,
+        0.0870000049,
+        0.008
+      ],
+      "min": [
+        -0.686,
+        -0.003,
+        -0.082
+      ]
+    },
+    {
+      "bufferView": 10,
+      "componentType": 5121,
+      "count": 300,
+      "type": "SCALAR",
+      "max": [
+        55.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 11,
+      "componentType": 5126,
+      "count": 56,
+      "type": "VEC3",
+      "max": [
+        0.879500031,
+        -0.00500000035,
+        4.03399446E-24
+      ],
+      "min": [
+        -0.879500031,
+        -0.07165077,
+        -0.164999992
+      ]
+    },
+    {
+      "bufferView": 12,
+      "componentType": 5121,
+      "count": 132,
+      "type": "SCALAR",
+      "max": [
+        30.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 13,
+      "componentType": 5126,
+      "count": 31,
+      "type": "VEC3",
+      "max": [
+        0.8905,
+        0.0200000014,
+        0.135
+      ],
+      "min": [
+        -0.8905,
+        -3.806955E-17,
+        -0.085
+      ]
+    },
+    {
+      "bufferView": 14,
+      "componentType": 5123,
+      "count": 4722,
+      "type": "SCALAR",
+      "max": [
+        888.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 15,
+      "componentType": 5126,
+      "count": 889,
+      "type": "VEC3",
+      "max": [
+        0.126,
+        0.132,
+        0.13
+      ],
+      "min": [
+        -0.126,
+        -0.132,
+        -0.091
+      ]
+    },
+    {
+      "bufferView": 16,
+      "componentType": 5123,
+      "count": 4722,
+      "type": "SCALAR",
+      "max": [
+        888.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 17,
+      "componentType": 5126,
+      "count": 889,
+      "type": "VEC3",
+      "max": [
+        0.126,
+        0.132,
+        0.13
+      ],
+      "min": [
+        -0.126,
+        -0.132,
+        -0.091
+      ]
+    }
+  ],
+  "asset": {
+    "copyright": "2019 (c) Smart2IT B.V.",
+    "generator": "Smart2IT Revit glTF Exporter v0.5",
+    "version": "2.0"
+  },
+  "buffers": [
+    {
+      "uri": "00_002_003.bin",
+      "byteLength": 58852
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteLength": 4124,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 4124,
+      "byteLength": 4656,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 8780,
+      "byteLength": 624,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 9404,
+      "byteLength": 1224,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 10628,
+      "byteLength": 468,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 11096,
+      "byteLength": 888,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 11984,
+      "byteLength": 656,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 12640,
+      "byteLength": 2280,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 14920,
+      "byteLength": 516,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 15436,
+      "byteLength": 1716,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 17152,
+      "byteLength": 300,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 17452,
+      "byteLength": 672,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 18124,
+      "byteLength": 132,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 18256,
+      "byteLength": 372,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 18628,
+      "byteLength": 9444,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 28072,
+      "byteLength": 10668,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 38740,
+      "byteLength": 9444,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 48184,
+      "byteLength": 10668,
+      "target": 34962
+    }
+  ],
+  "materials": [
+    {
+      "name": "Generic Models material#7F7F7FFF",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.498039216,
+          0.498039216,
+          0.498039216,
+          1.0
+        ],
+        "metallicFactor": 0.0
+      }
+    },
+    {
+      "name": "f2_beton",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.7490196,
+          0.698039234,
+          0.6784314,
+          1.0
+        ],
+        "metallicFactor": 0.0
+      }
+    },
+    {
+      "name": "m1_isolatie",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.768627465,
+          0.9882353,
+          0.619607866,
+          1.0
+        ],
+        "metallicFactor": 0.0
+      }
+    },
+    {
+      "name": "v2_RAL 7016",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.160784319,
+          0.192156866,
+          0.2,
+          1.0
+        ],
+        "metallicFactor": 0.0
+      }
+    },
+    {
+      "name": "n6_kunststof_RAL 9001",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.980392158,
+          0.956862748,
+          0.8901961,
+          1.0
+        ],
+        "metallicFactor": 0.0
+      }
+    },
+    {
+      "name": "e2_vensterbank",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.9137255,
+          0.8784314,
+          0.8235294,
+          1.0
+        ],
+        "metallicFactor": 0.0
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 1
+          },
+          "indices": 0,
+          "material": 0
+        }
+      ]
+    },
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 3
+          },
+          "indices": 2,
+          "material": 1
+        }
+      ]
+    },
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 5
+          },
+          "indices": 4,
+          "material": 2
+        }
+      ]
+    },
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 7
+          },
+          "indices": 6,
+          "material": 3
+        }
+      ]
+    },
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 9
+          },
+          "indices": 8,
+          "material": 3
+        }
+      ]
+    },
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 11
+          },
+          "indices": 10,
+          "material": 4
+        }
+      ]
+    },
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 13
+          },
+          "indices": 12,
+          "material": 5
+        }
+      ]
+    },
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 15
+          },
+          "indices": 14,
+          "material": 3
+        }
+      ]
+    },
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 17
+          },
+          "indices": 16,
+          "material": 3
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "matrix": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        2.745,
+        2.512,
+        0.27,
+        1.0
+      ],
+      "mesh": 0,
+      "name": "[8691878]57_Nedco bolrooster RVS"
+    },
+    {
+      "matrix": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        -30.0,
+        0.0,
+        45.0,
+        1.0
+      ],
+      "mesh": 1,
+      "name": "[8691879]21_prefab betonwand 90mm"
+    },
+    {
+      "matrix": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        -30.0,
+        0.0,
+        45.0,
+        1.0
+      ],
+      "mesh": 2,
+      "name": "[8691881]21_isolatie 131mm"
+    },
+    {
+      "matrix": [
+        -1.0,
+        0.0,
+        -1.01420261E-14,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        1.01420261E-14,
+        0.0,
+        -1.0,
+        0.0,
+        4.1515,
+        2.453,
+        0.17,
+        1.0
+      ],
+      "mesh": 3,
+      "name": "[8691899]Merk B_L18 90x116x3mm"
+    },
+    {
+      "matrix": [
+        -1.0,
+        0.0,
+        -1.01420261E-14,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        1.01420261E-14,
+        0.0,
+        -1.0,
+        0.0,
+        1.763,
+        2.453,
+        0.17,
+        1.0
+      ],
+      "mesh": 4,
+      "name": "[8691900]Merk A_L8 90x90x3mm"
+    },
+    {
+      "matrix": [
+        -1.0,
+        0.0,
+        -1.01420261E-14,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        1.01420261E-14,
+        0.0,
+        -1.0,
+        0.0,
+        4.1515,
+        0.946,
+        0.15,
+        1.0
+      ],
+      "mesh": 5,
+      "name": "[8691901]Merk B_Waterslag"
+    },
+    {
+      "matrix": [
+        -1.0,
+        0.0,
+        -1.01420261E-14,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        1.01420261E-14,
+        0.0,
+        -1.0,
+        0.0,
+        4.1515,
+        0.963,
+        4.05009359E-13,
+        1.0
+      ],
+      "mesh": 6,
+      "name": "[8691902]Merk B_Ventserbank"
+    },
+    {
+      "matrix": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.500625,
+        0.698,
+        0.27,
+        1.0
+      ],
+      "mesh": 7,
+      "name": "[8691903]57_Muurdoorvoer WTW"
+    },
+    {
+      "matrix": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.500625,
+        2.458,
+        0.27,
+        1.0
+      ],
+      "mesh": 8,
+      "name": "[8691904]57_Muurdoorvoer WTW"
+    }
+  ],
+  "scene": 0,
+  "scenes": [
+    {
+      "nodes": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "name": "Cell"
+    }
+  ]
+}
