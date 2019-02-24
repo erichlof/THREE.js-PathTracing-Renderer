@@ -5,6 +5,11 @@ let pathTracingScene, screenTextureScene, screenOutputScene;
 let pathTracingUniforms, pathTracingDefines, screenOutputMaterial, pathTracingRenderTarget;
 // Camera variables
 let quadCamera, worldCamera;
+// HDR image variables
+var hdrPath, hdrTexture, hdrLoader, hdrExposure = 2.0;
+// Environment variables
+var skyLightIntensity = 1.0, sunLightIntensity = 2.0;
+var skyLightIntensityChanged = false, sunLightIntensityChanged = false;
 var cameraControlsObject; //for positioning and moving the camera itself
 var cameraControlsYawObject; //allows access to control camera's left/right movements through mobile input
 var cameraControlsPitchObject; //allows access to control camera's up/down movements through mobile input
@@ -266,6 +271,7 @@ function initThree() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     //required by WebGL 2.0 for rendering to FLOAT textures
     renderer.context.getExtension('EXT_color_buffer_float');
+    renderer.toneMappingExposure = hdrExposure;
 
     container.appendChild(renderer.domElement);
 
@@ -618,6 +624,16 @@ async function prepareGeometryForPT(meshList, pathTracingMaterialList, triangleM
     PerlinNoiseTexture.magFilter = THREE.LinearFilter;
     PerlinNoiseTexture.generateMipmaps = false;
 
+    hdrLoader = new THREE.HDRLoader();
+    hdrPath = 'textures/daytime.hdr';
+
+    hdrTexture = hdrLoader.load( hdrPath, function ( texture, textureData ) {
+        texture.encoding = THREE.RGBEEncoding;
+        texture.minFilter = THREE.NearestFilter;
+        texture.magFilter = THREE.NearestFilter;
+        texture.flipY = true;
+    } );
+
     pathTracingUniforms = {
 
         tPreviousTexture: {type: "t", value: screenTextureRenderTarget.texture},
@@ -625,6 +641,8 @@ async function prepareGeometryForPT(meshList, pathTracingMaterialList, triangleM
         tAABBTexture: {type: "t", value: aabbDataTexture},
         tAlbedoTextures: {type: "t", value: uniqueMaterialTextures},
         t_PerlinNoise: {type: "t", value: PerlinNoiseTexture},
+        tHDRTexture: { type: "t", value: hdrTexture },
+
         uCameraIsMoving: {type: "b1", value: false},
         uCameraJustStartedMoving: {type: "b1", value: false},
 
@@ -632,8 +650,10 @@ async function prepareGeometryForPT(meshList, pathTracingMaterialList, triangleM
         uFrameCounter: {type: "f", value: 1.0},
         uULen: {type: "f", value: 1.0},
         uVLen: {type: "f", value: 1.0},
-        uApertureSize: {type: "f", value: 0.0},
-        uFocusDistance: {type: "f", value: 100.0},
+        uApertureSize: {type: "f", value: apertureSize},
+        uFocusDistance: {type: "f", value: focusDistance},
+        uSkyLightIntensity: {type: "f", value: skyLightIntensity},
+        uSunLightIntensity: {type: "f", value: sunLightIntensity},
 
         uResolution: {type: "v2", value: new THREE.Vector2()},
 
@@ -741,7 +761,7 @@ function initMenu() {
     gui = new dat.GUI();
     gui.domElement.classList.add("hidden");
 
-    gui.add(this, 'pixelRatio', 0.25, 1).step(0.05).onChange(function (value) {
+    gui.add(this, 'pixelRatio', 0.25, 1).step(0.0125).onChange(function (value) {
         renderer.setPixelRatio(value);
 
         pathTracingUniforms.uResolution.value.x = renderer.context.drawingBufferWidth;
@@ -752,14 +772,26 @@ function initMenu() {
 
         forceUpdate = true;
     });
-    gui.add(this, 'sunAngle', 0, Math.PI).step(0.02).onChange(() => {
+    gui.add(this, 'sunAngle', 0, Math.PI).step(Math.PI/60).onChange(() => {
+        forceUpdate = true;
+    });
+    gui.add(this, 'hdrExposure', 0, 10).step(10/60).onChange(() => {
+        renderer.toneMappingExposure = hdrExposure;
+        forceUpdate = true;
+    });
+    gui.add(this, 'skyLightIntensity', 0, 5).step(5/60).onChange(() => {
+        skyLightIntensityChanged = true;
+        forceUpdate = true;
+    });
+    gui.add(this, 'sunLightIntensity', 0, 5).step(5/60).onChange(() => {
+        sunLightIntensityChanged = true;
         forceUpdate = true;
     });
     cameraSettingsFolder = gui.addFolder("Camera Settings");
     cameraSettingsFolder.add(worldCamera, 'fov', minFov, maxFov).onChange(() => {
         fovChanged = true;
     });
-    cameraSettingsFolder.add(this, 'apertureSize', minApertureSize, maxApertureSize).step(0.1).onChange(() => {
+    cameraSettingsFolder.add(this, 'apertureSize', minApertureSize, maxApertureSize).step(maxApertureSize/60).onChange(() => {
         apertureSizeChanged = true;
     });
     cameraSettingsFolder.add(this, 'focusDistance', minFocusDistance).step(1).onChange(() => {
@@ -1035,6 +1067,16 @@ function animate() {
     if (focusDistanceChanged) {
         pathTracingUniforms.uFocusDistance.value = focusDistance;
         focusDistanceChanged = false;
+    }
+
+    if (skyLightIntensityChanged) {
+        pathTracingUniforms.uSkyLightIntensity.value = skyLightIntensity;
+        skyLightIntensityChanged = false;
+    }
+
+    if (sunLightIntensityChanged) {
+        pathTracingUniforms.uSunLightIntensity.value = sunLightIntensity;
+        sunLightIntensityChanged = false;
     }
 
     if (cameraIsMoving) {
