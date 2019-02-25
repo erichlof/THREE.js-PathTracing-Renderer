@@ -246,9 +246,9 @@ vec3 Get_HDR_Color(Ray r)
 	// tone mapping options
 	//vec3 texColor = LinearToneMapping(texData.rgb);
 	//vec3 texColor = ReinhardToneMapping(texData.rgb);
-	vec3 texColor = Uncharted2ToneMapping(texData.rgb);
+	//vec3 texColor = Uncharted2ToneMapping(texData.rgb);
 	//vec3 texColor = OptimizedCineonToneMapping(texData.rgb);
-	//vec3 texColor = ACESFilmicToneMapping(texData.rgb);
+	vec3 texColor = ACESFilmicToneMapping(texData.rgb);
 
 	return texColor;
 }
@@ -277,6 +277,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 
 	bool skyHit = false;
 	bool bounceIsSpecular = true;
+	bool sampleSunLight = false;
 
     	for (int bounces = 0; bounces < 4; bounces++)
 	{
@@ -294,7 +295,12 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
         	// if ray bounced off of diffuse material and hits sky
 		if (t == INFINITY && previousIntersecType == DIFF)
 		{
-			accumCol = mask * Get_HDR_Color(r) * uSkyLightIntensity;
+			accumCol = mask * Get_HDR_Color(r);
+
+			if (sampleSunLight)
+				accumCol *= uSunLightIntensity;
+			else
+				accumCol *= uSkyLightIntensity;
 
 			break;
 		}
@@ -302,8 +308,11 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
         	// if ray bounced off of glass and hits sky
 		if (t == INFINITY && (previousIntersecType == REFR || previousIntersecType == SPEC))
 		{
+			if (sampleSunLight)
+			    mask *= uSunLightIntensity;
+
 			if (bounceIsSpecular) // prevents sun 'fireflies' on diffuse surfaces
-				accumCol = mask * Get_HDR_Color(r) * uSkyLightIntensity;
+				accumCol = mask * Get_HDR_Color(r);
 			
 			break;	
 		}
@@ -367,7 +376,8 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 				if (weight < 0.01)
 					break;
 
-				mask *= weight * uSunLightIntensity;
+				mask *= weight;
+				sampleSunLight = true;
 				continue;
 			}
 		} // end if (intersec.type == DIFF)

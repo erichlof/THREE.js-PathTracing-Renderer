@@ -6,7 +6,7 @@ let pathTracingUniforms, pathTracingDefines, screenOutputMaterial, pathTracingRe
 // Camera variables
 let quadCamera, worldCamera;
 // HDR image variables
-var hdrPath, hdrTexture, hdrLoader, hdrExposure = 2.0;
+var hdrPath, hdrTexture, hdrLoader, hdrExposure = 10.0;
 // Environment variables
 var skyLightIntensity = 1.0, sunLightIntensity = 2.0;
 var skyLightIntensityChanged = false, sunLightIntensityChanged = false;
@@ -773,10 +773,6 @@ function initMenu() {
         forceUpdate = true;
     });
     gui.add(this, 'sunAngle', 0, Math.PI).step(Math.PI/60).onChange(() => {
-        forceUpdate = true;
-    });
-    gui.add(this, 'hdrExposure', 0, 10).step(10/60).onChange(() => {
-        renderer.toneMappingExposure = hdrExposure;
         forceUpdate = true;
     });
     gui.add(this, 'skyLightIntensity', 0, 5).step(5/60).onChange(() => {
