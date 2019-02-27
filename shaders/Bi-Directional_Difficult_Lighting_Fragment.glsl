@@ -343,7 +343,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				vec3 reflectVec = reflect(r.direction, nl);
 				vec3 glossyVec = randomDirectionInHemisphere(nl, seed);
 				r = Ray( x, mix(reflectVec, glossyVec, intersec.roughness) );
-				r.origin += r.direction;
+				r.origin += nl;
 				
 				continue;	
 			}
