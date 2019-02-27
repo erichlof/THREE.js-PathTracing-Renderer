@@ -321,14 +321,14 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                         
 			// choose random Diffuse sample vector
 			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
-			r.origin += r.direction * epsIntersect;
+			r.origin += nl * epsIntersect;
 			continue;	
                 }
 		
                 if (intersec.type == SPEC)  // Ideal SPECULAR reflection
                 {
 			r = Ray( x, reflect(r.direction, nl) );
-			r.origin += r.direction * epsIntersect;
+			r.origin += nl * epsIntersect;
 			mask *= intersec.color;
                         continue;
                 }
@@ -342,14 +342,14 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			if (rand(seed) < Re) // reflect ray from surface
 			{
 				r = Ray( x, reflect(r.direction, nl) );
-				r.origin += r.direction * epsIntersect;
+				r.origin += nl * epsIntersect;
 			    	continue;	
 			}
 			else // transmit ray through surface
 			{
 				mask *= intersec.color;
 				r = Ray(x, tdir);
-				r.origin += r.direction * epsIntersect;
+				r.origin -= nl * epsIntersect;
 				continue;
 			}
 			
@@ -365,7 +365,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			if( rand(seed) < Re )
 			{	
 				r = Ray( x, reflect(r.direction, nl) );
-				r.origin += r.direction * epsIntersect;
+				r.origin += nl * epsIntersect;
 				continue;	
 			}
 			else
@@ -373,7 +373,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				mask *= intersec.color;
 				//accumCol += calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
-				r.origin += r.direction * epsIntersect;
+				r.origin += nl * epsIntersect;
 				continue;
 			}
 			
