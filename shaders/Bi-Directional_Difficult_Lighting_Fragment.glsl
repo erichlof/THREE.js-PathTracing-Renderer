@@ -281,7 +281,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				
 			// choose random Diffuse sample vector
 			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
-			r.origin += r.direction;
+			r.origin += nl;
 			eyeX = r.origin;
 			continue;
 		}
@@ -293,7 +293,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			vec3 reflectVec = reflect(r.direction, nl);
 			vec3 glossyVec = randomDirectionInHemisphere(nl, seed);
 			r = Ray( x, mix(reflectVec, glossyVec, intersec.roughness) );
-			r.origin += r.direction;
+			r.origin += nl;
 
 			previousIntersecType = SPEC;
 			continue;
@@ -309,7 +309,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			if (rand(seed) < Re) // reflect ray from surface
 			{
 				r = Ray( x, reflect(r.direction, nl) );
-				r.origin += r.direction;
+				r.origin += nl;
 				
 				previousIntersecType = REFR;
 				continue;	
@@ -323,7 +323,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			
 				maskEyePath *= intersec.color;
 				r = Ray(x, tdir);
-				r.origin += r.direction;
+				r.origin -= nl;
 
 				continue;
 			}	
@@ -376,7 +376,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				
 				// choose random sample vector for diffuse material underneath ClearCoat
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
-				r.origin += r.direction;
+				r.origin += nl;
 				continue;	
 			}	
 		} //end if (intersec.type == COAT)
