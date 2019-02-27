@@ -935,7 +935,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                         {
                                 // choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
-				r.origin += r.direction;
+				r.origin += nl;
 				
 				continue;
                         }
@@ -960,7 +960,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			//bounceIsSpecular = (bounces < 2); 
 
 			r = Ray( x, reflect(r.direction, nl) );
-			r.origin += r.direction;
+			r.origin += nl;
 
 			continue;
 		}
@@ -977,7 +977,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			if (rand(seed) < Re) // reflect ray from surface
 			{
 				r = Ray( x, reflect(r.direction, nl) );
-				r.origin += r.direction;
+				r.origin += nl;
 			    	continue;	
 			}
 			else // transmit ray through surface
@@ -985,7 +985,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				mask *= intersec.color;
 				
 				r = Ray(x, tdir);
-				r.origin += r.direction;
+				r.origin -= nl;
 				continue;
 			}
 			
@@ -1022,7 +1022,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				vec3 reflectVec = reflect(r.direction, nl);
 				vec3 randVec = vec3(rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0);
 				r = Ray( x, mix( reflectVec, normalize(nl + randVec), roughness) );
-				r.origin += r.direction;
+				r.origin += nl;
 				continue;	
 			}
 
@@ -1036,7 +1036,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                         {
                                 // choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
-				r.origin += r.direction;
+				r.origin += nl;
 				continue;
                         }
                         else
@@ -1064,7 +1064,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			if( rand(seed) < Re )
 			{
 				r = Ray( x, reflect(r.direction, nl) );
-				r.origin += r.direction;
+				r.origin += nl;
 				continue;
 			}
 			
