@@ -445,7 +445,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 			if (rand(seed) < Re) // reflect ray from surface
 			{
 				r = Ray( x, reflect(r.direction, nl) );
-				r.origin += r.direction;
+				r.origin += nl;
 				previousIntersecType = REFR;
 				continue;	
 			}
@@ -453,7 +453,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 			{
 				mask *= intersec.color;
 				r = Ray(x, tdir);
-				r.origin += r.direction;
+				r.origin -= nl;
 				previousIntersecType = REFR;
 				continue;
 			}
