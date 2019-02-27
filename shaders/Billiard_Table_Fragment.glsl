@@ -237,7 +237,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                         {
                                 // choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
-				r.origin += r.direction;
+				r.origin += nl;
 				
 				continue;
                         }
@@ -264,7 +264,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			if( rand(seed) < Re )
 			{	
 				r = Ray( x, reflect(r.direction, nl) );
-				r.origin += r.direction;
+				r.origin += nl;
 				continue;	
 			}
 
@@ -278,7 +278,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                         {
                                 // choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
-				r.origin += r.direction;
+				r.origin += nl;
 				continue;
                         }
                         else
@@ -306,7 +306,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			{	
 				vec3 reflectVec = reflect(r.direction, nl);
 				r = Ray( x, mix( reflectVec, normalize(nl + randVec), intersec.roughness) );
-				r.origin += r.direction;
+				r.origin += nl;
 				continue;	
 			}
 			else
@@ -375,7 +375,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                         {
                                 // choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
-				r.origin += r.direction;
+				r.origin += nl;
 				continue;
                         }
                         else
