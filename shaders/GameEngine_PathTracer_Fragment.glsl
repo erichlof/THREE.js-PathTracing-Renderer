@@ -318,7 +318,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
                         {
                                 // choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
-				r.origin += r.direction;
+				r.origin += nl;
 				continue;
 			}
                         else
@@ -340,7 +340,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 			mask *= intersec.color;
 
 			r = Ray( x, reflect(r.direction, nl) );
-			r.origin += r.direction;
+			r.origin += nl;
 
 			previousIntersecType = SPEC;
 			//bounceIsSpecular = true; // turn on mirror caustics
@@ -356,7 +356,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 			if (rand(seed) < Re) // reflect ray from surface
 			{
 				r = Ray( x, reflect(r.direction, nl) );
-				r.origin += r.direction;
+				r.origin += nl;
 
 				previousIntersecType = REFR;
 				//bounceIsSpecular = true; // turn on reflecting caustics, useful for water
@@ -370,7 +370,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 					mask *= TWO_PI;
 				
 				r = Ray(x, tdir);
-				r.origin += r.direction;
+				r.origin -= nl;
 
 				previousIntersecType = REFR;
 				//bounceIsSpecular = true; // turn on refracting caustics
@@ -391,7 +391,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 			if( rand(seed) < Re )
 			{	
 				r = Ray( x, reflect(r.direction, nl) );
-				r.origin += r.direction;
+				r.origin += nl;
 				continue;	
 			}
 
@@ -408,7 +408,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
                         {
                                 // choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
-				r.origin += r.direction;
+				r.origin += nl;
 				continue;
                         }
                         else
