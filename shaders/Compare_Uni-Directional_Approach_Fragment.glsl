@@ -158,7 +158,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			
 			// choose random Diffuse sample vector
 			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
-			r.origin += r.direction;
+			r.origin += nl;
 			
 			continue;
 		}
@@ -167,7 +167,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		{
 			maskEyePath *= intersec.color;
 			r = Ray( x, reflect(r.direction, nl) );
-			r.origin += r.direction;
+			r.origin += nl;
 			
 			continue;
 		}
