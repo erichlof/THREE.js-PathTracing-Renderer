@@ -259,7 +259,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			
 			// choose random Diffuse sample vector
 			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
-			r.origin += r.direction;
+			r.origin += nl;
 			eyeX = r.origin;
 			bounceIsSpecular = false;
 			previousIntersecType = DIFF;
@@ -272,7 +272,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			vec3 reflectVec = reflect(r.direction, nl);
 			vec3 randVec = randomDirectionInHemisphere(nl, seed);
 			r = Ray( x, mix(reflectVec, randVec, intersec.roughness) );
-			r.origin += r.direction;
+			r.origin += nl;
 			bounceIsSpecular = true;
 			previousIntersecType = SPEC;
 			continue;
@@ -291,7 +291,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			{
 				previousIntersecType = REFR;
 				r = Ray( x, reflect(r.direction, nl) );
-				r.origin += r.direction;
+				r.origin += nl;
 				continue;	
 			}
 			else // transmit ray through surface
@@ -302,7 +302,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				previousIntersecType = REFR;
 				maskEyePath *= intersec.color;
 				r = Ray(x, tdir);
-				r.origin += r.direction;
+				r.origin -= nl;
 				continue;
 			}	
 		} // end if (intersec.type == REFR)
