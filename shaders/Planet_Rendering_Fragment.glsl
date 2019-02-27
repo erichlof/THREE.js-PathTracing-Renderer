@@ -623,14 +623,14 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, vec3 starRayDir )
 			if (rand(seed) < Re) // reflect ray from surface
 			{
 				r = Ray( x, reflect(r.direction, nl) );
-				r.origin += r.direction * 1.0;
+				r.origin += nl;
 				continue;	
 			}
 			else // transmit ray through surface
 			{
 				mask *= intersec.color;
 				r = Ray(x, tdir);
-				r.origin += r.direction * 1.0;
+				r.origin -= nl;
 				continue;
 			}
 			
