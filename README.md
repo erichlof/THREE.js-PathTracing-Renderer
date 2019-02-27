@@ -52,6 +52,19 @@ The following demo showcases different materials possibilities. The materials th
 * [Switching Materials Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Switching_Materials.html) <br> <br>
 
 * <h3>Classic Scenes</h3>
+
+![](readme-Images/Whitted_1979.jpg)
+
+While working at Bell Labs and writing his now-famous paper [An Improved Illumination Model for Shaded Display](https://dl.acm.org/citation.cfm?id=358882), J. Turner Whitted created an iconic ray traced scene which showcased his novel methods for producing more realistic images with a computer. Beginning work in 1978, he rendered a handful of scenes featuring spheres and planes with various materials and reflectivity, so that these images would be included in his paper (which would be published in June 1980).  Then, for an upcoming SIGGRAPH conference submission, Whitted decided to create an animated sequence of individual rendered images.  Thus the first ever ray traced animation was born!  This style of putting together single frames of pre-rendered images would continue through a lineage of movies such as Tron, Toy Story, Cars, all the way to current animated feature films.     
+
+[Vintage 1979 Video: 'The Compleat Angler' by J. Turner Whitted](https://youtu.be/0KrCh5qD9Ho)
+
+Although this movie appears as a smooth animation, it took around 45 minutes to render each individual frame back in 1979!  Fast forward to today and using WebGL 2.0 and the parallel processing power of GPUs, here is the same iconic scene rendered at 60 times a second in your browser! : <br>
+* [The Compleat Angler demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Classic_Scene_Whitted_TheCompleatAngler.html) <br>
+
+Thank you J. Turner Whitted for your pioneering computer graphics work and for helping start the rendered animation industry!  <br> 
+<br>
+
 In 1986 James T. Kajiya published his famous paper The Rendering Equation, in which he presented an elegant unifying integral equation that generalizes a variety of previously known rendering algorithms.  Since the equation is infinitely recursive and hopelessly multidimensional, he suggests using Monte Carlo integration (sampling and averaging) to converge on a solution.  Thus Monte Carlo path tracing was born, which this repo follows fairly closely.  At the end of his paper he included an image that demonstrates global illumination through path tracing:
 
 ![](readme-Images/kajiya.jpg)
