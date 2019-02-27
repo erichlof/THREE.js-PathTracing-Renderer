@@ -489,7 +489,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
                         {
                                 // choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
-				r.origin += r.direction * epsIntersect;
+				r.origin += nl * epsIntersect;
 				continue;
                         }
                         else
@@ -511,7 +511,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 			vec3 glossyVec = randomDirectionInHemisphere(nl, seed);
 			r = Ray( x, mix(reflectVec, glossyVec, metallicRoughness.g) );
 
-			r.origin += r.direction * epsIntersect;
+			r.origin += nl * epsIntersect;
 			mask *= intersec.color;
 			bounceIsSpecular = true;
                         continue;
@@ -529,14 +529,14 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 			if (rand(seed) < Re) // reflect ray from surface
 			{
 				r = Ray( x, reflect(r.direction, nl) );
-				r.origin += r.direction * epsIntersect;
+				r.origin += nl * epsIntersect;
 			    	continue;	
 			}
 			else // transmit ray through surface
 			{
 				mask *= intersec.color;
 				r = Ray(x, tdir);
-				r.origin += r.direction * epsIntersect;
+				r.origin -= nl * epsIntersect;
 				continue;
 			}
 
@@ -553,7 +553,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 			if( rand(seed) < Re )
 			{	
 				r = Ray( x, reflect(r.direction, nl) );
-				r.origin += r.direction * epsIntersect;
+				r.origin += nl * epsIntersect;
 				bounceIsSpecular = true;
 				continue;	
 			}
@@ -562,7 +562,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 				mask *= intersec.color;
 
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
-				r.origin += r.direction * epsIntersect;
+				r.origin += nl * epsIntersect;
 				bounceIsSpecular = false;
 				continue;
 			}
