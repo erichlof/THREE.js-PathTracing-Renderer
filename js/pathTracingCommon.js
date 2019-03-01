@@ -244,53 +244,119 @@ float RectangleIntersect( vec3 pos, vec3 normal, float radiusU, float radiusV, R
 	vec3 u = normalize(cross( abs(normal.y) < 0.9 ? vec3(0, 1, 0) : vec3(0, 0, 1), normal));
 	vec3 v = cross(normal, u);
 
-	if (abs(dot(u, vi)) > radiusU) return INFINITY;
-	if (abs(dot(v, vi)) > radiusV) return INFINITY;
+	if (abs(dot(u, vi)) > radiusU || abs(dot(v, vi)) > radiusV)
+		return INFINITY;
 	
 	return t;
 }
 
 `;
 
+THREE.ShaderChunk[ 'pathtracing_slab_intersect' ] = `
+
+//--------------------------------------------------------------------------------------
+float YZ_SlabIntersect( float minX, float maxX, Ray r, inout vec3 n )
+//--------------------------------------------------------------------------------------
+{
+	vec3 pOrO;
+	float denom, offset;
+
+	if (r.direction.x > 0.0)
+	{
+		if (r.origin.x > maxX) return INFINITY;
+		n = vec3(-1,0,0);
+		denom = dot(n, r.direction);
+		offset = r.origin.x > minX ? maxX : minX;
+		pOrO = (offset * n) - r.origin;
+	}  
+	else //if (r.direction.x < 0.0)
+	{
+		if (r.origin.x < minX) return INFINITY;
+		n = vec3(1,0,0);
+		denom = dot(n, r.direction);
+		offset = r.origin.x < maxX ? minX : maxX;
+		pOrO = (offset * n) - r.origin;
+	}
+
+	return dot(pOrO, n) / denom;	
+}
+
+//--------------------------------------------------------------------------------------
+float XZ_SlabIntersect( float minY, float maxY, Ray r, inout vec3 n )
+//--------------------------------------------------------------------------------------
+{
+	vec3 pOrO;
+	float denom, offset;
+
+	if (r.direction.y > 0.0)
+	{
+		if (r.origin.y > maxY) return INFINITY;
+		n = vec3(0,-1,0);
+		denom = dot(n, r.direction);
+		offset = r.origin.y > minY ? maxY : minY;
+		pOrO = (offset * n) - r.origin;
+	}  
+	else //if (r.direction.y < 0.0)
+	{
+		if (r.origin.y < minY) return INFINITY;
+		n = vec3(0,1,0);
+		denom = dot(n, r.direction);
+		offset = r.origin.y < maxY ? minY : maxY;
+		pOrO = (offset * n) - r.origin;
+	}
+
+	return dot(pOrO, n) / denom;	
+}
+
+//--------------------------------------------------------------------------------------
+float XY_SlabIntersect( float minZ, float maxZ, Ray r, inout vec3 n )
+//--------------------------------------------------------------------------------------
+{
+	vec3 pOrO;
+	float denom, offset;
+
+	if (r.direction.z > 0.0)
+	{
+		if (r.origin.z > maxZ) return INFINITY;
+		n = vec3(0,0,-1);
+		denom = dot(n, r.direction);
+		offset = r.origin.z > minZ ? maxZ : minZ;
+		pOrO = (offset * n) - r.origin;
+	}  
+	else //if (r.direction.z < 0.0)
+	{
+		if (r.origin.z < minZ) return INFINITY;
+		n = vec3(0,0,1);
+		denom = dot(n, r.direction);
+		offset = r.origin.z < maxZ ? minZ : maxZ;
+		pOrO = (offset * n) - r.origin;
+	}
+
+	return dot(pOrO, n) / denom;	
+}
+
+`;
+
 THREE.ShaderChunk[ 'pathtracing_sphere_intersect' ] = `
 
-/*
 bool solveQuadratic(float A, float B, float C, out float t0, out float t1)
 {
-	float discrim = B*B-4.0*A*C;
-    	
-	if ( discrim < 0.0 )
-        	return false;
-	
-    	float A2 = 2.0 * A;
-	float rootDiscrim = sqrt( discrim );
+	float discrim = B * B - 4.0 * A * C;
     
-	float t_0 = (-B-rootDiscrim)/A2;
-	float t_1 = (-B+rootDiscrim)/A2;
-
-	t0 = min( t_0, t_1 );
-	t1 = max( t_0, t_1 );
-    
-	return true;
-}
-*/
-
-bool solveQuadratic(float A, float B, float C, out float t0, out float t1)
-{
-	float discrim = B*B-4.0*A*C;
-    
-	if ( discrim < 0.0 )
+	if (discrim < 0.0)
         	return false;
     
-	float rootDiscrim = sqrt( discrim );
+	float rootDiscrim = sqrt(discrim);
 
 	float Q = (B > 0.0) ? -0.5 * (B + rootDiscrim) : -0.5 * (B - rootDiscrim); 
-	float t_0 = Q / A; 
-	float t_1 = C / Q;
+	//float t_0 = Q / A; 
+	//float t_1 = C / Q;
+	//t0 = min( t_0, t_1 );
+	//t1 = max( t_0, t_1 );
+
+	t1 = Q / A; 
+	t0 = C / Q;
 	
-	t0 = min( t_0, t_1 );
-	t1 = max( t_0, t_1 );
-    
 	return true;
 }
 
@@ -376,15 +442,14 @@ float OpenCylinderIntersect( vec3 p0, vec3 p1, float rad, Ray r, out vec3 n )
 	
 	float det=b*b-2.0*a*c;
 	
-	if(det<0.0)
-	return INFINITY;
+	if (det<0.0) return INFINITY;
 	
 	det=sqrt(det);
 	
 	float t = INFINITY;
 	
-	float t0=(-b-det)*ra;
-	float t1=(-b+det)*ra;
+	float t0 = (-b-det)*ra;
+	float t1 = (-b+det)*ra;
 	
 	vec3 ip;
 	vec3 lp;
@@ -1048,6 +1113,36 @@ float BVH_TriangleIntersect( vec3 v0, vec3 v1, vec3 v2, Ray r, out float u, out 
 	// comment out the following line if double-sided triangles are wanted, or ...
 	// uncomment the following line if back-face culling is desired (front-facing triangles only)
 	if (det < 0.0) return INFINITY;
+
+	vec3 tvec = r.origin - v0;
+	u = dot(tvec, pvec) * det;
+
+	if (u < 0.0 || u > 1.0) return INFINITY;
+
+	vec3 qvec = cross(tvec, edge1);
+	v = dot(r.direction, qvec) * det;
+
+	if (v < 0.0 || u + v > 1.0) return INFINITY;
+
+	return dot(edge2, qvec) * det;
+}
+
+`;
+
+THREE.ShaderChunk[ 'pathtracing_bvhDoubleSidedTriangle_intersect' ] = `
+
+//-------------------------------------------------------------------------------------------
+float BVH_DoubleSidedTriangleIntersect( vec3 v0, vec3 v1, vec3 v2, Ray r, out float u, out float v )
+//-------------------------------------------------------------------------------------------
+{
+	vec3 edge1 = v1 - v0;
+	vec3 edge2 = v2 - v0;
+	vec3 pvec = cross(r.direction, edge2);
+	float det = 1.0 / dot(edge1, pvec);
+
+	// comment out the following line if double-sided triangles are wanted, or ...
+	// uncomment the following line if back-face culling is desired (front-facing triangles only)
+	//if (det < 0.0) return INFINITY;
 
 	vec3 tvec = r.origin - v0;
 	u = dot(tvec, pvec) * det;
