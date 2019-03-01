@@ -7,8 +7,7 @@ Edited and Ported from C++ to Javascript by: Erich Loftis (erichlof on GitHub)
 https://github.com/erichlof/THREE.js-PathTracing-Renderer
 */
 
-var nNodes = 0;
-var nLeaves = 0;
+
 var stackptr = 0;
 var buildnodes = [];
 var leftWorkLists = [];
@@ -49,7 +48,7 @@ function BVH_FlatNode() {
 }
 
 
-function BVH_Create_Node(workList, idParent, isLeftBranch) {
+function BVH_Create_Node(workList, aabb_array, idParent, isLeftBranch) {
 
         // reset variables
         currentMinCorner.set(Infinity, Infinity, Infinity);
@@ -76,8 +75,6 @@ function BVH_Create_Node(workList, idParent, isLeftBranch) {
                 // now that we have assigned this right child an ID
                 if (!isLeftBranch) 
                         buildnodes[idParent].idRightChild = flatLeafNode.idSelf;
-
-                nLeaves++;
 
                 return;
         } // end else if (workList.length == 1)
@@ -109,7 +106,6 @@ function BVH_Create_Node(workList, idParent, isLeftBranch) {
                 if (!isLeftBranch) 
                         buildnodes[idParent].idRightChild = flatnode0.idSelf;
                 
-                nNodes++;
                 
                 k = workList[0];
                 // create 'left' leaf node
@@ -123,8 +119,6 @@ function BVH_Create_Node(workList, idParent, isLeftBranch) {
                 buildnodes.push(flatnode1);
                 //console.log(flatnode1);
                 
-                nLeaves++;
-                
                 k = workList[1];
                 // create 'right' leaf node
                 let flatnode2 = new BVH_FlatNode();
@@ -136,8 +130,6 @@ function BVH_Create_Node(workList, idParent, isLeftBranch) {
                 flatnode2.maxCorner.set(aabb_array[9 * k + 3], aabb_array[9 * k + 4], aabb_array[9 * k + 5]);
                 buildnodes.push(flatnode2);
                 //console.log(flatnode2);
-                
-                nLeaves++;
                 
                 return;
         } // end else if (workList.length == 2)
@@ -175,7 +167,6 @@ function BVH_Create_Node(workList, idParent, isLeftBranch) {
                 if (!isLeftBranch) 
                         buildnodes[idParent].idRightChild = flatnode.idSelf;
                 
-                nNodes++;
 
                 side1 = currentMaxCorner.x - currentMinCorner.x; // length bbox along X-axis
                 side2 = currentMaxCorner.y - currentMinCorner.y; // length bbox along Y-axis
@@ -374,24 +365,30 @@ function BVH_Create_Node(workList, idParent, isLeftBranch) {
                 }
         }
 
-} // end function BVH_Create_Node(workList, idParent, isLeftBranch)
+} // end function BVH_Create_Node(workList, aabb_array, idParent, isLeftBranch)
 
 
 
-function BVH_Build_Iterative(workList) {
+function BVH_Build_Iterative(workList, aabb_array) {
         
         currentList = workList;
 
         //console.log("building root with " + currentList.length + " triangle AABBs");
         //console.log(currentList);
 
+        // reset BVH builder arrays;
+        buildnodes = [];
+        leftWorkLists = [];
+        rightWorkLists = [];
+        parentList = [];
+
         stackptr = 0;
-        //console.log("stackptr: " + stackptr);
+        nullCodePathReached = false;
 
         parentList.push(buildnodes.length - 1);
 
         // parent id of -1, meaning this is the root node, which has no parent
-        BVH_Create_Node(currentList, -1, true); // build root node
+        BVH_Create_Node(currentList, aabb_array, -1, true); // build root node
 
         // build the tree using the "go down left branches until done, then ascend back up right branches" approach
         while (stackptr > -1) {
@@ -411,7 +408,7 @@ function BVH_Build_Iterative(workList) {
                         parentList.push(buildnodes.length - 1);
 
                         // build the left node
-                        BVH_Create_Node(currentList, buildnodes.length - 1, true);
+                        BVH_Create_Node(currentList, aabb_array, buildnodes.length - 1, true);
 
                         leftBranchCounter++;
                 }
@@ -425,7 +422,7 @@ function BVH_Build_Iterative(workList) {
                                 //console.log("stackptr: " + stackptr);
 
                                 // build the right node
-                                BVH_Create_Node(currentList, parentList.pop(), false);
+                                BVH_Create_Node(currentList, aabb_array, parentList.pop(), false);
                                 rightWorkLists[stackptr - 1] = null;
 
                                 rightBranchCounter++;
@@ -439,4 +436,4 @@ function BVH_Build_Iterative(workList) {
         } // end while (stackptr > -1)
 
         
-} // end function BVH_Build_Iterative(workList)
+} // end function BVH_Build_Iterative(workList, aabb_array)
