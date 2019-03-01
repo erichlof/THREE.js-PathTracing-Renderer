@@ -87,7 +87,7 @@ The following classic scene rendering comes from later in the same paper by Veac
 And here is that scene rendered in real-time by the three.js path tracer: Try pressing 'E' and 'R' to open and close the door! <br>
 * [Difficult Lighting Classic Test Scene Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Bi-Directional_Difficult_Lighting.html) <br>
 
-I had the above images only to go on - there are no scene dimensions specifications that I am aware of.  Since I'm experimenting with the BVH acceleration structure and multiple models, I simplified the sculptures on the coffee table from Utah teapots to ellipsoids.  However, I feel that I have captured the essence and purpose of his test scene rooms.  I think Veach would be interested to know that his scenes, which probably took several minutes if not hours to render back in the 1990's, are now rendering real-time near 60 FPS on a web browser! :-D
+I had the above images only to go on - there are no scene dimensions specifications that I am aware of.  However, I feel that I have captured the essence and purpose of his test scene rooms.  I think Veach would be interested to know that his scenes, which probably took several minutes if not hours to render back in the 1990's, are now rendering real-time (30-60 fps) on a web browser! :-D
 
 For more intuition and a direct comparison between regular path tracing and bi-directional path tracing, here is the old Cornell Box scene but this time there is a blocker panel that blocks most of the light source in the ceiling.  The naive approach is just to hope that the camera rays will be lucky enough to find a light source:
 * [Naive Approach to Blocked Light Source](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Compare_Uni-Directional_Approach.html) As we can painfully see, we will have to wait a long time to get a decent image!
@@ -145,11 +145,9 @@ To my knowledge, this is just about as fast as I can push the path tracing engin
 * November 1st, 2018: New Iterative BVH Builder!  Unlike the previous recursive builder (which crashed if you even looked at it the wrong way, ha) this new iterative version actually works!  It is very robust, handling low poly up to 500,000 triangles (that's how much I tested so far, maybe it will handle millions).  Now the models can be rotated and scaled to any dimensions upon loading, and the BVH builder will just do its job. Depending on how close you are to the model, rendering stays at a rock-solid 60 fps on my humble laptop with integrated graphics.  Of course if you try flying the camera inside of a dense model, the framerate will tank (due to the BVH being called multiple times and camera ray divergence), but aside from that, it works great!  The only major issue is that it won't compile on my cell phone, so this may be a desktop-only feature of the renderer (I am investigating possible solutions for mobile).  Next on the TODO list is to add support for diffuse texture mapping of models (as specified in their respective .obj and .mtl files).  I figured out how to apply 1 texture to the entire model, but I'm still looking into ways of handling multiple textures for the same model. Then it will be time to try loading multiple objects (different .obj files) into the same scene.  But for now, I'm really happy with how my builder is shaping up; it's amazing that in 2018 we can load anywhere from 50 to 500,000 triangles and path-trace them in real time inside a browser! :-)    
 
 
-
 <h2>TODO</h2>
 
-* Add support for multiple BVH models in the same scene, which will require a BVH for the BVH's! ;-)
-* Instead of scene description hard-coded in the path tracing shader, let the scene be defined using the Three.js library
+* For simple scenes without gltf models, instead of scene description hard-coded in the path tracing shader, let the scene be defined using familiar Three.js mesh creation commands
 * Dynamic Scene description/BVH rigged model animation streamed real-time to the GPU path tracer<br>
 
 <h2>ABOUT</h2>
