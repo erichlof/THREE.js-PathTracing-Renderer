@@ -14,6 +14,7 @@ uniform sampler2D tAlbedoTextures[8]; // 8 = max number of diffuse albedo textur
 uniform sampler2D tHDRTexture;
 uniform float uSkyLightIntensity;
 uniform float uSunLightIntensity;
+uniform vec3 uSunColor;
 
 // (1 / 2048 texture width)
 #define INV_TEXTURE_WIDTH 0.00048828125
@@ -31,8 +32,6 @@ Plane plane;
 #include <pathtracing_triangle_intersect>
 #include <pathtracing_boundingbox_intersect>
 #include <pathtracing_bvhTriangle_intersect>
-
-
 
 struct StackLevelData
 {
@@ -243,11 +242,7 @@ vec3 Get_HDR_Color(Ray r)
 	vec4 texData = texture( tHDRTexture, sampleUV );
 	texData = RGBEToLinear(texData);
 	
-	// tone mapping options
-	//vec3 texColor = LinearToneMapping(texData.rgb);
-	//vec3 texColor = ReinhardToneMapping(texData.rgb);
-	//vec3 texColor = Uncharted2ToneMapping(texData.rgb);
-	//vec3 texColor = OptimizedCineonToneMapping(texData.rgb);
+	// tone mapping
 	vec3 texColor = ACESFilmicToneMapping(texData.rgb);
 
 	return texColor;
@@ -295,12 +290,10 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
         	// if ray bounced off of diffuse material and hits sky
 		if (t == INFINITY && previousIntersecType == DIFF)
 		{
-			accumCol = mask * Get_HDR_Color(r);
-
 			if (sampleSunLight)
-				accumCol *= uSunLightIntensity;
+				accumCol = mask * uSunColor * uSunLightIntensity;
 			else
-				accumCol *= uSkyLightIntensity;
+				accumCol = mask * Get_HDR_Color(r) * uSkyLightIntensity;
 
 			break;
 		}
@@ -308,13 +301,15 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
         	// if ray bounced off of glass and hits sky
 		if (t == INFINITY && (previousIntersecType == REFR || previousIntersecType == SPEC))
 		{
-			if (sampleSunLight)
-			    mask *= uSunLightIntensity;
+			if (sampleSunLight) // sun going through glass, hitting a another surface
+			    mask *= uSunColor * uSunLightIntensity;
+            else // looking through glass, hitting the sky
+                mask *= Get_HDR_Color(r) * uSkyLightIntensity;
 
 			if (bounceIsSpecular) // prevents sun 'fireflies' on diffuse surfaces
-				accumCol = mask * Get_HDR_Color(r);
-			
-			break;	
+                accumCol = mask;
+
+			break;
 		}
 
         	// other lights, like houselights, could be added to the scene
@@ -331,14 +326,6 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
         	vec3 nl = dot(n,r.direction) <= 0.0 ? normalize(n) : normalize(n * -1.0);
 		vec3 x = r.origin + r.direction * t;
 
-
-		if (intersec.type == SEAFLOOR)
-		{
-			accumCol = mask * intersec.color;
-
-            		break;
-		}
-		
         	if (intersec.type == DIFF) // Ideal DIFFUSE reflection
         	{
 			diffuseCount++;

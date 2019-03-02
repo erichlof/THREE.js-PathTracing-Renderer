@@ -6,10 +6,10 @@ let pathTracingUniforms, pathTracingDefines, screenOutputMaterial, pathTracingRe
 // Camera variables
 let quadCamera, worldCamera;
 // HDR image variables
-var hdrPath, hdrTexture, hdrLoader, hdrExposure = 10.0;
+var hdrPath, hdrTexture, hdrLoader, hdrExposure = 1.0;
 // Environment variables
-var skyLightIntensity = 1.0, sunLightIntensity = 2.0;
-var skyLightIntensityChanged = false, sunLightIntensityChanged = false;
+var skyLightIntensity = 2.0, sunLightIntensity = 2.0, sunColor = [255, 250, 235];
+var skyLightIntensityChanged = false, sunLightIntensityChanged = false, sunColorChanged = false;
 var cameraControlsObject; //for positioning and moving the camera itself
 var cameraControlsYawObject; //allows access to control camera's left/right movements through mobile input
 var cameraControlsPitchObject; //allows access to control camera's up/down movements through mobile input
@@ -37,6 +37,7 @@ let uniqueMaterialTextures = [];
 var aabb_array;
 // Menu variables
 var gui;
+var lightingSettingsFolder;
 var cameraSettingsFolder;
 const minFov = 1, maxFov = 150;
 const minFocusDistance = 1;
@@ -654,6 +655,7 @@ async function prepareGeometryForPT(meshList, pathTracingMaterialList, triangleM
         uFocusDistance: {type: "f", value: focusDistance},
         uSkyLightIntensity: {type: "f", value: skyLightIntensity},
         uSunLightIntensity: {type: "f", value: sunLightIntensity},
+        uSunColor: {type: "v3", value: new THREE.Color().fromArray(sunColor.map(x => x / 255))},
 
         uResolution: {type: "v2", value: new THREE.Vector2()},
 
@@ -761,7 +763,7 @@ function initMenu() {
     gui = new dat.GUI();
     gui.domElement.classList.add("hidden");
 
-    gui.add(this, 'pixelRatio', 0.25, 1).step(0.0125).onChange(function (value) {
+    gui.add(this, 'pixelRatio', 0.25, 1).step(0.01).onChange(function (value) {
         renderer.setPixelRatio(value);
 
         pathTracingUniforms.uResolution.value.x = renderer.context.drawingBufferWidth;
@@ -772,22 +774,31 @@ function initMenu() {
 
         forceUpdate = true;
     });
-    gui.add(this, 'sunAngle', 0, Math.PI).step(Math.PI/60).onChange(() => {
+    lightingSettingsFolder = gui.addFolder("Lighting Settings");
+    lightingSettingsFolder.add(this, 'sunAngle', 0, Math.PI).step(Math.PI/100).onChange(() => {
         forceUpdate = true;
     });
-    gui.add(this, 'skyLightIntensity', 0, 5).step(5/60).onChange(() => {
+    lightingSettingsFolder.add(this, 'hdrExposure', 0, 10).step(10/100).onChange(() => {
+        renderer.toneMappingExposure = hdrExposure;
+        forceUpdate = true;
+    });
+    lightingSettingsFolder.add(this, 'skyLightIntensity', 0, 5).step(5/100).onChange(() => {
         skyLightIntensityChanged = true;
         forceUpdate = true;
     });
-    gui.add(this, 'sunLightIntensity', 0, 5).step(5/60).onChange(() => {
+    lightingSettingsFolder.add(this, 'sunLightIntensity', 0, 5).step(5/100).onChange(() => {
         sunLightIntensityChanged = true;
+        forceUpdate = true;
+    });
+    lightingSettingsFolder.addColor(this, 'sunColor').onChange(() => {
+        sunColorChanged = true;
         forceUpdate = true;
     });
     cameraSettingsFolder = gui.addFolder("Camera Settings");
     cameraSettingsFolder.add(worldCamera, 'fov', minFov, maxFov).onChange(() => {
         fovChanged = true;
     });
-    cameraSettingsFolder.add(this, 'apertureSize', minApertureSize, maxApertureSize).step(maxApertureSize/60).onChange(() => {
+    cameraSettingsFolder.add(this, 'apertureSize', minApertureSize, maxApertureSize).step(maxApertureSize/100).onChange(() => {
         apertureSizeChanged = true;
     });
     cameraSettingsFolder.add(this, 'focusDistance', minFocusDistance).step(1).onChange(() => {
@@ -1073,6 +1084,11 @@ function animate() {
     if (sunLightIntensityChanged) {
         pathTracingUniforms.uSunLightIntensity.value = sunLightIntensity;
         sunLightIntensityChanged = false;
+    }
+
+    if (sunColorChanged) {
+        pathTracingUniforms.uSunColor.value = new THREE.Color().fromArray(sunColor.map(x => x / 255));
+        sunColorChanged = false;
     }
 
     if (cameraIsMoving) {
