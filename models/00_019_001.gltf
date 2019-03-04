@@ -1,0 +1,116 @@
+{
+  "accessors": [
+    {
+      "bufferView": 0,
+      "componentType": 5121,
+      "count": 1344,
+      "type": "SCALAR",
+      "max": [
+        229.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 230,
+      "type": "VEC3",
+      "max": [
+        1.550375,
+        2.6,
+        3.02499986
+      ],
+      "min": [
+        0.0,
+        0.0,
+        -2.30109273E-14
+      ]
+    }
+  ],
+  "asset": {
+    "copyright": "2019 (c) Smart2IT B.V.",
+    "generator": "Smart2IT Revit glTF Exporter v0.5",
+    "version": "2.0"
+  },
+  "buffers": [
+    {
+      "uri": "00_019_001.bin",
+      "byteLength": 4104
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteLength": 1344,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 1344,
+      "byteLength": 2760,
+      "target": 34962
+    }
+  ],
+  "materials": [
+    {
+      "name": "Generic Models material#7F7F7FFF",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.498039216,
+          0.498039216,
+          0.498039216,
+          1.0
+        ],
+        "metallicFactor": 0.0
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 1
+          },
+          "indices": 0,
+          "material": 0
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "matrix": [
+        -1.24054086E-05,
+        0.0,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        -1.24054086E-05,
+        0.0,
+        2.55,
+        3.49233E-13,
+        -0.09,
+        1.0
+      ],
+      "mesh": 0,
+      "name": "[6740526]Bruynzeel_Keuken_Hoek_5700mm"
+    }
+  ],
+  "scene": 0,
+  "scenes": [
+    {
+      "nodes": [
+        0
+      ],
+      "name": "Cell"
+    }
+  ]
+}

@@ -1,0 +1,374 @@
+{
+  "accessors": [
+    {
+      "bufferView": 0,
+      "componentType": 5121,
+      "count": 72,
+      "type": "SCALAR",
+      "max": [
+        15.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 16,
+      "type": "VEC3",
+      "max": [
+        0.745499969,
+        -0.0800000057,
+        -0.061499998
+      ],
+      "min": [
+        -0.7995,
+        -1.408,
+        -0.104499996
+      ]
+    },
+    {
+      "bufferView": 2,
+      "componentType": 5123,
+      "count": 1569,
+      "type": "SCALAR",
+      "max": [
+        305.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 3,
+      "componentType": 5126,
+      "count": 306,
+      "type": "VEC3",
+      "max": [
+        0.0830000043,
+        -0.711500049,
+        -0.1315
+      ],
+      "min": [
+        0.053,
+        -0.861922264,
+        -0.174043283
+      ]
+    },
+    {
+      "bufferView": 4,
+      "componentType": 5121,
+      "count": 144,
+      "type": "SCALAR",
+      "max": [
+        23.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 5,
+      "componentType": 5126,
+      "count": 24,
+      "type": "VEC3",
+      "max": [
+        0.8275,
+        -0.052,
+        -0.061499998
+      ],
+      "min": [
+        0.013,
+        -1.436,
+        -0.1315
+      ]
+    },
+    {
+      "bufferView": 6,
+      "componentType": 5121,
+      "count": 180,
+      "type": "SCALAR",
+      "max": [
+        46.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 7,
+      "componentType": 5126,
+      "count": 47,
+      "type": "VEC3",
+      "max": [
+        0.879500031,
+        7.10847255E-18,
+        1.675393E-18
+      ],
+      "min": [
+        -0.879500031,
+        -1.488,
+        -0.112
+      ]
+    },
+    {
+      "bufferView": 8,
+      "componentType": 5121,
+      "count": 576,
+      "type": "SCALAR",
+      "max": [
+        71.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 9,
+      "componentType": 5126,
+      "count": 72,
+      "type": "VEC3",
+      "max": [
+        0.912499964,
+        1.521,
+        -0.022
+      ],
+      "min": [
+        -0.912499964,
+        -0.031,
+        -0.212
+      ]
+    }
+  ],
+  "asset": {
+    "copyright": "2019 (c) Smart2IT B.V.",
+    "generator": "Smart2IT Revit glTF Exporter v0.5",
+    "version": "2.0"
+  },
+  "buffers": [
+    {
+      "uri": "00_004_003.bin",
+      "byteLength": 9692
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteLength": 72,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 72,
+      "byteLength": 192,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 264,
+      "byteLength": 3140,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 3404,
+      "byteLength": 3672,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 7076,
+      "byteLength": 144,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 7220,
+      "byteLength": 288,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 7508,
+      "byteLength": 180,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 7688,
+      "byteLength": 564,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 8252,
+      "byteLength": 576,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 8828,
+      "byteLength": 864,
+      "target": 34962
+    }
+  ],
+  "materials": [
+    {
+      "name": "o1_glas_grijs",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.627451,
+          0.627451,
+          0.627451,
+          0.25
+        ],
+        "metallicFactor": 0.0
+      },
+      "alphaMode": "BLEND"
+    },
+    {
+      "name": "h4_aluminium",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.956862748,
+          0.956862748,
+          0.956862748,
+          1.0
+        ],
+        "metallicFactor": 0.0
+      }
+    },
+    {
+      "name": "n6_kunststof_RAL 6005",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.184313729,
+          0.270588249,
+          0.219607845,
+          1.0
+        ],
+        "metallicFactor": 0.0
+      }
+    },
+    {
+      "name": "n6_kunststof_RAL 9010",
+      "pbrMetallicRoughness": {
+        "metallicFactor": 0.0
+      }
+    },
+    {
+      "name": "i2_naaldhout (vuren)",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.9019608,
+          0.8352941,
+          0.6745098,
+          1.0
+        ],
+        "metallicFactor": 0.0
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 1
+          },
+          "indices": 0,
+          "material": 0
+        },
+        {
+          "attributes": {
+            "POSITION": 3
+          },
+          "indices": 2,
+          "material": 1
+        },
+        {
+          "attributes": {
+            "POSITION": 5
+          },
+          "indices": 4,
+          "material": 2
+        },
+        {
+          "attributes": {
+            "POSITION": 7
+          },
+          "indices": 6,
+          "material": 3
+        }
+      ]
+    },
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 9
+          },
+          "indices": 8,
+          "material": 4
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "matrix": [
+        1.0,
+        0.0,
+        7.00584762E-15,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        -7.00584762E-15,
+        0.0,
+        1.0,
+        0.0,
+        4.1515,
+        2.436,
+        0.2,
+        1.0
+      ],
+      "mesh": 0,
+      "name": "[8693666]Merk B-001"
+    },
+    {
+      "matrix": [
+        1.0,
+        0.0,
+        7.00584762E-15,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        -7.00584762E-15,
+        0.0,
+        1.0,
+        0.0,
+        4.1515,
+        0.948,
+        0.2,
+        1.0
+      ],
+      "mesh": 1,
+      "name": "[8693667]DEL_Merk B"
+    }
+  ],
+  "scene": 0,
+  "scenes": [
+    {
+      "nodes": [
+        0,
+        1
+      ],
+      "name": "Cell"
+    }
+  ]
+}

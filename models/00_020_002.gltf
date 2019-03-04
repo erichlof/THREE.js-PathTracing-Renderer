@@ -1,0 +1,569 @@
+{
+  "accessors": [
+    {
+      "bufferView": 0,
+      "componentType": 5123,
+      "count": 12483,
+      "type": "SCALAR",
+      "max": [
+        2548.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 2549,
+      "type": "VEC3",
+      "max": [
+        0.181199908,
+        0.5425,
+        -5.143619E-15
+      ],
+      "min": [
+        -0.181199908,
+        -1.96269668E-15,
+        -0.34670046
+      ]
+    },
+    {
+      "bufferView": 2,
+      "componentType": 5123,
+      "count": 11070,
+      "type": "SCALAR",
+      "max": [
+        2724.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 3,
+      "componentType": 5126,
+      "count": 2725,
+      "type": "VEC3",
+      "max": [
+        0.182749927,
+        0.0361568742,
+        -8.908274E-15
+      ],
+      "min": [
+        -0.182749927,
+        0.0003474964,
+        -0.446566135
+      ]
+    },
+    {
+      "bufferView": 4,
+      "componentType": 5123,
+      "count": 7401,
+      "type": "SCALAR",
+      "max": [
+        1481.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 5,
+      "componentType": 5126,
+      "count": 1482,
+      "type": "VEC3",
+      "max": [
+        0.175500721,
+        0.3005,
+        0.075
+      ],
+      "min": [
+        -0.175500721,
+        -1.86782327E-15,
+        -0.075
+      ]
+    },
+    {
+      "bufferView": 6,
+      "componentType": 5121,
+      "count": 276,
+      "type": "SCALAR",
+      "max": [
+        47.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 7,
+      "componentType": 5126,
+      "count": 48,
+      "type": "VEC3",
+      "max": [
+        -0.06,
+        0.0752302,
+        0.0188020933
+      ],
+      "min": [
+        -0.09,
+        0.0452302024,
+        -0.0061982153
+      ]
+    },
+    {
+      "bufferView": 8,
+      "componentType": 5123,
+      "count": 2784,
+      "type": "SCALAR",
+      "max": [
+        553.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 9,
+      "componentType": 5126,
+      "count": 554,
+      "type": "VEC3",
+      "max": [
+        0.0275,
+        0.1983748,
+        0.13662979
+      ],
+      "min": [
+        -0.027499998,
+        -1.38777888E-19,
+        -0.0275
+      ]
+    },
+    {
+      "bufferView": 10,
+      "componentType": 5121,
+      "count": 420,
+      "type": "SCALAR",
+      "max": [
+        121.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 11,
+      "componentType": 5126,
+      "count": 122,
+      "type": "VEC3",
+      "max": [
+        0.107,
+        0.015,
+        0.0720000044
+      ],
+      "min": [
+        -0.107,
+        -4.06564253E-15,
+        -0.0720000044
+      ]
+    },
+    {
+      "bufferView": 12,
+      "componentType": 5123,
+      "count": 1758,
+      "type": "SCALAR",
+      "max": [
+        298.0
+      ],
+      "min": [
+        0.0
+      ]
+    },
+    {
+      "bufferView": 13,
+      "componentType": 5126,
+      "count": 299,
+      "type": "VEC3",
+      "max": [
+        0.0588,
+        0.0180000011,
+        0.0
+      ],
+      "min": [
+        -0.0602,
+        -0.0665,
+        -0.038
+      ]
+    }
+  ],
+  "asset": {
+    "copyright": "2019 (c) Smart2IT B.V.",
+    "generator": "Smart2IT Revit glTF Exporter v0.5",
+    "version": "2.0"
+  },
+  "buffers": [
+    {
+      "uri": "00_020_002.bin",
+      "byteLength": 165040
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteLength": 24968,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 24968,
+      "byteLength": 30588,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 55556,
+      "byteLength": 22140,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 77696,
+      "byteLength": 32700,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 110396,
+      "byteLength": 14804,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 125200,
+      "byteLength": 17784,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 142984,
+      "byteLength": 276,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 143260,
+      "byteLength": 576,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 143836,
+      "byteLength": 5568,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 149404,
+      "byteLength": 6648,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 156052,
+      "byteLength": 420,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 156472,
+      "byteLength": 1464,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 157936,
+      "byteLength": 3516,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 161452,
+      "byteLength": 3588,
+      "target": 34962
+    }
+  ],
+  "materials": [
+    {
+      "name": "g3_keramisch_wit",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          1.0,
+          1.0,
+          0.9411765,
+          1.0
+        ],
+        "metallicFactor": 0.0
+      }
+    },
+    {
+      "name": "Plumbing Fixtures material#7F7F7FFF",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.498039216,
+          0.498039216,
+          0.498039216,
+          1.0
+        ],
+        "metallicFactor": 0.0
+      }
+    },
+    {
+      "name": "h3_chroom",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.784313738,
+          0.784313738,
+          0.784313738,
+          1.0
+        ],
+        "metallicFactor": 0.0
+      }
+    },
+    {
+      "name": "h3_chroom_mat",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.956862748,
+          0.956862748,
+          0.956862748,
+          1.0
+        ],
+        "metallicFactor": 0.0
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 1
+          },
+          "indices": 0,
+          "material": 0
+        }
+      ]
+    },
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 3
+          },
+          "indices": 2,
+          "material": 0
+        }
+      ]
+    },
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 5
+          },
+          "indices": 4,
+          "material": 0
+        },
+        {
+          "attributes": {
+            "POSITION": 7
+          },
+          "indices": 6,
+          "material": 1
+        }
+      ]
+    },
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 9
+          },
+          "indices": 8,
+          "material": 2
+        }
+      ]
+    },
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 11
+          },
+          "indices": 10,
+          "material": 3
+        }
+      ]
+    },
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 13
+          },
+          "indices": 12,
+          "material": 2
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "matrix": [
+        -1.0,
+        -7.10542736E-15,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        -7.10542736E-15,
+        1.0,
+        0.0,
+        0.0,
+        0.6151,
+        0.495,
+        -2.7752,
+        1.0
+      ],
+      "mesh": 0,
+      "name": "[8797489]74_E005401 - Connect Air wall mounted bowl, wash-down, AquaBlade(E0365,E0366)"
+    },
+    {
+      "matrix": [
+        -1.0,
+        -1.62498338E-29,
+        -6.78168544E-15,
+        0.0,
+        5.668609E-30,
+        1.0,
+        -3.23200519E-15,
+        0.0,
+        6.78168544E-15,
+        -3.23200519E-15,
+        -1.0,
+        0.0,
+        0.6151,
+        0.495,
+        -2.6772,
+        1.0
+      ],
+      "mesh": 1,
+      "name": "[8797490]E036601 - Connect Air sandwich style seat & cover"
+    },
+    {
+      "matrix": [
+        0.0,
+        0.0,
+        -1.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.0,
+        0.0,
+        0.0,
+        0.1552,
+        0.815,
+        -1.9087007,
+        1.0
+      ],
+      "mesh": 2,
+      "name": "[8797493]74_T059501 - NOUVEAU - HANDWASTAFEL KRAANGAT LINKS"
+    },
+    {
+      "matrix": [
+        0.707106769,
+        0.0,
+        -0.707106769,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.707106769,
+        0.0,
+        0.707106769,
+        0.0,
+        0.205173239,
+        0.91,
+        -1.98974419,
+        1.0
+      ],
+      "mesh": 3,
+      "name": "[8797494]F2842AA - IDEALSTREAM bath pillar tap with lever handle"
+    },
+    {
+      "matrix": [
+        -1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.62515,
+        1.064,
+        -2.7752,
+        1.0
+      ],
+      "mesh": 4,
+      "name": "[8797501]52_BEDIENINGSPLAAT_MAT CHROOM"
+    },
+    {
+      "matrix": [
+        1.51723415E-13,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        -1.0,
+        0.0,
+        1.51723415E-13,
+        0.0,
+        0.1552,
+        0.7,
+        -2.25586271,
+        1.0
+      ],
+      "mesh": 5,
+      "name": "[8797506]74_N1381AA CONNECT toilet roll holder with no cover"
+    }
+  ],
+  "scene": 0,
+  "scenes": [
+    {
+      "nodes": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "name": "Cell"
+    }
+  ]
+}
