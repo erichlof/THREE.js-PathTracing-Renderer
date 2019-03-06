@@ -1135,18 +1135,21 @@ function animate() {
     // RENDERING in 3 steps
 
     // STEP 1
-    // Perform PathTracing and Render(save) into pathTracingRenderTarget
-    // Read previous screenTextureRenderTarget to use as a new starting point to blend with
-    renderer.render(pathTracingScene, worldCamera, pathTracingRenderTarget);
+    // Perform PathTracing and Render(save) into pathTracingRenderTarget, a full-screen texture.
+    // Read previous screenTextureRenderTarget(via texelFetch inside fragment shader) to use as a new starting point to blend with
+    renderer.setRenderTarget(pathTracingRenderTarget);
+    renderer.render(pathTracingScene, worldCamera);
 
     // STEP 2
-    // Render(copy) the final pathTracingScene output(above) into screenTextureRenderTarget
-    // This will be used as a new starting point for Step 1 above
-    renderer.render(screenTextureScene, quadCamera, screenTextureRenderTarget);
+    // Render(copy) the pathTracingScene output(pathTracingRenderTarget above) into screenTextureRenderTarget.
+    // This will be used as a new starting point for Step 1 above (essentially creating ping-pong buffers)
+    renderer.setRenderTarget(screenTextureRenderTarget);
+    renderer.render(screenTextureScene, quadCamera);
 
     // STEP 3
     // Render full screen quad with generated pathTracingRenderTarget in STEP 1 above.
-    // After the image is gamma corrected, it will be shown on the screen as the final accumulated output
+    // After the image is gamma-corrected, it will be shown on the screen as the final accumulated output
+    renderer.setRenderTarget(null);
     renderer.render(screenOutputScene, quadCamera);
 
     stats.update();
