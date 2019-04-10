@@ -375,13 +375,13 @@ float SphereIntersect( float rad, vec3 pos, Ray ray )
 	if (!solveQuadratic( a, b, c, t0, t1))
 		return INFINITY;
 	
-	if ( t1 > 0.0 )
-		t = t1;
-		
 	if ( t0 > 0.0 )
-		t = t0;
-	
-	return t;
+		return t0;
+
+	if ( t1 > 0.0 )
+		return t1;
+		
+	return INFINITY;
 }
 
 `;
@@ -673,11 +673,11 @@ float EllipsoidIntersect( vec3 radii, vec3 pos, Ray r )
 	if (!solveQuadratic( a, b, c, t0, t1))
 		return INFINITY;
 	
-	if ( t1 > 0.0 )
-		t = t1;
-		
 	if ( t0 > 0.0 )
-		t = t0;
+		return t0;
+
+	if ( t1 > 0.0 )
+		return t1;
 	
 	return t;
 }
@@ -706,11 +706,10 @@ float OpenCylinderIntersect( vec3 p0, vec3 p1, float rad, Ray r, out vec3 n )
 	
 	float det=b*b-2.0*a*c;
 	
-	if (det<0.0) return INFINITY;
+	if (det<0.0) 
+		return INFINITY;
 	
 	det=sqrt(det);
-	
-	float t = INFINITY;
 	
 	float t0 = (-b-det)*ra;
 	float t1 = (-b+det)*ra;
@@ -718,6 +717,18 @@ float OpenCylinderIntersect( vec3 p0, vec3 p1, float rad, Ray r, out vec3 n )
 	vec3 ip;
 	vec3 lp;
 	float ct;
+
+	if (t0 > 0.0)
+	{
+		ip=r.origin+r.direction*t0;
+		lp=ip-p0;
+		ct=dot(lp,dpt);
+		if((ct>0.0)&&(ct<1.0))
+		{
+			n=ip-(p0+dp*ct);
+			return t0;
+		}
+	}
 	
 	if (t1 > 0.0)
 	{
@@ -726,26 +737,12 @@ float OpenCylinderIntersect( vec3 p0, vec3 p1, float rad, Ray r, out vec3 n )
 		ct=dot(lp,dpt);
 		if((ct>0.0)&&(ct<1.0))
 		{
-			t = t1;
 		     	n=(p0+dp*ct)-ip;
+			return t1;
 		}
-		
 	}
 	
-	if (t0 > 0.0)
-	{
-		ip=r.origin+r.direction*t0;
-		lp=ip-p0;
-		ct=dot(lp,dpt);
-		if((ct>0.0)&&(ct<1.0))
-		{
-			t = t0;
-			n=ip-(p0+dp*ct);
-		}
-		
-	}
-	
-	return t;
+	return INFINITY;
 }
 
 `;
@@ -830,7 +827,6 @@ float CappedCylinderIntersect( vec3 p0, vec3 p1, float rad, Ray r, out vec3 n )
 			result = t1;
 		     	n=(p0+dp*ct)-ip;
 		}
-		
 	}
 	
 	if (t0 > 0.0)
@@ -843,7 +839,6 @@ float CappedCylinderIntersect( vec3 p0, vec3 p1, float rad, Ray r, out vec3 n )
 			result = t0;
 			n=ip-(p0+dp*ct);
 		}
-		
 	}
 	
 	return result;
@@ -858,7 +853,6 @@ float ConeIntersect( vec3 p0, float r0, vec3 p1, float r1, Ray r, out vec3 n )
 //----------------------------------------------------------------------------   
 {
 	r0 += 0.1;
-	float t = INFINITY;
 	vec3 locX;
 	vec3 locY;
 	vec3 locZ=-(p1-p0)/(1.0 - r1/r0);
@@ -920,29 +914,29 @@ float ConeIntersect( vec3 p0, float r0, vec3 p1, float r1, Ray r, out vec3 n )
 	vec3 pt0=ray.origin+t0*ray.direction;
 	vec3 pt1=ray.origin+t1*ray.direction;
 	
-        if(t1>0.0 && pt1.z>r1/r0 && pt1.z<1.0)
-	{
-		t=t1;
-		n=pt1;
-		n.z=0.0;
-		n=normalize(n);
-		n.z=-pt1.z/abs(pt1.z);
-		n=normalize(n);
-		n=tm*-n;
-	}
-	
 	if(t0>0.0 && pt0.z>r1/r0 && pt0.z<1.0)
 	{
-		t=t0;
 		n=pt0;
 		n.z=0.0;
 		n=normalize(n);
 		n.z=-pt0.z/abs(pt0.z);
 		n=normalize(n);
 		n=tm*n;
+		return t0;
+	}
+
+        if(t1>0.0 && pt1.z>r1/r0 && pt1.z<1.0)
+	{
+		n=pt1;
+		n.z=0.0;
+		n=normalize(n);
+		n.z=-pt1.z/abs(pt1.z);
+		n=normalize(n);
+		n=tm*-n;
+		return t1;
 	}
 	
-	return t;	
+	return INFINITY;	
 }
 
 `;
@@ -1018,48 +1012,29 @@ float ParaboloidIntersect( float rad, float height, vec3 pos, Ray r, out vec3 n 
 	if (!solveQuadratic( a, b, c, t0, t1))
 		return INFINITY;
 	
-	vec3 ip1, ip2;
-	float result = INFINITY;
-	
-	if (t1 > 0.0)
-	{	
-		ip2 = ro + rd * t1;
-		if (ip2.y < height)
-		{
-			n = vec3( -2.0 * ip2.x, 2.0 * ip2.y, -2.0 * ip2.z );
-			result = t1;
-		}		
-	}
+	vec3 ip;
 	
 	if (t0 > 0.0)
 	{
-		ip1 = ro + rd * t0;
-		if (ip1.y < height)
+		ip = ro + rd * t0;
+		if (ip.y < height)
 		{
-			n = vec3( 2.0 * ip1.x, -2.0 * ip1.y, 2.0 * ip1.z );
-			result = t0;
+			n = vec3( 2.0 * ip.x, -1.0 / k, 2.0 * ip.z );
+			return t0;
+		}		
+	}
+
+	if (t1 > 0.0)
+	{	
+		ip = ro + rd * t1;
+		if (ip.y < height)
+		{
+			n = -vec3( 2.0 * ip.x, -1.0 / k, 2.0 * ip.z );
+			return t1;
 		}		
 	}
 	
-	if( t0 > 0.0 && t1 > 0.0)
-	{
-		float dist1 = distance(ro,ip1);
-		float dist2 = distance(ro,ip2);
-		
-		if (dist2 < dist1 && ip2.y < height)
-		{
-			n = vec3( -2.0 * ip2.x, 2.0 * ip2.y, -2.0 * ip2.z );
-			result = t1;
-		}	
-		
-		if (dist1 < dist2 && ip1.y < height)
-		{
-			n = vec3( 2.0 * ip1.x, -2.0 * ip1.y, 2.0 * ip1.z );
-			result = t0;
-		}			
-	}
-	
-	return result;	
+	return INFINITY;	
 }
 
 `;
