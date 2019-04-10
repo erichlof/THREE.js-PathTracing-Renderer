@@ -99,48 +99,29 @@ float HyperboloidIntersect( float rad, float height, vec3 pos, Ray r, out vec3 n
 	if (!solveQuadratic( a, b, c, t0, t1))
 		return INFINITY;
 	
-	vec3 ip1, ip2;
-	float result = INFINITY;
-	
-	if (t1 > 0.0)
-	{	
-		ip2 = ro + rd * t1;
-		if (abs(ip2.y) < height)
-		{
-			n = vec3( -2.0 * ip2.x, 2.0 * ip2.y, -2.0 * ip2.z );
-			result = t1;
-		}		
-	}
+	vec3 ip;
 	
 	if (t0 > 0.0)
 	{
-		ip1 = ro + rd * t0;
-		if (abs(ip1.y) < height)
+		ip = ro + rd * t0;
+		if (abs(ip.y) < height)
 		{
-			n = vec3( 2.0 * ip1.x, -2.0 * ip1.y, 2.0 * ip1.z );
-			result = t0;
+			n = vec3( 2.0 * ip.x, -2.0 * ip.y, 2.0 * ip.z );
+			return t0;
+		}		
+	}
+
+	if (t1 > 0.0)
+	{	
+		ip = ro + rd * t1;
+		if (abs(ip.y) < height)
+		{
+			n = -vec3( 2.0 * ip.x, -2.0 * ip.y, 2.0 * ip.z );
+			return t1;
 		}		
 	}
 	
-	if( t0 > 0.0 && t1 > 0.0)
-	{
-		float dist1 = distance(ro,ip1);
-		float dist2 = distance(ro,ip2);
-		
-		if (dist2 < dist1 && abs(ip2.y) < height)
-		{
-			n = vec3( -2.0 * ip2.x, 2.0 * ip2.y, -2.0 * ip2.z );
-			result = t1;
-		}	
-		
-		else if (abs(ip1.y) < height)
-		{
-			n = vec3( 2.0 * ip1.x, -2.0 * ip1.y, 2.0 * ip1.z );
-			result = t0;
-		}			
-	}
-	
-	return result;	
+	return INFINITY;	
 }
 
 
@@ -161,48 +142,29 @@ float HyperbolicParaboloidIntersect( float rad, float height, vec3 pos, Ray r, o
 	if (!solveQuadratic( a, b, c, t0, t1))
 		return INFINITY;
 	
-	vec3 ip1, ip2;
-	float result = INFINITY;
-	
-	if (t1 > 0.0)
-	{	
-		ip2 = ro + rd * t1;
-		if (abs(ip2.x) < height && abs(ip2.y) < height && abs(ip2.z) < height)
-		{
-			n = vec3( -2.0 * ip2.x, 1.0, 2.0 * ip2.z );
-			result = t1;
-		}		
-	}
-	
+	vec3 ip;
+
 	if (t0 > 0.0)
 	{
-		ip1 = ro + rd * t0;
-		if (abs(ip1.x) < height && abs(ip1.y) < height && abs(ip1.z) < height)
+		ip = ro + rd * t0;
+		if (abs(ip.x) < height && abs(ip.y) < height && abs(ip.z) < height)
 		{
-			n = vec3( 2.0 * ip1.x, -1.0, -2.0 * ip1.z );
-			result = t0;
+			n = vec3( 2.0 * ip.x, -1.0 / k, -2.0 * ip.z );
+			return t0;
 		}		
 	}
-	
-	if( t0 > 0.0 && t1 > 0.0)
-	{
-		float dist1 = distance(ro,ip1);
-		float dist2 = distance(ro,ip2);
-		
-		if (dist2 < dist1 && abs(ip2.x) < height && abs(ip2.y) < height && abs(ip2.z) < height)
+
+	if (t1 > 0.0)
+	{	
+		ip = ro + rd * t1;
+		if (abs(ip.x) < height && abs(ip.y) < height && abs(ip.z) < height)
 		{
-			n = vec3( -2.0 * ip2.x, 1.0, 2.0 * ip2.z );
-			result = t1;
-		}	
-		
-		else if (abs(ip1.x) < height && abs(ip1.y) < height && abs(ip1.z) < height)
-		{
-			n = vec3( 2.0 * ip1.x, -1.0, -2.0 * ip1.z );
-			result = t0;
-		}			
+			n = -vec3( 2.0 * ip.x, -1.0 / k, -2.0 * ip.z );
+			return t1;
+		}		
 	}
 		
-	return result;	
+	return INFINITY;	
 }
 
 
