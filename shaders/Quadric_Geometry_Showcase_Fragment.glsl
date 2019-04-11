@@ -104,21 +104,19 @@ float HyperboloidIntersect( float rad, float height, vec3 pos, Ray r, out vec3 n
 	if (t0 > 0.0)
 	{
 		ip = ro + rd * t0;
+		n = vec3( 2.0 * ip.x, -2.0 * ip.y, 2.0 * ip.z );
+		if (dot(rd, n) > 0.0) n = -n;
 		if (abs(ip.y) < height)
-		{
-			n = vec3( 2.0 * ip.x, -2.0 * ip.y, 2.0 * ip.z );
-			return t0;
-		}		
+			return t0;		
 	}
 
 	if (t1 > 0.0)
 	{	
 		ip = ro + rd * t1;
+		n = vec3( 2.0 * ip.x, -2.0 * ip.y, 2.0 * ip.z );
+		if (dot(rd, n) > 0.0) n = -n;
 		if (abs(ip.y) < height)
-		{
-			n = -vec3( 2.0 * ip.x, -2.0 * ip.y, 2.0 * ip.z );
-			return t1;
-		}		
+			return t1;	
 	}
 	
 	return INFINITY;	
@@ -147,21 +145,19 @@ float HyperbolicParaboloidIntersect( float rad, float height, vec3 pos, Ray r, o
 	if (t0 > 0.0)
 	{
 		ip = ro + rd * t0;
+		n = vec3( 2.0 * ip.x, -1.0 / k, -2.0 * ip.z );
+		if (dot(rd, n) > 0.0) n = -n;
 		if (abs(ip.x) < height && abs(ip.y) < height && abs(ip.z) < height)
-		{
-			n = vec3( 2.0 * ip.x, -1.0 / k, -2.0 * ip.z );
-			return t0;
-		}		
+			return t0;		
 	}
 
 	if (t1 > 0.0)
 	{	
 		ip = ro + rd * t1;
+		n = vec3( 2.0 * ip.x, -1.0 / k, -2.0 * ip.z );
+		if (dot(rd, n) > 0.0) n = -n;
 		if (abs(ip.x) < height && abs(ip.y) < height && abs(ip.z) < height)
-		{
-			n = -vec3( 2.0 * ip.x, -1.0 / k, -2.0 * ip.z );
-			return t1;
-		}		
+			return t1;		
 	}
 		
 	return INFINITY;	
