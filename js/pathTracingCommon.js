@@ -386,10 +386,10 @@ float SphereIntersect( float rad, vec3 pos, Ray ray )
 
 `;
 
-THREE.ShaderChunk[ 'pathtracing_sphere_param_intersect' ] = `
+THREE.ShaderChunk[ 'pathtracing_ellipsoid_param_intersect' ] = `
 
 //------------------------------------------------------------------------------------------------------------
-float SphereParamIntersect( float yMinPercent, float yMaxPercent, float phiMaxRadians, vec3 ro, vec3 rd, out vec3 n )
+float EllipsoidParamIntersect( float yMinPercent, float yMaxPercent, float phiMaxRadians, vec3 ro, vec3 rd, out vec3 n )
 //------------------------------------------------------------------------------------------------------------
 {
 	vec3 pHit;
@@ -410,6 +410,7 @@ float SphereParamIntersect( float yMinPercent, float yMaxPercent, float phiMaxRa
 		pHit = ro + rd * t0;
 		phi = mod(atan(pHit.z, pHit.x), TWO_PI);
 		n = vec3(2.0 * pHit.x, 2.0 * pHit.y, 2.0 * pHit.z);
+		if (dot(rd, n) > 0.0) n = -n;
 		if (pHit.y < yMaxPercent && pHit.y > yMinPercent && phi < phiMaxRadians)
 			return t0;
 	}
@@ -418,7 +419,8 @@ float SphereParamIntersect( float yMinPercent, float yMaxPercent, float phiMaxRa
 	{
 		pHit = ro + rd * t1;
 		phi = mod(atan(pHit.z, pHit.x), TWO_PI);
-		n = -vec3(2.0 * pHit.x, 2.0 * pHit.y, 2.0 * pHit.z);
+		n = vec3(2.0 * pHit.x, 2.0 * pHit.y, 2.0 * pHit.z);
+		if (dot(rd, n) > 0.0) n = -n;
 		if (pHit.y < yMaxPercent && pHit.y > yMinPercent && phi < phiMaxRadians)
 			return t1;
 	}
@@ -452,6 +454,7 @@ float CylinderParamIntersect( float yMinPercent, float yMaxPercent, float phiMax
 		pHit = ro + rd * t0;
 		phi = mod(atan(pHit.z, pHit.x), TWO_PI);
 		n = vec3(2.0 * pHit.x, 0.0, 2.0 * pHit.z);
+		if (dot(rd, n) > 0.0) n = -n;
 		if (pHit.y < yMaxPercent && pHit.y > yMinPercent && phi < phiMaxRadians)
 			return t0;
 	}
@@ -460,7 +463,8 @@ float CylinderParamIntersect( float yMinPercent, float yMaxPercent, float phiMax
 	{
 		pHit = ro + rd * t1;
 		phi = mod(atan(pHit.z, pHit.x), TWO_PI);
-		n = -vec3(2.0 * pHit.x, 0.0, 2.0 * pHit.z);
+		n = vec3(2.0 * pHit.x, 0.0, 2.0 * pHit.z);
+		if (dot(rd, n) > 0.0) n = -n;
 		if (pHit.y < yMaxPercent && pHit.y > yMinPercent && phi < phiMaxRadians)
 			return t1;
 	}
@@ -497,6 +501,7 @@ float ConeParamIntersect( float yMinPercent, float yMaxPercent, float phiMaxRadi
 		pHit = ro + rd * t0;
 		phi = mod(atan(pHit.z, pHit.x), TWO_PI);
 		n = vec3(2.0 * pHit.x, -2.0 * (pHit.y - 1.0), 2.0 * pHit.z);
+		if (dot(rd, n) > 0.0) n = -n;
 		if (pHit.y < yMaxPercent && pHit.y > yMinPercent && phi < phiMaxRadians)
 			return t0;
 	}
@@ -505,7 +510,8 @@ float ConeParamIntersect( float yMinPercent, float yMaxPercent, float phiMaxRadi
 	{
 		pHit = ro + rd * t1;
 		phi = mod(atan(pHit.z, pHit.x), TWO_PI);
-		n = -vec3(2.0 * pHit.x, -2.0 * (pHit.y - 1.0), 2.0 * pHit.z);
+		n = vec3(2.0 * pHit.x, -2.0 * (pHit.y - 1.0), 2.0 * pHit.z);
+		if (dot(rd, n) > 0.0) n = -n;
 		if (pHit.y < yMaxPercent && pHit.y > yMinPercent && phi < phiMaxRadians)
 			return t1;
 	}
@@ -544,6 +550,7 @@ float ParaboloidParamIntersect( float yMinPercent, float yMaxPercent, float phiM
 		pHit = ro + rd * t0;
 		phi = mod(atan(pHit.z, pHit.x), TWO_PI);
 		n = vec3(2.0 * pHit.x, -1.0 / k, 2.0 * pHit.z);
+		if (dot(rd, n) > 0.0) n = -n;
 		if (pHit.y < yMaxPercent && pHit.y > yMinPercent && phi < phiMaxRadians)
 			return t0;
 	}
@@ -552,7 +559,8 @@ float ParaboloidParamIntersect( float yMinPercent, float yMaxPercent, float phiM
 	{
 		pHit = ro + rd * t1;
 		phi = mod(atan(pHit.z, pHit.x), TWO_PI);
-		n = -vec3(2.0 * pHit.x, -1.0 / k, 2.0 * pHit.z);
+		n = vec3(2.0 * pHit.x, -1.0 / k, 2.0 * pHit.z);
+		if (dot(rd, n) > 0.0) n = -n;
 		if (pHit.y < yMaxPercent && pHit.y > yMinPercent && phi < phiMaxRadians)
 			return t1;
 	}
@@ -589,6 +597,7 @@ float HyperboloidParamIntersect( float yMinPercent, float yMaxPercent, float phi
 		pHit = ro + rd * t0;
 		phi = mod(atan(pHit.z, pHit.x), TWO_PI);
 		n = vec3(2.0 * pHit.x, -2.0 * pHit.y, 2.0 * pHit.z);
+		if (dot(rd, n) > 0.0) n = -n;
 		if (pHit.y < yMaxPercent && pHit.y > yMinPercent && phi < phiMaxRadians)
 			return t0;
 	}
@@ -597,7 +606,8 @@ float HyperboloidParamIntersect( float yMinPercent, float yMaxPercent, float phi
 	{
 		pHit = ro + rd * t1;
 		phi = mod(atan(pHit.z, pHit.x), TWO_PI);
-		n = -vec3(2.0 * pHit.x, -2.0 * pHit.y, 2.0 * pHit.z);
+		n = vec3(2.0 * pHit.x, -2.0 * pHit.y, 2.0 * pHit.z);
+		if (dot(rd, n) > 0.0) n = -n;
 		if (pHit.y < yMaxPercent && pHit.y > yMinPercent && phi < phiMaxRadians)
 			return t1;
 	}
@@ -626,12 +636,13 @@ float HyperbolicParaboloidParamIntersect( float yMinPercent, float yMaxPercent, 
 
 	if (!solveQuadratic( a, b, c, t0, t1))
 		return INFINITY;
-	
+
 	if ( t0 > 0.0 )
 	{
 		pHit = ro + rd * t0;
 		phi = mod(atan(pHit.z, pHit.x), TWO_PI);
 		n = vec3(2.0 * pHit.x, -1.0 / k, -2.0 * pHit.z);
+		if (dot(rd, n) > 0.0) n = -n;
 		if (abs(pHit.x) < yMaxPercent && abs(pHit.y) < yMaxPercent && abs(pHit.z) < yMaxPercent && phi < phiMaxRadians)
 			return t0;
 	}
@@ -640,7 +651,8 @@ float HyperbolicParaboloidParamIntersect( float yMinPercent, float yMaxPercent, 
 	{
 		pHit = ro + rd * t1;
 		phi = mod(atan(pHit.z, pHit.x), TWO_PI);
-		n = -vec3(2.0 * pHit.x, -1.0 / k, -2.0 * pHit.z);
+		n = vec3(2.0 * pHit.x, -1.0 / k, -2.0 * pHit.z);
+		if (dot(rd, n) > 0.0) n = -n;
 		if (abs(pHit.x) < yMaxPercent && abs(pHit.y) < yMaxPercent && abs(pHit.z) < yMaxPercent && phi < phiMaxRadians)
 			return t1;
 	}
@@ -1017,21 +1029,20 @@ float ParaboloidIntersect( float rad, float height, vec3 pos, Ray r, out vec3 n 
 	if (t0 > 0.0)
 	{
 		ip = ro + rd * t0;
+		n = vec3( 2.0 * ip.x, -1.0 / k, 2.0 * ip.z );
+		if (dot(rd, n) > 0.0) n = -n;
 		if (ip.y < height)
-		{
-			n = vec3( 2.0 * ip.x, -1.0 / k, 2.0 * ip.z );
 			return t0;
-		}		
+				
 	}
 
 	if (t1 > 0.0)
 	{	
 		ip = ro + rd * t1;
+		n = vec3( 2.0 * ip.x, -1.0 / k, 2.0 * ip.z );
+		if (dot(rd, n) > 0.0) n = -n;
 		if (ip.y < height)
-		{
-			n = -vec3( 2.0 * ip.x, -1.0 / k, 2.0 * ip.z );
-			return t1;
-		}		
+			return t1;		
 	}
 	
 	return INFINITY;	
