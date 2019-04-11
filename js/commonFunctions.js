@@ -78,7 +78,7 @@ var fileLoader = new THREE.FileLoader();
 
 function onMouseWheel(event) {
 
-        event.preventDefault();
+        //event.preventDefault();
         event.stopPropagation();
 
         if (event.deltaY > 0) {
