@@ -105,7 +105,9 @@ float HyperboloidIntersect( float rad, float height, vec3 pos, Ray r, out vec3 n
 	{
 		ip = ro + rd * t0;
 		n = vec3( 2.0 * ip.x, -2.0 * ip.y, 2.0 * ip.z );
-		if (dot(rd, n) > 0.0) n = -n;
+		// flip normal if it is facing away from us
+		n *= sign(-dot(rd, n)) * 2.0 - 1.0; // sign is 0 or 1, map it to -1 and +1
+		
 		if (abs(ip.y) < height)
 			return t0;		
 	}
@@ -114,7 +116,9 @@ float HyperboloidIntersect( float rad, float height, vec3 pos, Ray r, out vec3 n
 	{	
 		ip = ro + rd * t1;
 		n = vec3( 2.0 * ip.x, -2.0 * ip.y, 2.0 * ip.z );
-		if (dot(rd, n) > 0.0) n = -n;
+		// flip normal if it is facing away from us
+		n *= sign(-dot(rd, n)) * 2.0 - 1.0; // sign is 0 or 1, map it to -1 and +1
+		
 		if (abs(ip.y) < height)
 			return t1;	
 	}
@@ -146,7 +150,9 @@ float HyperbolicParaboloidIntersect( float rad, float height, vec3 pos, Ray r, o
 	{
 		ip = ro + rd * t0;
 		n = vec3( 2.0 * ip.x, -1.0 / k, -2.0 * ip.z );
-		if (dot(rd, n) > 0.0) n = -n;
+		// flip normal if it is facing away from us
+		n *= sign(-dot(rd, n)) * 2.0 - 1.0; // sign is 0 or 1, map it to -1 and +1
+		
 		if (abs(ip.x) < height && abs(ip.y) < height && abs(ip.z) < height)
 			return t0;		
 	}
@@ -155,7 +161,9 @@ float HyperbolicParaboloidIntersect( float rad, float height, vec3 pos, Ray r, o
 	{	
 		ip = ro + rd * t1;
 		n = vec3( 2.0 * ip.x, -1.0 / k, -2.0 * ip.z );
-		if (dot(rd, n) > 0.0) n = -n;
+		// flip normal if it is facing away from us
+		n *= sign(-dot(rd, n)) * 2.0 - 1.0; // sign is 0 or 1, map it to -1 and +1
+		
 		if (abs(ip.x) < height && abs(ip.y) < height && abs(ip.z) < height)
 			return t1;		
 	}
