@@ -37,30 +37,12 @@ uniform mat4 uHyperbolicParaboloidClipInvMatrix;
 #include <pathtracing_uniforms_and_defines>
 
 #define N_SPHERES 4
-#define N_ELLIPSOIDS_PARAM 1
-#define N_CYLINDERS_PARAM 1
-#define N_CONES_PARAM 1
-#define N_PARABOLOIDS_PARAM 1
-#define N_HYPERBOLOIDS_PARAM 1
-#define N_HYPERBOLIC_PARABOLOIDS_PARAM 1
 
 struct Ray { vec3 origin; vec3 direction; };
 struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; int type; bool isDynamic; };
-struct ellipsoidParam { float yMinPercent; float yMaxPercent; float phiMaxRadians; vec3 emission; vec3 color; int type; bool isDynamic; };
-struct cylinderParam { float yMinPercent; float yMaxPercent; float phiMaxRadians; vec3 emission; vec3 color; int type; bool isDynamic; };
-struct coneParam { float yMinPercent; float yMaxPercent; float phiMaxRadians; vec3 emission; vec3 color; int type; bool isDynamic; };
-struct paraboloidParam { float yMinPercent; float yMaxPercent; float phiMaxRadians; vec3 emission; vec3 color; int type; bool isDynamic; };
-struct HyperboloidParam { float yMinPercent; float yMaxPercent; float phiMaxRadians; vec3 emission; vec3 color; int type; bool isDynamic; };
-struct HyperbolicParaboloidParam { float yMinPercent; float yMaxPercent; float phiMaxRadians; vec3 emission; vec3 color; int type; bool isDynamic; };
 struct Intersection { vec3 normal; vec3 emission; vec3 color; int type; bool isDynamic; };
 
 Sphere spheres[N_SPHERES];
-ellipsoidParam ellipsoidsParam[N_ELLIPSOIDS_PARAM];
-cylinderParam cylindersParam[N_CYLINDERS_PARAM];
-coneParam conesParam[N_CONES_PARAM];
-paraboloidParam paraboloidsParam[N_PARABOLOIDS_PARAM];
-HyperboloidParam hyperboloidsParam[N_HYPERBOLOIDS_PARAM];
-HyperbolicParaboloidParam hyperbolicParaboloidsParam[N_HYPERBOLIC_PARABOLOIDS_PARAM];
 
 
 #include <pathtracing_random_functions>
@@ -118,9 +100,9 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	if (d < t)
 	{
 		t = d;
-		//vec3 ellipsoidPos = vec3(-uellipsoidTranslateInvMatrix[3][0], -uellipsoidTranslateInvMatrix[3][1], -uellipsoidTranslateInvMatrix[3][2]));
+		//vec3 ellipsoidPos = vec3(-uEllipsoidTranslateInvMatrix[3][0], -uEllipsoidTranslateInvMatrix[3][1], -uEllipsoidTranslateInvMatrix[3][2]));
 		intersec.normal = normalize(transpose(mat3(uEllipsoidTranslateInvMatrix)) * n);
-		intersec.emission = vec3(0);
+		//intersec.emission = vec3(0);
 		intersec.color = vec3(0.0, 0.3, 1.0);
 		intersec.type = SPEC;
 		intersec.isDynamic = false;
@@ -134,9 +116,8 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	if (d < t)
 	{
 		t = d;
-		//vec3 ellipsoidPos = vec3(-uellipsoidRotateInvMatrix[3][0], -uellipsoidRotateInvMatrix[3][1], -uellipsoidRotateInvMatrix[3][2]));
 		intersec.normal = normalize(transpose(mat3(uEllipsoidRotateInvMatrix)) * n);
-		intersec.emission = vec3(0);
+		//intersec.emission = vec3(0);
 		intersec.color = vec3(0.0, 0.3, 1.0);
 		intersec.type = REFR;
 		intersec.isDynamic = false;
@@ -150,9 +131,8 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	if (d < t)
 	{
 		t = d;
-		//vec3 ellipsoidPos = vec3(-uellipsoidScaleInvMatrix[3][0], -uellipsoidScaleInvMatrix[3][1], -uellipsoidScaleInvMatrix[3][2]));
 		intersec.normal = normalize(transpose(mat3(uEllipsoidScaleInvMatrix)) * n);
-		intersec.emission = vec3(0);
+		//intersec.emission = vec3(0);
 		intersec.color = vec3(0.0, 0.3, 1.0);
 		intersec.type = DIFF;
 		intersec.isDynamic = false;
@@ -166,9 +146,8 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	if (d < t)
 	{
 		t = d;
-		//vec3 ellipsoidPos = vec3(-uellipsoidClipInvMatrix[3][0], -uellipsoidClipInvMatrix[3][1], -uellipsoidClipInvMatrix[3][2]));
 		intersec.normal = normalize(transpose(mat3(uEllipsoidClipInvMatrix)) * n);
-		intersec.emission = vec3(0);
+		//intersec.emission = vec3(0);
 		intersec.color = vec3(0.0, 0.3, 1.0);
 		intersec.type = COAT;
 		intersec.isDynamic = false;
@@ -183,7 +162,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	{
 		t = d;
 		intersec.normal = normalize(transpose(mat3(uCylinderTranslateInvMatrix)) * n);
-		intersec.emission = vec3(0);
+		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 0.0, 0.0);
 		intersec.type = SPEC;
 		intersec.isDynamic = false;
@@ -198,7 +177,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	{
 		t = d;
 		intersec.normal = normalize(transpose(mat3(uCylinderRotateInvMatrix)) * n);
-		intersec.emission = vec3(0);
+		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 0.0, 0.0);
 		intersec.type = REFR;
 		intersec.isDynamic = false;
@@ -213,7 +192,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	{
 		t = d;
 		intersec.normal = normalize(transpose(mat3(uCylinderScaleInvMatrix)) * n);
-		intersec.emission = vec3(0);
+		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 0.0, 0.0);
 		intersec.type = DIFF;
 		intersec.isDynamic = false;
@@ -228,7 +207,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	{
 		t = d;
 		intersec.normal = normalize(transpose(mat3(uCylinderClipInvMatrix)) * n);
-		intersec.emission = vec3(0);
+		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 0.0, 0.0);
 		intersec.type = COAT;
 		intersec.isDynamic = false;
@@ -243,7 +222,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	{
 		t = d;
 		intersec.normal = normalize(transpose(mat3(uConeTranslateInvMatrix)) * n);
-		intersec.emission = vec3(0);
+		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 0.2, 0.0);
 		intersec.type = SPEC;
 		intersec.isDynamic = false;
@@ -258,7 +237,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	{
 		t = d;
 		intersec.normal = normalize(transpose(mat3(uConeRotateInvMatrix)) * n);
-		intersec.emission = vec3(0);
+		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 0.2, 0.0);
 		intersec.type = REFR;
 		intersec.isDynamic = false;
@@ -273,7 +252,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	{
 		t = d;
 		intersec.normal = normalize(transpose(mat3(uConeScaleInvMatrix)) * n);
-		intersec.emission = vec3(0);
+		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 0.2, 0.0);
 		intersec.type = DIFF;
 		intersec.isDynamic = false;
@@ -288,7 +267,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	{
 		t = d;
 		intersec.normal = normalize(transpose(mat3(uConeClipInvMatrix)) * n);
-		intersec.emission = vec3(0);
+		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 0.2, 0.0);
 		intersec.type = COAT;
 		intersec.isDynamic = false;
@@ -303,7 +282,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	{
 		t = d;
 		intersec.normal = normalize(transpose(mat3(uParaboloidTranslateInvMatrix)) * n);
-		intersec.emission = vec3(0);
+		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 0.0, 1.0);
 		intersec.type = SPEC;
 		intersec.isDynamic = false;
@@ -318,7 +297,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	{
 		t = d;
 		intersec.normal = normalize(transpose(mat3(uParaboloidRotateInvMatrix)) * n);
-		intersec.emission = vec3(0);
+		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 0.0, 1.0);
 		intersec.type = REFR;
 		intersec.isDynamic = false;
@@ -333,7 +312,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	{
 		t = d;
 		intersec.normal = normalize(transpose(mat3(uParaboloidScaleInvMatrix)) * n);
-		intersec.emission = vec3(0);
+		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 0.0, 1.0);
 		intersec.type = DIFF;
 		intersec.isDynamic = false;
@@ -348,7 +327,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	{
 		t = d;
 		intersec.normal = normalize(transpose(mat3(uParaboloidClipInvMatrix)) * n);
-		intersec.emission = vec3(0);
+		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 0.0, 1.0);
 		intersec.type = COAT;
 		intersec.isDynamic = false;
@@ -363,7 +342,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	{
 		t = d;
 		intersec.normal = normalize(transpose(mat3(uHyperboloidTranslateInvMatrix)) * n);
-		intersec.emission = vec3(0);
+		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 1.0, 0.0);
 		intersec.type = SPEC;
 		intersec.isDynamic = false;
@@ -378,7 +357,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	{
 		t = d;
 		intersec.normal = normalize(transpose(mat3(uHyperboloidRotateInvMatrix)) * n);
-		intersec.emission = vec3(0);
+		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 1.0, 0.0);
 		intersec.type = REFR;
 		intersec.isDynamic = false;
@@ -393,7 +372,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	{
 		t = d;
 		intersec.normal = normalize(transpose(mat3(uHyperboloidScaleInvMatrix)) * n);
-		intersec.emission = vec3(0);
+		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 1.0, 0.0);
 		intersec.type = DIFF;
 		intersec.isDynamic = false;
@@ -408,7 +387,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	{
 		t = d;
 		intersec.normal = normalize(transpose(mat3(uHyperboloidClipInvMatrix)) * n);
-		intersec.emission = vec3(0);
+		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 1.0, 0.0);
 		intersec.type = COAT;
 		intersec.isDynamic = false;
@@ -423,7 +402,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	{
 		t = d;
 		intersec.normal = normalize(transpose(mat3(uHyperbolicParaboloidTranslateInvMatrix)) * n);
-		intersec.emission = vec3(0);
+		//intersec.emission = vec3(0);
 		intersec.color = vec3(0.0, 1.0, 0.0);
 		intersec.type = SPEC;
 		intersec.isDynamic = false;
@@ -438,7 +417,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	{
 		t = d;
 		intersec.normal = normalize(transpose(mat3(uHyperbolicParaboloidRotateInvMatrix)) * n);
-		intersec.emission = vec3(0);
+		//intersec.emission = vec3(0);
 		intersec.color = vec3(0.0, 1.0, 0.0);
 		intersec.type = REFR;
 		intersec.isDynamic = false;
@@ -453,7 +432,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	{
 		t = d;
 		intersec.normal = normalize(transpose(mat3(uHyperbolicParaboloidScaleInvMatrix)) * n);
-		intersec.emission = vec3(0);
+		//intersec.emission = vec3(0);
 		intersec.color = vec3(0.0, 1.0, 0.0);
 		intersec.type = DIFF;
 		intersec.isDynamic = false;
@@ -468,7 +447,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	{
 		t = d;
 		intersec.normal = normalize(transpose(mat3(uHyperbolicParaboloidClipInvMatrix)) * n);
-		intersec.emission = vec3(0);
+		//intersec.emission = vec3(0);
 		intersec.color = vec3(0.0, 1.0, 0.0);
 		intersec.type = COAT;
 		intersec.isDynamic = false;
@@ -496,7 +475,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 	float nc, nt, Re;
 	float weight;
 	float randChoose;
-	float diffuseColorBleeding = 0.3; // range: 0.0 - 0.5, amount of color bleeding between surfaces
+	float diffuseColorBleeding = 0.1; // range: 0.0 - 0.5, amount of color bleeding between surfaces
 	
 	int diffuseCount = 0;
 	int previousIntersecType = -100;
