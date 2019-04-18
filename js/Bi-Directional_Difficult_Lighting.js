@@ -100,8 +100,8 @@ function load_GLTF_Models() {
                 modelMesh_0.geometry = THREE.BufferGeometryUtils.mergeBufferGeometries(geoList_0);
 
                 // settings for UtahTeapot model_0
-                modelScale_0 = 1.4;
-                modelPositionOffset_0.set(-70, -56.5, -180);
+                modelScale_0 = 2.3;
+                modelPositionOffset_0.set(-70, -38.7, -180);
                 
         }); // end gltfLoader.load()
 
@@ -135,8 +135,8 @@ function load_GLTF_Models() {
                 modelMesh_1.geometry = THREE.BufferGeometryUtils.mergeBufferGeometries(geoList_1);
 
                 // settings for UtahTeapot model_1
-                modelScale_1 = 1.4;
-                modelPositionOffset_1.set(0, -56.5, -180);
+                modelScale_1 = 2.3;
+                modelPositionOffset_1.set(0, -38.7, -180);
                 
         }); // end gltfLoader.load()
 
@@ -170,8 +170,8 @@ function load_GLTF_Models() {
                 modelMesh_2.geometry = THREE.BufferGeometryUtils.mergeBufferGeometries(geoList_2);
 
                 // settings for UtahTeapot model_2
-                modelScale_2 = 1.4;
-                modelPositionOffset_2.set(70, -56.5, -180);
+                modelScale_2 = 2.3;
+                modelPositionOffset_2.set(70, -38.7, -180);
                 
                 // now that the models have been loaded, we can init 
                 init();
