@@ -96,9 +96,7 @@ function load_GLTF_Models() {
                 } );
 
                 modelMesh_0 = new THREE.Mesh();
-
-                modelMesh_0.geometry = THREE.BufferGeometryUtils.mergeBufferGeometries(geoList_0);
-
+                modelMesh_0.geometry.copy(geoList_0[0]);
                 // settings for UtahTeapot model_0
                 modelScale_0 = 2.3;
                 modelPositionOffset_0.set(-70, -38.7, -180);
@@ -132,8 +130,7 @@ function load_GLTF_Models() {
                 } );
 
                 modelMesh_1 = new THREE.Mesh();
-                modelMesh_1.geometry = THREE.BufferGeometryUtils.mergeBufferGeometries(geoList_1);
-
+                modelMesh_1.geometry.copy(geoList_1[0]);
                 // settings for UtahTeapot model_1
                 modelScale_1 = 2.3;
                 modelPositionOffset_1.set(0, -38.7, -180);
@@ -167,8 +164,7 @@ function load_GLTF_Models() {
                 } );
 
                 modelMesh_2 = new THREE.Mesh();
-                modelMesh_2.geometry = THREE.BufferGeometryUtils.mergeBufferGeometries(geoList_2);
-
+                modelMesh_2.geometry.copy(geoList_2[0]);
                 // settings for UtahTeapot model_2
                 modelScale_2 = 2.3;
                 modelPositionOffset_2.set(70, -38.7, -180);
@@ -206,7 +202,7 @@ function initSceneData() {
         geoList.push(modelMesh_2.geometry);
         modelMesh = new THREE.Mesh();
         modelMesh.geometry = THREE.BufferGeometryUtils.mergeBufferGeometries(geoList);
-
+        
         if (modelMesh.geometry.index)
                 modelMesh.geometry = modelMesh.geometry.toNonIndexed();
         
