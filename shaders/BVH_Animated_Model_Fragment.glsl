@@ -664,11 +664,15 @@ void main( void )
 	vec4 previousImage = texelFetch(tPreviousTexture, ivec2(gl_FragCoord.xy), 0);
 	vec3 previousColor = previousImage.rgb;
 
-	
-	if (uCameraIsMoving || previousImage.a > 0.0)
+	if (uCameraIsMoving)
 	{
-                previousColor *= 0.55; // motion-blur trail amount (old image)
-                pixelColor *= 0.45; // brightness of new image (noisy)
+                previousColor *= 0.5; // motion-blur trail amount (old image)
+                pixelColor *= 0.5; // brightness of new image (noisy)
+        }
+	else if (previousImage.a > 0.0)
+	{
+                previousColor *= 0.8; // motion-blur trail amount (old image)
+                pixelColor *= 0.2; // brightness of new image (noisy)
         }
 	else
 	{
