@@ -1,4 +1,5 @@
 // scene/demo-specific variables go here
+var EPS_intersect;
 var sceneIsDynamic = true;
 var camFlightSpeed = 60;
 
@@ -10,7 +11,6 @@ var ellipsoidClip, cylinderClip, coneClip, paraboloidClip, hyperboloidClip, hype
 var ellipsoidTranslateAngle, cylinderTranslateAngle, coneTranslateAngle, paraboloidTranslateAngle, hyperboloidTranslateAngle, hyperbolicParaboloidTranslateAngle;
 var ellipsoidRotateAngle, cylinderRotateAngle, coneRotateAngle, paraboloidRotateAngle, hyperboloidRotateAngle, hyperbolicParaboloidRotateAngle;
 var ellipsoidScaleAngle, cylinderScaleAngle, coneScaleAngle, paraboloidScaleAngle, hyperboloidScaleAngle, hyperbolicParaboloidScaleAngle;
-//var ellipsoidClipAngle, cylinderClipAngle, coneClipAngle, paraboloidClipAngle, hyperboloidClipAngle, hyperbolicParaboloidClipAngle;
 
 var spacing = 50;
 var baseXPos = 200;
@@ -23,6 +23,7 @@ var posXOffset = 25;
 function initSceneData() {
         
         // scene/demo-specific three.js objects setup goes here
+        EPS_intersect = mouseControl ? 0.1 : 1.0; // less precision on mobile
 
         // set camera's field of view
         worldCamera.fov = 60;
@@ -183,6 +184,7 @@ function initPathTracingShaders() {
                 uCameraIsMoving: { type: "b1", value: false },
                 uCameraJustStartedMoving: { type: "b1", value: false },
         
+                uEPS_intersect: { type: "f", value: EPS_intersect },
                 uTime: { type: "f", value: 0.0 },
                 uSampleCounter: { type: "f", value: 0.0 },
                 uFrameCounter: { type: "f", value: 1.0 },
