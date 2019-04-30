@@ -202,42 +202,43 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 } // end float SceneIntersect( Ray r, inout Intersection intersec )
 
 
-//--------------------------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------
 vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
-//--------------------------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------
 {
 	Intersection intersec;
+	Sphere lightChoice;
+	Ray firstRay;
 
-	vec3 accumCol = vec3(0.0);
-        vec3 mask = vec3(1.0);
+	vec3 accumCol = vec3(0);
+        vec3 mask = vec3(1);
+	vec3 firstMask = vec3(1);
 	vec3 checkCol0 = vec3(1);
 	vec3 checkCol1 = vec3(0.5);
 	vec3 dirToLight;
 	vec3 tdir;
         
-	float nc, nt, Re;
+	float nc, nt, Re, firstRe, firstTr;
 	float weight;
 	float randChoose;
-	float diffuseColorBleeding = 0.1; // range: 0.0 - 0.5, amount of color bleeding between surfaces
-	
-	int diffuseCount = 0;
-	int previousIntersecType = -100;
+	float diffuseColorBleeding = 0.0; // range: 0.0 - 0.5, amount of color bleeding between surfaces
 
 	bool bounceIsSpecular = true;
 	bool sampleLight = false;
+	bool firstTypeWasREFR = false;
+	bool firstTypeWasSPEC = false;
+	bool reflectionTime = false;
 
-	Sphere lightChoice;
+	rayHitIsDynamic = true;
 	
-	rayHitIsDynamic = false;
-	
-
 	for (int bounces = 0; bounces < 6; bounces++)
 	{
-		
+
 		float t = SceneIntersect(r, intersec);
+
+		if(bounces == 0)
+			rayHitIsDynamic = intersec.isDynamic;
 		
-		if (bounces == 0 && intersec.isDynamic)
-			rayHitIsDynamic = true;
 
 		/*
 		//not used in this scene because we are inside a huge sphere - no rays can escape
@@ -247,49 +248,80 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 		}
 		*/
 		
-		// if we reached something bright, don't spawn any more rays
+		
 		if (intersec.type == LIGHT)
 		{	
-			if (sampleLight)
+			if (firstTypeWasREFR)
+			{
+				if (!reflectionTime) 
+				{
+					if (bounceIsSpecular)
+					{
+						accumCol = mask * intersec.emission * firstTr;
+					}
+					if (sampleLight)
+						accumCol = mask * intersec.emission * firstTr;
+
+					// start back at the refractive surface, but this time follow reflective branch
+					r = firstRay;
+					mask = firstMask;
+					// set/reset variables
+					reflectionTime = true;
+					bounceIsSpecular = true;
+					sampleLight = false;
+					
+					continue;
+				}
+				else if (bounceIsSpecular)
+				{
+					// add reflective result to the refractive result (if any)
+					accumCol += intersec.emission * firstRe;
+				}
+				else if (sampleLight)
+				{
+					// add reflective result to the refractive result (if any)
+					accumCol += mask * intersec.emission * firstRe;
+				}
+			}
+			else if (sampleLight || bounceIsSpecular)
 			{
 				accumCol = mask * intersec.emission;
 			}
-			else if (bounceIsSpecular)
-			{
-				accumCol = mask * clamp(intersec.emission, 0.0, 2.0);
-			}
-			
+
 			break;
+		} // end if (intersec.type == LIGHT)
+
+		// if we get here and sampleLight is still true, shadow ray failed to find a light source
+		if (sampleLight) 
+		{
+			if (firstTypeWasREFR && !reflectionTime) 
+			{
+				// start back at the refractive surface, but this time follow reflective branch
+				r = firstRay;
+				mask = firstMask;
+				// set/reset variables
+				reflectionTime = true;
+				bounceIsSpecular = true;
+				sampleLight = false;
+				
+				continue;
+			}
+			// nothing left to calculate, so exit early	
+			//break;
 		}
 
-		// comment out the following if refractive caustics are still desired
 
-		// if we reached this point and sampleLight failed to find a light above, exit early
-		//if (sampleLight)
-		//{
-		//	break;
-		//}
-		
 		// useful data 
 		vec3 n = intersec.normal;
                 vec3 nl = dot(n,r.direction) <= 0.0 ? normalize(n) : normalize(n * -1.0);
 		vec3 x = r.origin + r.direction * t;
 
-		randChoose = rand(seed);
-		if (randChoose < 0.33)
-			lightChoice = spheres[0];
-		else if (randChoose < 0.66)
-			lightChoice = spheres[1];
-		else lightChoice = spheres[2];
-		
+		randChoose = rand(seed) * 3.0; // 3 lights to choose from
+		lightChoice = spheres[int(randChoose)];
+
 		    
                 if (intersec.type == DIFF || intersec.type == CHECK) // Ideal DIFFUSE reflection
 		{
-			previousIntersecType = DIFF;
-			diffuseCount++;
-
-			if (diffuseCount > 2)
-				break;
 
 			if( intersec.type == CHECK )
 			{
@@ -299,8 +331,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 
 			mask *= intersec.color;
 
-			/*
-			// Russian Roulette - if needed, this speeds up the framerate, at the cost of some dark noise
+			/* // Russian Roulette - if needed, this speeds up the framerate, at the cost of some dark noise
 			float p = max(mask.r, max(mask.g, mask.b));
 			if (bounces > 0)
 			{
@@ -308,41 +339,41 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
                                 	mask *= 1.0 / p;
                         	else
                                 	break;
-			}
-			*/
-
+			} */
+			
 			bounceIsSpecular = false;
 
-			
-			if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
+			if (bounces < 2 && rand(seed) < diffuseColorBleeding)
                         {
                                 // choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
-				r.origin += nl;
+				r.origin += nl * uEPS_intersect;
+				
 				continue;
-			}
+                        }
                         else
                         {
 				weight = sampleSphereLight(x, nl, dirToLight, lightChoice, seed);
 				mask *= clamp(weight, 0.0, 1.0);
 
                                 r = Ray( x, dirToLight );
-				r.origin += nl;
+				r.origin += nl * uEPS_intersect;
 
 				sampleLight = true;
 				continue;
-			}
-			
-		}
+                        }
+		} // end if (intersec.type == DIFF)
 		
 		if (intersec.type == SPEC)  // Ideal SPECULAR reflection
 		{
+			if (bounces == 0)
+				firstTypeWasSPEC = true;
+
 			mask *= intersec.color;
 
 			r = Ray( x, reflect(r.direction, nl) );
-			r.origin += nl;
+			r.origin += nl * uEPS_intersect;
 
-			previousIntersecType = SPEC;
 			//bounceIsSpecular = true; // turn on mirror caustics
 			continue;
 		}
@@ -353,73 +384,84 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 			nt = 1.5; // IOR of common Glass
 			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
 
-			if (rand(seed) < Re) // reflect ray from surface
-			{
-				r = Ray( x, reflect(r.direction, nl) );
-				r.origin += nl;
-
-				previousIntersecType = REFR;
-				//bounceIsSpecular = true; // turn on reflecting caustics, useful for water
-			    	continue;	
+			if (bounces == 0)
+			{	
+				firstTypeWasREFR = true;
+				firstRe = Re;
+				firstTr = 1.0 - Re;
+				firstMask = mask;
+				firstRay = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
+				firstRay.origin += nl * uEPS_intersect;
 			}
-			else // transmit ray through surface
+
+			if (bounces > 0 && (firstTypeWasSPEC || firstTypeWasREFR))
 			{
-				mask *= intersec.color;
-
-				if (previousIntersecType == DIFF)
-					mask *= TWO_PI;
-				
-				r = Ray(x, tdir);
-				r.origin -= nl;
-
-				previousIntersecType = REFR;
-				//bounceIsSpecular = true; // turn on refracting caustics
-				continue;
+				if (rand(seed) < Re)
+				{
+					r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
+					r.origin += nl * uEPS_intersect;
+					continue;
+				}
 			}
+
+			// transmit ray through surface
+			mask *= intersec.color;
+			
+			r = Ray(x, tdir);
+			r.origin -= nl * uEPS_intersect;
+
+			bounceIsSpecular = true; // turn on refracting caustics
+			continue;
 			
 		} // end if (intersec.type == REFR)
 		
 		if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top
 		{
-			previousIntersecType = COAT;
-
 			nc = 1.0; // IOR of Air
 			nt = 1.4; // IOR of Clear Coat
 			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
-			
-			// choose either specular reflection or diffuse
-			if( rand(seed) < Re )
+
+			// clearCoat counts as refractive surface
+			if (bounces == 0)
 			{	
-				r = Ray( x, reflect(r.direction, nl) );
-				r.origin += nl;
-				continue;	
+				firstTypeWasREFR = true;
+				firstRe = Re;
+				firstTr = 1.0 - Re;
+				firstMask = mask;
+				firstRay = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
+				firstRay.origin += nl * uEPS_intersect;
 			}
-
-			diffuseCount++;
-
-			if (diffuseCount > 2)
-				break;
-
+			
+			if (bounces > 0 && (firstTypeWasSPEC || firstTypeWasREFR))
+			{
+				if (rand(seed) < Re)
+				{	
+					r = Ray( x, reflect(r.direction, nl) );
+					r.origin += nl * uEPS_intersect;
+					continue;	
+				}
+			}
+			
 			mask *= intersec.color;
 			
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
+			if (bounces == 0 && rand(seed) < diffuseColorBleeding)
                         {
                                 // choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
-				r.origin += nl;
+				r.origin += nl * uEPS_intersect;
 				continue;
                         }
                         else
                         {
-				if (rand(seed) < 0.9)
+				if (intersec.color.r == 1.0 && rand(seed) < 0.9)
 					lightChoice = spheres[0]; // this makes capsule more white
 				weight = sampleSphereLight(x, nl, dirToLight, lightChoice, seed);
 				mask *= clamp(weight, 0.0, 1.0);
 				
                                 r = Ray( x, dirToLight );
-				r.origin += nl;
+				r.origin += nl * uEPS_intersect;
 
 				sampleLight = true;
 				continue;
@@ -430,7 +472,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 	} // end for (int bounces = 0; bounces < 6; bounces++)
 	
 	return accumCol;      
-}
+} // end vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 
 //-----------------------------------------------------------------------
