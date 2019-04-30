@@ -49,6 +49,7 @@ var oldPinchWidthY = 0;
 var pinchDeltaX = 0;
 var pinchDeltaY = 0;
 var fontAspect;
+var useGenericInput = true;
 
 // the following variables will be used to calculate rotations and directions from the camera
 var cameraDirectionVector = new THREE.Vector3(); //for moving where the camera is looking
@@ -498,110 +499,115 @@ function animate() {
         // rotating scene objects to match the camera's rotation
         worldCamera.getWorldQuaternion(cameraWorldQuaternion);
 
-        // allow flying camera
-        if ((keyboard.pressed('W') || button3Pressed) && !(keyboard.pressed('S') || button4Pressed)) {
+        if (useGenericInput) {
 
-                cameraControlsObject.position.add(cameraDirectionVector.multiplyScalar(camFlightSpeed * frameTime));
-                cameraIsMoving = true;
-        }
-        if ((keyboard.pressed('S') || button4Pressed) && !(keyboard.pressed('W') || button3Pressed)) {
+                // allow flying camera
+                if ((keyboard.pressed('W') || button3Pressed) && !(keyboard.pressed('S') || button4Pressed)) {
 
-                cameraControlsObject.position.sub(cameraDirectionVector.multiplyScalar(camFlightSpeed * frameTime));
-                cameraIsMoving = true;
-        }
-        if ((keyboard.pressed('A') || button1Pressed) && !(keyboard.pressed('D') || button2Pressed)) {
+                        cameraControlsObject.position.add(cameraDirectionVector.multiplyScalar(camFlightSpeed * frameTime));
+                        cameraIsMoving = true;
+                }
+                if ((keyboard.pressed('S') || button4Pressed) && !(keyboard.pressed('W') || button3Pressed)) {
 
-                cameraControlsObject.position.sub(cameraRightVector.multiplyScalar(camFlightSpeed * frameTime));
-                cameraIsMoving = true;
-        }
-        if ((keyboard.pressed('D') || button2Pressed) && !(keyboard.pressed('A') || button1Pressed)) {
+                        cameraControlsObject.position.sub(cameraDirectionVector.multiplyScalar(camFlightSpeed * frameTime));
+                        cameraIsMoving = true;
+                }
+                if ((keyboard.pressed('A') || button1Pressed) && !(keyboard.pressed('D') || button2Pressed)) {
 
-                cameraControlsObject.position.add(cameraRightVector.multiplyScalar(camFlightSpeed * frameTime));
-                cameraIsMoving = true;
-        }
-        if (keyboard.pressed('Q') && !keyboard.pressed('Z')) {
+                        cameraControlsObject.position.sub(cameraRightVector.multiplyScalar(camFlightSpeed * frameTime));
+                        cameraIsMoving = true;
+                }
+                if ((keyboard.pressed('D') || button2Pressed) && !(keyboard.pressed('A') || button1Pressed)) {
 
-                cameraControlsObject.position.add(cameraUpVector.multiplyScalar(camFlightSpeed * frameTime));
-                cameraIsMoving = true;
-        }
-        if (keyboard.pressed('Z') && !keyboard.pressed('Q')) {
+                        cameraControlsObject.position.add(cameraRightVector.multiplyScalar(camFlightSpeed * frameTime));
+                        cameraIsMoving = true;
+                }
+                if (keyboard.pressed('Q') && !keyboard.pressed('Z')) {
 
-                cameraControlsObject.position.sub(cameraUpVector.multiplyScalar(camFlightSpeed * frameTime));
-                cameraIsMoving = true;
-        }
-        if ((keyboard.pressed('up') || button5Pressed) && !(keyboard.pressed('down') || button6Pressed)) {
+                        cameraControlsObject.position.add(cameraUpVector.multiplyScalar(camFlightSpeed * frameTime));
+                        cameraIsMoving = true;
+                }
+                if (keyboard.pressed('Z') && !keyboard.pressed('Q')) {
 
-                increaseFocusDist = true;
-        }
-        if ((keyboard.pressed('down') || button6Pressed) && !(keyboard.pressed('up') || button5Pressed)) {
+                        cameraControlsObject.position.sub(cameraUpVector.multiplyScalar(camFlightSpeed * frameTime));
+                        cameraIsMoving = true;
+                }
+                if ((keyboard.pressed('up') || button5Pressed) && !(keyboard.pressed('down') || button6Pressed)) {
 
-                decreaseFocusDist = true;
-        }
-        if (keyboard.pressed('right') && !keyboard.pressed('left')) {
+                        increaseFocusDist = true;
+                }
+                if ((keyboard.pressed('down') || button6Pressed) && !(keyboard.pressed('up') || button5Pressed)) {
 
-                increaseAperture = true;
-        }
-        if (keyboard.pressed('left') && !keyboard.pressed('right')) {
+                        decreaseFocusDist = true;
+                }
+                if (keyboard.pressed('right') && !keyboard.pressed('left')) {
 
-                decreaseAperture = true;
-        }
+                        increaseAperture = true;
+                }
+                if (keyboard.pressed('left') && !keyboard.pressed('right')) {
 
-        if (increaseFOV) {
-                worldCamera.fov++;
-                if (worldCamera.fov > 150)
-                        worldCamera.fov = 150;
-                fovScale = worldCamera.fov * 0.5 * (Math.PI / 180.0);
-                pathTracingUniforms.uVLen.value = Math.tan(fovScale);
-                pathTracingUniforms.uULen.value = pathTracingUniforms.uVLen.value * worldCamera.aspect;
+                        decreaseAperture = true;
+                }
 
-                cameraIsMoving = true;
-                increaseFOV = false;
-        }
-        if (decreaseFOV) {
-                worldCamera.fov--;
-                if (worldCamera.fov < 1)
-                        worldCamera.fov = 1;
-                fovScale = worldCamera.fov * 0.5 * (Math.PI / 180.0);
-                pathTracingUniforms.uVLen.value = Math.tan(fovScale);
-                pathTracingUniforms.uULen.value = pathTracingUniforms.uVLen.value * worldCamera.aspect;
+                if (increaseFOV) {
+                        worldCamera.fov++;
+                        if (worldCamera.fov > 150)
+                                worldCamera.fov = 150;
+                        fovScale = worldCamera.fov * 0.5 * (Math.PI / 180.0);
+                        pathTracingUniforms.uVLen.value = Math.tan(fovScale);
+                        pathTracingUniforms.uULen.value = pathTracingUniforms.uVLen.value * worldCamera.aspect;
 
-                cameraIsMoving = true;
-                decreaseFOV = false;
-        }
+                        cameraIsMoving = true;
+                        increaseFOV = false;
+                }
+                if (decreaseFOV) {
+                        worldCamera.fov--;
+                        if (worldCamera.fov < 1)
+                                worldCamera.fov = 1;
+                        fovScale = worldCamera.fov * 0.5 * (Math.PI / 180.0);
+                        pathTracingUniforms.uVLen.value = Math.tan(fovScale);
+                        pathTracingUniforms.uULen.value = pathTracingUniforms.uVLen.value * worldCamera.aspect;
 
-        if (increaseFocusDist) {
-                focusDistance += 1;
-                pathTracingUniforms.uFocusDistance.value = focusDistance;
-                cameraIsMoving = true;
-                increaseFocusDist = false;
-        }
-        if (decreaseFocusDist) {
-                focusDistance -= 1;
-                if (focusDistance < 1)
-                        focusDistance = 1;
-                pathTracingUniforms.uFocusDistance.value = focusDistance;
-                cameraIsMoving = true;
-                decreaseFocusDist = false;
-        }
+                        cameraIsMoving = true;
+                        decreaseFOV = false;
+                }
 
-        if (increaseAperture) {
-                apertureSize += 0.1;
-                if (apertureSize > 20.0)
-                        apertureSize = 20.0;
-                pathTracingUniforms.uApertureSize.value = apertureSize;
-                cameraIsMoving = true;
-                increaseAperture = false;
-        }
-        if (decreaseAperture) {
-                apertureSize -= 0.1;
-                if (apertureSize < 0.0)
-                        apertureSize = 0.0;
-                pathTracingUniforms.uApertureSize.value = apertureSize;
-                cameraIsMoving = true;
-                decreaseAperture = false;
-        }
+                if (increaseFocusDist) {
+                        focusDistance += 1;
+                        pathTracingUniforms.uFocusDistance.value = focusDistance;
+                        cameraIsMoving = true;
+                        increaseFocusDist = false;
+                }
+                if (decreaseFocusDist) {
+                        focusDistance -= 1;
+                        if (focusDistance < 1)
+                                focusDistance = 1;
+                        pathTracingUniforms.uFocusDistance.value = focusDistance;
+                        cameraIsMoving = true;
+                        decreaseFocusDist = false;
+                }
 
-        // update scene/demo-specific variables and uniforms every animation frame
+                if (increaseAperture) {
+                        apertureSize += 0.1;
+                        if (apertureSize > 20.0)
+                                apertureSize = 20.0;
+                        pathTracingUniforms.uApertureSize.value = apertureSize;
+                        cameraIsMoving = true;
+                        increaseAperture = false;
+                }
+                if (decreaseAperture) {
+                        apertureSize -= 0.1;
+                        if (apertureSize < 0.0)
+                                apertureSize = 0.0;
+                        pathTracingUniforms.uApertureSize.value = apertureSize;
+                        cameraIsMoving = true;
+                        decreaseAperture = false;
+                }
+
+        } // end if (useGenericInput)
+
+
+        // update scene/demo-specific input(if custom), variables and uniforms every animation frame
         updateVariablesAndUniforms();
 
 
