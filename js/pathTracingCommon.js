@@ -91,6 +91,7 @@ THREE.ShaderChunk[ 'pathtracing_uniforms_and_defines' ] = `
 uniform bool uCameraIsMoving;
 uniform bool uCameraJustStartedMoving;
 
+uniform float uEPS_intersect;
 uniform float uTime;
 uniform float uSampleCounter;
 uniform float uFrameCounter;
@@ -1293,6 +1294,7 @@ float QuadIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 v3, vec3 normal, Ray r )
 
 THREE.ShaderChunk[ 'pathtracing_box_intersect' ] = `
 
+
 //--------------------------------------------------------------------------
 float BoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r, out vec3 normal )
 //--------------------------------------------------------------------------
@@ -1309,20 +1311,19 @@ float BoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r, out vec3 normal )
 	
 	if (t0 > t1) return INFINITY;
 
-	float result = INFINITY;
+	if (t0 > 0.0) // if we are outside the box
+	{
+		normal = -sign(r.direction) * step(tmin.yzx, tmin) * step(tmin.zxy, tmin);
+		return t0;	
+	}
 	
 	if (t1 > 0.0) // if we are inside the box
 	{
 		normal = -sign(r.direction) * step(tmax, tmax.yzx) * step(tmax, tmax.zxy);
-		result = t1;
+		return t1;
 	}
-	if (t0 > 0.0) // if we are outside the box
-	{
-		normal = -sign(r.direction) * step(tmin.yzx, tmin) * step(tmin.zxy, tmin);
-		result = t0;	
-	}
-			
-	return result;
+
+	return INFINITY;
 }
 
 `;
