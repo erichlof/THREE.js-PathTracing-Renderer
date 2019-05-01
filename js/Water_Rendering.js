@@ -1,4 +1,5 @@
 // scene/demo-specific variables go here
+var EPS_intersect;
 var sceneIsDynamic = true;
 var camFlightSpeed = 300;
 var waterLevel = 0.0;
@@ -10,6 +11,7 @@ var shortBoxGeometry, shortBoxMaterial, shortBoxMesh;
 function initSceneData() {
         
         // scene/demo-specific three.js objects setup goes here
+        EPS_intersect = mouseControl ? 0.1 : 1.0; // less precision on mobile
 
         // Boxes
         tallBoxGeometry = new THREE.BoxGeometry(1,1,1);
@@ -47,10 +49,10 @@ function initSceneData() {
         worldCamera.fov = 50;
 
         // position and orient camera
-        cameraControlsObject.position.set(217, 389, 417);
-        cameraControlsYawObject.rotation.y = -0.1;
+        cameraControlsObject.position.set(147, 360, 360);
+        cameraControlsYawObject.rotation.y = -0.2;
         // look slightly downward
-        cameraControlsPitchObject.rotation.x = -0.4;
+        cameraControlsPitchObject.rotation.x = -0.45;
         
         /*
         PerlinNoiseTexture = new THREE.TextureLoader().load( 'textures/perlin256.png' );
@@ -77,6 +79,7 @@ function initPathTracingShaders() {
                 uCameraIsMoving: { type: "b1", value: false },
                 uCameraJustStartedMoving: { type: "b1", value: false },
 
+                uEPS_intersect: { type: "f", value: EPS_intersect },
                 uTime: { type: "f", value: 0.0 },
                 uSampleCounter: { type: "f", value: 0.0 },
                 uFrameCounter: { type: "f", value: 1.0 },
