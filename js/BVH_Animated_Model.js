@@ -1,4 +1,5 @@
 // scene/demo-specific variables go here
+var EPS_intersect;
 var sceneIsDynamic = true;
 var camFlightSpeed = 60;
 var GLTF_Model_Geometry, GLTF_Model_Material, GLTF_Model_Mesh;
@@ -8,7 +9,6 @@ var animationAxis = new THREE.Vector3(0, 0, 1);
 var modelMesh;
 var modelScale = 1.0;
 var modelPositionOffset = new THREE.Vector3();
-var albedoTexture;
 var total_number_of_triangles = 0;
 var triangle_array;
 var triangleMaterialMarkers = [];
@@ -104,7 +104,6 @@ function load_GLTF_Model() {
                         geoList.push(meshList[i].geometry);
                 }
                 
-                
                 if (modelMesh.geometry.index)
                         modelMesh.geometry = modelMesh.geometry.toNonIndexed();
 
@@ -145,6 +144,8 @@ function load_GLTF_Model() {
 function initSceneData() {
         
         // scene/demo-specific three.js objects setup goes here
+        EPS_intersect = mouseControl ? 0.1 : 1.0; // less precision on mobile
+
         GLTF_Model_Geometry = new THREE.BoxGeometry(1,1,1);
         GLTF_Model_Material = new THREE.MeshPhysicalMaterial( {
                 color: new THREE.Color(0.95, 0.95, 0.95), //RGB, ranging from 0.0 - 1.0
@@ -389,6 +390,7 @@ function initPathTracingShaders() {
                 uCameraIsMoving: { type: "b1", value: false },
                 uCameraJustStartedMoving: { type: "b1", value: false },
 
+                uEPS_intersect: { type: "f", value: EPS_intersect },
                 uTime: { type: "f", value: 0.0 },
                 uSampleCounter: { type: "f", value: 1.0 },
                 uFrameCounter: { type: "f", value: 1.0 },
@@ -455,8 +457,6 @@ function createPathTracingMaterial() {
 
 // called automatically from within the animate() function
 function updateVariablesAndUniforms() {
-        
-        animationTimer += 1.0 * frameTime;
 
         if ( cameraIsMoving ) {
 					
@@ -490,10 +490,10 @@ function updateVariablesAndUniforms() {
         pathTracingUniforms.uRandomVector.value = randomVector.set(Math.random(), Math.random(), Math.random());
         
         // GLTF Model
-        //GLTF_Model_Mesh.scale.set(1, 1, 1); // GLTF_Model_Mesh.scale.set(Math.cos(animationTimer * 1.0) + 2, 1, 1);
+        animationTimer += 1.0 * frameTime;
         GLTF_Model_Mesh.rotateOnWorldAxis(animationAxis, 0.1 * frameTime);
         GLTF_Model_Mesh.position.set(100 * Math.cos(animationTimer * 0.05), 20 * (Math.sin(animationTimer * 0.2) + 1.5), 120 * Math.sin(animationTimer * 0.05) - 50 );
-        //GLTF_Model_Mesh.position.set(0,1,0);
+        //GLTF_Model_Mesh.position.set(0,40,80);
 
         GLTF_Model_Mesh.updateMatrixWorld(true); // 'true' forces immediate matrix update
         pathTracingUniforms.uGLTF_Model_Position.value.copy(GLTF_Model_Mesh.position);
