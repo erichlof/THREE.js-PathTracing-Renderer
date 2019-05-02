@@ -188,16 +188,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 					intersec.color = vec3(0);
 					intersec.type = LIGHT;
 				}
-                                /*
-				else 
-                                {
-                                        //t = INFINITY;
-                                        // set leaf node to purple/magenta light
-                                        intersec.emission = vec3(1, 0, 1);
-                                        intersec.color = vec3(0);
-                                        intersec.type = LIGHT;
-                                }
-                                */
                         }
                         else // else this is a branch
                         {
@@ -264,33 +254,59 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 //-----------------------------------------------------------------------
 {
         Intersection intersec;
+	Ray firstRay;
 
-	vec3 accumCol = vec3(0.0);
-        vec3 mask = vec3(1.0);
+	vec3 accumCol = vec3(0);
+        vec3 mask = vec3(1);
+	vec3 firstMask = vec3(1);
 	vec3 checkCol0 = vec3(1);
 	vec3 checkCol1 = vec3(0.5);
         vec3 tdir;
 
-        float nc, nt, Re;
-	float epsIntersect = 0.01;
+        float nc, nt, Re, Tr;
+
+	bool firstTypeWasREFR = false;
+	bool reflectionTime = false;
 	
-	// we need up to 30 bounces to get through all the possible yellow glass boxes
-	for (int depth = 0; depth < 30; depth++)
+	// need more bounces than usual, because there could be lots of yellow glass boxes in a row
+	for (int bounces = 0; bounces < 10; bounces++)
 	{
 		
 		float t = SceneIntersect(r, intersec);
 		
+		/*
 		if (t == INFINITY)
 		{
                         break;
 		}
+		*/
 		
 		if (intersec.type == LIGHT)
 		{	
-			accumCol = mask * intersec.emission;
+			if (firstTypeWasREFR)
+			{
+				if (!reflectionTime) 
+				{
+					accumCol = mask * intersec.emission;
+					
+					// start back at the refractive surface, but this time follow reflective branch
+					r = firstRay;
+					mask = firstMask;
+					// set/reset variables
+					reflectionTime = true;
+					
+					// continue with the reflection ray
+					continue;
+				}
+				else 
+					accumCol += mask * intersec.emission; // add reflective result to the refractive result (if any)
+			}
+			else 
+				accumCol = mask * intersec.emission;
 			
+			// reached a light, so we can exit
 			break;
-		}
+		} // end if (intersec.type == LIGHT)
 		
 		
 		// useful data 
@@ -309,27 +325,28 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			
 			mask *= intersec.color;
 
-			// Russian Roulette
+			/* // Russian Roulette
 			float p = max(mask.r, max(mask.g, mask.b));
-			if (depth > 0)
+			if (bounces > 0)
 			{
 				if (rand(seed) < p)
                                 	mask *= 1.0 / p;
                         	else
                                 	break;
-			}
+			} */
                         
 			// choose random Diffuse sample vector
 			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
-			r.origin += nl * epsIntersect;
+			r.origin += nl * uEPS_intersect;
 			continue;	
                 }
 		
                 if (intersec.type == SPEC)  // Ideal SPECULAR reflection
                 {
-			r = Ray( x, reflect(r.direction, nl) );
-			r.origin += nl * epsIntersect;
 			mask *= intersec.color;
+
+			r = Ray( x, reflect(r.direction, nl) );
+			r.origin += nl * uEPS_intersect;
                         continue;
                 }
 
@@ -338,20 +355,35 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
 			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
+			Tr = 1.0 - Re;
+
+			if (bounces == 0)
+			{	
+				// save intersection data for future reflection trace
+				firstTypeWasREFR = true;
+				firstMask = mask * Re;
+				firstRay = Ray( x, reflect(r.direction, nl) ); // create reflection ray from surface
+				firstRay.origin += nl * uEPS_intersect;
+			}
+
+			if (bounces > 0)
+			{
+				if (rand(seed) < Re)
+				{
+					r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
+					r.origin += nl * uEPS_intersect;
+					continue;
+				}
+			}
+
+			// transmit ray through surface
+			mask *= Tr;
+			mask *= intersec.color;
 			
-			if (rand(seed) < Re) // reflect ray from surface
-			{
-				r = Ray( x, reflect(r.direction, nl) );
-				r.origin += nl * epsIntersect;
-			    	continue;	
-			}
-			else // transmit ray through surface
-			{
-				mask *= intersec.color;
-				r = Ray(x, tdir);
-				r.origin -= nl * epsIntersect;
-				continue;
-			}
+			r = Ray(x, tdir);
+			r.origin -= nl * uEPS_intersect;
+
+			continue;
 			
 		} // end if (intersec.type == REFR)
 		
@@ -360,30 +392,43 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			nc = 1.0; // IOR of Air
 			nt = 1.4; // IOR of Clear Coat
 			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
+			Tr = 1.0 - Re;
 			
-			// choose either specular reflection or diffuse
-			if( rand(seed) < Re )
+			// clearCoat counts as refractive surface
+			if (bounces == 0)
 			{	
-				r = Ray( x, reflect(r.direction, nl) );
-				r.origin += nl * epsIntersect;
-				continue;	
+				// save intersection data for future reflection trace
+				firstTypeWasREFR = true;
+				firstMask = mask * Re;
+				firstRay = Ray( x, reflect(r.direction, nl) ); // create reflection ray from surface
+				firstRay.origin += nl * uEPS_intersect;
 			}
-			else
+
+			if (bounces > 0)
 			{
-				mask *= intersec.color;
-				//accumCol += calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
-				r.origin += nl * epsIntersect;
-				continue;
+				if (rand(seed) < Re)
+				{	
+					r = Ray( x, reflect(r.direction, nl) );
+					r.origin += nl * uEPS_intersect;
+					continue;	
+				}
 			}
+
+			mask *= Tr;
+			mask *= intersec.color;
+			//accumCol += calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
+			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+			r.origin += nl * uEPS_intersect;
+			continue;
+			
 			
 		} //end if (intersec.type == COAT)
 		
 		
-	} // end for (int depth = 0; depth < 30; depth++)
+	} // end for (int bounces = 0; bounces < 10; bounces++)
 	
 	return accumCol;      
-}
+} // end vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 
 //-----------------------------------------------------------------------
