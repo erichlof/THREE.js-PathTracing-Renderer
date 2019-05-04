@@ -1,10 +1,9 @@
 // scene/demo-specific variables go here
+var EPS_intersect;
 var sceneIsDynamic = true;
 var camFlightSpeed = 300;
 var sunAngle = 0;
 var sunDirection = new THREE.Vector3();
-var waterLevel = 0.0;
-var cameraUnderWater = false;
 var tallBoxGeometry, tallBoxMaterial, tallBoxMesh;
 var shortBoxGeometry, shortBoxMaterial, shortBoxMesh;
 
@@ -12,6 +11,7 @@ var shortBoxGeometry, shortBoxMaterial, shortBoxMesh;
 function initSceneData() {
         
         // scene/demo-specific three.js objects setup goes here
+        EPS_intersect = mouseControl ? 0.1 : 1.0; // less precision on mobile
 
         // Boxes
         tallBoxGeometry = new THREE.BoxGeometry(1,1,1);
@@ -78,6 +78,7 @@ function initPathTracingShaders() {
                 uCameraIsMoving: { type: "b1", value: false },
                 uCameraJustStartedMoving: { type: "b1", value: false },
                 
+                uEPS_intersect: { type: "f", value: EPS_intersect },
                 uCameraUnderWater: { type: "f", value: 0.0 },
                 uTime: { type: "f", value: 0.0 },
                 uSampleCounter: { type: "f", value: 0.0 },
@@ -150,10 +151,7 @@ function createPathTracingMaterial() {
 function updateVariablesAndUniforms() {
         
         // scene/demo-specific variables
-        if (cameraControlsObject.position.y < 0.0)
-                cameraUnderWater = true;
-        else cameraUnderWater = false;
-        
+
         sunAngle = (elapsedTime * 0.03) % Math.PI;
         sunDirection.set(Math.cos(sunAngle) * 1.2, Math.sin(sunAngle), -Math.cos(sunAngle) * 3.0);
         sunDirection.normalize();
@@ -196,6 +194,10 @@ function updateVariablesAndUniforms() {
         pathTracingUniforms.uShortBoxNormalMatrix.value.getNormalMatrix( shortBoxMesh.matrixWorld );
                                 
         // CAMERA
+        if (cameraControlsObject.position.y < 2.0)
+                pathTracingUniforms.uCameraUnderWater.value = 1.0;
+        else 
+                pathTracingUniforms.uCameraUnderWater.value = 0.0;
         cameraControlsObject.updateMatrixWorld(true);			
         pathTracingUniforms.uCameraMatrix.value.copy( worldCamera.matrixWorld );
         screenOutputMaterial.uniforms.uOneOverSampleCounter.value = 1.0 / sampleCounter;
