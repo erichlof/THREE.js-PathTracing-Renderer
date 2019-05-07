@@ -1,4 +1,5 @@
 // scene/demo-specific variables go here
+var EPS_intersect;
 var clothTexture, darkWoodTexture, lightWoodTexture;
 var increaseDoorAngle = false;
 var decreaseDoorAngle = false;
@@ -9,9 +10,10 @@ var camFlightSpeed = 100;
 function initSceneData() {
         
         // scene/demo-specific three.js objects setup goes here
+        EPS_intersect = mouseControl ? 0.1 : 1.0; // less precision on mobile
 
         // set camera's field of view
-        worldCamera.fov = 60;
+        worldCamera.fov = 55;
 
         // position and orient camera
         cameraControlsObject.position.set(100,50,140);
@@ -25,25 +27,25 @@ function initSceneData() {
         clothTexture.wrapS = THREE.RepeatWrapping;
         clothTexture.wrapT = THREE.RepeatWrapping;
         clothTexture.flipY = false;
-        //clothTexture.minFilter = THREE.LinearMipMapLinearFilter; 
-        //clothTexture.magFilter = THREE.LinearFilter;
-        //clothTexture.generateMipmaps = false;
+        clothTexture.minFilter = THREE.LinearFilter; 
+        clothTexture.magFilter = THREE.LinearFilter;
+        clothTexture.generateMipmaps = false;
         
         darkWoodTexture = new THREE.TextureLoader().load( 'textures/darkWood.jpg' );
         darkWoodTexture.wrapS = THREE.RepeatWrapping;
         darkWoodTexture.wrapT = THREE.RepeatWrapping;
         darkWoodTexture.flipY = false;
-        //darkWoodTexture.minFilter = THREE.LinearFilter; 
-        //darkWoodTexture.magFilter = THREE.LinearFilter;
-        //darkWoodTexture.generateMipmaps = false;
+        darkWoodTexture.minFilter = THREE.LinearFilter; 
+        darkWoodTexture.magFilter = THREE.LinearFilter;
+        darkWoodTexture.generateMipmaps = false;
         
         lightWoodTexture = new THREE.TextureLoader().load( 'textures/lightWood.jpg' );
         lightWoodTexture.wrapS = THREE.RepeatWrapping;
         lightWoodTexture.wrapT = THREE.RepeatWrapping;
         lightWoodTexture.flipY = false;
-        //lightWoodTexture.minFilter = THREE.LinearFilter; 
-        //lightWoodTexture.magFilter = THREE.LinearFilter;
-        //lightWoodTexture.generateMipmaps = false;
+        lightWoodTexture.minFilter = THREE.LinearFilter; 
+        lightWoodTexture.magFilter = THREE.LinearFilter;
+        lightWoodTexture.generateMipmaps = false;
 
 } // end function initSceneData()
 
@@ -63,6 +65,7 @@ function initPathTracingShaders() {
                 uCameraIsMoving: { type: "b1", value: false },
                 uCameraJustStartedMoving: { type: "b1", value: false },
 
+                uEPS_intersect: { type: "f", value: EPS_intersect },
                 uTime: { type: "f", value: 0.0 },
                 uSampleCounter: { type: "f", value: 0.0 },
                 uFrameCounter: { type: "f", value: 1.0 },
