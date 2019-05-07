@@ -152,24 +152,26 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 //-----------------------------------------------------------------------
 {
 	Intersection intersec;
+	Quad lightChoice;
+	Ray firstRay;
 
 	vec3 randVec = vec3(rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0);
-	vec3 accumCol = vec3(0.0);
-	vec3 mask = vec3(1.0);
+	vec3 accumCol = vec3(0);
+	vec3 mask = vec3(1);
+	vec3 firstMask = vec3(1);
 	vec3 tdir;
 	vec3 dirToLight;
         
         float weight;
-	float nc, nt, Re;
-	float diffuseColorBleeding = 0.3; // range: 0.0 - 0.5, amount of color bleeding between surfaces
-
-	int diffuseCount = 0;
+	float nc, nt, Re, Tr;
+	float diffuseColorBleeding = 0.4; // range: 0.0 - 0.5, amount of color bleeding between surfaces
+	float randChoose;
 
 	bool bounceIsSpecular = true;
 	bool sampleLight = false;
+	bool firstTypeWasREFR = false;
+	bool reflectionTime = false;
 
-	Quad lightChoice;
-	
 	
         for (int bounces = 0; bounces < 4; bounces++)
 	{
@@ -178,45 +180,88 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		
 		if (t == INFINITY)
 		{
-                        break;
+                        if (firstTypeWasREFR)
+			{
+				if (!reflectionTime) 
+				{
+					// start back at the refractive surface, but this time follow reflective branch
+					r = firstRay;
+					mask = firstMask;
+					// set/reset variables
+					reflectionTime = true;
+					bounceIsSpecular = true;
+					sampleLight = false;
+					// continue with the reflection ray
+					continue;
+				}
+			}
+			// nothing left to calculate, so exit
+			break;
 		}
 		
-		// if we reached something bright, don't spawn any more rays
 		if (intersec.type == LIGHT)
 		{	
-			if (bounceIsSpecular || sampleLight)
+			if (firstTypeWasREFR)
 			{
-				accumCol = mask * intersec.emission;
+				if (!reflectionTime) 
+				{
+					if (bounceIsSpecular || sampleLight)
+						accumCol = mask * intersec.emission;
+					
+					// start back at the refractive surface, but this time follow reflective branch
+					r = firstRay;
+					mask = firstMask;
+					// set/reset variables
+					reflectionTime = true;
+					bounceIsSpecular = true;
+					sampleLight = false;
+					// continue with the reflection ray
+					continue;
+				}
+				else if (bounceIsSpecular || sampleLight)
+					accumCol += mask * intersec.emission; // add reflective result to the refractive result (if any)
 			}
+			else if (bounceIsSpecular || sampleLight)
+				accumCol = mask * intersec.emission;
 			
+			// reached a light, so we can exit
 			break;
-		}
+		} // end if (intersec.type == LIGHT)
 		
-		// if we reached this point and sampleLight failed to find a light above, exit early
-		if (sampleLight)
+		// if we get here and sampleLight is still true, shadow ray failed to find a light source
+		if (sampleLight) 
 		{
+			if (firstTypeWasREFR && !reflectionTime) 
+			{
+				// start back at the refractive surface, but this time follow reflective branch
+				r = firstRay;
+				mask = firstMask;
+				// set/reset variables
+				reflectionTime = true;
+				bounceIsSpecular = true;
+				sampleLight = false;
+				// continue with the reflection ray
+				continue;
+			}
+			// nothing left to calculate, so exit	
 			break;
 		}
+
 		
 		// useful data 
 		vec3 n = intersec.normal;
                 vec3 nl = dot(n,r.direction) <= 0.0 ? normalize(n) : normalize(n * -1.0);
 		vec3 x = r.origin + r.direction * t;
 		
-		if (rand(seed) < 0.5)
-			lightChoice = quads[0];
-		else lightChoice = quads[1];
+		randChoose = rand(seed) * 2.0; // 2 lights to choose from
+		lightChoice = quads[int(randChoose)];
+
 		
                 if (intersec.type == DIFF || intersec.type == CLOTH ) // Ideal DIFFUSE reflection
 		{
-			diffuseCount++;
-
 			if (intersec.type == CLOTH)
-			{
 				intersec.color *= pow(texture(tClothTexture, (10.0 * x.xz) / 512.0).rgb, vec3(2.2));
-				
-			}
-				
+					
 			mask *= intersec.color;
 
 			/*
@@ -233,11 +278,11 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
+			if (bounces == 0 && rand(seed) < diffuseColorBleeding)
                         {
                                 // choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
-				r.origin += nl;
+				r.origin += nl * uEPS_intersect;
 				
 				continue;
                         }
@@ -247,7 +292,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				mask *= clamp(weight, 0.0, 1.0);
 
                                 r = Ray( x, dirToLight );
-				r.origin += nl;
+				r.origin += nl * uEPS_intersect;
 
 				sampleLight = true;
 				continue;
@@ -259,26 +304,39 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			nc = 1.0; // IOR of Air
 			nt = 1.4; // IOR of Clear Coat
 			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
+			Tr = 1.0 - Re;
 			
-			// choose either specular reflection or diffuse
-			if( rand(seed) < Re )
+			// clearCoat counts as refractive surface
+			if (bounces == 0)
 			{	
-				r = Ray( x, reflect(r.direction, nl) );
-				r.origin += nl;
-				continue;	
+				// save intersection data for future reflection trace
+				firstTypeWasREFR = true;
+				firstMask = mask * Re;
+				firstRay = Ray( x, reflect(r.direction, nl) ); // create reflection ray from surface
+				firstRay.origin += nl * uEPS_intersect;
 			}
-
-			diffuseCount++;
 			
+			if (bounces > 0 && bounceIsSpecular)
+			{
+				
+				if (rand(seed) < Re)
+				{	
+					r = Ray( x, reflect(r.direction, nl) );
+					r.origin += nl * uEPS_intersect;
+					continue;	
+				}
+			}
+			
+			mask *= Tr;
 			mask *= intersec.color;
 			
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
+			if (bounces == 0 && rand(seed) < diffuseColorBleeding)
                         {
                                 // choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
-				r.origin += nl;
+				r.origin += nl * uEPS_intersect;
 				continue;
                         }
                         else
@@ -287,7 +345,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				mask *= clamp(weight, 0.0, 1.0);
 				
                                 r = Ray( x, dirToLight );
-				r.origin += nl;
+				r.origin += nl * uEPS_intersect;
 
 				sampleLight = true;
 				continue;
@@ -300,82 +358,95 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			nc = 1.0; // IOR of Air
 			nt = 1.1; // IOR of Clear Coat
 			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
+			Tr = 1.0 - Re;
 			
-			// choose either specular reflection or diffuse
-			if ( rand(seed) < Re )
+			float spotRadius = 1.5;
+			bool isSpot = false;
+			
+			bool spotn1 = distance(x, vec3(212, 10, -100)) < spotRadius;
+			bool spotn2 = distance(x, vec3(212, 10, -200)) < spotRadius;
+			bool spotn3 = distance(x, vec3(212, 10, -300)) < spotRadius;
+			bool spotn4 = distance(x, vec3(212, 10, -400)) < spotRadius;
+			bool spotp0 = distance(x, vec3(212, 10, 0)) < spotRadius;
+			bool spotp1 = distance(x, vec3(212, 10, 100)) < spotRadius;
+			bool spotp2 = distance(x, vec3(212, 10, 200)) < spotRadius;
+			bool spotp3 = distance(x, vec3(212, 10, 300)) < spotRadius;
+			bool spotp4 = distance(x, vec3(212, 10, 400)) < spotRadius;
+			if (spotn1 || spotn2 || spotn3 || spotn4 || spotp0 || 
+				spotp1 || spotp2 || spotp3 || spotp4 ) 
+				isSpot = true;
+				
+			spotn1 = distance(x, vec3(-212, 10, -100)) < spotRadius;
+			spotn2 = distance(x, vec3(-212, 10, -200)) < spotRadius;
+			spotn3 = distance(x, vec3(-212, 10, -300)) < spotRadius;
+			spotn4 = distance(x, vec3(-212, 10, -400)) < spotRadius;
+			bool spotn0 = distance(x, vec3(-212, 10, 0)) < spotRadius;
+			spotp1 = distance(x, vec3(-212, 10, 100)) < spotRadius;
+			spotp2 = distance(x, vec3(-212, 10, 200)) < spotRadius;
+			spotp3 = distance(x, vec3(-212, 10, 300)) < spotRadius;
+			spotp4 = distance(x, vec3(-212, 10, 400)) < spotRadius;
+			if (spotn1 || spotn2 || spotn3 || spotn4 || spotn0 || 
+				spotp1 || spotp2 || spotp3 || spotp4 ) 
+				isSpot = true;
+			
+			spotn1 = distance(x, vec3(200, 10, -412)) < spotRadius;
+			spotn2 = distance(x, vec3(100, 10, -412)) < spotRadius;
+			spotn0 = distance(x, vec3(0, 10, -412)) < spotRadius;
+			spotn3 = distance(x, vec3(-100, 10, -412)) < spotRadius;
+			spotn4 = distance(x, vec3(-200, 10, -412)) < spotRadius;
+			spotp1 = distance(x, vec3(200, 10,  412)) < spotRadius;
+			spotp2 = distance(x, vec3(100, 10, 412)) < spotRadius;
+			spotp0 = distance(x, vec3(0, 10, 412)) < spotRadius;
+			spotp3 = distance(x, vec3(-100, 10, 412)) < spotRadius;
+			spotp4 = distance(x, vec3(-200, 10, 412)) < spotRadius;
+			if (spotn1 || spotn2 || spotn0 || spotn3 || spotn4 || 
+				spotp1 || spotp2 || spotp0 || spotp3 || spotp4 ) 
+				isSpot = true;
+			
+			if (intersec.type == DARKWOOD)
+				intersec.color *= pow(texture(tDarkWoodTexture, 3.5 * x.xz / 512.0).rgb, vec3(2.2));
+			
+			if (isSpot)
+				intersec.color = clamp(intersec.color + 0.5, 0.0, 1.0);
+				
+			if (intersec.type == LIGHTWOOD)
+				intersec.color *= pow(texture(tLightWoodTexture, 6.0 * x.xz / 512.0).rgb, vec3(2.2));	
+				
+		
+			vec3 reflectVec = reflect(r.direction, nl);
+			vec3 glossyVec = randomDirectionInHemisphere(nl, seed);
+
+			// clearCoat counts as refractive surface
+			if (bounces == 0)
 			{	
-				vec3 reflectVec = reflect(r.direction, nl);
-				r = Ray( x, mix( reflectVec, normalize(nl + randVec), intersec.roughness) );
-				r.origin += nl;
-				continue;	
+				// save intersection data for future reflection trace
+				firstTypeWasREFR = true;
+				firstMask = mask * Re;
+				firstRay = Ray( x, mix(reflectVec, glossyVec, intersec.roughness)); // create reflection ray from surface
+				firstRay.origin += nl * uEPS_intersect;
 			}
-			else
+			
+			if (bounces > 0 && bounceIsSpecular)
 			{
-				float spotRadius = 1.5;
-				bool isSpot = false;
 				
-				bool spotn1 = distance(x, vec3(212, 10, -100)) < spotRadius;
-				bool spotn2 = distance(x, vec3(212, 10, -200)) < spotRadius;
-				bool spotn3 = distance(x, vec3(212, 10, -300)) < spotRadius;
-				bool spotn4 = distance(x, vec3(212, 10, -400)) < spotRadius;
-				bool spotp0 = distance(x, vec3(212, 10, 0)) < spotRadius;
-				bool spotp1 = distance(x, vec3(212, 10, 100)) < spotRadius;
-				bool spotp2 = distance(x, vec3(212, 10, 200)) < spotRadius;
-				bool spotp3 = distance(x, vec3(212, 10, 300)) < spotRadius;
-				bool spotp4 = distance(x, vec3(212, 10, 400)) < spotRadius;
-				if (spotn1 || spotn2 || spotn3 || spotn4 || spotp0 || 
-				    spotp1 || spotp2 || spotp3 || spotp4 ) 
-				    	isSpot = true;
-					
-				spotn1 = distance(x, vec3(-212, 10, -100)) < spotRadius;
-				spotn2 = distance(x, vec3(-212, 10, -200)) < spotRadius;
-				spotn3 = distance(x, vec3(-212, 10, -300)) < spotRadius;
-				spotn4 = distance(x, vec3(-212, 10, -400)) < spotRadius;
-				bool spotn0 = distance(x, vec3(-212, 10, 0)) < spotRadius;
-				spotp1 = distance(x, vec3(-212, 10, 100)) < spotRadius;
-				spotp2 = distance(x, vec3(-212, 10, 200)) < spotRadius;
-				spotp3 = distance(x, vec3(-212, 10, 300)) < spotRadius;
-				spotp4 = distance(x, vec3(-212, 10, 400)) < spotRadius;
-				if (spotn1 || spotn2 || spotn3 || spotn4 || spotn0 || 
-				    spotp1 || spotp2 || spotp3 || spotp4 ) 
-				    	isSpot = true;
-				
-				spotn1 = distance(x, vec3(200, 10, -412)) < spotRadius;
-				spotn2 = distance(x, vec3(100, 10, -412)) < spotRadius;
-				spotn0 = distance(x, vec3(0, 10, -412)) < spotRadius;
-				spotn3 = distance(x, vec3(-100, 10, -412)) < spotRadius;
-				spotn4 = distance(x, vec3(-200, 10, -412)) < spotRadius;
-				spotp1 = distance(x, vec3(200, 10,  412)) < spotRadius;
-				spotp2 = distance(x, vec3(100, 10, 412)) < spotRadius;
-				spotp0 = distance(x, vec3(0, 10, 412)) < spotRadius;
-				spotp3 = distance(x, vec3(-100, 10, 412)) < spotRadius;
-				spotp4 = distance(x, vec3(-200, 10, 412)) < spotRadius;
-				if (spotn1 || spotn2 || spotn0 || spotn3 || spotn4 || 
-				    spotp1 || spotp2 || spotp0 || spotp3 || spotp4 ) 
-				    	isSpot = true;
-				
-				if (intersec.type == DARKWOOD)
-					intersec.color *= pow(texture(tDarkWoodTexture, 3.5 * x.xz / 512.0).rgb, vec3(2.2));
-				
-				if (isSpot)
-					intersec.color = clamp(intersec.color + 0.5, 0.0, 1.0);
-					
-				if (intersec.type == LIGHTWOOD)
-					intersec.color *= pow(texture(tLightWoodTexture, 6.0 * x.xz / 512.0).rgb, vec3(2.2));	
-					
+				if (rand(seed) < Re)
+				{	
+					r = Ray( x, mix(reflectVec, glossyVec, intersec.roughness));
+					r.origin += nl * uEPS_intersect;
+					continue;	
+				}
 			}
-
-			diffuseCount++;
-
+			
+			mask *= Tr;
 			mask *= intersec.color;
 			
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
+			if (bounces == 0 && rand(seed) < diffuseColorBleeding)
                         {
                                 // choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
-				r.origin += nl;
+				r.origin += nl * uEPS_intersect;
 				continue;
                         }
                         else
@@ -384,7 +455,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				mask *= clamp(weight, 0.0, 1.0);
 				
                                 r = Ray( x, dirToLight );
-				r.origin += nl;
+				r.origin += nl * uEPS_intersect;
 
 				sampleLight = true;
 				continue;
@@ -416,7 +487,7 @@ void SetupScene(void)
 	quads[4] = Quad( normalize(vec3(0,-1, 1)), vec3(-200,0,-400), vec3(200,0,-400), vec3(200,10,-390), vec3(-200,10,-390), z, clothColor, 0.0, CLOTH);// Cloth back Rail bottom portion
 	quads[5] = Quad( normalize(vec3(0,-1, -1)), vec3(200,0,400), vec3(-200,0,400),  vec3(-200,10,390), vec3(200,10,390), z, clothColor, 0.0, CLOTH);// Cloth front Rail bottom portion
 	
-	spheres[0] = Sphere(9.0, vec3( 25, 9, 25), z, vec3(0.8, 0.8, 0.6), 0.0, COAT);// White Ball
+	spheres[0] = Sphere(9.0, vec3( 25, 9, 25), z, vec3(0.8, 0.8, 0.5), 0.0, COAT);// White Ball
 	spheres[1] = Sphere(9.0, vec3(-50, 9, 0),   z, vec3(0.9, 0.5, 0.01), 0.0, COAT);// Yellow Ball
 	spheres[2] = Sphere(9.0, vec3( 50, 9, 0), z, vec3(0.35, 0.0, 0.0), 0.0, COAT);// Red Ball
         
