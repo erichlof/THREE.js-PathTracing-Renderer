@@ -1,4 +1,5 @@
 // scene/demo-specific variables go here
+var EPS_intersect;
 var sceneIsDynamic = false;
 var camFlightSpeed = 300;
 var gui;
@@ -71,18 +72,13 @@ function init_GUI() {
 
 
                 var pointerlockChange = function ( event ) {
-
                         if ( document.pointerLockElement === document.body || 
                             document.mozPointerLockElement === document.body || document.webkitPointerLockElement === document.body ) {
 
                                 isPaused = false;
-
                         } else {
-
                                 isPaused = true;
-
                         }
-
                 };
 
                 // Hook pointer lock state change events
@@ -139,6 +135,7 @@ function MaterialObject() {
 function initSceneData() {
         
         // scene/demo-specific three.js objects setup goes here
+        EPS_intersect = mouseControl ? 0.1 : 1.0; // less precision on mobile
 
         // set camera's field of view
         worldCamera.fov = 50;
@@ -163,6 +160,8 @@ function initPathTracingShaders() {
 					
                 uCameraIsMoving: { type: "b1", value: false },
                 uCameraJustStartedMoving: { type: "b1", value: false },
+
+                uEPS_intersect: { type: "f", value: EPS_intersect },
                 uTime: { type: "f", value: 0.0 },
                 uSampleCounter: { type: "f", value: 0.0 },
                 uFrameCounter: { type: "f", value: 1.0 },
@@ -170,13 +169,11 @@ function initPathTracingShaders() {
                 uVLen: { type: "f", value: 1.0 },
                 uApertureSize: { type: "f", value: 0.0 },
                 uFocusDistance: { type: "f", value: 500.0 },
-
                 uLeftSphereMaterialType: { type: "f", value: 0.0 },
                 uRightSphereMaterialType: { type: "f", value: 0.0 },
+
                 uLeftSphereColor: { type: "v3", value: new THREE.Color() },
                 uRightSphereColor: { type: "v3", value: new THREE.Color() },
-                //uLeftSphereEmissive: { type: "v3", value: new THREE.Color() },
-                //uRightSphereEmissive: { type: "v3", value: new THREE.Color() },
                 
                 uResolution: { type: "v2", value: new THREE.Vector2() },
                 
