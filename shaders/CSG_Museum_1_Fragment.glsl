@@ -1149,7 +1149,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			// transmission?
 			if (scatteringDistance > t) 
 			{
-				mask *= exp(-absorptionCoefficient * t);
+				mask *= exp(-absorptionCoefficient * t) * Tr;
 
 				r.origin = x;
 				r.origin += r.direction * scatteringDistance;
@@ -1162,7 +1162,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			bounceIsSpecular = false;
 
 			// else scattering
-			mask *= exp(-absorptionCoefficient * scatteringDistance);
+			mask *= exp(-absorptionCoefficient * scatteringDistance) * Tr;
 			
 			if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
                         {
