@@ -11,12 +11,12 @@ function initSceneData() {
         EPS_intersect = mouseControl ? 0.1 : 1.0; // less precision on mobile
 
         // set camera's field of view
-        worldCamera.fov = 60;
+        worldCamera.fov = 56;
         
         // position and orient camera
         cameraControlsObject.position.set(-10, 88, 195);
         // look slightly downward
-        ///cameraControlsPitchObject.rotation.x = -0.4;
+        cameraControlsPitchObject.rotation.x = -0.05;
 
         tileNormalMapTexture = new THREE.TextureLoader().load( 'textures/tileNormalMap.png' );
         tileNormalMapTexture.wrapS = THREE.RepeatWrapping;
