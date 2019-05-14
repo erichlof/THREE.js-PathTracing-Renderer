@@ -1,18 +1,17 @@
 // scene/demo-specific variables go here
+var EPS_intersect;
 var sceneIsDynamic = true;
-var camFlightSpeed = 100;
+var camFlightSpeed = 300;
 var sunAngle = 0;
 var sunDirection = new THREE.Vector3();
 var waterLevel = 400;
 var cameraUnderWater = 0.0;
-var terrain_eps = 0.2;
 
 // called automatically from within initTHREEjs() function
 function initSceneData() {
         
         // scene/demo-specific three.js objects setup goes here
-        if ( 'ontouchstart' in window )
-                terrain_eps = 0.02;
+        EPS_intersect = mouseControl ? 0.02 : 0.2; // less precision on mobile
 
         // set camera's field of view
         worldCamera.fov = 60;
@@ -46,6 +45,7 @@ function initPathTracingShaders() {
                 uCameraIsMoving: { type: "b1", value: false },
                 uCameraJustStartedMoving: { type: "b1", value: false },
                 
+                uEPS_intersect: { type: "f", value: EPS_intersect },
                 uCameraUnderWater: { type: "f", value: 0.0 },
                 uWaterLevel: { type: "f", value: 0.0 },
                 uTime: { type: "f", value: 0.0 },
@@ -55,7 +55,6 @@ function initPathTracingShaders() {
                 uVLen: { type: "f", value: 1.0 },
                 uApertureSize: { type: "f", value: 0.0 },
                 uFocusDistance: { type: "f", value: 1180.0 },
-                uTerrain_eps: { type: "f", value: terrain_eps },
                 
                 uResolution: { type: "v2", value: new THREE.Vector2() },
                 
