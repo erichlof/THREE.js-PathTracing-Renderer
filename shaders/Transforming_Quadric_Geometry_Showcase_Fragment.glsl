@@ -480,6 +480,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 	float randChoose;
 	float diffuseColorBleeding = 0.0; // range: 0.0 - 0.5, amount of color bleeding between surfaces
 
+	int diffuseCount = 0;
+
 	bool bounceIsSpecular = true;
 	bool sampleLight = false;
 	bool firstTypeWasREFR = false;
@@ -549,8 +551,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 				// continue with the reflection ray
 				continue;
 			}
-			// nothing left to calculate, so exit	
-			break;
+			// nothing left to calculate, so exit
+			// comment out the following break statement if refractive caustics are still desired
+			//break;
 		}
 
 
@@ -565,6 +568,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 		    
                 if (intersec.type == DIFF || intersec.type == CHECK) // Ideal DIFFUSE reflection
 		{
+			diffuseCount++;
 
 			if( intersec.type == CHECK )
 			{
@@ -586,7 +590,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 			
 			bounceIsSpecular = false;
 
-			if (bounces < 2 && rand(seed) < diffuseColorBleeding)
+			if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
                         {
                                 // choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
@@ -684,12 +688,14 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 				}
 			}
 			
+			diffuseCount++;
+
 			mask *= Tr;
 			mask *= intersec.color;
 			
 			bounceIsSpecular = false;
 
-			if (bounces == 0 && rand(seed) < diffuseColorBleeding)
+			if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
                         {
                                 // choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
