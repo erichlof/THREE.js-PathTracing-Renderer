@@ -189,6 +189,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	float weight;
 	float diffuseColorBleeding = 0.5; // range: 0.0 - 0.5, amount of color bleeding between surfaces
 
+	int diffuseCount = 0;
+
 	bool bounceIsSpecular = true;
 	bool sampleLight = false;
 	bool checkWater = true;
@@ -249,7 +251,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			break;
 		} // end if (intersec.type == LIGHT)
 
-		/*
+		
 		// if we get here and sampleLight is still true, shadow ray failed to find a light source
 		if (sampleLight) 
 		{
@@ -265,10 +267,11 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				// continue with the reflection ray
 				continue;
 			}
-			// nothing left to calculate, so exit	
-			break;
+			// nothing left to calculate, so exit
+			// comment out the following break statement if refractive caustics are still desired
+			//break;
 		}
-		*/
+		
 		
 		// useful data 
 		n = normalize(intersec.normal);
@@ -278,6 +281,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		
                 if (intersec.type == DIFF) // Ideal DIFFUSE reflection
                 {
+			diffuseCount++;
 
 			mask *= intersec.color;
 
@@ -293,28 +297,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			}
 			*/
 
-			/*
-			// create caustic ray
-                        if (rand(seed) < 0.2)
-                        {
-				//vec3 randVec = vec3(rand(seed), rand(seed) * 2.0 - 1.0, rand(seed));
-				//vec3 target = vec3(randVec.x * 549.6, STILL_WATER_LEVEL - 10.0, randVec.z * -559.2);
-				vec3 randVec = vec3(rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0);
-				vec3 offset = vec3(randVec.x * 82.0, randVec.y * 170.0, randVec.z * 80.0);
-				vec3 target = vec3(180.0 + offset.x, 170.0 + offset.y, -350.0 + offset.z);
-                                causticDirection = normalize(target - x);
-				r = Ray( x, causticDirection );
-				r.origin += nl * uEPS_intersect;
-				weight = max(0.0, dot(nl, r.direction));
-				mask *= weight;
-				
-				continue;
-			}
-			*/
-
 			bounceIsSpecular = false;
 
-                        if (bounces < 3 && rand(seed) < diffuseColorBleeding)
+                        if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
                         {
                                 // choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
