@@ -89,7 +89,7 @@ float lookup_Normal( in vec3 pos )
 
 vec3 terrain_calcNormal( vec3 pos, float t )
 {
-	vec3 eps = vec3(1.0, 0.0, 0.0);
+	vec3 eps = vec3(uEPS_intersect, 0.0, 0.0);
 	
 	return normalize( vec3( lookup_Normal(pos-eps.xyy) - lookup_Normal(pos+eps.xyy),
 			  	eps.x * 2.0,
@@ -370,7 +370,6 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 		// ray hits terrain
 		if (intersec.type == TERRAIN)
 		{
-			//firstX = x;
 			float rockNoise = texture(t_PerlinNoise, (0.0001 * x.xz) + 0.5).x;
 			vec3 rockColor0 = vec3(0.2, 0.2, 0.2) * 0.01 * rockNoise;
 			vec3 rockColor1 = vec3(0.2, 0.2, 0.2) * rockNoise;
@@ -402,14 +401,12 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 					firstTypeWasREFR = true;
 					reflectionTime = false;
 					firstRay = Ray( x, reflect(r.direction, n) );
-					firstRay.origin += n;
+					firstRay.origin += n * uEPS_intersect;
 					mask *= Tr;
 					firstMask = vec3(1) * Re;
 				}
 			}
 				
-			
-
 			vec3 shadowRayDirection = normalize(sunDirection + (randomSkyVec * max(dot(sunDirection, up), 0.1)));						
 			if ( isLightSourceVisible(x, n, shadowRayDirection) && x.y > uWaterLevel ) // in direct sunlight
 			{
@@ -436,7 +433,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 
 			accumCol = mask;	
 			break;
-		}
+		} // end if (intersec.type == TERRAIN)
 
 		
 		if (intersec.type == REFR)  // Ideal dielectric REFRACTION
