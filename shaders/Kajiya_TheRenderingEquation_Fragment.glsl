@@ -146,6 +146,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	float diffuseColorBleeding = 0.5; // range: 0.0 - 0.5, amount of color bleeding between surfaces
 	float randChoose;
 
+	int diffuseCount = 0;
+
 	bool bounceIsSpecular = true;
 	bool sampleLight = false;
 	bool firstTypeWasREFR = false;
@@ -250,6 +252,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		    
                 if (intersec.type == DIFF ) // Ideal DIFFUSE reflection
 		{
+			diffuseCount++;
 
 			mask *= intersec.color;
 
@@ -267,7 +270,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 			bounceIsSpecular = false;
 
-			if (bounces < 2 && rand(seed) < diffuseColorBleeding)
+			if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
                         {
                                 // choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
