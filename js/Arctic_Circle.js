@@ -1,4 +1,5 @@
 // scene/demo-specific variables go here
+var EPS_intersect;
 var sceneIsDynamic = true;
 var camFlightSpeed = 1000;
 var sunAngle = 0;
@@ -10,6 +11,7 @@ var cameraUnderWater = false;
 function initSceneData() {
         
         // scene/demo-specific three.js objects setup goes here
+        EPS_intersect = mouseControl ? 0.02 : 0.2; // less precision on mobile
 
         // set camera's field of view
         worldCamera.fov = 60;
@@ -44,6 +46,7 @@ function initPathTracingShaders() {
                 uCameraIsMoving: { type: "b1", value: false },
                 uCameraJustStartedMoving: { type: "b1", value: false },
                 
+                uEPS_intersect: { type: "f", value: EPS_intersect },
                 uWaterLevel: { type: "f", value: 0.0 },
                 uTime: { type: "f", value: 0.0 },
                 uSampleCounter: { type: "f", value: 0.0 },
