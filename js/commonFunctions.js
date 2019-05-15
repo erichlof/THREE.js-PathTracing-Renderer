@@ -589,8 +589,8 @@ function animate() {
 
                 if (increaseAperture) {
                         apertureSize += 0.1;
-                        if (apertureSize > 20.0)
-                                apertureSize = 20.0;
+                        if (apertureSize > 100.0)
+                                apertureSize = 100.0;
                         pathTracingUniforms.uApertureSize.value = apertureSize;
                         cameraIsMoving = true;
                         increaseAperture = false;
