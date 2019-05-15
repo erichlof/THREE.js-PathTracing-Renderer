@@ -460,7 +460,6 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 		// ray hits terrain
 		if (intersec.type == TERRAIN)
 		{
-			firstX = x;
 			float rockNoise = texture(t_PerlinNoise, (0.001 * x.xz)).x;
 			vec3 rockColor0 = vec3(0.2, 0.2, 0.2) * 0.01 * rockNoise;
 			vec3 rockColor1 = vec3(0.2, 0.2, 0.2) * rockNoise;
@@ -526,8 +525,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 				firstRay.origin += nl * uEPS_intersect;
 			}
 
-			
-			if (bounces > 0)
+			/* if (bounces > 0)
 			{
 				if (rand(seed) < Re)
 				{
@@ -535,7 +533,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 					r.origin += nl * uEPS_intersect;
 					continue;
 				}
-			}
+			} */
 			
 			// transmit ray through surface
 			mask *= Tr;
