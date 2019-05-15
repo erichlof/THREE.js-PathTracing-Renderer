@@ -167,6 +167,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	float diffuseColorBleeding = 0.4; // range: 0.0 - 0.5, amount of color bleeding between surfaces
 	float randChoose;
 
+	int diffuseCount = 0;
+
 	bool bounceIsSpecular = true;
 	bool sampleLight = false;
 	bool firstTypeWasREFR = false;
@@ -259,6 +261,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		
                 if (intersec.type == DIFF || intersec.type == CLOTH ) // Ideal DIFFUSE reflection
 		{
+			diffuseCount++;
+
 			if (intersec.type == CLOTH)
 				intersec.color *= pow(texture(tClothTexture, (10.0 * x.xz) / 512.0).rgb, vec3(2.2));
 					
@@ -278,7 +282,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 			bounceIsSpecular = false;
 
-			if (bounces == 0 && rand(seed) < diffuseColorBleeding)
+			if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
                         {
                                 // choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
@@ -327,12 +331,14 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				}
 			}
 			
+			diffuseCount++;
+
 			mask *= Tr;
 			mask *= intersec.color;
 			
 			bounceIsSpecular = false;
 
-			if (bounces == 0 && rand(seed) < diffuseColorBleeding)
+			if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
                         {
                                 // choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
@@ -437,12 +443,14 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				}
 			}
 			
+			diffuseCount++;
+
 			mask *= Tr;
 			mask *= intersec.color;
 			
 			bounceIsSpecular = false;
 
-			if (bounces == 0 && rand(seed) < diffuseColorBleeding)
+			if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
                         {
                                 // choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
