@@ -712,9 +712,10 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 			mask *= Tr;
 			mask *= intersec.color;
 
+			diffuseCount++;
 			bounceIsSpecular = false;
 
-			if (bounces == 0 && rand(seed) < diffuseColorBleeding)
+			if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
                         {
                                 // choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
