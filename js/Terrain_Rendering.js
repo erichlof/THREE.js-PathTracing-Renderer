@@ -11,7 +11,7 @@ var cameraUnderWater = 0.0;
 function initSceneData() {
         
         // scene/demo-specific three.js objects setup goes here
-        EPS_intersect = mouseControl ? 0.02 : 0.2; // less precision on mobile
+        EPS_intersect = mouseControl ? 0.2 : 4.0; // less precision on mobile
 
         // set camera's field of view
         worldCamera.fov = 60;
