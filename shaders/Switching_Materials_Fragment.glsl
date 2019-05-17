@@ -13,8 +13,8 @@ uniform vec3 uRightSphereColor;
 //uniform vec3 uLeftSphereEmissive;
 //uniform vec3 uRightSphereEmissive;
 
-#define N_QUADS 5
-#define N_SPHERES 3
+#define N_QUADS 6
+#define N_SPHERES 2
 
 struct Ray { vec3 origin; vec3 direction; };
 struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; int type; };
@@ -33,7 +33,7 @@ Sphere spheres[N_SPHERES];
 
 #include <pathtracing_quad_intersect>
 
-#include <pathtracing_sample_sphere_light>
+#include <pathtracing_sample_quad_light>
 
 
 //-----------------------------------------------------------------------
@@ -78,7 +78,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 //-----------------------------------------------------------------------
 {
 	Intersection intersec;
-	Sphere light = spheres[0];
+	Quad light = quads[5];
 	Ray firstRay;
 
 	vec3 accumCol = vec3(0);
@@ -97,6 +97,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	bool sampleLight = false;
 	bool firstTypeWasREFR = false;
 	bool reflectionTime = false;
+	bool firstTypeWasDIFF = false;
+	bool shadowTime = false;
 
 	
 	for (int bounces = 0; bounces < 6; bounces++)
@@ -117,6 +119,19 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				bounceIsSpecular = true;
 				sampleLight = false;
 				// continue with the reflection ray
+				continue;
+			}
+
+			if (firstTypeWasDIFF && !shadowTime) 
+			{
+				// start back at the diffuse surface, but this time follow shadow ray branch
+				r = firstRay;
+				mask = firstMask;
+				// set/reset variables
+				shadowTime = true;
+				bounceIsSpecular = false;
+				sampleLight = true;
+				// continue with the shadow ray
 				continue;
 			}
 			// nothing left to calculate, so exit	
@@ -144,8 +159,36 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 					continue;
 				}
 				else if (bounceIsSpecular || sampleLight)
+				{
 					accumCol += mask * intersec.emission; // add reflective result to the refractive result (if any)
+					break;
+				}	
 			}
+
+			if (firstTypeWasDIFF)
+			{
+				if (!shadowTime) 
+				{
+					if (bounceIsSpecular || sampleLight)
+						accumCol = mask * intersec.emission * 0.5;
+					
+					// start back at the diffuse surface, but this time follow shadow ray branch
+					r = firstRay;
+					mask = firstMask;
+					// set/reset variables
+					shadowTime = true;
+					bounceIsSpecular = false;
+					sampleLight = true;
+					// continue with the shadow ray
+					continue;
+				}
+				else if (bounceIsSpecular || sampleLight)
+				{
+					accumCol += mask * intersec.emission * 0.5; // add shadow ray result to the colorbleed result (if any)
+					break;
+				}		
+			}
+
 			else if (bounceIsSpecular || sampleLight)
 				accumCol = mask * intersec.emission;
 			
@@ -169,8 +212,22 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				// continue with the reflection ray
 				continue;
 			}
+
+			if (firstTypeWasDIFF && !shadowTime) 
+			{
+				// start back at the diffuse surface, but this time follow shadow ray branch
+				r = firstRay;
+				mask = firstMask;
+				// set/reset variables
+				shadowTime = true;
+				bounceIsSpecular = false;
+				sampleLight = true;
+				// continue with the shadow ray
+				continue;
+			}
+
 			// nothing left to calculate, so exit	
-			break;
+			//break;
 		}
 
 
@@ -186,29 +243,25 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 			mask *= intersec.color;
 
-			/* // Russian Roulette - if needed, this speeds up the framerate, at the cost of some dark noise
-			float p = max(mask.r, max(mask.g, mask.b));
-			if (bounces > 0)
-			{
-				if (rand(seed) < p)
-                                	mask *= 1.0 / p;
-                        	else
-                                	break;
-			} */
-			
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
-                        {
-                                // choose random Diffuse sample vector
+			if (bounces < 2 && diffuseCount == 1 && !firstTypeWasREFR)
+			{	
+				// save intersection data for future shadowray trace
+				firstTypeWasDIFF = true;
+				weight = sampleQuadLight(x, nl, dirToLight, quads[5], seed);
+				firstMask = mask * weight;
+                                firstRay = Ray( x, dirToLight ); // create shadow ray pointed towards light
+				firstRay.origin += nl * uEPS_intersect;
+
+				// choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 				r.origin += nl * uEPS_intersect;
-				
 				continue;
-                        }
+			}
                         else
                         {
-				weight = sampleSphereLight(x, nl, dirToLight, light, seed);
+				weight = sampleQuadLight(x, nl, dirToLight, quads[5], seed);
 				mask *= clamp(weight, 0.0, 1.0);
 
                                 r = Ray( x, dirToLight );
@@ -310,7 +363,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                         }
                         else
                         {
-				weight = sampleSphereLight(x, nl, dirToLight, light, seed);
+				weight = sampleQuadLight(x, nl, dirToLight, quads[5], seed);
 				mask *= clamp(weight, 0.0, 1.0);
 				
                                 r = Ray( x, dirToLight );
@@ -373,7 +426,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                         }
                         else
                         {
-				weight = sampleSphereLight(x, nl, dirToLight, light, seed);
+				weight = sampleQuadLight(x, nl, dirToLight, quads[5], seed);
 				mask *= clamp(weight, 0.0, 1.0);
 				
                                 r = Ray( x, dirToLight );
@@ -420,7 +473,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                         }
                         else
                         {
-				weight = sampleSphereLight(x, nl, dirToLight, light, seed);
+				weight = sampleQuadLight(x, nl, dirToLight, quads[5], seed);
 				mask *= clamp(weight, 0.0, 1.0);
 
                                 r = Ray( x, dirToLight );
@@ -491,7 +544,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                         }
                         else
                         {
-				weight = sampleSphereLight(x, nl, dirToLight, light, seed);
+				weight = sampleQuadLight(x, nl, dirToLight, quads[5], seed);
 				mask *= clamp(weight, 0.0, 1.0);
 
                                 r = Ray( x, dirToLight );
@@ -515,17 +568,18 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0);// No color value, Black        
-	vec3 L1 = vec3(1.0, 1.0, 1.0) * 4.0;// Bright light
+	vec3 L1 = vec3(1.0, 1.0, 1.0) * 6.0;// Bright light
 		    
-	spheres[0] = Sphere( 200.0, vec3(275.0, 620.0, -280.0), L1, z, LIGHT);// Light Sphere
-	spheres[1] = Sphere(  90.0, vec3(150.0,  91.0, -200.0),  z, uLeftSphereColor, int(uLeftSphereMaterialType));// Sphere Left
-	spheres[2] = Sphere(  90.0, vec3(400.0,  91.0, -200.0),  z, uRightSphereColor, int(uRightSphereMaterialType));// Sphere Right
+	spheres[0] = Sphere(  90.0, vec3(150.0,  91.0, -200.0),  z, uLeftSphereColor, int(uLeftSphereMaterialType));// Sphere Left
+	spheres[1] = Sphere(  90.0, vec3(400.0,  91.0, -200.0),  z, uRightSphereColor, int(uRightSphereMaterialType));// Sphere Right
 	
 	quads[0] = Quad( vec3( 0.0, 0.0, 1.0), vec3(  0.0,   0.0,-559.2), vec3(549.6,   0.0,-559.2), vec3(549.6, 548.8,-559.2), vec3(  0.0, 548.8,-559.2), z, vec3( 1.0,  1.0,  1.0), DIFF);// Back Wall
 	quads[1] = Quad( vec3( 1.0, 0.0, 0.0), vec3(  0.0,   0.0,   0.0), vec3(  0.0,   0.0,-559.2), vec3(  0.0, 548.8,-559.2), vec3(  0.0, 548.8,   0.0), z, vec3( 0.7, 0.05, 0.05), DIFF);// Left Wall Red
 	quads[2] = Quad( vec3(-1.0, 0.0, 0.0), vec3(549.6,   0.0,-559.2), vec3(549.6,   0.0,   0.0), vec3(549.6, 548.8,   0.0), vec3(549.6, 548.8,-559.2), z, vec3(0.05, 0.05, 0.7 ), DIFF);// Right Wall Blue
 	quads[3] = Quad( vec3( 0.0,-1.0, 0.0), vec3(  0.0, 548.8,-559.2), vec3(549.6, 548.8,-559.2), vec3(549.6, 548.8,   0.0), vec3(  0.0, 548.8,   0.0), z, vec3( 1.0,  1.0,  1.0), DIFF);// Ceiling
 	quads[4] = Quad( vec3( 0.0, 1.0, 0.0), vec3(  0.0,   0.0,   0.0), vec3(549.6,   0.0,   0.0), vec3(549.6,   0.0,-559.2), vec3(  0.0,   0.0,-559.2), z, vec3( 1.0,  1.0,  1.0), DIFF);// Floor
+
+	quads[5] = Quad( vec3( 0.0,-1.0, 0.0), vec3(213.0, 548.0,-332.0), vec3(343.0, 548.0,-332.0), vec3(343.0, 548.0,-227.0), vec3(213.0, 548.0,-227.0), L1, z, LIGHT);// Area Light Rectangle in ceiling
 }
 
 
