@@ -6,8 +6,8 @@ precision highp sampler2D;
 
 #include <pathtracing_uniforms_and_defines>
 
-#define N_SPHERES 4
-#define N_QUADS 5
+#define N_SPHERES 3
+#define N_QUADS 6
 #define N_BOXES 1
 
 
@@ -35,7 +35,7 @@ Box boxes[N_BOXES];
 
 #include <pathtracing_box_intersect>
 
-#include <pathtracing_sample_sphere_light>
+#include <pathtracing_sample_quad_light>
 
 
 mat4 makeRotateY(float rot)
@@ -145,12 +145,8 @@ float SceneIntersect( Ray r, inout Intersection intersec, inout uvec2 seed )
 
 	for (int i = 0; i < N_SPHERES; i++)
         {
-		if (i == 0) // Sphere Light
-		{
-			d = SphereIntersect( spheres[i].radius, spheres[i].position, r );
-			offset = vec3(0);
-		}
-		else if (i == 1 || i == 2) // Twisted Spheres
+		
+		if (i < 2) // Twisted Spheres
 		{
 			d = SphereIntersect( spheres[i].radius, spheres[i].position, r );
 			if (d == INFINITY) continue;
@@ -161,7 +157,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, inout uvec2 seed )
 			offset = o * 0.1;
 			d = SphereIntersect( spheres[i].radius, spheres[i].position + offset, r);
 		}
-		else if (i == 3) // Cloudy Sphere
+		else // Cloudy Sphere
 		{
 			float dense = 1.0 + rand(seed);
 			offset = (spheres[i].radius*0.5) * (vec3(rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0));
@@ -232,7 +228,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 //-----------------------------------------------------------------------
 {
 	Intersection intersec;
-	Sphere light = spheres[0];
+	Quad light = quads[5];
 	Ray firstRay;
 
 	vec3 accumCol = vec3(0);
@@ -251,6 +247,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	bool sampleLight = false;
 	bool firstTypeWasREFR = false;
 	bool reflectionTime = false;
+	bool firstTypeWasDIFF = false;
+	bool shadowTime = false;
 
 	
 	for (int bounces = 0; bounces < 6; bounces++)
@@ -271,6 +269,19 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				bounceIsSpecular = true;
 				sampleLight = false;
 				// continue with the reflection ray
+				continue;
+			}
+
+			if (firstTypeWasDIFF && !shadowTime) 
+			{
+				// start back at the diffuse surface, but this time follow shadow ray branch
+				r = firstRay;
+				mask = firstMask;
+				// set/reset variables
+				shadowTime = true;
+				bounceIsSpecular = false;
+				sampleLight = true;
+				// continue with the shadow ray
 				continue;
 			}
 			// nothing left to calculate, so exit	
@@ -298,8 +309,36 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 					continue;
 				}
 				else if (bounceIsSpecular || sampleLight)
+				{
 					accumCol += mask * intersec.emission; // add reflective result to the refractive result (if any)
+					break;
+				}	
 			}
+
+			if (firstTypeWasDIFF)
+			{
+				if (!shadowTime) 
+				{
+					if (bounceIsSpecular || sampleLight)
+						accumCol = mask * intersec.emission * 0.5;
+					
+					// start back at the diffuse surface, but this time follow shadow ray branch
+					r = firstRay;
+					mask = firstMask;
+					// set/reset variables
+					shadowTime = true;
+					bounceIsSpecular = false;
+					sampleLight = true;
+					// continue with the shadow ray
+					continue;
+				}
+				else if (bounceIsSpecular || sampleLight)
+				{
+					accumCol += mask * intersec.emission * 0.5; // add shadow ray result to the colorbleed result (if any)
+					break;
+				}		
+			}
+
 			else if (bounceIsSpecular || sampleLight)
 				accumCol = mask * intersec.emission;
 			
@@ -323,8 +362,22 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				// continue with the reflection ray
 				continue;
 			}
+
+			if (firstTypeWasDIFF && !shadowTime) 
+			{
+				// start back at the diffuse surface, but this time follow shadow ray branch
+				r = firstRay;
+				mask = firstMask;
+				// set/reset variables
+				shadowTime = true;
+				bounceIsSpecular = false;
+				sampleLight = true;
+				// continue with the shadow ray
+				continue;
+			}
+
 			// nothing left to calculate, so exit	
-			break;
+			//break;
 		}
 
 
@@ -340,29 +393,25 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 			mask *= intersec.color;
 
-			/* // Russian Roulette - if needed, this speeds up the framerate, at the cost of some dark noise
-			float p = max(mask.r, max(mask.g, mask.b));
-			if (bounces > 0)
-			{
-				if (rand(seed) < p)
-                                	mask *= 1.0 / p;
-                        	else
-                                	break;
-			} */
-			
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
-                        {
-                                // choose random Diffuse sample vector
+			if (bounces < 2 && diffuseCount == 1 && !firstTypeWasREFR)
+			{	
+				// save intersection data for future shadowray trace
+				firstTypeWasDIFF = true;
+				weight = sampleQuadLight(x, nl, dirToLight, quads[5], seed);
+				firstMask = mask * weight;
+                                firstRay = Ray( x, dirToLight ); // create shadow ray pointed towards light
+				firstRay.origin += nl * uEPS_intersect;
+
+				// choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 				r.origin += nl * uEPS_intersect;
-				
 				continue;
-                        }
+			}
                         else
                         {
-				weight = sampleSphereLight(x, nl, dirToLight, light, seed);
+				weight = sampleQuadLight(x, nl, dirToLight, quads[5], seed);
 				mask *= clamp(weight, 0.0, 1.0);
 
                                 r = Ray( x, dirToLight );
@@ -465,7 +514,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                         }
                         else
                         {
-				weight = sampleSphereLight(x, nl, dirToLight, light, seed);
+				weight = sampleQuadLight(x, nl, dirToLight, quads[5], seed);
 				mask *= clamp(weight, 0.0, 1.0);
 				
                                 r = Ray( x, dirToLight );
@@ -489,13 +538,11 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0);// No color value, Black        
-	vec3 L1 = vec3(1.0, 1.0, 1.0) * 4.0;// Bright light
-		    
-	spheres[0] = Sphere( 200.0, vec3(275.0, 650.0, -280.0), L1, z, LIGHT);// Light Sphere
+	vec3 L1 = vec3(1.0, 1.0, 1.0) * 6.0;// Bright light
 	
-	spheres[1] = Sphere( 90.0, vec3(150.0,  91.0, -200.0),  z, vec3(0.4, 0.9, 1.0),  REFR);// Sphere Left
-	spheres[2] = Sphere( 90.0, vec3(400.0,  91.0, -200.0),  z, vec3(1.0, 1.0, 1.0),  COAT);// Sphere Right
-	spheres[3] = Sphere( 60.0, vec3(450.0, 380.0, -300.0),  z, vec3(1.0, 0.0, 1.0),  DIFF);// Cloud Sphere Top Right
+	spheres[0] = Sphere( 90.0, vec3(150.0,  91.0, -200.0),  z, vec3(0.4, 0.9, 1.0),  REFR);// Sphere Left
+	spheres[1] = Sphere( 90.0, vec3(400.0,  91.0, -200.0),  z, vec3(1.0, 1.0, 1.0),  COAT);// Sphere Right
+	spheres[2] = Sphere( 60.0, vec3(450.0, 380.0, -300.0),  z, vec3(1.0, 0.0, 1.0),  DIFF);// Cloud Sphere Top Right
 	
 	boxes[0]  = Box( vec3(-82, -170, -80), vec3(82, 170, 80), z, vec3(1.0, 1.0, 1.0), SPEC);// Tall Mirror Box Left
 	
@@ -503,7 +550,9 @@ void SetupScene(void)
 	quads[1] = Quad( vec3( 1.0, 0.0, 0.0), vec3(  0.0,   0.0,   0.0), vec3(  0.0,   0.0,-559.2), vec3(  0.0, 548.8,-559.2), vec3(  0.0, 548.8,   0.0), z, vec3( 0.7, 0.05, 0.05), DIFF);// Left Wall Red
 	quads[2] = Quad( vec3(-1.0, 0.0, 0.0), vec3(549.6,   0.0,-559.2), vec3(549.6,   0.0,   0.0), vec3(549.6, 548.8,   0.0), vec3(549.6, 548.8,-559.2), z, vec3(0.05, 0.05, 0.7 ), DIFF);// Right Wall Blue
 	quads[3] = Quad( vec3( 0.0,-1.0, 0.0), vec3(  0.0, 548.8,-559.2), vec3(549.6, 548.8,-559.2), vec3(549.6, 548.8,   0.0), vec3(  0.0, 548.8,   0.0), z, vec3( 1.0,  1.0,  1.0), DIFF);// Ceiling
-	quads[4] = Quad( vec3( 0.0, 1.0, 0.0), vec3(  0.0,   0.0,   0.0), vec3(549.6,   0.0,   0.0), vec3(549.6,   0.0,-559.2), vec3(  0.0,   0.0,-559.2), z, vec3( 1.0,  1.0,  1.0), DIFF);// Floor	
+	quads[4] = Quad( vec3( 0.0, 1.0, 0.0), vec3(  0.0,   0.0,   0.0), vec3(549.6,   0.0,   0.0), vec3(549.6,   0.0,-559.2), vec3(  0.0,   0.0,-559.2), z, vec3( 1.0,  1.0,  1.0), DIFF);// Floor
+
+	quads[5] = Quad( vec3( 0.0,-1.0, 0.0), vec3(213.0, 548.0,-332.0), vec3(343.0, 548.0,-332.0), vec3(343.0, 548.0,-227.0), vec3(213.0, 548.0,-227.0), L1, z, LIGHT);// Area Light Rectangle in ceiling	
 }
 
 
