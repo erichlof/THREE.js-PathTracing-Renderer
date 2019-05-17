@@ -245,12 +245,13 @@ function initSceneData() {
 
         // set camera's field of view
         worldCamera.fov = 60;
+        focusDistance = 80.0;
 
         // position and orient camera
         cameraControlsObject.position.set(0, 30, 40);
         // look slightly downward
         //cameraControlsPitchObject.rotation.x = -0.2;
-
+        
         total_number_of_triangles = modelMesh.geometry.attributes.position.array.length / 9;
         console.log("Triangle count:" + total_number_of_triangles);
 
@@ -476,7 +477,7 @@ function initPathTracingShaders() {
                 uULen: { type: "f", value: 1.0 },
                 uVLen: { type: "f", value: 1.0 },
                 uApertureSize: { type: "f", value: 0.0 },
-                uFocusDistance: { type: "f", value: 100.0 },
+                uFocusDistance: { type: "f", value: focusDistance },
                 uBVH_NodeLevel: { type: "f", value: 0.0 },
 
                 uResolution: { type: "v2", value: new THREE.Vector2() },
