@@ -11,6 +11,7 @@ function initSceneData() {
 
         // set camera's field of view
         worldCamera.fov = 60;
+        focusDistance = 140.0;
 
         // position and orient camera
         cameraControlsObject.position.set(20,30,130);
@@ -40,7 +41,7 @@ function initPathTracingShaders() {
                 uULen: { type: "f", value: 1.0 },
                 uVLen: { type: "f", value: 1.0 },
                 uApertureSize: { type: "f", value: 0.0 },
-                uFocusDistance: { type: "f", value: 132.0 },
+                uFocusDistance: { type: "f", value: focusDistance },
         
                 uResolution: { type: "v2", value: new THREE.Vector2() },
         
