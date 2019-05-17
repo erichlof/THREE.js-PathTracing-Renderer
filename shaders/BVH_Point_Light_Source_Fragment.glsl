@@ -288,7 +288,6 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	vec3 firstMask = vec3(1);
 	vec3 checkCol0 = vec3(1);
 	vec3 checkCol1 = vec3(0.5);
-
 	vec3 dirToLight;
 	vec3 tdir;
 	
@@ -302,9 +301,11 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	bool sampleLight = false;
 	bool firstTypeWasREFR = false;
 	bool reflectionTime = false;
+	bool firstTypeWasDIFF = false;
+	bool shadowTime = false;
 
 	
-        for (int bounces = 0; bounces < 6; bounces++)
+        for (int bounces = 0; bounces < 5; bounces++)
 	{
 
 		float t = SceneIntersect(r, intersec);
@@ -315,23 +316,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                         break;
 		}
 		*/
-		/*
-		if (intersec.type == POINT_LIGHT)
-		{	
-			
-			if (sampleLight)
-			{
-				accumCol = mask * intersec.emission;
-			}
-			else if (bounceIsSpecular && bounces < 2)
-			{
-				accumCol = mask * clamp(intersec.emission, 0.0, 5.0);
-			}
-
-			break;
-		}
-		*/
-		if (intersec.type == LIGHT || intersec.type == POINT_LIGHT)
+		
+		if (intersec.type == LIGHT)
 		{	
 			if (firstTypeWasREFR)
 			{
@@ -350,22 +336,105 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 					// continue with the reflection ray
 					continue;
 				}
-				else if (sampleLight)
+				else if (sampleLight || bounceIsSpecular)
+				{
 					accumCol += mask * intersec.emission; // add reflective result to the refractive result (if any)
-				else if (bounceIsSpecular)
-					accumCol += mask * clamp(intersec.emission, 0.0, 100.0);	
-				
+					break;
+				}
 			}
-			else if (sampleLight)
-					accumCol = mask * intersec.emission;
-			else if (bounceIsSpecular)
-					accumCol = mask * clamp(intersec.emission, 0.0, 50.0);	
-			
+
+			if (firstTypeWasDIFF)
+			{
+				if (!shadowTime) 
+				{
+					accumCol = mask * intersec.emission * 0.5;
+					
+					// start back at the diffuse surface, but this time follow shadow ray branch
+					r = firstRay;
+					mask = firstMask;
+					// set/reset variables
+					shadowTime = true;
+					bounceIsSpecular = false;
+					sampleLight = true;
+					// continue with the shadow ray
+					continue;
+				}
+				
+				accumCol += mask * intersec.emission * 0.5; // add shadow ray result to the colorbleed result (if any)
+				break;
+			}
+
+			accumCol = mask * intersec.emission;
+
 			// reached a light, so we can exit
 			break;
 		} // end if (intersec.type == LIGHT)
 
 
+		if (intersec.type == POINT_LIGHT)
+		{	
+			if (firstTypeWasREFR)
+			{
+				if (!reflectionTime) 
+				{
+					if (sampleLight)
+						accumCol = mask * intersec.emission;
+					else if (bounceIsSpecular)
+						accumCol = mask * clamp(intersec.emission, 0.0, 1.0);
+					
+					// start back at the refractive surface, but this time follow reflective branch
+					r = firstRay;
+					mask = firstMask;
+					// set/reset variables
+					reflectionTime = true;
+					bounceIsSpecular = true;
+					sampleLight = false;
+					// continue with the reflection ray
+					continue;
+				}
+				else if (sampleLight)
+				{
+					accumCol += mask * intersec.emission; // add reflective result to the refractive result (if any)
+					break;
+				}	
+				else if (bounceIsSpecular)
+				{
+					accumCol += mask * clamp(intersec.emission, 0.0, 100.0);
+					break;
+				}
+			}
+
+			if (firstTypeWasDIFF)
+			{
+				if (!shadowTime) 
+				{
+					// start back at the diffuse surface, but this time follow shadow ray branch
+					r = firstRay;
+					mask = firstMask;
+					// set/reset variables
+					shadowTime = true;
+					bounceIsSpecular = false;
+					sampleLight = true;
+					// continue with the shadow ray
+					continue;
+				}
+
+				if (sampleLight)
+					accumCol += mask * intersec.emission * 0.5;
+				
+				break;
+			}
+
+			if (sampleLight)
+				accumCol = mask * intersec.emission;
+			else if (bounceIsSpecular)
+				accumCol = mask * clamp(intersec.emission, 0.0, 1.0);
+			
+			// reached a light, so we can exit
+			break;
+		} // end if (intersec.type == POINT_LIGHT)
+
+		
 		// if we get here and sampleLight is still true, shadow ray failed to find a light source
 		if (sampleLight) 
 		{
@@ -381,6 +450,20 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				// continue with the reflection ray
 				continue;
 			}
+
+			if (firstTypeWasDIFF && !shadowTime) 
+			{
+				// start back at the diffuse surface, but this time follow shadow ray branch
+				r = firstRay;
+				mask = firstMask;
+				// set/reset variables
+				shadowTime = true;
+				bounceIsSpecular = false;
+				sampleLight = true;
+				// continue with the shadow ray
+				continue;
+			}
+
 			// nothing left to calculate, so exit	
 			break;
 		}
@@ -420,28 +503,22 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				mask *= albedoSample;
 			}
 			
-			/*
-			// Russian Roulette - if needed, this speeds up the framerate, at the cost of some dark noise
-			float p = max(mask.r, max(mask.g, mask.b));
-			if (bounces > 0)
-			{
-				if (rand(seed) < p)
-                                	mask *= 1.0 / p;
-                        	else
-                                	break;
-			}
-			*/
-
                         bounceIsSpecular = false;
 
-                        if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
-                        {
-                                // choose random Diffuse sample vector
+                        if (!firstTypeWasREFR && diffuseCount == 1)
+			{	
+				// save intersection data for future shadowray trace
+				firstTypeWasDIFF = true;
+				weight = sampleSphereLight(x, nl, dirToLight, light, seed);
+				firstMask = mask * weight;
+                                firstRay = Ray( x, dirToLight ); // create shadow ray pointed towards light
+				firstRay.origin += nl * uEPS_intersect;
+
+				// choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 				r.origin += nl * uEPS_intersect;
-				
 				continue;
-                        }
+			}
                         else
                         {
 				weight = sampleSphereLight(x, nl, dirToLight, light, seed);
