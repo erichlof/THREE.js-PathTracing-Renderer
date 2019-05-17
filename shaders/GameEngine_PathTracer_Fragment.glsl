@@ -221,7 +221,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 	float nc, nt, Re, Tr;
 	float weight;
 	float randChoose;
-	float diffuseColorBleeding = 0.0; // range: 0.0 - 0.5, amount of color bleeding between surfaces
+	float diffuseColorBleeding = 0.2; // range: 0.0 - 0.5, amount of color bleeding between surfaces
 
 	int diffuseCount = 0;
 
@@ -229,6 +229,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 	bool sampleLight = false;
 	bool firstTypeWasREFR = false;
 	bool reflectionTime = false;
+	bool firstTypeWasDIFF = false;
+	bool shadowTime = false;
 
 	rayHitIsDynamic = false;
 
@@ -237,12 +239,15 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 
 		float t = SceneIntersect(r, intersec);
 
-		if (intersec.type == REFR)
-			rayHitIsDynamic = true;
+		if (bounces == 0 && intersec.type == REFR)
+		{
+			if (intersec.color.b == 0.01 || intersec.color.b == 1.0)
+				rayHitIsDynamic = true;
+		}
+
 		if (intersec.type == DIFF)
 			rayHitIsDynamic = false;
-		
-
+			
 		/*
 		//not used in this scene because we are inside a huge sphere - no rays can escape
 		if (t == INFINITY)
@@ -271,11 +276,39 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 					// continue with the reflection ray
 					continue;
 				}
-				else if (bounceIsSpecular || sampleLight)
+				else
+				{
 					accumCol += mask * intersec.emission; // add reflective result to the refractive result (if any)
+					break;
+				}	
 			}
+
+			if (firstTypeWasDIFF)
+			{
+				if (!shadowTime) 
+				{
+					if (sampleLight)
+						accumCol = mask * intersec.emission * 0.5;
+					
+					// start back at the diffuse surface, but this time follow shadow ray branch
+					r = firstRay;
+					mask = firstMask;
+					// set/reset variables
+					shadowTime = true;
+					bounceIsSpecular = false;
+					sampleLight = true;
+					// continue with the shadow ray
+					continue;
+				}
+				else
+				{
+					accumCol += mask * intersec.emission * 0.5; // add shadow ray result to the colorbleed result (if any)
+					break;
+				}		
+			}
+
 			else if (bounceIsSpecular || sampleLight)
-				accumCol = mask * intersec.emission;
+				accumCol = mask * intersec.emission; // looking directly at light or through a reflection
 			
 			// reached a light, so we can exit
 			break;
@@ -297,8 +330,21 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 				// continue with the reflection ray
 				continue;
 			}
-			// nothing left to calculate, so exit
-			// comment out the following break statement if refractive caustics are still desired
+
+			if (firstTypeWasDIFF && !shadowTime) 
+			{
+				// start back at the diffuse surface, but this time follow shadow ray branch
+				r = firstRay;
+				mask = firstMask;
+				// set/reset variables
+				shadowTime = true;
+				bounceIsSpecular = false;
+				sampleLight = true;
+				// continue with the shadow ray
+				continue;
+			}
+
+			// nothing left to calculate, so exit	
 			//break;
 		}
 
@@ -323,27 +369,23 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 			}
 
 			mask *= intersec.color;
-
-			/* // Russian Roulette - if needed, this speeds up the framerate, at the cost of some dark noise
-			float p = max(mask.r, max(mask.g, mask.b));
-			if (bounces > 0)
-			{
-				if (rand(seed) < p)
-                                	mask *= 1.0 / p;
-                        	else
-                                	break;
-			} */
 			
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
-                        {
-                                // choose random Diffuse sample vector
+			if (!firstTypeWasREFR && diffuseCount == 1)
+			{	
+				// save intersection data for future shadowray trace
+				firstTypeWasDIFF = true;
+				weight = sampleSphereLight(x, nl, dirToLight, lightChoice, seed);
+				firstMask = mask * weight;
+                                firstRay = Ray( x, dirToLight ); // create shadow ray pointed towards light
+				firstRay.origin += nl * uEPS_intersect;
+
+				// choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 				r.origin += nl * uEPS_intersect;
-				
 				continue;
-                        }
+			}
                         else
                         {
 				weight = sampleSphereLight(x, nl, dirToLight, lightChoice, seed);
@@ -375,7 +417,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
 			Tr = 1.0 - Re;
 
-			if (bounces == 0)
+			if (!firstTypeWasREFR && diffuseCount == 0)
 			{	
 				// save intersection data for future reflection trace
 				firstTypeWasREFR = true;
@@ -395,13 +437,21 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 			}
 
 			// transmit ray through surface
-			mask *= Tr;
-			mask *= intersec.color;
-			
 			r = Ray(x, tdir);
 			r.origin -= nl * uEPS_intersect;
 
-			bounceIsSpecular = true; // turn on refracting caustics
+			if (shadowTime)
+			{
+				mask = intersec.color;
+				mask *= Tr * 0.1;
+				sampleLight = true; // turn on refracting caustics
+			}
+			else
+			{
+				mask *= Tr;
+				mask *= intersec.color;
+			}
+				
 			continue;
 			
 		} // end if (intersec.type == REFR)
@@ -425,7 +475,6 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 			
 			if (bounces > 0 && bounceIsSpecular)
 			{
-				
 				if (rand(seed) < Re)
 				{	
 					r = Ray( x, reflect(r.direction, nl) );
@@ -450,7 +499,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
                         }
                         else
                         {
-				if (intersec.color.r == 1.0 && rand(seed) < 0.9)
+				if (intersec.color.r == 1.0 && rand(seed) < 0.8)
 					lightChoice = spheres[0]; // this makes capsule more white
 				weight = sampleSphereLight(x, nl, dirToLight, lightChoice, seed);
 				mask *= clamp(weight, 0.0, 1.0);
@@ -582,8 +631,8 @@ void main( void )
         }
 	else
 	{
-                previousColor *= 0.93; // motion-blur trail amount (old image)
-                pixelColor *= 0.07; // brightness of new image (noisy)
+                previousColor *= 0.94; // motion-blur trail amount (old image)
+                pixelColor *= 0.06; // brightness of new image (noisy)
         }
 	
         out_FragColor = vec4( pixelColor + previousColor, rayHitIsDynamic? 1.0 : 0.0 );	
