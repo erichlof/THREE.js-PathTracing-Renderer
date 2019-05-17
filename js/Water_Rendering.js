@@ -49,8 +49,8 @@ function initSceneData() {
         worldCamera.fov = 50;
 
         // position and orient camera
-        cameraControlsObject.position.set(147, 360, 360);
-        cameraControlsYawObject.rotation.y = -0.2;
+        cameraControlsObject.position.set(96, 397, 278);
+        cameraControlsYawObject.rotation.y = -0.3;
         // look slightly downward
         cameraControlsPitchObject.rotation.x = -0.45;
         
