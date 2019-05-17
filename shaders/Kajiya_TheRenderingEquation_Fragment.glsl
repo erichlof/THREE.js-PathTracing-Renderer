@@ -152,9 +152,11 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	bool sampleLight = false;
 	bool firstTypeWasREFR = false;
 	bool reflectionTime = false;
+	bool firstTypeWasDIFF = false;
+	bool shadowTime = false;
 
 	
-        for (int bounces = 0; bounces < 7; bounces++)
+        for (int bounces = 0; bounces < 6; bounces++)
 	{
 
 		float t = SceneIntersect(r, intersec);
@@ -168,6 +170,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			{
 				if (!reflectionTime) 
 				{
+					accumCol = mask * skyColor;
 					// start back at the refractive surface, but this time follow reflective branch
 					r = firstRay;
 					mask = firstMask;
@@ -182,7 +185,20 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				{
 					// add reflective result to the refractive result (if any)
 					accumCol += mask * skyColor;
+					break;
 				}
+			}
+			if (firstTypeWasDIFF && !shadowTime) 
+			{
+				// start back at the diffuse surface, but this time follow shadow ray branch
+				r = firstRay;
+				mask = firstMask;
+				// set/reset variables
+				shadowTime = true;
+				bounceIsSpecular = false;
+				sampleLight = true;
+				// continue with the shadow ray
+				continue;
 			}
 			
 			if (bounces == 0)
@@ -211,8 +227,36 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 					continue;
 				}
 				else if (bounceIsSpecular || sampleLight)
+				{
 					accumCol += mask * intersec.emission; // add reflective result to the refractive result (if any)
+					break;
+				}
 			}
+
+			if (firstTypeWasDIFF)
+			{
+				if (!shadowTime) 
+				{
+					if (bounceIsSpecular || sampleLight)
+						accumCol = mask * intersec.emission * 0.5;
+					
+					// start back at the diffuse surface, but this time follow shadow ray branch
+					r = firstRay;
+					mask = firstMask;
+					// set/reset variables
+					shadowTime = true;
+					bounceIsSpecular = false;
+					sampleLight = true;
+					// continue with the shadow ray
+					continue;
+				}
+				else if (bounceIsSpecular || sampleLight)
+				{
+					accumCol += mask * intersec.emission * 0.5; // add shadow ray result to the colorbleed result (if any)
+					break;
+				}		
+			}
+
 			else if (bounceIsSpecular || sampleLight)
 				accumCol = mask * intersec.emission;
 			
@@ -236,8 +280,22 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				// continue with the reflection ray
 				continue;
 			}
+
+			if (firstTypeWasDIFF && !shadowTime) 
+			{
+				// start back at the diffuse surface, but this time follow shadow ray branch
+				r = firstRay;
+				mask = firstMask;
+				// set/reset variables
+				shadowTime = true;
+				bounceIsSpecular = false;
+				sampleLight = true;
+				// continue with the shadow ray
+				continue;
+			}
+
 			// nothing left to calculate, so exit	
-			break;
+			//break;
 		}
 		
 
@@ -256,28 +314,22 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 			mask *= intersec.color;
 
-			/*
-			// Russian Roulette - if needed, this speeds up the framerate, at the cost of some dark noise
-			float p = max(mask.r, max(mask.g, mask.b));
-			if (bounces > 0)
-			{
-				if (rand(seed) < p)
-                                	mask *= 1.0 / p;
-                        	else
-                                	break;
-			}
-			*/
-
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
-                        {
-                                // choose random Diffuse sample vector
+			if (bounces < 2 && diffuseCount == 1 && !firstTypeWasREFR)
+			{	
+				// save intersection data for future shadowray trace
+				firstTypeWasDIFF = true;
+				weight = sampleRectangleLight(x, nl, dirToLight, lightChoice, seed);
+				firstMask = mask * weight;
+                                firstRay = Ray( x, dirToLight ); // create shadow ray pointed towards light
+				firstRay.origin += nl * uEPS_intersect;
+
+				// choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 				r.origin += nl * uEPS_intersect;
-				
 				continue;
-                        }
+			}
                         else
                         {
 				weight = sampleRectangleLight(x, nl, dirToLight, lightChoice, seed);
@@ -329,7 +381,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			
 		} // end if (intersec.type == REFR)
 		
-	} // end for (int bounces = 0; bounces < 7; bounces++)
+	} // end for (int bounces = 0; bounces < 6; bounces++)
 	
 	
 	return accumCol;      
