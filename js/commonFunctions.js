@@ -264,6 +264,9 @@ function initTHREEjs() {
         context = canvas.getContext('webgl2');
 
         renderer = new THREE.WebGLRenderer({ canvas: canvas, context: context });
+        //suggestion: set to false for production
+        renderer.debug.checkShaderErrors = true;
+
         renderer.autoClear = false;
         // 1 is full resolution, 0.5 is half, 0.25 is quarter, etc. (must be > than 0.0)
         renderer.setPixelRatio(pixelRatio);
