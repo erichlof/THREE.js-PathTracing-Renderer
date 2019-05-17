@@ -1,4 +1,5 @@
 // scene/demo-specific variables go here
+var EPS_intersect;
 var sceneIsDynamic = true;
 var earthRadius = 6360;
 var atmosphereRadius = 6420;
@@ -58,9 +59,11 @@ function toggleTimePause() {
 function initSceneData() {
         
         // scene/demo-specific three.js objects setup goes here
+        EPS_intersect = mouseControl ? 0.002 : 0.2; // less precision on mobile
 
         // set camera's field of view
         worldCamera.fov = 60;
+        focusDistance = 10.0;
 
         // position and orient camera
         // camera starts in space
@@ -93,13 +96,14 @@ function initPathTracingShaders() {
                 uCameraJustStartedMoving: { type: "b1", value: false },
                 uCameraWithinAtmosphere: { type: "b1", value: cameraWithinAtmosphere },
                 
+                uEPS_intersect: { type: "f", value: EPS_intersect },
                 uTime: { type: "f", value: 0.0 },
                 uSampleCounter: { type: "f", value: 0.0 },
                 uFrameCounter: { type: "f", value: 1.0 },
                 uULen: { type: "f", value: 1.0 },
                 uVLen: { type: "f", value: 1.0 },
                 uApertureSize: { type: "f", value: 0.0 },
-                uFocusDistance: { type: "f", value: 1180.0 },
+                uFocusDistance: { type: "f", value: focusDistance },
                 uCameraUnderWater: { type: "f", value: 0.0 },
                 uSunAngle: { type: "f", value: 0.0 },
                 
