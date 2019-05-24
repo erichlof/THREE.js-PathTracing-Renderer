@@ -401,7 +401,6 @@ void main( void )
                 pixelOffset.y = tentFilter(y);
         }
         
-        
         // pixelOffset ranges from -1.0 to +1.0, so only need to divide by half resolution
         pixelOffset /= (uResolution * 0.5);
 
