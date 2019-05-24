@@ -140,7 +140,8 @@ Before I got into this world of path tracing, I was a 3D game programmer (and st
 * [Future Game Engine PathTracer Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/GameEngine_PathTracer.html)<br>
 To my knowledge, this is just about as fast as I can push the path tracing engine and WebGL in general, and still retain good lighting, accurate reflections, and almost instant convergence of noise.  As computers get faster, this will be the future game rendering engine - a simple path tracer that is just around 500 to 1000 lines of code, which is easy to maintain and debug, and that gives photo-realistic real-time results! I already have some ideas for some simple 3d games that can use this technology.  I'll keep you posted! <br>
 <br>
-*Update: May 24th, 2019* - As promised I wanted to post an exciting update to the game engine path tracer.  What better way to give proof of concept and put it through its paces than an actual game!  I am pleased to announce the first ever pathtraced game for desktop and mobile: AntiGravity Pool!  Since it uses a physics engine and various custom components, I decided to create a dedicated repository for just this new game. Be sure to check it out!
+*Update: May 24th, 2019*
+- As promised I wanted to post an exciting update to the game engine path tracer.  What better way to give proof of concept and put it through its paces than an actual game!  I am pleased to announce the first ever pathtraced game for desktop and mobile: AntiGravity Pool!  Since it uses a physics engine and various custom components, I decided to create a dedicated repository for just this new game. Be sure to check it out! <br>
 
 * [AntiGravity Pool](https://github.com/erichlof/AntiGravity-Pool)
 
