@@ -815,15 +815,14 @@ void main( void )
 	float x = rand(seed);
 	float y = rand(seed);
 
-	if (!uCameraIsMoving)
+	//if (!uCameraIsMoving)
 	{
 		pixelOffset.x = tentFilter(x);
 		pixelOffset.y = tentFilter(y);
 	}
 	
-	
 	// pixelOffset ranges from -1.0 to +1.0, so only need to divide by half resolution
-	pixelOffset /= (uResolution * 0.5);
+	pixelOffset /= (uResolution * 1.0); // normally this is * 0.5, but for dynamic scenes, * 1.0 looks sharper
 
 	// we must map pixelPos into the range -1.0 to +1.0
 	pixelPos = (gl_FragCoord.xy / uResolution) * 2.0 - 1.0;
