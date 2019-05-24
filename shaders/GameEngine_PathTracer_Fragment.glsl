@@ -583,7 +583,7 @@ void main( void )
 	float x = rand(seed);
 	float y = rand(seed);
 
-	if (!uCameraIsMoving)
+	//if (!uCameraIsMoving)
 	{
 		pixelOffset.x = tentFilter(x);
 		pixelOffset.y = tentFilter(y);
