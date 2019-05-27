@@ -47,44 +47,40 @@ Box boxes[N_BOXES];
 
 struct StackLevelData
 {
-        int id;
+        float id;
         float rayT;
 } stackLevels[24];
 
 struct BoxNode
 {
-	int branch_A_Index;
+	float branch_A_Index;
 	vec3 minCorner;
-	int branch_B_Index;
+	float branch_B_Index;
 	vec3 maxCorner;  
 };
 
-int modulus(in int a, in int b)
-{
-	return a - (a / b) * b;
-}
-
-BoxNode GetBoxNode(const in int i)
+BoxNode GetBoxNode(const in float i)
 {
 	// each bounding box's data is encoded in 2 rgba(or xyzw) texture slots 
-	int iX2 = i * 2;
+	float iX2 = (i * 2.0);
 	// (iX2 + 0.0) corresponds to .x: idLeftChild, .y: aabbMin.x, .z: aabbMin.y, .w: aabbMin.z 
 	// (iX2 + 1.0) corresponds to .x: idRightChild .y: aabbMax.x, .z: aabbMax.y, .w: aabbMax.z 
 
-	ivec2 uv0 = ivec2( modulus(iX2 + 0, 2048), (iX2 + 0) / 2048 );
-	ivec2 uv1 = ivec2( modulus(iX2 + 1, 2048), (iX2 + 1) / 2048 );
+	ivec2 uv0 = ivec2( mod(iX2 + 0.0, 2048.0), floor((iX2 + 0.0) * INV_TEXTURE_WIDTH) );
+	ivec2 uv1 = ivec2( mod(iX2 + 1.0, 2048.0), floor((iX2 + 1.0) * INV_TEXTURE_WIDTH) );
 	
 	vec4 aabbNodeData0 = texelFetch(tAABBTexture, uv0, 0);
 	vec4 aabbNodeData1 = texelFetch(tAABBTexture, uv1, 0);
 	
 
-	BoxNode BN = BoxNode( int(aabbNodeData0.x),
+	BoxNode BN = BoxNode( aabbNodeData0.x,
 			      aabbNodeData0.yzw,
-			      int(aabbNodeData1.x),
+			      aabbNodeData1.x,
 			      aabbNodeData1.yzw );
 
         return BN;
 }
+
 
 //----------------------------------------------------------
 float SceneIntersect( Ray r, inout Intersection intersec )
@@ -101,19 +97,18 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	vec3 inverseDir = 1.0 / r.direction;
 	vec3 hitPos, toLightBulb;
 	ivec2 uv0, uv1, uv2, uv3, uv4, uv5, uv6, uv7;
-	
+
+        float stackptr = 0.0;	
 	float bc, bd;
+	float id = 0.0;
 	float tu, tv;
+	float triangleID = 0.0;
 	float triangleU = 0.0;
 	float triangleV = 0.0;
 	float triangleW = 0.0;
-
-	int stackptr = 0;
-	int id = 0;
-	int triangleID = 0;
 	
 	bool skip = false;
-	bool triangleHit = false;
+	bool triangleLookupNeeded = false;
 
 	BoxNode currentBoxNode, nodeA, nodeB, tnp;
 	StackLevelData currentStackData, slDataA, slDataB, tmp;
@@ -156,14 +151,14 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 
 		if (currentStackData.rayT < t) 
                 {
-                        if (currentBoxNode.branch_A_Index < 0) //  < 0.0 signifies a leaf node
+                        if (currentBoxNode.branch_A_Index < 0.0) //  < 0.0 signifies a leaf node
                         {
 				// each triangle's data is encoded in 8 rgba(or xyzw) texture slots
-				id = 8 * (-currentBoxNode.branch_A_Index - 1);
+				id = 8.0 * (-currentBoxNode.branch_A_Index - 1.0);
 
-				uv0 = ivec2( modulus(id + 0, 2048), (id + 0) / 2048 );
-				uv1 = ivec2( modulus(id + 1, 2048), (id + 1) / 2048 );
-				uv2 = ivec2( modulus(id + 2, 2048), (id + 2) / 2048 );
+				uv0 = ivec2( mod(id + 0.0, 2048.0), floor((id + 0.0) * INV_TEXTURE_WIDTH) );
+				uv1 = ivec2( mod(id + 1.0, 2048.0), floor((id + 1.0) * INV_TEXTURE_WIDTH) );
+				uv2 = ivec2( mod(id + 2.0, 2048.0), floor((id + 2.0) * INV_TEXTURE_WIDTH) );
 				
 				vd0 = texelFetch(tTriangleTexture, uv0, 0);
 				vd1 = texelFetch(tTriangleTexture, uv1, 0);
@@ -177,7 +172,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 					triangleID = id;
 					triangleU = tu;
 					triangleV = tv;
-					triangleHit = true;
+					triangleLookupNeeded = true;
 				}
                         }
                         else // else this is a branch
@@ -208,7 +203,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 				if (slDataA.rayT < t) // see if branch 'a' (the smaller rayT) needs to be processed 
 				{
 					if (skip == true) // if larger branch 'b' needed to be processed also,
-						stackLevels[stackptr++] = slDataB; // cue larger branch 'b' for future round
+						stackLevels[int(stackptr++)] = slDataB; // cue larger branch 'b' for future round
 								// also, increase pointer by 1
 					
 					currentStackData = slDataA;
@@ -221,9 +216,9 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		if (skip == false) 
                 {
                         // decrease pointer by 1 (0.0 is root level, 24.0 is maximum depth)
-                        if (--stackptr < 0) // went past the root level, terminate loop
+                        if (--stackptr < 0.0) // went past the root level, terminate loop
                                 break;
-                        currentStackData = stackLevels[stackptr];
+                        currentStackData = stackLevels[int(stackptr)];
                         currentBoxNode = GetBoxNode(currentStackData.id);
                 }
 		skip = false; // reset skip
@@ -232,29 +227,26 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 
 
 
-	// take texture lookups out of if statement branch, just read them always
-
-	//uv0 = ivec2( modulus(triangleID + 0, 2048), (triangleID + 0) / 2048 );
-	//uv1 = ivec2( modulus(triangleID + 1, 2048), (triangleID + 1) / 2048 );
-	uv2 = ivec2( modulus(triangleID + 2, 2048), (triangleID + 2) / 2048 );
-	uv3 = ivec2( modulus(triangleID + 3, 2048), (triangleID + 3) / 2048 );
-	uv4 = ivec2( modulus(triangleID + 4, 2048), (triangleID + 4) / 2048 );
-	uv5 = ivec2( modulus(triangleID + 5, 2048), (triangleID + 5) / 2048 );
-	uv6 = ivec2( modulus(triangleID + 6, 2048), (triangleID + 6) / 2048 );
-	//uv7 = ivec2( modulus(triangleID + 7, 2048), (triangleID + 7) / 2048 );
-	
-	//vd0 = texelFetch(tTriangleTexture, uv0, 0);
-	//vd1 = texelFetch(tTriangleTexture, uv1, 0);
-	vd2 = texelFetch(tTriangleTexture, uv2, 0);
-	vd3 = texelFetch(tTriangleTexture, uv3, 0);
-	vd4 = texelFetch(tTriangleTexture, uv4, 0);
-	vd5 = texelFetch(tTriangleTexture, uv5, 0);
-	vd6 = texelFetch(tTriangleTexture, uv6, 0);
-	//vd7 = texelFetch(tTriangleTexture, uv7, 0);
-
+	if (triangleLookupNeeded)
+	{
+		uv0 = ivec2( mod(triangleID + 0.0, 2048.0), floor((triangleID + 0.0) * INV_TEXTURE_WIDTH) );
+		uv1 = ivec2( mod(triangleID + 1.0, 2048.0), floor((triangleID + 1.0) * INV_TEXTURE_WIDTH) );
+		uv2 = ivec2( mod(triangleID + 2.0, 2048.0), floor((triangleID + 2.0) * INV_TEXTURE_WIDTH) );
+		uv3 = ivec2( mod(triangleID + 3.0, 2048.0), floor((triangleID + 3.0) * INV_TEXTURE_WIDTH) );
+		uv4 = ivec2( mod(triangleID + 4.0, 2048.0), floor((triangleID + 4.0) * INV_TEXTURE_WIDTH) );
+		uv5 = ivec2( mod(triangleID + 5.0, 2048.0), floor((triangleID + 5.0) * INV_TEXTURE_WIDTH) );
+		uv6 = ivec2( mod(triangleID + 6.0, 2048.0), floor((triangleID + 6.0) * INV_TEXTURE_WIDTH) );
+		uv7 = ivec2( mod(triangleID + 7.0, 2048.0), floor((triangleID + 7.0) * INV_TEXTURE_WIDTH) );
 		
-	if (triangleHit) // if statement branch: only do this if triangle hit was closest
-	{	
+		vd0 = texelFetch(tTriangleTexture, uv0, 0);
+		vd1 = texelFetch(tTriangleTexture, uv1, 0);
+		vd2 = texelFetch(tTriangleTexture, uv2, 0);
+		vd3 = texelFetch(tTriangleTexture, uv3, 0);
+		vd4 = texelFetch(tTriangleTexture, uv4, 0);
+		vd5 = texelFetch(tTriangleTexture, uv5, 0);
+		vd6 = texelFetch(tTriangleTexture, uv6, 0);
+		vd7 = texelFetch(tTriangleTexture, uv7, 0);
+
 		// face normal for flat-shaded polygon look
 		//intersec.normal = normalize( cross(vec3(vd0.w, vd1.xy) - vec3(vd0.xyz), vec3(vd1.zw, vd2.x) - vec3(vd0.xyz)) );
 		
