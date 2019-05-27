@@ -135,9 +135,9 @@ function initSceneData() {
         focusDistance = 106.0;
         
         // position and orient camera
-        cameraControlsObject.position.set(0, 30, 70);
+        cameraControlsObject.position.set(0, 30, 60);
         // look slightly downward
-        cameraControlsPitchObject.rotation.x = -0.2;
+        //cameraControlsPitchObject.rotation.x = -0.2;
         
 
         total_number_of_triangles = modelMesh.geometry.attributes.position.array.length / 9;
