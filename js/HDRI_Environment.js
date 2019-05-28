@@ -455,11 +455,11 @@ function initSceneData() {
 
         hdrLoader = new THREE.HDRLoader();
 
-        hdrPath = 'textures/cloud_layers_2k.hdr';
-        hdrPath = 'textures/delta_2_2k.hdr';
-        hdrPath = 'textures/kiara_5_noon_2k.hdr';
-        hdrPath = 'textures/noon_grass_2k.hdr';
         hdrPath = 'textures/symmetrical_garden_2k.hdr';
+	//hdrPath = 'textures/cloud_layers_2k.hdr';
+        //hdrPath = 'textures/delta_2_2k.hdr';
+        //hdrPath = 'textures/kiara_5_noon_2k.hdr';
+        //hdrPath = 'textures/noon_grass_2k.hdr';
 
         hdrTexture = hdrLoader.load( hdrPath, function ( texture, textureData ) {
                 texture.encoding = THREE.RGBEEncoding;
