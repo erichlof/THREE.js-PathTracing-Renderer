@@ -1669,16 +1669,16 @@ THREE.ShaderChunk[ 'pathtracing_calc_fresnel_reflectance' ] = `
 
 float calcFresnelReflectance(vec3 n, vec3 nl, vec3 rayDirection, float nc, float nt, out vec3 tdir)
 {
-	float nnt = dot(rayDirection, n) <= 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
+	float nnt = dot(rayDirection, n) < 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
 	tdir = refract(rayDirection, nl, nnt);
 		
 	// Original Fresnel equations
 	float cosThetaInc = dot(nl, rayDirection);
 	float cosThetaTra = dot(nl, tdir);
-	float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
-	float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
+	float coefPara = (nt * cosThetaInc - nc * cosThetaTra) / (nt * cosThetaInc + nc * cosThetaTra);
+	float coefPerp = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
 
-	return ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
+	return ( coefPara * coefPara + coefPerp * coefPerp ) * 0.5; // Unpolarized
 }
 
 `;
