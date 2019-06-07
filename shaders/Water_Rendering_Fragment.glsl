@@ -230,6 +230,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				shadowTime = true;
 				bounceIsSpecular = false;
 				sampleLight = true;
+				checkWater = true;
 				// continue with the shadow ray
 				continue;
 			}
@@ -278,6 +279,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 					shadowTime = true;
 					bounceIsSpecular = false;
 					sampleLight = true;
+					checkWater = true;
 					// continue with the shadow ray
 					continue;
 				}
@@ -321,6 +323,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				shadowTime = true;
 				bounceIsSpecular = false;
 				sampleLight = true;
+				checkWater = true;
 				// continue with the shadow ray
 				continue;
 			}
@@ -358,9 +361,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
-			if (!firstTypeWasDIFF && rand(seed) < 0.5)
+			if (!firstTypeWasDIFF && diffuseCount < 2 && rand(seed) < 0.5)
 			{
-				diffuseCount = 0;
 				// choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 				r.origin += nl * uEPS_intersect;
@@ -401,13 +403,14 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
 			Tr = 1.0 - Re;
 
-			if (!firstTypeWasREFR && diffuseCount == 0)
+			if (!firstTypeWasDIFF && diffuseCount == 0)
 			{	
 				// save intersection data for future reflection trace
 				firstTypeWasREFR = true;
 				firstMask = mask * Re;
 				firstRay = Ray( x, reflect(r.direction, nl) ); // create reflection ray from surface
 				firstRay.origin += nl * uEPS_intersect;
+				mask *= Tr;
 			}
 
 			// transmit ray through surface
@@ -416,16 +419,13 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				
 			if (shadowTime)
 			{
-				//if (!firstTypeWasREFR)
-				mask = intersec.color * Tr * 0.1;
+				mask = intersec.color;
+				mask *= Tr * 0.1;
 				sampleLight = true; // turn on refracting caustics
 			}
 			else
-			{
-				mask *= Tr;
 				mask *= intersec.color;
-			}
-
+				
 			continue;
 			
 		} // end if (intersec.type == REFR)
