@@ -297,20 +297,16 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				firstMask = mask * Re;
 				firstRay = Ray( x, reflect(r.direction, nl) ); // create reflection ray from surface
 				firstRay.origin += nl * uEPS_intersect;
+				mask *= Tr;
 			}
-
-			if (bounces > 0 && bounceIsSpecular)
+			else if (rand(seed) < Re)
 			{
-				if (rand(seed) < Re)
-				{
-					r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
-					r.origin += nl * uEPS_intersect;
-					continue;
-				}
+				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
+				r.origin += nl * uEPS_intersect;
+				continue;
 			}
 
 			// transmit ray through surface
-			mask *= Tr;
 			mask *= intersec.color;
 			
 			r = Ray(x, tdir);
@@ -336,22 +332,19 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				firstMask = mask * Re;
 				firstRay = Ray( x, reflect(r.direction, nl) ); // create reflection ray from surface
 				firstRay.origin += nl * uEPS_intersect;
+				mask *= Tr;
 			}
-			
-			if (bounces > 0 && bounceIsSpecular)
+			else if (rand(seed) < Re)
 			{
-				if (rand(seed) < Re)
-				{	
-					r = Ray( x, reflect(r.direction, nl) );
-					r.origin += nl * uEPS_intersect;
-					continue;	
-				}
+				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
+				r.origin += nl * uEPS_intersect;
+				continue;
 			}
-			
-			mask *= Tr;
-			mask *= intersec.color;
 			
 			diffuseCount++;
+
+			mask *= intersec.color;
+			
 			bounceIsSpecular = false;
 
 			if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
@@ -390,17 +383,14 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				firstMask = mask * Re;
 				firstRay = Ray( x, reflect(r.direction, nl) ); // create reflection ray from surface
 				firstRay.origin += nl * uEPS_intersect;
+				mask *= Tr;
 			}
-			
 			// choose either specular reflection, metallic, or diffuse
-			if (bounces > 0 && bounceIsSpecular)
+			else if (rand(seed) < Re)
 			{
-				if (rand(seed) < Re)
-				{	
-					r = Ray( x, reflect(r.direction, nl) );
-					r.origin += nl * uEPS_intersect;
-					continue;	
-				}
+				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
+				r.origin += nl * uEPS_intersect;
+				continue;
 			}
 
 			// metallic component
@@ -501,16 +491,13 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				firstMask = mask * Re;
 				firstRay = Ray( x, reflect(r.direction, nl) ); // create reflection ray from surface
 				firstRay.origin += nl * uEPS_intersect;
+				mask *= Tr;
 			}
-
-			if (bounces > 0 && bounceIsSpecular)
+			else if (rand(seed) < Re)
 			{
-				if (rand(seed) < Re)
-				{	
-					r = Ray( x, reflect(r.direction, nl) );
-					r.origin += nl * uEPS_intersect;
-					continue;	
-				}
+				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
+				r.origin += nl * uEPS_intersect;
+				continue;
 			}
 
 			vec3 absorptionCoefficient = intersec.color;
@@ -520,7 +507,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			// transmission?
 			if (scatteringDistance > t) 
 			{
-				mask *= exp(-absorptionCoefficient * t) * Tr;
+				mask *= exp(-absorptionCoefficient * t);
 
 				r.origin = x;
 				r.origin += r.direction * scatteringDistance;
@@ -533,7 +520,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			bounceIsSpecular = false;
 
 			// else scattering
-			mask *= exp(-absorptionCoefficient * scatteringDistance) * Tr;
+			mask *= exp(-absorptionCoefficient * scatteringDistance);
 			
 			if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
                         {
