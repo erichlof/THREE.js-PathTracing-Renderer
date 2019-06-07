@@ -164,7 +164,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
         
         float weight;
 	float nc, nt, Re, Tr;
-	float diffuseColorBleeding = 0.4; // range: 0.0 - 0.5, amount of color bleeding between surfaces
+	float diffuseColorBleeding = 0.3; // range: 0.0 - 0.5, amount of color bleeding between surfaces
 	float randChoose;
 
 	int diffuseCount = 0;
@@ -359,7 +359,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top
 		{
 			nc = 1.0; // IOR of Air
-			nt = 1.4; // IOR of Clear Coat
+			nt = 1.3; // IOR of Clear Coat
 			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
 			Tr = 1.0 - Re;
 			
@@ -371,22 +371,17 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				firstMask = mask * Re;
 				firstRay = Ray( x, reflect(r.direction, nl) ); // create reflection ray from surface
 				firstRay.origin += nl * uEPS_intersect;
+				mask *= Tr;
 			}
-			
-			if (bounces > 0 && bounceIsSpecular)
+			else if (rand(seed) < Re)
 			{
-				
-				if (rand(seed) < Re)
-				{	
-					r = Ray( x, reflect(r.direction, nl) );
-					r.origin += nl * uEPS_intersect;
-					continue;	
-				}
+				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
+				r.origin += nl * uEPS_intersect;
+				continue;
 			}
 			
 			diffuseCount++;
 
-			mask *= Tr;
 			mask *= intersec.color;
 			
 			bounceIsSpecular = false;
@@ -483,22 +478,17 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				firstMask = mask * Re;
 				firstRay = Ray( x, mix(reflectVec, glossyVec, intersec.roughness)); // create reflection ray from surface
 				firstRay.origin += nl * uEPS_intersect;
+				mask *= Tr;
 			}
-			
-			if (bounces > 0 && bounceIsSpecular)
+			else if (rand(seed) < Re)
 			{
-				
-				if (rand(seed) < Re)
-				{	
-					r = Ray( x, mix(reflectVec, glossyVec, intersec.roughness));
-					r.origin += nl * uEPS_intersect;
-					continue;	
-				}
+				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
+				r.origin += nl * uEPS_intersect;
+				continue;
 			}
 			
 			diffuseCount++;
 
-			mask *= Tr;
 			mask *= intersec.color;
 			
 			bounceIsSpecular = false;
@@ -548,9 +538,9 @@ void SetupScene(void)
 	quads[4] = Quad( normalize(vec3(0,-1, 1)), vec3(-200,0,-400), vec3(200,0,-400), vec3(200,10,-390), vec3(-200,10,-390), z, clothColor, 0.0, CLOTH);// Cloth back Rail bottom portion
 	quads[5] = Quad( normalize(vec3(0,-1, -1)), vec3(200,0,400), vec3(-200,0,400),  vec3(-200,10,390), vec3(200,10,390), z, clothColor, 0.0, CLOTH);// Cloth front Rail bottom portion
 	
-	spheres[0] = Sphere(9.0, vec3( 25, 9, 25), z, vec3(0.8, 0.8, 0.5), 0.0, COAT);// White Ball
-	spheres[1] = Sphere(9.0, vec3(-50, 9, 0),   z, vec3(0.9, 0.5, 0.01), 0.0, COAT);// Yellow Ball
-	spheres[2] = Sphere(9.0, vec3( 50, 9, 0), z, vec3(0.35, 0.0, 0.0), 0.0, COAT);// Red Ball
+	spheres[0] = Sphere(9.0, vec3( 25, 9, 25), z, vec3(0.7, 0.7, 0.5), 0.0, COAT);// White Ball
+	spheres[1] = Sphere(9.0, vec3(-50, 9, 0),   z, vec3(0.9, 0.5, 0.0), 0.0, COAT);// Yellow Ball
+	spheres[2] = Sphere(9.0, vec3( 50, 9, 0), z, vec3(0.4, 0.0, 0.0), 0.0, COAT);// Red Ball
         
 	ellipsoids[0] = Ellipsoid(  vec3(1.97,1.97,1), vec3(0,2,79), z, vec3(0,0.3,0.7), 0.0, DIFF);//CueStick blue chalked tip
 	ellipsoids[1] = Ellipsoid(  vec3(4.5,4.5,2), vec3(0,4.5,-375), z, vec3(0.01), 0.0, DIFF);//CueStick rubber butt-end cap
