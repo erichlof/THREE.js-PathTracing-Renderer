@@ -417,23 +417,20 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
 			Tr = 1.0 - Re;
 
-			if (!firstTypeWasREFR && diffuseCount == 0)
+			if (bounces == 0)
 			{	
 				// save intersection data for future reflection trace
 				firstTypeWasREFR = true;
 				firstMask = mask * Re;
 				firstRay = Ray( x, reflect(r.direction, nl) ); // create reflection ray from surface
 				firstRay.origin += nl * uEPS_intersect;
+				mask *= Tr;
 			}
-
-			if (bounces > 0 && bounceIsSpecular)
+			else if (rand(seed) < Re)
 			{
-				if (rand(seed) < Re)
-				{
-					r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
-					r.origin += nl * uEPS_intersect;
-					continue;
-				}
+				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
+				r.origin += nl * uEPS_intersect;
+				continue;
 			}
 
 			// transmit ray through surface
@@ -443,14 +440,11 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 			if (shadowTime)
 			{
 				mask = intersec.color;
-				mask *= Tr * 0.1;
+				mask *= Tr * 0.2;
 				sampleLight = true; // turn on refracting caustics
 			}
 			else
-			{
-				mask *= Tr;
 				mask *= intersec.color;
-			}
 				
 			continue;
 			
@@ -471,21 +465,17 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 				firstMask = mask * Re;
 				firstRay = Ray( x, reflect(r.direction, nl) ); // create reflection ray from surface
 				firstRay.origin += nl * uEPS_intersect;
+				mask *= Tr;
 			}
-			
-			if (bounces > 0 && bounceIsSpecular)
+			else if (rand(seed) < Re)
 			{
-				if (rand(seed) < Re)
-				{	
-					r = Ray( x, reflect(r.direction, nl) );
-					r.origin += nl * uEPS_intersect;
-					continue;	
-				}
+				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
+				r.origin += nl * uEPS_intersect;
+				continue;
 			}
 			
 			diffuseCount++;
 
-			mask *= Tr;
 			mask *= intersec.color;
 			
 			bounceIsSpecular = false;
