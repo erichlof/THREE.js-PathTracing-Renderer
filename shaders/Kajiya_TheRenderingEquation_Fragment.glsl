@@ -357,20 +357,16 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				firstMask = mask * Re;
 				firstRay = Ray( x, reflect(r.direction, nl) ); // create reflection ray from surface
 				firstRay.origin += nl * uEPS_intersect;
+				mask *= Tr;
 			}
-
-			if (bounces > 0 && bounceIsSpecular)
+			else if (rand(seed) < Re)
 			{
-				if (rand(seed) < Re)
-				{
-					r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
-					r.origin += nl * uEPS_intersect;
-					continue;
-				}
+				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
+				r.origin += nl * uEPS_intersect;
+				continue;
 			}
 
 			// transmit ray through surface
-			mask *= Tr;
 			mask *= intersec.color;
 			
 			r = Ray(x, tdir);
