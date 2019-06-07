@@ -194,11 +194,6 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, out bool rayHitIsDynamic )
 				else // yellow spec sphere, darker shadow
 					mask *= 0.3;
 			}
-			// if (previousIntersecType == SPEC)
-			// {
-			// 	if (intersec.type == REFR)
-			// 		mask *= 0.3;
-			// }
                         
                         if (firstTypeWasREFR)
 			{
