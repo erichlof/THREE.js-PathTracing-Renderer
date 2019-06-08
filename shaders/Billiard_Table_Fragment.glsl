@@ -540,7 +540,7 @@ void SetupScene(void)
 	
 	spheres[0] = Sphere(9.0, vec3( 25, 9, 25), z, vec3(0.7, 0.7, 0.5), 0.0, COAT);// White Ball
 	spheres[1] = Sphere(9.0, vec3(-50, 9, 0),   z, vec3(0.9, 0.5, 0.0), 0.0, COAT);// Yellow Ball
-	spheres[2] = Sphere(9.0, vec3( 50, 9, 0), z, vec3(0.4, 0.0, 0.0), 0.0, COAT);// Red Ball
+	spheres[2] = Sphere(9.0, vec3( 50, 9, 0), z, vec3(0.3, 0.0, 0.0), 0.0, COAT);// Red Ball
         
 	ellipsoids[0] = Ellipsoid(  vec3(1.97,1.97,1), vec3(0,2,79), z, vec3(0,0.3,0.7), 0.0, DIFF);//CueStick blue chalked tip
 	ellipsoids[1] = Ellipsoid(  vec3(4.5,4.5,2), vec3(0,4.5,-375), z, vec3(0.01), 0.0, DIFF);//CueStick rubber butt-end cap
