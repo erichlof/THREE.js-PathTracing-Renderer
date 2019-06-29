@@ -354,7 +354,7 @@ function initPathTracingShaders() {
                 tPreviousTexture: { type: "t", value: screenTextureRenderTarget.texture },
                 tTriangleTexture: { type: "t", value: triangleDataTexture },
                 tAABBTexture: { type: "t", value: aabbDataTexture },
-                tAlbedoTextures: { type: "t", value: uniqueMaterialTextures },
+                //tAlbedoTextures: { type: "t", value: uniqueMaterialTextures },
 
                 uCameraIsMoving: { type: "b1", value: false },
                 uCameraJustStartedMoving: { type: "b1", value: false },
