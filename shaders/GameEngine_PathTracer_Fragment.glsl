@@ -27,16 +27,16 @@ uniform mat3 uTorusNormalMatrix;
 //-----------------------------------------------------------------------
 
 struct Ray { vec3 origin; vec3 direction; };
-struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; int type; bool isDynamic; };
-struct Ellipsoid { vec3 radii; vec3 position; vec3 emission; vec3 color; int type; bool isDynamic; };
-struct Paraboloid { float rad; float height; vec3 pos; vec3 emission; vec3 color; int type; bool isDynamic; };
-struct OpenCylinder { float radius; float height; vec3 position; vec3 emission; vec3 color; int type; bool isDynamic; };
-struct CappedCylinder { float radius; vec3 cap1pos; vec3 cap2pos; vec3 emission; vec3 color; int type; bool isDynamic; };
-struct Cone { vec3 pos0; float radius0; vec3 pos1; float radius1; vec3 emission; vec3 color; int type; bool isDynamic; };
-struct Capsule { vec3 pos0; float radius0; vec3 pos1; float radius1; vec3 emission; vec3 color; int type; bool isDynamic; };
-struct Torus { float radius0; float radius1; vec3 emission; vec3 color; int type; bool isDynamic; };
-struct Box { vec3 minCorner; vec3 maxCorner; vec3 emission; vec3 color; int type; bool isDynamic; };
-struct Intersection { vec3 normal; vec3 emission; vec3 color; int type; bool isDynamic; };
+struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; int type; };
+struct Ellipsoid { vec3 radii; vec3 position; vec3 emission; vec3 color; int type; };
+struct Paraboloid { float rad; float height; vec3 pos; vec3 emission; vec3 color; int type; };
+struct OpenCylinder { float radius; float height; vec3 position; vec3 emission; vec3 color; int type; };
+struct CappedCylinder { float radius; vec3 cap1pos; vec3 cap2pos; vec3 emission; vec3 color; int type; };
+struct Cone { vec3 pos0; float radius0; vec3 pos1; float radius1; vec3 emission; vec3 color; int type; };
+struct Capsule { vec3 pos0; float radius0; vec3 pos1; float radius1; vec3 emission; vec3 color; int type; };
+struct Torus { float radius0; float radius1; vec3 emission; vec3 color; int type; };
+struct Box { vec3 minCorner; vec3 maxCorner; vec3 emission; vec3 color; int type; };
+struct Intersection { vec3 normal; vec3 emission; vec3 color; int type; };
 
 Sphere spheres[N_SPHERES];
 Ellipsoid ellipsoids[N_ELLIPSOIDS];
@@ -79,6 +79,11 @@ Box boxes[N_BOXES];
 float SceneIntersect( Ray r, inout Intersection intersec )
 //-----------------------------------------------------------------------
 {
+	// intersec.normal = vec3(0);
+	// intersec.emission = vec3(0);
+	// intersec.color = vec3(0);
+	// intersec.type = -100;
+
 	float d;
 	float t = INFINITY;
 	vec3 n;
@@ -93,7 +98,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.emission = spheres[i].emission;
 			intersec.color = spheres[i].color;
 			intersec.type = spheres[i].type;
-			intersec.isDynamic = spheres[i].isDynamic;
 		}
 	}
 	
@@ -107,7 +111,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.emission = boxes[i].emission;
 			intersec.color = boxes[i].color;
 			intersec.type = boxes[i].type;
-			intersec.isDynamic = boxes[i].isDynamic;
 		}
         }
 	
@@ -120,7 +123,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		intersec.emission = ellipsoids[0].emission;
 		intersec.color = ellipsoids[0].color;
 		intersec.type = ellipsoids[0].type;
-		intersec.isDynamic = ellipsoids[0].isDynamic;
 	}
 	
 	d = ParaboloidIntersect( paraboloids[0].rad, paraboloids[0].height, paraboloids[0].pos, r, n );
@@ -131,7 +133,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		intersec.emission = paraboloids[0].emission;
 		intersec.color = paraboloids[0].color;
 		intersec.type = paraboloids[0].type;
-		intersec.isDynamic = paraboloids[0].isDynamic;
 	}
 	
 	d = OpenCylinderIntersect( openCylinders[0].position, openCylinders[0].position + vec3(0,30,30), openCylinders[0].radius, r, n );
@@ -142,7 +143,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		intersec.emission = openCylinders[0].emission;
 		intersec.color = openCylinders[0].color;
 		intersec.type = openCylinders[0].type;
-		intersec.isDynamic = openCylinders[0].isDynamic;
 	}
         
 	d = CappedCylinderIntersect( cappedCylinders[0].cap1pos, cappedCylinders[0].cap2pos, cappedCylinders[0].radius, r, n);
@@ -153,7 +153,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		intersec.emission = cappedCylinders[0].emission;
 		intersec.color = cappedCylinders[0].color;
 		intersec.type = cappedCylinders[0].type;
-		intersec.isDynamic = cappedCylinders[0].isDynamic;
 	}
         
 	d = ConeIntersect( cones[0].pos0, cones[0].radius0, cones[0].pos1, cones[0].radius1, r, n );
@@ -164,7 +163,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		intersec.emission = cones[0].emission;
 		intersec.color = cones[0].color;
 		intersec.type = cones[0].type;
-		intersec.isDynamic = cones[0].isDynamic;
 	}
         
 	d = CapsuleIntersect( capsules[0].pos0, capsules[0].radius0, capsules[0].pos1, capsules[0].radius1, r, n );
@@ -175,7 +173,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		intersec.emission = capsules[0].emission;
 		intersec.color = capsules[0].color;
 		intersec.type = capsules[0].type;
-		intersec.isDynamic = capsules[0].isDynamic;
 	}
         
 	Ray rObj;
@@ -194,7 +191,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		intersec.emission = torii[0].emission;
 		intersec.color = torii[0].color;
 		intersec.type = torii[0].type;
-		intersec.isDynamic = torii[0].isDynamic;
 	}
         
 	return t;
@@ -232,21 +228,14 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 	bool firstTypeWasDIFF = false;
 	bool shadowTime = false;
 
-	rayHitIsDynamic = false;
 
 	for (int bounces = 0; bounces < 6; bounces++)
 	{
 
 		float t = SceneIntersect(r, intersec);
 
-		if (bounces == 0 && intersec.type == REFR)
-		{
-			if (intersec.color.b == 0.01 || intersec.color.b == 1.0)
-				rayHitIsDynamic = true;
-		}
-
-		if (intersec.type == DIFF)
-			rayHitIsDynamic = false;
+		if (intersec.type == CHECK)
+		 	rayHitIsDynamic = false;
 			
 		/*
 		//not used in this scene because we are inside a huge sphere - no rays can escape
@@ -518,30 +507,30 @@ void SetupScene(void)
 	vec3 L2 = vec3(1.0, 0.8, 0.2) * 15.0;// Yellow light
 	vec3 L3 = vec3(0.1, 0.7, 1.0) * 10.0;// Blue light
 		
-        spheres[0] = Sphere(150.0, vec3(-400, 900, 200), L1, z, LIGHT, true);//spherical white Light1 
-	spheres[1] = Sphere(100.0, vec3( 300, 400,-300), L2, z, LIGHT, true);//spherical yellow Light2
-	spheres[2] = Sphere( 50.0, vec3( 500, 250,-100), L3, z, LIGHT, true);//spherical blue Light3
+        spheres[0] = Sphere(150.0, vec3(-400, 900, 200), L1, z, LIGHT);//spherical white Light1 
+	spheres[1] = Sphere(100.0, vec3( 300, 400,-300), L2, z, LIGHT);//spherical yellow Light2
+	spheres[2] = Sphere( 50.0, vec3( 500, 250,-100), L3, z, LIGHT);//spherical blue Light3
 	
-	spheres[3] = Sphere(1000.0, vec3(  0.0, 1000.0,  0.0), z, vec3(1.0, 1.0, 1.0), CHECK, false);//Checkered Floor
-        spheres[4] = Sphere(  16.5, vec3(-26.0,   17.2,  5.0), z, vec3(0.95, 0.95, 0.95), SPEC, false);//Mirror sphere
-        spheres[5] = Sphere(  15.0, vec3( sin(mod(uTime * 0.3, TWO_PI)) * 80.0, 25, cos(mod(uTime * 0.1, TWO_PI)) * 80.0 ), z, vec3(1.0, 1.0, 1.0), REFR, true);//Glass sphere
+	spheres[3] = Sphere(1000.0, vec3(  0.0, 1000.0,  0.0), z, vec3(1.0, 1.0, 1.0), CHECK);//Checkered Floor
+        spheres[4] = Sphere(  16.5, vec3(-26.0,   17.2,  5.0), z, vec3(0.95, 0.95, 0.95), SPEC);//Mirror sphere
+        spheres[5] = Sphere(  15.0, vec3( sin(mod(uTime * 0.3, TWO_PI)) * 80.0, 25, cos(mod(uTime * 0.1, TWO_PI)) * 80.0 ), z, vec3(1.0, 1.0, 1.0), REFR);//Glass sphere
         
-	ellipsoids[0] = Ellipsoid(  vec3(30,40,16), vec3(cos(mod(uTime * 0.5, TWO_PI)) * 80.0,5,-30), z, vec3(1.0, 0.765557, 0.336057), SPEC, true);//metallic gold ellipsoid
+	ellipsoids[0] = Ellipsoid(  vec3(30,40,16), vec3(cos(mod(uTime * 0.5, TWO_PI)) * 80.0,5,-30), z, vec3(1.0, 0.765557, 0.336057), SPEC);//metallic gold ellipsoid
 	
-	paraboloids[0] = Paraboloid(  16.5, 50.0, vec3(20,1,-50), z, vec3(1.0, 0.2, 0.7), REFR, false);//paraboloid
+	paraboloids[0] = Paraboloid(  16.5, 50.0, vec3(20,1,-50), z, vec3(1.0, 0.2, 0.7), REFR);//paraboloid
 	
-	openCylinders[0] = OpenCylinder( 15.0, 30.0, vec3( cos(mod(uTime * 0.1, TWO_PI)) * 100.0, 10, sin(mod(uTime * 0.4, TWO_PI)) * 100.0 ), z, vec3(0.9,0.01,0.01), REFR, true);//red glass open Cylinder
+	openCylinders[0] = OpenCylinder( 15.0, 30.0, vec3( cos(mod(uTime * 0.1, TWO_PI)) * 100.0, 10, sin(mod(uTime * 0.4, TWO_PI)) * 100.0 ), z, vec3(0.9,0.01,0.01), REFR);//red glass open Cylinder
 
-	cappedCylinders[0] = CappedCylinder( 14.0, vec3(-60,0,20), vec3(-60,14,20), z, vec3(0.05,0.05,0.05), COAT, false);//dark gray capped Cylinder
+	cappedCylinders[0] = CappedCylinder( 14.0, vec3(-60,0,20), vec3(-60,14,20), z, vec3(0.05,0.05,0.05), COAT);//dark gray capped Cylinder
 	
-	cones[0] = Cone( vec3(1,20,-12), 15.0, vec3(1,0,-12), 0.0, z, vec3(0.01,0.1,0.5), REFR, false);//blue Cone
+	cones[0] = Cone( vec3(1,20,-12), 15.0, vec3(1,0,-12), 0.0, z, vec3(0.01,0.1,0.5), REFR);//blue Cone
 	
-	capsules[0] = Capsule( vec3(80,13,15), 10.0, vec3(110,15.8,15), 10.0, z, vec3(1.0,1.0,1.0), COAT, false);//white Capsule
+	capsules[0] = Capsule( vec3(80,13,15), 10.0, vec3(110,15.8,15), 10.0, z, vec3(1.0,1.0,1.0), COAT);//white Capsule
 	
-	torii[0] = Torus( 10.0, 1.5, z, vec3(0.955008, 0.637427, 0.538163), SPEC, false);//copper Torus
+	torii[0] = Torus( 10.0, 1.5, z, vec3(0.955008, 0.637427, 0.538163), SPEC);//copper Torus
 	
-	boxes[0] = Box( vec3(50.0,21.0,-60.0), vec3(100.0,28.0,-130.0), z, vec3(0.2,0.9,0.7), REFR, false);//Glass Box
-	boxes[1] = Box( vec3(56.0,23.0,-66.0), vec3(94.0,26.0,-124.0), z, vec3(0.0,0.0,0.0), DIFF, false);//Diffuse Box
+	boxes[0] = Box( vec3(50.0,21.0,-60.0), vec3(100.0,28.0,-130.0), z, vec3(0.2,0.9,0.7), REFR);//Glass Box
+	boxes[1] = Box( vec3(56.0,23.0,-66.0), vec3(94.0,26.0,-124.0), z, vec3(0.0,0.0,0.0), DIFF);//Diffuse Box
 }
 
 
@@ -600,7 +589,7 @@ void main( void )
 
 	SetupScene(); 
 
-	bool rayHitIsDynamic;
+	bool rayHitIsDynamic = true;
 	
 	// perform path tracing and get resulting pixel color
 	vec3 pixelColor = CalculateRadiance( ray, seed, rayHitIsDynamic );
@@ -613,7 +602,7 @@ void main( void )
                 previousColor *= 0.5; // motion-blur trail amount (old image)
                 pixelColor *= 0.5; // brightness of new image (noisy)
         }
-	else if (previousImage.a > 0.0)
+	else if (previousImage.a > 0.1)
 	{
                 previousColor *= 0.8; // motion-blur trail amount (old image)
                 pixelColor *= 0.2; // brightness of new image (noisy)
