@@ -29,7 +29,7 @@ function initSceneData() {
         tallBoxMesh.rotation.set(0, Math.PI * 0.1, 0);
         tallBoxMesh.position.set(180, 170, -350);
         tallBoxMesh.updateMatrixWorld(true); // 'true' forces immediate matrix update
-        
+
         
         shortBoxGeometry = new THREE.BoxGeometry(1,1,1);
         shortBoxMaterial = new THREE.MeshPhysicalMaterial( {
@@ -43,7 +43,7 @@ function initSceneData() {
         shortBoxMesh.rotation.set(0, -Math.PI * 0.09, 0);
         shortBoxMesh.position.set(370, 85, -170);
         shortBoxMesh.updateMatrixWorld(true); // 'true' forces immediate matrix update
-
+        
 
         // set camera's field of view
         worldCamera.fov = 50;
@@ -94,13 +94,8 @@ function initPathTracingShaders() {
                 uRandomVector: { type: "v3", value: new THREE.Vector3() },
         
                 uCameraMatrix: { type: "m4", value: new THREE.Matrix4() },
-                
                 uShortBoxInvMatrix: { type: "m4", value: new THREE.Matrix4() },
-                uShortBoxNormalMatrix: { type: "m3", value: new THREE.Matrix3() },
-                
-                uTallBoxInvMatrix: { type: "m4", value: new THREE.Matrix4() },
-                uTallBoxNormalMatrix: { type: "m3", value: new THREE.Matrix3() }
-
+                uTallBoxInvMatrix: { type: "m4", value: new THREE.Matrix4() }
         };
 
         pathTracingDefines = {
@@ -140,6 +135,10 @@ function createPathTracingMaterial() {
                 //   of the camera at all times. This is necessary because without it, the scene 
                 //   quad will fall out of view and get clipped when the camera rotates past 180 degrees.
                 worldCamera.add(pathTracingMesh);
+
+                // these transforms only need to be set once at init time
+                pathTracingUniforms.uTallBoxInvMatrix.value.getInverse( tallBoxMesh.matrixWorld );
+                pathTracingUniforms.uShortBoxInvMatrix.value.getInverse( shortBoxMesh.matrixWorld );
                 
         });
 
@@ -187,10 +186,8 @@ function updateVariablesAndUniforms() {
         pathTracingUniforms.uRandomVector.value = randomVector.set( Math.random(), Math.random(), Math.random() );
         
         // BOXES
-        pathTracingUniforms.uTallBoxInvMatrix.value.getInverse( tallBoxMesh.matrixWorld );
-        pathTracingUniforms.uTallBoxNormalMatrix.value.getNormalMatrix( tallBoxMesh.matrixWorld );
-        pathTracingUniforms.uShortBoxInvMatrix.value.getInverse( shortBoxMesh.matrixWorld );
-        pathTracingUniforms.uShortBoxNormalMatrix.value.getNormalMatrix( shortBoxMesh.matrixWorld );
+        //pathTracingUniforms.uTallBoxInvMatrix.value.getInverse( tallBoxMesh.matrixWorld );
+        //pathTracingUniforms.uShortBoxInvMatrix.value.getInverse( shortBoxMesh.matrixWorld );
 
         // CAMERA
         cameraControlsObject.updateMatrixWorld(true);			
