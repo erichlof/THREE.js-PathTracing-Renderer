@@ -262,7 +262,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, out bool rayHitIsDynamic )
                 
 		// useful data 
 		n = intersec.normal;
-                nl = dot(n,r.direction) <= 0.0 ? normalize(n) : normalize(n * -1.0);
+                nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
 		x = r.origin + r.direction * t;
 
 		    
@@ -297,7 +297,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, out bool rayHitIsDynamic )
                         // temporarily treat as diffuse, apply typical NdotL lighting 
                         mask = intersec.color * max(0.15, dot(nl, dirToLight));
 
-                        r = Ray( x, reflect(r.direction, nl) );
+                        nl = normalize(nl); // normalize() to avoid strange artifacts on mirror box on certain mobile devices
+			r = Ray( x, reflect(normalize(r.direction), nl) ); // same as above
 			r.origin += nl * uEPS_intersect;
 
 			//sampleLight = true;
