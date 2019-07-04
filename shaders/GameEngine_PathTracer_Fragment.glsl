@@ -213,6 +213,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 	vec3 checkCol1 = vec3(0.5);
 	vec3 dirToLight;
 	vec3 tdir;
+	vec3 n, nl, x;
         
 	float nc, nt, Re, Tr;
 	float weight;
@@ -295,10 +296,11 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 					break;
 				}		
 			}
-
 			else if (bounceIsSpecular || sampleLight)
+			{
 				accumCol = mask * intersec.emission; // looking directly at light or through a reflection
-			
+				rayHitIsDynamic = true;
+			}
 			// reached a light, so we can exit
 			break;
 		} // end if (intersec.type == LIGHT)
@@ -333,15 +335,16 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 				continue;
 			}
 
+			// comment out the following if caustics are desired
 			// nothing left to calculate, so exit	
 			//break;
 		}
 
 
 		// useful data 
-		vec3 n = intersec.normal;
-                vec3 nl = dot(n,r.direction) <= 0.0 ? normalize(n) : normalize(n * -1.0);
-		vec3 x = r.origin + r.direction * t;
+		n = intersec.normal;
+                nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
+		x = r.origin + r.direction * t;
 
 		randChoose = rand(seed) * 3.0; // 3 lights to choose from
 		lightChoice = spheres[int(randChoose)];
