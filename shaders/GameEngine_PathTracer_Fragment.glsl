@@ -235,8 +235,10 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 
 		float t = SceneIntersect(r, intersec);
 
-		if (intersec.type == CHECK)
-		 	rayHitIsDynamic = false;
+		if (bounces < 2 && bounceIsSpecular && intersec.type == LIGHT)
+		{
+			rayHitIsDynamic = true;
+		}
 			
 		/*
 		//not used in this scene because we are inside a huge sphere - no rays can escape
@@ -592,7 +594,7 @@ void main( void )
 
 	SetupScene(); 
 
-	bool rayHitIsDynamic = true;
+	bool rayHitIsDynamic = false;
 	
 	// perform path tracing and get resulting pixel color
 	vec3 pixelColor = CalculateRadiance( ray, seed, rayHitIsDynamic );
