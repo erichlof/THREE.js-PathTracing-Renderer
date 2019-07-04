@@ -39,8 +39,8 @@ uniform mat4 uHyperbolicParaboloidClipInvMatrix;
 #define N_SPHERES 4
 
 struct Ray { vec3 origin; vec3 direction; };
-struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; int type; bool isDynamic; };
-struct Intersection { vec3 normal; vec3 emission; vec3 color; int type; bool isDynamic; };
+struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; int type; };
+struct Intersection { vec3 normal; vec3 emission; vec3 color; int type; };
 
 Sphere spheres[N_SPHERES];
 
@@ -86,7 +86,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.emission = spheres[i].emission;
 			intersec.color = spheres[i].color;
 			intersec.type = spheres[i].type;
-			intersec.isDynamic = spheres[i].isDynamic;
 		}
 	}
 	
@@ -105,7 +104,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(0.0, 0.3, 1.0);
 		intersec.type = SPEC;
-		intersec.isDynamic = true;
 	}
 
 	// transform ray into Ellipsoid Param's object space
@@ -120,7 +118,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(0.0, 0.3, 1.0);
 		intersec.type = REFR;
-		intersec.isDynamic = true;
 	}
 
 	// transform ray into Ellipsoid Param's object space
@@ -135,7 +132,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(0.0, 0.3, 1.0);
 		intersec.type = DIFF;
-		intersec.isDynamic =false;
 	}
 
 	// transform ray into Ellipsoid Param's object space
@@ -150,7 +146,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(0.0, 0.3, 1.0);
 		intersec.type = COAT;
-		intersec.isDynamic = false;
 	}
 
 	// transform ray into Cylinder Param's object space
@@ -165,7 +160,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 0.0, 0.0);
 		intersec.type = SPEC;
-		intersec.isDynamic = true;
 	}
 
 	// transform ray into Cylinder Param's object space
@@ -180,7 +174,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 0.0, 0.0);
 		intersec.type = REFR;
-		intersec.isDynamic = true;
 	}
 
 	// transform ray into Cylinder Param's object space
@@ -195,7 +188,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 0.0, 0.0);
 		intersec.type = DIFF;
-		intersec.isDynamic = false;
 	}
 
 	// transform ray into Cylinder Param's object space
@@ -210,7 +202,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 0.0, 0.0);
 		intersec.type = COAT;
-		intersec.isDynamic = false;
 	}
 
 	// transform ray into Cone Param's object space
@@ -225,7 +216,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 0.2, 0.0);
 		intersec.type = SPEC;
-		intersec.isDynamic = true;
 	}
 
 	// transform ray into Cone Param's object space
@@ -240,7 +230,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 0.2, 0.0);
 		intersec.type = REFR;
-		intersec.isDynamic = true;
 	}
 
 	// transform ray into Cone Param's object space
@@ -255,7 +244,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 0.2, 0.0);
 		intersec.type = DIFF;
-		intersec.isDynamic = false;
 	}
 
 	// transform ray into Cone Param's object space
@@ -270,7 +258,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 0.2, 0.0);
 		intersec.type = COAT;
-		intersec.isDynamic = false;
 	}
 
 	// transform ray into Paraboloid Param's object space
@@ -285,7 +272,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 0.0, 1.0);
 		intersec.type = SPEC;
-		intersec.isDynamic = true;
 	}
 
 	// transform ray into Paraboloid Param's object space
@@ -300,7 +286,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 0.0, 1.0);
 		intersec.type = REFR;
-		intersec.isDynamic = true;
 	}
 
 	// transform ray into Paraboloid Param's object space
@@ -315,7 +300,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 0.0, 1.0);
 		intersec.type = DIFF;
-		intersec.isDynamic = false;
 	}
 
 	// transform ray into Paraboloid Param's object space
@@ -330,7 +314,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 0.0, 1.0);
 		intersec.type = COAT;
-		intersec.isDynamic = false;
 	}
 
 	// transform ray into Hyperboloid Param's object space
@@ -345,7 +328,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 1.0, 0.0);
 		intersec.type = SPEC;
-		intersec.isDynamic = true;
 	}
 
 	// transform ray into Hyperboloid Param's object space
@@ -360,7 +342,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 1.0, 0.0);
 		intersec.type = REFR;
-		intersec.isDynamic = true;
 	}
 
 	// transform ray into Hyperboloid Param's object space
@@ -375,7 +356,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 1.0, 0.0);
 		intersec.type = DIFF;
-		intersec.isDynamic = false;
 	}
 
 	// transform ray into Hyperboloid Param's object space
@@ -390,7 +370,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 1.0, 0.0);
 		intersec.type = COAT;
-		intersec.isDynamic = false;
 	}
 
 	// transform ray into HyperbolicParaboloid Param's object space
@@ -405,7 +384,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(0.0, 1.0, 0.0);
 		intersec.type = SPEC;
-		intersec.isDynamic = true;
 	}
 
 	// transform ray into HyperbolicParaboloid Param's object space
@@ -420,7 +398,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(0.0, 1.0, 0.0);
 		intersec.type = REFR;
-		intersec.isDynamic = true;
 	}
 
 	// transform ray into HyperbolicParaboloid Param's object space
@@ -435,7 +412,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(0.0, 1.0, 0.0);
 		intersec.type = DIFF;
-		intersec.isDynamic = false;
 	}
 
 	// transform ray into HyperbolicParaboloid Param's object space
@@ -450,7 +426,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(0.0, 1.0, 0.0);
 		intersec.type = COAT;
-		intersec.isDynamic = false;
 	}
 	
         
@@ -474,6 +449,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 	vec3 checkCol1 = vec3(0.5);
 	vec3 dirToLight;
 	vec3 tdir;
+	vec3 n, nl, x;
         
 	float nc, nt, Re, Tr;
 	float weight;
@@ -495,10 +471,11 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 
 		float t = SceneIntersect(r, intersec);
 
-		if (bounces == 0)
-			rayHitIsDynamic = intersec.isDynamic;
+		if (bounces < 2 && bounceIsSpecular && intersec.type == LIGHT)
+		{
+			rayHitIsDynamic = true;
+		}
 		
-
 		/*
 		//not used in this scene because we are inside a huge sphere - no rays can escape
 		if (t == INFINITY)
@@ -506,7 +483,6 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
                         break;
 		}
 		*/
-		
 		
 		if (intersec.type == LIGHT)
 		{	
@@ -557,10 +533,11 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 					break;
 				}		
 			}
-
 			else if (bounceIsSpecular || sampleLight)
+			{
 				accumCol = mask * intersec.emission; // looking directly at light or through a reflection
-			
+			}
+				
 			// reached a light, so we can exit
 			break;
 		} // end if (intersec.type == LIGHT)
@@ -601,9 +578,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 
 
 		// useful data 
-		vec3 n = intersec.normal;
-                vec3 nl = dot(n,r.direction) <= 0.0 ? normalize(n) : normalize(n * -1.0);
-		vec3 x = r.origin + r.direction * t;
+		n = intersec.normal;
+                nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
+		x = r.origin + r.direction * t;
 
 		randChoose = rand(seed) * 3.0; // 3 lights to choose from
 		lightChoice = spheres[int(randChoose)];
@@ -768,11 +745,11 @@ void SetupScene(void)
 	vec3 L2 = vec3(1.0, 0.8, 0.2) * 15.0;// Yellow light
 	vec3 L3 = vec3(0.1, 0.7, 1.0) * 10.0;// Blue light
 		
-        spheres[0] = Sphere(150.0, vec3(-400, 900, 200), L1, z, LIGHT, true);//spherical white Light1 
-	spheres[1] = Sphere(100.0, vec3( 300, 400,-300), L2, z, LIGHT, true);//spherical yellow Light2
-	spheres[2] = Sphere( 50.0, vec3( 500, 250,-100), L3, z, LIGHT, true);//spherical blue Light3
+        spheres[0] = Sphere(150.0, vec3(-400, 900, 200), L1, z, LIGHT);//spherical white Light1 
+	spheres[1] = Sphere(100.0, vec3( 300, 400,-300), L2, z, LIGHT);//spherical yellow Light2
+	spheres[2] = Sphere( 50.0, vec3( 500, 250,-100), L3, z, LIGHT);//spherical blue Light3
 	
-	spheres[3] = Sphere(1000.0, vec3(  0.0, 1000.0,  0.0), z, vec3(1.0, 1.0, 1.0), CHECK, false);//Checkered Floor
+	spheres[3] = Sphere(1000.0, vec3(  0.0, 1000.0,  0.0), z, vec3(1.0, 1.0, 1.0), CHECK);//Checkered Floor
         
 }
 
@@ -845,7 +822,7 @@ void main( void )
                 previousColor *= 0.5; // motion-blur trail amount (old image)
                 pixelColor *= 0.5; // brightness of new image (noisy)
         }
-	else if (previousImage.a > 0.0)
+	else if (previousImage.a > 0.1)
 	{
                 previousColor *= 0.8; // motion-blur trail amount (old image)
                 pixelColor *= 0.2; // brightness of new image (noisy)
