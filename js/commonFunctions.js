@@ -17,6 +17,8 @@ var frameTime, elapsedTime;
 var fovScale;
 var increaseFOV = false;
 var decreaseFOV = false;
+var dollyCameraIn = false;
+var dollyCameraOut = false;
 var apertureSize = 0.0;
 var increaseAperture = false;
 var decreaseAperture = false;
@@ -476,13 +478,23 @@ function animate() {
                 pinchDeltaY = newPinchWidthY - oldPinchWidthY;
 
                 if (Math.abs(pinchDeltaX) > Math.abs(pinchDeltaY)) {
-                        if (pinchDeltaX < -3) increaseFOV = true;
-                        if (pinchDeltaX > 3) decreaseFOV = true;
+                        if (pinchDeltaX < -1) {
+                                increaseFOV = true;
+                                dollyCameraOut = true;
+                        }
+                        if (pinchDeltaX > 1) {
+                                decreaseFOV = true;
+                                dollyCameraIn = true;
+                        }
                 }
 
                 if (Math.abs(pinchDeltaY) >= Math.abs(pinchDeltaX)) {
-                        if (pinchDeltaY > 1) increaseAperture = true;
-                        if (pinchDeltaY < -1) decreaseAperture = true;
+                        if (pinchDeltaY > 1) {
+                                increaseAperture = true;
+                        }
+                        if (pinchDeltaY < -1) {
+                                decreaseAperture = true;
+                        }
                 }
 
                 // save state for next frame
