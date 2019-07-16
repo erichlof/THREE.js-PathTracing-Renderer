@@ -102,7 +102,7 @@ For more intuition and a direct comparison between regular path tracing and bi-d
 Enter Bi-Directional path tracing to the rescue!:
 * [Bi-Directional Approach to Blocked Light Source](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Compare_Bi-Directional_Approach.html) Like magic, the difficult scene comes into focus - in real-time! <br> <br> <br>
 
-<h4>Game Engine path tracer for Desktop and Mobile</h4>
+<h3>Game Engine path tracer for Desktop and Mobile</h3>
 
 Before I got into this world of path tracing, I was a 3D game programmer (and still am, although path tracing is consuming most of my coding time!).  My first game was way back in 1998, using OpenGL 1 and the C language, back when these new things called graphics cards were all the rage! [my old Binary Brotherz page](https://web.archive.org/web/20010405004141/http://www.binarybrotherz.com/games.html)  Although using OpenGL back then, and WebGL today was/is cool, I always wanted more in terms of lighting, shadows, reflections, diffuse color sharing, etc., in my game engines that I just couldn't get from rasterizing graphics APIs.  Well, fast forward to 2019 and NVidia is releasing graphics cards dedicated to real-time ray tracing!  I couldn't have imagined this back in the 90's! However, at the time I'm writing this, NVidia is only doing specular ray tracing as a bonus feature on top of the old rasterization technique. I wanted to see if I could 'overclock' my full path tracer's convergence so that you could see the beautiful light effects in real time, being able to possibly move a game character or 1st-person camera through a Path traced game environment at 60 fps and 30-60 fps on mobile.  Recently, I have been experimenting with different amounts of diffuse color bleeding vs. direct light shadows and, if you're willing to sacrafice some ultimate physical reality (like perfect converged reflected/refracted caustics), then you can have this!: <br>
 
@@ -112,8 +112,13 @@ To my knowledge, this is just about as fast as I can push the path tracing engin
 *Update: May 24th, 2019*
 - As promised I wanted to post an exciting update to the game engine path tracer.  What better way to give proof of concept and put it through its paces than an actual game!  I am pleased to announce the first ever pathtraced game for desktop and mobile: AntiGravity Pool!  Since it uses a physics engine and various custom components, I decided to create a dedicated repository for just this new game. Be sure to check it out! <br>
 
-* [AntiGravity Pool](https://github.com/erichlof/AntiGravity-Pool)
+* [AntiGravity Pool game](https://erichlof.github.io/AntiGravity-Pool/AntiGravityPool.html)
+* [AntiGravity Pool project](https://github.com/erichlof/AntiGravity-Pool)
 
+<br>
+<br>
+A random sample rendering from the three.js pathtracing renderer as it was in 2015!
+<br>
 
 ![](readme-Images/threejsPathTracing.png)
 
