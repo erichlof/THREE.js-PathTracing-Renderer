@@ -6,11 +6,11 @@ precision highp sampler2D;
 
 #include <pathtracing_uniforms_and_defines>
 
-#define N_SPHERES 3
+#define N_SPHERES 4
 #define N_ELLIPSOIDS 1
 #define N_OPENCYLINDERS 6
 #define N_CONES 1
-#define N_DISKS 2
+#define N_DISKS 1
 #define N_QUADS 5
 #define N_BOXES 1
 
@@ -50,6 +50,8 @@ Box boxes[N_BOXES];
 
 #include <pathtracing_box_intersect>
 
+#include <pathtracing_sample_sphere_light>
+
 
 
 //-----------------------------------------------------------------------
@@ -59,12 +61,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	vec3 normal;
         float d;
 	float t = INFINITY;
-	// clear fields out
-	intersec.normal = vec3(0);
-	intersec.emission = vec3(0);
-	intersec.color = vec3(0);
-	intersec.roughness = 0.0;
-	intersec.type = -1;
 			
 	// ROOM
 	for (int i = 0; i < N_QUADS; i++)
@@ -169,237 +165,386 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		intersec.type = ellipsoids[0].type;
 	}
 	
-	d = SphereIntersect( spheres[2].radius, spheres[2].position, r );
+	d = SphereIntersect( spheres[3].radius, spheres[3].position, r );
 	hitPos = r.origin + r.direction * d;
-	if (hitPos.y >= spheres[2].position.y) 
+	if (hitPos.y >= spheres[3].position.y) 
 		d = INFINITY;
 	
 	if (d < t)
 	{
 		t = d;
-		intersec.normal = normalize((r.origin + r.direction * t) - spheres[2].position);
-		intersec.emission = spheres[2].emission;
-		intersec.color = spheres[2].color;
-		intersec.roughness = spheres[2].roughness;
-		intersec.type = spheres[2].type;
+		intersec.normal = normalize((r.origin + r.direction * t) - spheres[3].position);
+		intersec.emission = spheres[3].emission;
+		intersec.color = spheres[3].color;
+		intersec.roughness = spheres[3].roughness;
+		intersec.type = spheres[3].type;
 	}
 	
 	
 	return t;
 }
 
-#define EYE_PATH_LENGTH    5
-#define LIGHT_PATH_LENGTH  1
+
 
 //-----------------------------------------------------------------------
-vec3 CalculateRadiance( Ray r, inout uvec2 seed )
+vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 //-----------------------------------------------------------------------
 {
 	Intersection intersec;
+	int randChoose = int(rand(seed) * 2.0); // 2 lights to choose from
+	Sphere lightChoice = spheres[randChoose]; 
+	//lightChoice = spheres[1]; // override lightChoice
+	Ray firstRay;
+	
 	vec3 accumCol = vec3(0);
-	vec3 maskEyePath = vec3(1);
-	vec3 maskLightPath = vec3(1);
-	vec3 eyeX = vec3(0);
-	vec3 lightX = vec3(0);
-	vec3 nl, n, x;
-	vec3 nlEyePath = vec3(0);
+        vec3 mask = vec3(1);
+	vec3 firstMask = vec3(1);
+	vec3 dirToLight;
 	vec3 tdir;
-	
-	float nc, nt, Re;
+	vec3 spotlightPos1 = vec3(380.0, 290.0, -470.0);
+	vec3 spotlightPos2 = vec3(430.0, 315.0, -485.0);
+	vec3 spotlightDir = normalize(spotlightPos1 - spotlightPos2);
+	vec3 lightHitPos = lightChoice.position + randomSphereDirection(seed) * (lightChoice.radius * 0.5);
+	vec3 lightNormal = vec3(0,1,0);
+	if (randChoose > 0) lightNormal = spotlightDir;
+	vec3 lightHitEmission = lightChoice.emission;
+        
+	float lightHitDistance = 0.0;
+	float firstLightHitDistance = 0.0;
 	float t = INFINITY;
+	float nc, nt, Re, Tr;
+	float weight;
+	
 	int diffuseCount = 0;
-	int previousIntersecType = -1;
+
 	bool bounceIsSpecular = true;
-	//set following flag to true - we haven't found a diffuse surface yet and can exit early (keeps frame rate high)
-	bool skipConnectionLightPath = true;
-	
-	
-	// Eye path tracing (from Camera) ///////////////////////////////////////////////////////////////////////////
-	
-	for (int bounces = 0; bounces < EYE_PATH_LENGTH; bounces++)
+	bool sampleLight = false;
+	bool firstTypeWasREFR = false;
+	bool reflectionTime = false;
+	bool firstTypeWasDIFF = false;
+	bool shadowTime = false;
+	bool ableToJoinPaths = false;
+
+	// light trace
+	Ray r = Ray(lightChoice.position, randomCosWeightedDirectionInHemisphere(lightNormal, seed));
+	r.origin += r.direction * (lightChoice.radius * 1.1);
+	t = SceneIntersect(r, intersec);
+	if (intersec.type == DIFF)
 	{
-	
+		lightHitPos = r.origin + r.direction * t;
+		weight = max(0.0, dot(-r.direction, intersec.normal));
+		lightHitEmission *= intersec.color * weight;
+	}
+
+	// reset intersec struct fields
+	intersec.normal = vec3(0);
+	intersec.emission = vec3(0);
+	intersec.color = vec3(0);
+	intersec.roughness = 0.0;
+	intersec.type = -100;
+	t = INFINITY;
+	// regular path tracing from camera
+	r = originalRay;
+
+	for (int bounces = 0; bounces < 6; bounces++)
+	{
+
 		t = SceneIntersect(r, intersec);
 		
 		if (t == INFINITY)
 		{
+                        if (firstTypeWasREFR && !reflectionTime) 
+			{
+				// start back at the refractive surface, but this time follow reflective branch
+				r = firstRay;
+				mask = firstMask;
+				// set/reset variables
+				reflectionTime = true;
+				bounceIsSpecular = true;
+				sampleLight = false;
+				// continue with the reflection ray
+				continue;
+			}
+
+			if (firstTypeWasDIFF && !shadowTime) 
+			{
+				// start back at the diffuse surface, but this time follow shadow ray branch
+				r = firstRay;
+				mask = firstMask;
+				lightHitDistance = firstLightHitDistance;
+				// set/reset variables
+				shadowTime = true;
+				bounceIsSpecular = false;
+				sampleLight = true;
+				// continue with the shadow ray
+				continue;
+			}
+			// nothing left to calculate, so exit	
 			break;
 		}
+		
 		
 		if (intersec.type == LIGHT)
-		{
-			if (bounceIsSpecular)
+		{	
+			if (firstTypeWasREFR)
 			{
-				accumCol = maskEyePath * intersec.emission;
-			
-				skipConnectionLightPath = true;
+				if (!reflectionTime) 
+				{
+					if (bounceIsSpecular || sampleLight)
+						accumCol = mask * intersec.emission;
+					
+					// start back at the refractive surface, but this time follow reflective branch
+					r = firstRay;
+					mask = firstMask;
+					// set/reset variables
+					reflectionTime = true;
+					bounceIsSpecular = true;
+					sampleLight = false;
+					// continue with the reflection ray
+					continue;
+				}
+				
+				// add reflective result to the refractive result (if any)
+				if (bounceIsSpecular || sampleLight)
+					accumCol += mask * intersec.emission;
+
+				break;	
 			}
-			
-			break;
-		}
-		
-		// useful data 
-		n = normalize(intersec.normal);
-		nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(n * -1.0);
-		x = r.origin + r.direction * t;
-		
-		
-		if (intersec.type == DIFF) // Ideal DIFFUSE reflection
-		{
-			maskEyePath *= intersec.color;
-			eyeX = x + nl;
-			nlEyePath = nl;
-			skipConnectionLightPath = false;
-			
-			diffuseCount++;
-			if (diffuseCount > 1 || rand(seed) < 0.5)
+
+			if (firstTypeWasDIFF)
 			{
+				if (!shadowTime) 
+				{
+					if (bounceIsSpecular)
+						accumCol = mask * intersec.emission * 10.0;
+					else if (sampleLight)
+						accumCol = mask * intersec.emission * 0.5;
+					
+					// start back at the diffuse surface, but this time follow shadow ray branch
+					r = firstRay;
+					mask = firstMask;
+					lightHitDistance = firstLightHitDistance;
+					// set/reset variables
+					shadowTime = true;
+					sampleLight = true;
+					bounceIsSpecular = false;
+					// continue with the shadow ray
+					continue;
+				}
+				
+				// add shadow ray result to the colorbleed result (if any)
+				if (bounceIsSpecular)
+					accumCol += mask * intersec.emission * 10.0;
+				else if (sampleLight)
+					accumCol += mask * intersec.emission * 0.5;
+
+				break;
+						
+			}
+
+			if (sampleLight || bounceIsSpecular)
+				accumCol = mask * intersec.emission;
+			// reached a light, so we can exit
+			break;
+		} // end if (intersec.type == LIGHT)
+
+
+		if (intersec.type == DIFF && sampleLight)
+		{
+			ableToJoinPaths = (lightHitDistance - t) < 1.0;
+			
+			if (firstTypeWasDIFF)
+			{
+				if (!shadowTime) 
+				{	
+					if (ableToJoinPaths)
+						accumCol = mask * lightHitEmission * 0.5;
+					// start back at the diffuse surface, but this time follow shadow ray branch
+					r = firstRay;
+					mask = firstMask;
+					lightHitDistance = firstLightHitDistance;
+					// set/reset variables
+					shadowTime = true;
+					sampleLight = true;
+					bounceIsSpecular = false;
+					// continue with the shadow ray
+					continue;
+				}
+				
+				// add shadow ray result to the colorbleed result (if any)
+				if (ableToJoinPaths)
+					accumCol += mask * lightHitEmission * 0.5;
+
 				break;
 			}
-			
-			// choose random Diffuse sample vector
-			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
-			r.origin += nl;
-			eyeX = r.origin;
-			bounceIsSpecular = false;
-			previousIntersecType = DIFF;
-			continue;
+
+			if (firstTypeWasREFR)
+			{
+				if (!reflectionTime) 
+				{
+					if (ableToJoinPaths)
+						accumCol = mask * lightHitEmission;
+					
+					// start back at the refractive surface, but this time follow reflective branch
+					r = firstRay;
+					mask = firstMask;
+					// set/reset variables
+					reflectionTime = true;
+					bounceIsSpecular = true;
+					sampleLight = false;
+					// continue with the reflection ray
+					continue;
+				}
+				
+				// add reflective result to the refractive result (if any)
+				if (ableToJoinPaths)
+					accumCol += mask * lightHitEmission;
+
+				break;	
+			}
+
+			if (ableToJoinPaths)
+				accumCol = mask * lightHitEmission;
+			break;
 		}
+
+		// if we reached this point and sampleLight is still true, then we can either
+		//  continue with the reflection/shadow ray or exit because the light was not found
+		if (sampleLight)
+		{
+                        if (firstTypeWasREFR && !reflectionTime) 
+			{
+				// start back at the refractive surface, but this time follow reflective branch
+				r = firstRay;
+				mask = firstMask;
+				// set/reset variables
+				reflectionTime = true;
+				bounceIsSpecular = true;
+				sampleLight = false;
+				// continue with the reflection ray
+				continue;
+			}
+
+			if (firstTypeWasDIFF && !shadowTime) 
+			{
+				// start back at the diffuse surface, but this time follow shadow ray branch
+				r = firstRay;
+				mask = firstMask;
+				lightHitDistance = firstLightHitDistance;
+				// set/reset variables
+				shadowTime = true;
+				bounceIsSpecular = false;
+				sampleLight = true;
+				// continue with the shadow ray
+				continue;
+			}
+			// nothing left to calculate, so exit	
+			break;
+		}
+
+		// useful data 
+		vec3 n = intersec.normal;
+                vec3 nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
+		vec3 x = r.origin + r.direction * t;
+
+		    
+                if (intersec.type == DIFF) // Ideal DIFFUSE reflection
+		{
+			diffuseCount++;
+
+			mask *= intersec.color;
+
+			bounceIsSpecular = false;
+
+			if (diffuseCount == 1 && !firstTypeWasREFR)
+			{	
+				// save intersection data for future shadow ray trace
+				firstTypeWasDIFF = true;
+				
+				//weight = sampleSphereLight(x, nl, dirToLight, lightChoice, seed);
+				dirToLight = normalize(lightHitPos - x);
+				firstLightHitDistance = distance(lightHitPos, x);
+				weight = max(0.0, dot(nl, dirToLight));
+				firstMask = mask * weight;
+
+				firstRay = Ray( x, dirToLight ); // create shadow ray pointed towards light
+				firstRay.origin += nl * uEPS_intersect;
+
+				// choose random Diffuse sample vector
+				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+				//r = Ray(x, nl); // interesting effect for tracing heightfields/holographic projections?
+				r.origin += nl * uEPS_intersect;
+				sampleLight = false;
+				continue;
+			}
+			if (diffuseCount == 1 && firstTypeWasREFR)
+			{
+				// choose random Diffuse sample vector
+				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+				r.origin += nl * uEPS_intersect;
+				sampleLight = false;
+				continue;
+			}
+			else
+			{
+				dirToLight = normalize(lightHitPos - x);
+				lightHitDistance = distance(lightHitPos, x);
+				weight = max(0.0, dot(nl, dirToLight));
+				mask *= weight;
+				
+				r = Ray( x, dirToLight );
+				r.origin += nl * uEPS_intersect;
+				sampleLight = true;
+				continue;
+			}
+                        
+		} // end if (intersec.type == DIFF)
 		
 		if (intersec.type == SPEC)  // Ideal SPECULAR reflection
 		{
-			maskEyePath *= intersec.color;
-			vec3 reflectVec = reflect(r.direction, nl);
-			vec3 randVec = randomDirectionInHemisphere(nl, seed);
-			r = Ray( x, mix(reflectVec, randVec, intersec.roughness) );
-			r.origin += nl;
-			bounceIsSpecular = true;
-			previousIntersecType = SPEC;
+			mask *= intersec.color;
+
+			r = Ray( x, reflect(r.direction, nl) );
+			r.origin += nl * uEPS_intersect;
+
+			//bounceIsSpecular = true; // turn on mirror caustics
 			continue;
 		}
 		
-		
-		if (intersec.type == REFR)  // Ideal dielectric refraction
-		{	
+		if (intersec.type == REFR)  // Ideal dielectric REFRACTION
+		{
 			nc = 1.0; // IOR of Air
-			nt = 1.6; // IOR of Heavy Glass
+			nt = 1.6; // IOR of heavy Glass
 			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
-			
-			bounceIsSpecular = true;
-				
-			if (rand(seed) < Re) // reflect ray from surface
-			{
-				previousIntersecType = REFR;
-				r = Ray( x, reflect(r.direction, nl) );
-				r.origin += nl;
-				continue;	
+			Tr = 1.0 - Re;
+
+			if (bounces == 0)
+			{	
+				// save intersection data for future reflection trace
+				firstTypeWasREFR = true;
+				firstMask = mask * Re;
+				firstRay = Ray( x, reflect(r.direction, nl) ); // create reflection ray from surface
+				firstRay.origin += nl * uEPS_intersect;
+				mask *= Tr;
 			}
-			else // transmit ray through surface
-			{
-				if (previousIntersecType == DIFF) 
-					maskEyePath *= TWO_PI;
-					
-				previousIntersecType = REFR;
-				maskEyePath *= intersec.color;
-				r = Ray(x, tdir);
-				r.origin -= nl;
-				continue;
-			}	
+
+			// transmit ray through surface
+			mask *= intersec.color;
+			
+			r = Ray(x, tdir);
+			r.origin -= nl * uEPS_intersect;
+
+			bounceIsSpecular = true; // turn on refracting caustics
+			continue;
+			
 		} // end if (intersec.type == REFR)
 		
-	} // end for (int bounces = 0; bounces < EYE_PATH_LENGTH; bounces++)
-	
-	
-	if (skipConnectionLightPath)
-		return accumCol;
-	
-	
-	// Light path tracing (from Light sources) ////////////////////////////////////////////////////////////////////
-	vec3 randLightPos;
-	vec3 randLightDir;
-	vec3 randPointOnLight;
-	vec3 nlLightPath;
-	// Choose a random light source for this loop
-	if (rand(seed) < 0.85)
-	{
-		// Floor Lamp
-		vec3 floorLampDir = vec3(0,1,0);
-		nlLightPath = floorLampDir;
-		//randLightDir = randomDirectionInHemisphere(nlLightPath, seed);
-		randLightDir = randomCosWeightedDirectionInHemisphere(nlLightPath, seed);
-		randLightPos = vec3(80.0, 372.0, -430.0);
-		randPointOnLight = randLightPos + randLightDir * 6.0; // multiplied by light bulb radius
-		maskLightPath = spheres[1].emission;// * max(0.0, dot(nlLightPath, randLightDir));
-	}
-	else
-	{
-		// Spot Light
-		vec3 spotlightPos1 = vec3(380.0, 290.0, -470.0);
-		vec3 spotlightPos2 = vec3(430.0, 315.0, -485.0);
-		vec3 spotlightDir = normalize(spotlightPos1 - spotlightPos2);
-		nlLightPath = spotlightDir;
-		randLightPos = spotlightPos2 + spotlightDir;
-		randLightDir = randomCosWeightedDirectionInHemisphere(spotlightDir, seed);
-		randPointOnLight = randLightPos + randLightDir;
-		maskLightPath = disks[1].emission;
-	}
-	
-	r = Ray( randPointOnLight, randLightDir );
-	r.origin += r.direction * 3.0; // move light ray out to prevent self-intersection with light
-	vec3 originalLightPos = r.origin;
-	lightX = originalLightPos;
-	vec3 originalLightMask = maskLightPath;
-	bool diffuseReached = false;
-	
-	// the following loop only performs 1 iteration because of the relative ease of this particular scene for
-	// the light sources to escape their blockers and find a diffuse surface (like a nearby wall) to illuminate.
-	// For more hidden lights however, 2 bounces might be needed to get the light out and into the scene.
-	
-	for (int bounces = 0; bounces < LIGHT_PATH_LENGTH; bounces++)
-	{
-	
-		t = SceneIntersect(r, intersec);
 		
-		if ( t == INFINITY || intersec.type != DIFF)
-		{
-			break;
-		}
-		
-		// useful data 
-		n = normalize(intersec.normal);
-		nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(n * -1.0);
-		x = r.origin + r.direction * t;
-		
-		//if (intersec.type == DIFF) // Ideal DIFFUSE reflection
-		{
-			maskLightPath *= intersec.color;
-			nlLightPath = nl;
-			lightX = x + nl;
-			diffuseReached = true;
-			break;
-		}
-		
-	} // end for (int bounces = 0; bounces < LIGHT_PATH_LENGTH; bounces++)
+	} // end for (int bounces = 0; bounces < 6; bounces++)
 	
-	
-	// Connect Camera path and Light path ////////////////////////////////////////////////////////////
-	
-	Ray connectRay = Ray(eyeX, normalize(lightX - eyeX));
-	float connectDist = distance(eyeX, lightX);
-	float c = SceneIntersect(connectRay, intersec);
-	if (c < connectDist)
-		return accumCol;
-	else
-	{
-		maskEyePath *= max(0.0, dot(connectRay.direction, nlEyePath));
-		
-		if (diffuseReached)
-			maskLightPath *= max(0.0, dot(-connectRay.direction, nlLightPath));
-		accumCol = (maskEyePath * maskLightPath);
-	}
-	
-	return accumCol;
-}
+	return accumCol;      
+} // end vec3 CalculateRadiance( Ray r, inout uvec2 seed )
+
 
 
 //-----------------------------------------------------------------------
@@ -407,18 +552,19 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0);// No color value, Black        
-	vec3 L1 = vec3(1.0, 1.0, 1.0) * 12.0;// Bright White light
-	vec3 L2 = vec3(0.936507, 0.642866, 0.310431) * 25.0;// Bright Yellowish light
-	vec3 wallColor = vec3(1.0, 0.98, 1.0) * 0.5;
-	vec3 tableColor = vec3(1.0, 0.7, 0.4) * 0.6;
+	vec3 L1 = vec3(1.0, 1.0, 1.0) * 8.0;// Bright White light
+	vec3 L2 = vec3(0.936507, 0.642866, 0.310431) * 8.0;// Bright Yellowish light
+	vec3 wallColor = vec3(1.0, 0.98, 1.0) * 0.7;
+	vec3 tableColor = vec3(1.0, 0.7, 0.4) * 0.8;
 	vec3 lampColor = vec3(1.0, 1.0, 0.8) * 0.7;
 	vec3 spotlightPos1 = vec3(380.0, 290.0, -470.0);
 	vec3 spotlightPos2 = vec3(430.0, 315.0, -485.0);
 	vec3 spotlightDir = normalize(spotlightPos1 - spotlightPos2);
+	float spotlightRadius = 14.0; // 12.0
 	
 	quads[0] = Quad( vec3( 0.0, 0.0, 1.0), vec3(  0.0,   0.0,-559.2), vec3(549.6,   0.0,-559.2), vec3(549.6, 548.8,-559.2), vec3(  0.0, 548.8,-559.2),  z, wallColor, 0.0, DIFF);// Back Wall
-	quads[1] = Quad( vec3( 1.0, 0.0, 0.0), vec3(  0.0,   0.0,   0.0), vec3(  0.0,   0.0,-559.2), vec3(  0.0, 548.8,-559.2), vec3(  0.0, 548.8,   0.0),  z, wallColor, 0.0, DIFF);// Left Wall Red
-	quads[2] = Quad( vec3(-1.0, 0.0, 0.0), vec3(549.6,   0.0,-559.2), vec3(549.6,   0.0,   0.0), vec3(549.6, 548.8,   0.0), vec3(549.6, 548.8,-559.2),  z, wallColor, 0.0, DIFF);// Right Wall Green
+	quads[1] = Quad( vec3( 1.0, 0.0, 0.0), vec3(  0.0,   0.0,   0.0), vec3(  0.0,   0.0,-559.2), vec3(  0.0, 548.8,-559.2), vec3(  0.0, 548.8,   0.0),  z, wallColor, 0.0, DIFF);// Left Wall
+	quads[2] = Quad( vec3(-1.0, 0.0, 0.0), vec3(549.6,   0.0,-559.2), vec3(549.6,   0.0,   0.0), vec3(549.6, 548.8,   0.0), vec3(549.6, 548.8,-559.2),  z, wallColor, 0.0, DIFF);// Right Wall
 	quads[3] = Quad( vec3( 0.0,-1.0, 0.0), vec3(  0.0, 548.8,-559.2), vec3(549.6, 548.8,-559.2), vec3(549.6, 548.8,   0.0), vec3(  0.0, 548.8,   0.0),  z, wallColor, 0.0, DIFF);// Ceiling
 	quads[4] = Quad( vec3( 0.0, 1.0, 0.0), vec3(  0.0,   0.0,   0.0), vec3(549.6,   0.0,   0.0), vec3(549.6,   0.0,-559.2), vec3(  0.0,   0.0,-559.2),  z, wallColor, 0.0, DIFF);// Floor
 	
@@ -430,17 +576,16 @@ void SetupScene(void)
 	openCylinders[3] = OpenCylinder( 8.5, vec3(485.0, 0.0, -335.0), vec3(485.0, 145.0, -335.0), z, tableColor, 0.0, DIFF);// Table Leg
 	
 	openCylinders[4] = OpenCylinder( 6.0, vec3(80.0, 0.0, -430.0), vec3(80.0, 366.0, -430.0), z, lampColor, 0.0, SPEC);// Floor Lamp Post
-	openCylinders[5] = OpenCylinder( 22.0, spotlightPos1, spotlightPos2, z, vec3(1.0,0.9,0.9), 0.6, SPEC);// Spotlight Casing
+	openCylinders[5] = OpenCylinder( spotlightRadius, spotlightPos1, spotlightPos2, z, vec3(1.0,0.9,0.9), 0.6, SPEC);// Spotlight Casing
 	
-	disks[0] = Disk( 22.0, spotlightPos2, spotlightDir, z, vec3(0.4), 1.0, SPEC);// disk backing of spotlight
-	disks[1] = Disk( 21.0, spotlightPos2 + spotlightDir, spotlightDir, L2, z, 0.0, LIGHT);// Light disk of spotlight
+	disks[0] = Disk( spotlightRadius, spotlightPos2, spotlightDir, z, vec3(0.4), 1.0, SPEC);// disk backing of spotlight
 	
 	cones[0] = Cone( vec3(80.0, 405.0, -430.0), 70.0, vec3(80.0, 365.0, -430.0), 6.0, z, lampColor, 0.2, SPEC);// Floor Lamp Shade
 	
-	spheres[0] = Sphere( 80.0, vec3(80.0, -60.0, -430.0), z, lampColor, 0.4, SPEC);// Floor Lamp Base
+	spheres[0] = Sphere( spotlightRadius * 0.5, spotlightPos2 + spotlightDir * 20.0, L2, z, 0.0, LIGHT);// Spot Light Bulb
 	spheres[1] = Sphere( 6.0, vec3(80.0, 378.0, -430.0), L1, z, 0.0, LIGHT);// Floor Lamp Bulb
-	
-	spheres[2] = Sphere( 33.0, vec3(290.0, 189.0, -435.0), z, vec3(1), 0.0, REFR);// Glass Egg Bottom
+	spheres[2] = Sphere( 80.0, vec3(80.0, -60.0, -430.0), z, lampColor, 0.4, SPEC);// Floor Lamp Base
+	spheres[3] = Sphere( 33.0, vec3(290.0, 189.0, -435.0), z, vec3(1), 0.0, REFR);// Glass Egg Bottom
 	ellipsoids[0] = Ellipsoid( vec3(33, 62, 33), vec3(290.0, 189.0, -435.0), z, vec3(1), 0.0, REFR);// Glass Egg Top
 }
 
