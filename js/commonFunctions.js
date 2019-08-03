@@ -112,11 +112,11 @@ function onWindowResize(event) {
         if (fontAspect < 4) fontAspect = 4;
         fontAspect *= 2;
 
-        pathTracingUniforms.uResolution.value.x = renderer.context.drawingBufferWidth;
-        pathTracingUniforms.uResolution.value.y = renderer.context.drawingBufferHeight;
+        pathTracingUniforms.uResolution.value.x = context.drawingBufferWidth;
+        pathTracingUniforms.uResolution.value.y = context.drawingBufferHeight;
 
-        pathTracingRenderTarget.setSize(renderer.context.drawingBufferWidth, renderer.context.drawingBufferHeight);
-        screenTextureRenderTarget.setSize(renderer.context.drawingBufferWidth, renderer.context.drawingBufferHeight);
+        pathTracingRenderTarget.setSize(context.drawingBufferWidth, context.drawingBufferHeight);
+        screenTextureRenderTarget.setSize(context.drawingBufferWidth, context.drawingBufferHeight);
 
         worldCamera.aspect = renderer.domElement.clientWidth / renderer.domElement.clientHeight;
         worldCamera.updateProjectionMatrix();
@@ -263,18 +263,19 @@ function init() {
 function initTHREEjs() {
 
         canvas = document.createElement('canvas');
-        context = canvas.getContext('webgl2');
 
-        renderer = new THREE.WebGLRenderer({ canvas: canvas, context: context });
+        renderer = new THREE.WebGLRenderer({ canvas: canvas, context: canvas.getContext('webgl2') });
         //suggestion: set to false for production
         renderer.debug.checkShaderErrors = true;
+
+        context = renderer.getContext();
 
         renderer.autoClear = false;
         // 1 is full resolution, 0.5 is half, 0.25 is quarter, etc. (must be > than 0.0)
         renderer.setPixelRatio(pixelRatio);
         renderer.setSize(window.innerWidth, window.innerHeight);
         //required by WebGL 2.0 for rendering to FLOAT textures
-        renderer.context.getExtension('EXT_color_buffer_float');
+        context.getExtension('EXT_color_buffer_float');
 
         container = document.getElementById('container');
         container.appendChild(renderer.domElement);
