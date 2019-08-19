@@ -267,7 +267,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			{
 				if (!shadowTime) 
 				{
-					if (bounceIsSpecular|| sampleLight)
+					if (bounceIsSpecular || sampleLight)
 						accumCol = mask * intersec.emission * 0.5;
 					
 					// start back at the diffuse surface, but this time follow shadow ray branch
