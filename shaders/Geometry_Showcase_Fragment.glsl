@@ -208,7 +208,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	vec3 checkCol1 = vec3(0.5);
 	vec3 dirToLight;
 	vec3 tdir;
+	vec3 x, n, nl;
         
+	float t;
 	float nc, nt, Re, Tr;
 	float weight;
 	float randChoose;
@@ -226,8 +228,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	
 	for (int bounces = 0; bounces < 6; bounces++)
 	{
-
-		float t = SceneIntersect(r, intersec);
+		t = SceneIntersect(r, intersec);
 		
 		/*
 		//not used in this scene because we are inside a huge sphere - no rays can escape
@@ -266,7 +267,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			{
 				if (!shadowTime) 
 				{
-					if (bounceIsSpecular || sampleLight)
+					if (bounceIsSpecular|| sampleLight)
 						accumCol = mask * intersec.emission * 0.5;
 					
 					// start back at the diffuse surface, but this time follow shadow ray branch
@@ -362,9 +363,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 
 		// useful data 
-		vec3 n = intersec.normal;
-                vec3 nl = dot(n,r.direction) <= 0.0 ? normalize(n) : normalize(n * -1.0);
-		vec3 x = r.origin + r.direction * t;
+		n = normalize(intersec.normal);
+                nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
+		x = r.origin + r.direction * t;
 
 		randChoose = rand(seed) * 3.0; // 3 lights to choose from
 		lightChoice = spheres[int(randChoose)];
@@ -403,7 +404,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
                                 r = Ray( x, dirToLight );
 				r.origin += nl * uEPS_intersect;
-
+				r.direction = normalize(r.direction);
 				sampleLight = true;
 				continue;
                         }
