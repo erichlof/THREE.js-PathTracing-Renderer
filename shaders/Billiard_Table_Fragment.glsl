@@ -180,7 +180,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
         for (int bounces = 0; bounces < 4; bounces++)
 	{
 		
-		float t = SceneIntersect(r, intersec);
+		t = SceneIntersect(r, intersec);
 		
 		if (t == INFINITY)
 		{
