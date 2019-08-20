@@ -262,11 +262,16 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	vec3 checkCol0 = vec3(1);
 	vec3 checkCol1 = vec3(0.5);
         vec3 tdir;
-
+	vec3 x, n, nl;
+        
+	float t;
         float nc, nt, Re, Tr;
 
+	bool bounceIsSpecular = true;
 	bool firstTypeWasREFR = false;
 	bool reflectionTime = false;
+	bool firstTypeWasCOAT = false;
+	bool specularTime = false;
 	
 	// need more bounces than usual, because there could be lots of yellow glass boxes in a row
 	for (int bounces = 0; bounces < 10; bounces++)
@@ -298,21 +303,41 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 					// continue with the reflection ray
 					continue;
 				}
-				else 
-					accumCol += mask * intersec.emission; // add reflective result to the refractive result (if any)
+
+				accumCol += mask * intersec.emission; // add reflective result to the refractive result (if any)
+				break;
 			}
-			else 
-				accumCol = mask * intersec.emission;
-			
+
+			if (firstTypeWasCOAT)
+			{
+				if (!specularTime) 
+				{
+					accumCol = mask * intersec.emission;
+					
+					// start back at the refractive surface, but this time follow reflective branch
+					r = firstRay;
+					mask = firstMask;
+					// set/reset variables
+					specularTime = true;
+					
+					// continue with the reflection ray
+					continue;
+				}
+
+				accumCol += mask * intersec.emission; // add reflective result to the refractive result (if any)
+				break;
+			}
+
+			accumCol = mask * intersec.emission;
 			// reached a light, so we can exit
 			break;
 		} // end if (intersec.type == LIGHT)
 		
 		
 		// useful data 
-		vec3 n = intersec.normal;
-                vec3 nl = dot(n,r.direction) <= 0.0 ? normalize(n) : normalize(n * -1.0);
-		vec3 x = r.origin + r.direction * t;
+		n = normalize(intersec.normal);
+                nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
+		x = r.origin + r.direction * t;
 		
 		    
                 if (intersec.type == DIFF || intersec.type == CHECK) // Ideal DIFFUSE reflection
@@ -357,7 +382,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
 			Tr = 1.0 - Re;
 
-			if (bounces == 0)
+			if (bounces < 2 && !firstTypeWasREFR && !firstTypeWasCOAT)
 			{	
 				// save intersection data for future reflection trace
 				firstTypeWasREFR = true;
@@ -386,15 +411,14 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top (like car, or shiny pool ball)
 		{
 			nc = 1.0; // IOR of Air
-			nt = 1.4; // IOR of Clear Coat
+			nt = 1.6; // IOR of Clear Coat (a little thicker for this demo)
 			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
 			Tr = 1.0 - Re;
 			
-			// clearCoat counts as refractive surface
-			if (bounces == 0)
+			if (bounces < 2 && !firstTypeWasCOAT && !firstTypeWasREFR)
 			{	
 				// save intersection data for future reflection trace
-				firstTypeWasREFR = true;
+				firstTypeWasCOAT = true;
 				firstMask = mask * Re;
 				firstRay = Ray( x, reflect(r.direction, nl) ); // create reflection ray from surface
 				firstRay.origin += nl * uEPS_intersect;
