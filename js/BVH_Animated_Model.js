@@ -144,7 +144,7 @@ function load_GLTF_Model() {
 function initSceneData() {
         
         // scene/demo-specific three.js objects setup goes here
-        EPS_intersect = mouseControl ? 0.1 : 1.0; // less precision on mobile
+        EPS_intersect = mouseControl ? 0.01 : 1.0; // less precision on mobile
 
         GLTF_Model_Geometry = new THREE.BoxGeometry(1,1,1);
         GLTF_Model_Material = new THREE.MeshPhysicalMaterial( {
