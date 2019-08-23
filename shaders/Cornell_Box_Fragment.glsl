@@ -113,8 +113,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
         vec3 n, nl, x;
 	vec3 dirToLight;
         
+	float t;
 	float weight, p;
-	float diffuseColorBleeding = 0.5; // range: 0.0 - 0.5, amount of color bleeding between surfaces
+	//float diffuseColorBleeding = 0.5; // range: 0.0 - 0.5, amount of color bleeding between surfaces
 
 	int diffuseCount = 0;
 
@@ -122,19 +123,24 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	bool sampleLight = false;
 	bool firstTypeWasDIFF = false;
 	bool shadowTime = false;
+	bool createCausticRay = false;
 
 
 	for (int bounces = 0; bounces < 5; bounces++)
 	{
 
-		float t = SceneIntersect(r, intersec);
+		t = SceneIntersect(r, intersec);
 		
 		if (t == INFINITY)
 		{
+			if (createCausticRay) 
+				break;
+
 			if (firstTypeWasDIFF && !shadowTime) 
 			{
 				// start back at the diffuse surface, but this time follow shadow ray branch
 				r = firstRay;
+				r.direction = normalize(r.direction);
 				mask = firstMask;
 				// set/reset variables
 				shadowTime = true;
@@ -149,6 +155,12 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		
 		if (intersec.type == LIGHT)
 		{	
+			if (createCausticRay && bounceIsSpecular)
+			{
+				accumCol = mask * intersec.emission;
+				break;
+			}
+
 			if (firstTypeWasDIFF)
 			{
 				if (!shadowTime) 
@@ -158,6 +170,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 					
 					// start back at the diffuse surface, but this time follow shadow ray branch
 					r = firstRay;
+					r.direction = normalize(r.direction);
 					mask = firstMask;
 					// set/reset variables
 					shadowTime = true;
@@ -166,11 +179,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 					// continue with the shadow ray
 					continue;
 				}
-				else
-				{
-					accumCol += mask * intersec.emission * 0.5; // add shadow ray result to the colorbleed result (if any)
-					break;
-				}		
+				
+				accumCol += mask * intersec.emission * 0.5; // add shadow ray result to the colorbleed result (if any)
+				break;		
 			}
 			
 			accumCol = mask * intersec.emission;
@@ -186,6 +197,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			{
 				// start back at the diffuse surface, but this time follow shadow ray branch
 				r = firstRay;
+				r.direction = normalize(r.direction);
 				mask = firstMask;
 				// set/reset variables
 				shadowTime = true;
@@ -200,7 +212,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		
 		// useful data 
 		n = normalize(intersec.normal);
-		nl = dot(n, r.direction) <= 0.0 ? normalize(n) : normalize(n * -1.0);
+                nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
 		x = r.origin + r.direction * t;
 		
 		
@@ -210,64 +222,52 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 			mask *= intersec.color;
 
+			bounceIsSpecular = false;
+
+			if (createCausticRay)
+				break;
+
+			// create caustic ray
+                        if (diffuseCount == 1 && rand(seed) < 0.2)
+                        {
+				createCausticRay = true;
+
+				vec3 randVec = vec3(rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0);
+				vec3 offset = vec3(randVec.x * 82.0, randVec.y * 170.0, randVec.z * 80.0);
+				vec3 target = vec3(180.0 + offset.x, 170.0 + offset.y, -350.0 + offset.z);
+				r = Ray( x, normalize(target - x) );
+				r.origin += nl * uEPS_intersect;
+				
+				weight = max(0.0, dot(nl, r.direction));
+				mask *= weight * 0.8;
+
+				continue;
+			}
+
 			if (diffuseCount == 1)
 			{	
 				// save intersection data for future shadowray trace
 				firstTypeWasDIFF = true;
 				weight = sampleQuadLight(x, nl, dirToLight, quads[5], seed);
 				firstMask = mask * weight;
-                                firstRay = Ray( x, dirToLight ); // create shadow ray pointed towards light
+                                firstRay = Ray( x, normalize(dirToLight) ); // create shadow ray pointed towards light
 				firstRay.origin += nl * uEPS_intersect;
-			}
 
-			/*
-			// Russian Roulette - if needed, this speeds up the framerate, at the cost of some dark noise
-			float p = max(mask.r, max(mask.g, mask.b));
-			if (bounces > 0)
-			{
-				if (rand(seed) < p)
-                                	mask *= 1.0 / p;
-                        	else
-                                	break;
-			}
-			*/
-
-			// create caustic ray
-                        if (diffuseCount == 1 && rand(seed) < 0.2)
-                        {
-				vec3 randVec = vec3(rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0);
-				vec3 offset = vec3(randVec.x * 82.0, randVec.y * 170.0, randVec.z * 80.0);
-				vec3 target = vec3(180.0 + offset.x, 170.0 + offset.y, -350.0 + offset.z);
-				r = Ray( x, normalize(target - x) );
-				r.origin += nl * uEPS_intersect;
-				weight = max(0.0, dot(nl, r.direction));
-				mask *= weight * 0.8;
-				firstTypeWasDIFF = false;
-				bounceIsSpecular = true;
-				continue;
-			}
-
-			bounceIsSpecular = false;
-
-                        if (diffuseCount == 1)
-                        {
-                                // choose random Diffuse sample vector
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+				// choose random Diffuse sample vector
+				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
 				r.origin += nl * uEPS_intersect;
 				continue;
-                        }
-                        else
-                        {
-				weight = sampleQuadLight(x, nl, dirToLight, quads[5], seed);
-				mask *= weight;
+			}
+			
+			weight = sampleQuadLight(x, nl, dirToLight, quads[5], seed);
+			mask *= clamp(weight, 0.0, 1.0);
 
-                                r = Ray( x, dirToLight );
-				r.origin += nl * uEPS_intersect;
-				
-				sampleLight = true;
-				continue;
-                        }
-                }
+			r = Ray( x, normalize(dirToLight) );
+			r.origin += nl * uEPS_intersect;
+			sampleLight = true;
+			continue;
+                        
+                } // end if (intersec.type == DIFF)
 		
                 if (intersec.type == SPEC)  // Ideal SPECULAR reflection
 		{
@@ -276,7 +276,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			r = Ray( x, reflect(r.direction, nl) );
 			r.origin += nl * uEPS_intersect;
 
-			bounceIsSpecular = diffuseCount < 2; // turn on mirror caustics
+			if (createCausticRay)
+				bounceIsSpecular = true;
+
 			continue;
 		}
 		
