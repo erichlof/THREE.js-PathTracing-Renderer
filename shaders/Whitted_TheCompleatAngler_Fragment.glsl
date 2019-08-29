@@ -101,6 +101,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, out bool rayHitIsDynamic )
 
         vec2 sphereUV;
 
+	float t;
 	float nc, nt, Re, Tr;
 	float firstRe;
 
@@ -117,7 +118,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, out bool rayHitIsDynamic )
         for (int bounces = 0; bounces < 8; bounces++)
 	{
 		
-		float t = SceneIntersect(r, intersec);
+		t = SceneIntersect(r, intersec);
 		
 		if (t == INFINITY)
 		{
@@ -149,6 +150,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, out bool rayHitIsDynamic )
 					
 					// start back at the refractive surface, but this time follow reflective branch
 					r = firstRay;
+					r.direction = normalize(r.direction);
 					mask = firstMask;
 					// set/reset variables
 					reflectionTime = true;
@@ -203,6 +205,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, out bool rayHitIsDynamic )
 
 					// start back at the refractive surface, but this time follow reflective branch
 					r = firstRay;
+					r.direction = normalize(r.direction);
 					mask = firstMask;
 					// set/reset variables
 					reflectionTime = true;
@@ -237,6 +240,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, out bool rayHitIsDynamic )
 					
 					// start back at the refractive surface, but this time follow reflective branch
 					r = firstRay;
+					r.direction = normalize(r.direction);
 					mask = firstMask;
 					// set/reset variables
 					reflectionTime = true;
@@ -261,7 +265,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, out bool rayHitIsDynamic )
 		
                 
 		// useful data 
-		n = intersec.normal;
+		n = normalize(intersec.normal);
                 nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
 		x = r.origin + r.direction * t;
 
@@ -275,7 +279,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, out bool rayHitIsDynamic )
 				mask += intersec.color * 0.3;     
 			else mask = intersec.color;// * max(0., dot(nl, dirToLight));
 
-                        r = Ray( x, dirToLight ); // shadow ray
+                        r = Ray( x, normalize(dirToLight) ); // shadow ray
 			r.origin += nl * uEPS_intersect;
 
                         sampleLight = true;
@@ -297,8 +301,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, out bool rayHitIsDynamic )
                         // temporarily treat as diffuse, apply typical NdotL lighting 
                         mask = intersec.color * max(0.15, dot(nl, dirToLight));
 
-                        nl = normalize(nl); // normalize() to avoid strange artifacts on mirror box on certain mobile devices
-			r = Ray( x, reflect(normalize(r.direction), nl) ); // same as above
+                        nl = normalize(nl); // normalize() to avoid strange artifacts on certain mobile devices
+			r = Ray( x, reflect(r.direction, nl) ); // same as above
 			r.origin += nl * uEPS_intersect;
 
 			//sampleLight = true;
@@ -328,7 +332,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, out bool rayHitIsDynamic )
 			}
 
 			// transmit ray through surface
-			r = Ray(x, tdir);
+			r = Ray(x, normalize(tdir));
 			r.origin -= nl * uEPS_intersect;
 
 			previousIntersecType = REFR;
