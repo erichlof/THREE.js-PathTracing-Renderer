@@ -66,8 +66,8 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		t = d;
 		
 		// transfom normal back into world space
+		normal = normalize(normal);
 		normal = vec3(uTallBoxNormalMatrix * normal);
-		
 		intersec.normal = normalize(normal);
 		intersec.emission = boxes[0].emission;
 		intersec.color = boxes[0].color;
@@ -86,8 +86,8 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		t = d;
 		
 		// transfom normal back into world space
+		normal = normalize(normal);
 		normal = vec3(uShortBoxNormalMatrix * normal);
-		
 		intersec.normal = normalize(normal);
 		intersec.emission = boxes[1].emission;
 		intersec.color = boxes[1].color;
@@ -133,7 +133,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		
 		if (t == INFINITY)
 		{
-			if (createCausticRay) 
+			if (bounces == 0 || createCausticRay) 
 				break;
 
 			if (firstTypeWasDIFF && !shadowTime) 
@@ -155,6 +155,13 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		
 		if (intersec.type == LIGHT)
 		{	
+
+			if (bounces == 0)
+			{
+				accumCol = mask * intersec.emission;
+				break;
+			}
+
 			if (createCausticRay && bounceIsSpecular)
 			{
 				accumCol = mask * intersec.emission;
@@ -184,8 +191,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				break;		
 			}
 			
-			accumCol = mask * intersec.emission;
-			
+			accumCol = mask * intersec.emission; // looking at light through a reflection
 			// reached a light, so we can exit
 			break;
 		} // end if (intersec.type == LIGHT)
