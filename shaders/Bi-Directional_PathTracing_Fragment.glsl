@@ -206,14 +206,15 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 	vec3 spotlightDir = normalize(spotlightPos1 - spotlightPos2);
 	vec3 lightHitPos = lightChoice.position + randomSphereDirection(seed) * (lightChoice.radius * 0.5);
 	vec3 lightNormal = vec3(0,1,0);
-	if (randChoose > 0) lightNormal = spotlightDir;
 	vec3 lightHitEmission = lightChoice.emission;
+	vec3 x, n, nl;
         
-	float lightHitDistance = 0.0;
-	float firstLightHitDistance = 0.0;
+	float lightHitDistance = INFINITY;
+	float firstLightHitDistance = INFINITY;
 	float t = INFINITY;
 	float nc, nt, Re, Tr;
 	float weight;
+	float distanceEPS = uEPS_intersect * 10.0;
 	
 	int diffuseCount = 0;
 
@@ -226,7 +227,11 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 	bool ableToJoinPaths = false;
 
 	// light trace
+	if (randChoose > 0)
+		lightNormal = spotlightDir;
+	lightNormal = normalize(lightNormal);
 	Ray r = Ray(lightChoice.position, randomCosWeightedDirectionInHemisphere(lightNormal, seed));
+	r.direction = normalize(r.direction);
 	r.origin += r.direction * (lightChoice.radius * 1.1);
 	t = SceneIntersect(r, intersec);
 	if (intersec.type == DIFF)
@@ -245,6 +250,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 	t = INFINITY;
 	// regular path tracing from camera
 	r = originalRay;
+	r.direction = normalize(r.direction);
 
 	for (int bounces = 0; bounces < 6; bounces++)
 	{
@@ -257,6 +263,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 			{
 				// start back at the refractive surface, but this time follow reflective branch
 				r = firstRay;
+				r.direction = normalize(r.direction);
 				mask = firstMask;
 				// set/reset variables
 				reflectionTime = true;
@@ -270,6 +277,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 			{
 				// start back at the diffuse surface, but this time follow shadow ray branch
 				r = firstRay;
+				r.direction = normalize(r.direction);
 				mask = firstMask;
 				lightHitDistance = firstLightHitDistance;
 				// set/reset variables
@@ -286,6 +294,13 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 		
 		if (intersec.type == LIGHT)
 		{	
+
+			if (bounces == 0)
+			{
+				accumCol = mask * intersec.emission;
+				break;
+			}
+
 			if (firstTypeWasREFR)
 			{
 				if (!reflectionTime) 
@@ -295,6 +310,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 					
 					// start back at the refractive surface, but this time follow reflective branch
 					r = firstRay;
+					r.direction = normalize(r.direction);
 					mask = firstMask;
 					// set/reset variables
 					reflectionTime = true;
@@ -322,6 +338,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 					
 					// start back at the diffuse surface, but this time follow shadow ray branch
 					r = firstRay;
+					r.direction = normalize(r.direction);
 					mask = firstMask;
 					lightHitDistance = firstLightHitDistance;
 					// set/reset variables
@@ -342,8 +359,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 						
 			}
 
-			if (sampleLight || bounceIsSpecular)
-				accumCol = mask * intersec.emission;
+			accumCol = mask * intersec.emission; // looking at light through a reflection
 			// reached a light, so we can exit
 			break;
 		} // end if (intersec.type == LIGHT)
@@ -351,7 +367,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 
 		if (intersec.type == DIFF && sampleLight)
 		{
-			ableToJoinPaths = (lightHitDistance - t) < 1.0;
+			ableToJoinPaths = abs(lightHitDistance - t) < distanceEPS;
 			
 			if (firstTypeWasDIFF)
 			{
@@ -361,6 +377,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 						accumCol = mask * lightHitEmission * 0.5;
 					// start back at the diffuse surface, but this time follow shadow ray branch
 					r = firstRay;
+					r.direction = normalize(r.direction);
 					mask = firstMask;
 					lightHitDistance = firstLightHitDistance;
 					// set/reset variables
@@ -387,6 +404,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 					
 					// start back at the refractive surface, but this time follow reflective branch
 					r = firstRay;
+					r.direction = normalize(r.direction);
 					mask = firstMask;
 					// set/reset variables
 					reflectionTime = true;
@@ -403,8 +421,6 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 				break;	
 			}
 
-			if (ableToJoinPaths)
-				accumCol = mask * lightHitEmission;
 			break;
 		}
 
@@ -416,6 +432,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 			{
 				// start back at the refractive surface, but this time follow reflective branch
 				r = firstRay;
+				r.direction = normalize(r.direction);
 				mask = firstMask;
 				// set/reset variables
 				reflectionTime = true;
@@ -429,6 +446,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 			{
 				// start back at the diffuse surface, but this time follow shadow ray branch
 				r = firstRay;
+				r.direction = normalize(r.direction);
 				mask = firstMask;
 				lightHitDistance = firstLightHitDistance;
 				// set/reset variables
@@ -438,14 +456,15 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 				// continue with the shadow ray
 				continue;
 			}
+			
 			// nothing left to calculate, so exit	
 			break;
 		}
 
 		// useful data 
-		vec3 n = intersec.normal;
-                vec3 nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
-		vec3 x = r.origin + r.direction * t;
+		n = normalize(intersec.normal);
+                nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
+		x = r.origin + r.direction * t;
 
 		    
                 if (intersec.type == DIFF) // Ideal DIFFUSE reflection
@@ -464,14 +483,15 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 				//weight = sampleSphereLight(x, nl, dirToLight, lightChoice, seed);
 				dirToLight = normalize(lightHitPos - x);
 				firstLightHitDistance = distance(lightHitPos, x);
+				lightHitDistance = firstLightHitDistance;
 				weight = max(0.0, dot(nl, dirToLight));
 				firstMask = mask * weight;
 
-				firstRay = Ray( x, dirToLight ); // create shadow ray pointed towards light
+				firstRay = Ray( x, normalize(dirToLight) ); // create shadow ray pointed towards light
 				firstRay.origin += nl * uEPS_intersect;
 
 				// choose random Diffuse sample vector
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
 				//r = Ray(x, nl); // interesting effect for tracing heightfields/holographic projections?
 				r.origin += nl * uEPS_intersect;
 				sampleLight = false;
@@ -480,24 +500,22 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 			if (diffuseCount == 1 && firstTypeWasREFR)
 			{
 				// choose random Diffuse sample vector
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
 				r.origin += nl * uEPS_intersect;
 				sampleLight = false;
 				continue;
 			}
-			else
-			{
-				dirToLight = normalize(lightHitPos - x);
-				lightHitDistance = distance(lightHitPos, x);
-				weight = max(0.0, dot(nl, dirToLight));
-				mask *= weight;
-				
-				r = Ray( x, dirToLight );
-				r.origin += nl * uEPS_intersect;
-				sampleLight = true;
-				continue;
-			}
-                        
+			
+			dirToLight = normalize(lightHitPos - x);
+			lightHitDistance = distance(lightHitPos, x);
+			weight = max(0.0, dot(nl, dirToLight));
+			mask *= weight;
+			
+			r = Ray( x, normalize(dirToLight) );
+			r.origin += nl * uEPS_intersect;
+			sampleLight = true;
+			continue;
+			
 		} // end if (intersec.type == DIFF)
 		
 		if (intersec.type == SPEC)  // Ideal SPECULAR reflection
@@ -531,7 +549,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 			// transmit ray through surface
 			mask *= intersec.color;
 			
-			r = Ray(x, tdir);
+			r = Ray(x, normalize(tdir));
 			r.origin -= nl * uEPS_intersect;
 
 			bounceIsSpecular = true; // turn on refracting caustics
