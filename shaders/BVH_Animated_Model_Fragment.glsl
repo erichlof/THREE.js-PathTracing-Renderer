@@ -402,6 +402,13 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 
 		if (intersec.type == LIGHT)
 		{	
+
+			if (bounces == 0)
+			{
+				accumCol = mask * intersec.emission;
+				break;
+			}
+
 			if (firstTypeWasDIFF)
 			{
 				if (!shadowTime) 
@@ -470,8 +477,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 				break;	
 			}
 
-			accumCol = mask * intersec.emission; // looking directly at light or through a reflection
-			
+			accumCol = mask * intersec.emission; // looking at light through a reflection
 			// reached a light, so we can exit
 			break;
 		} // end if (intersec.type == LIGHT)
@@ -479,6 +485,13 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 
 		if (intersec.type == SPOT_LIGHT)
 		{	
+
+			if (bounces == 0)
+			{
+				accumCol = mask * clamp(intersec.emission, 0.0, 1.0);
+				break;
+			}
+
 			if (firstTypeWasDIFF)
 			{
 				if (!shadowTime) 
@@ -555,8 +568,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 				break;	
 			}
 
-			accumCol = mask * clamp(intersec.emission, 0.0, 1.0);
-			
+			accumCol = mask * clamp(intersec.emission, 0.0, 1.0); // looking at light through a reflection
 			// reached a light, so we can exit
 			break;
 		} // end if (intersec.type == SPOTLIGHT)
