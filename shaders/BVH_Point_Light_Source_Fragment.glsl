@@ -315,6 +315,13 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		
 		if (intersec.type == LIGHT)
 		{	
+
+			if (bounces == 0)
+			{
+				accumCol = mask * intersec.emission;
+				break;
+			}
+
 			if (firstTypeWasDIFF)
 			{
 				if (!shadowTime) 
@@ -383,8 +390,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				break;	
 			}
 
-			accumCol = mask * intersec.emission; // looking directly at light or through a reflection
-			
+			accumCol = mask * intersec.emission; // looking at light through a reflection
 			// reached a light, so we can exit
 			break;
 		} // end if (intersec.type == LIGHT)
@@ -392,6 +398,13 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 		if (intersec.type == POINT_LIGHT)
 		{	
+
+			if (bounces == 0)
+			{
+				accumCol = mask * clamp(intersec.emission, 0.0, 1.0);
+				break;
+			}
+
 			if (firstTypeWasDIFF)
 			{
 				if (!shadowTime) 
@@ -440,7 +453,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				}	
 				else if (bounceIsSpecular)
 				{
-					accumCol += mask * clamp(intersec.emission, 0.0, 100.0);
+					accumCol += mask * clamp(intersec.emission, 0.0, 1.0);
 					break;
 				}
 			}
@@ -464,12 +477,11 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 					continue;
 				}
 				
-				accumCol += mask * intersec.emission; // add reflective result to the refractive result (if any)
+				accumCol += mask * clamp(intersec.emission, 0.0, 200.0); // add reflective result to the refractive result (if any)
 				break;	
 			}
 
-			accumCol = mask * clamp(intersec.emission, 0.0, 1.0);
-			
+			accumCol = mask * clamp(intersec.emission, 0.0, 1.0); // looking at light through a reflection
 			// reached a light, so we can exit
 			break;
 		} // end if (intersec.type == POINT_LIGHT)
