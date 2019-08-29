@@ -993,6 +993,13 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		
 		if (intersec.type == LIGHT)
 		{	
+			
+			if (bounces == 0)
+			{
+				accumCol = mask * intersec.emission;
+				break;
+			}
+
 			if (firstTypeWasDIFF)
 			{
 				if (!shadowTime) 
@@ -1062,10 +1069,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				break;	
 			}
 
-			accumCol = mask * intersec.emission; // looking directly at light or through a reflection
-			
-			// reached a light, so we can exit
-			break;
+			// need this check for translucent materials
+			if (sampleLight || bounceIsSpecular) 
+				accumCol = mask * intersec.emission; // looking at light through a reflection
 		} // end if (intersec.type == LIGHT)
 
 
