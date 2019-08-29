@@ -152,7 +152,7 @@ function MaterialObject() {
 function initSceneData() {
         
         // scene/demo-specific three.js objects setup goes here
-        EPS_intersect = mouseControl ? 0.1 : 1.0; // less precision on mobile
+        EPS_intersect = mouseControl ? 0.01 : 1.0; // less precision on mobile
 
         // set camera's field of view
         worldCamera.fov = 50;
