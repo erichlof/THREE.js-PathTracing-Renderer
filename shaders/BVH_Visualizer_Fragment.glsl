@@ -277,7 +277,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	for (int bounces = 0; bounces < 10; bounces++)
 	{
 		
-		float t = SceneIntersect(r, intersec);
+		t = SceneIntersect(r, intersec);
 		
 		/*
 		if (t == INFINITY)
@@ -288,6 +288,13 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		
 		if (intersec.type == LIGHT)
 		{	
+
+			if (bounces == 0)
+			{
+				accumCol = mask * intersec.emission;
+				break;
+			}
+
 			if (firstTypeWasREFR)
 			{
 				if (!reflectionTime) 
@@ -296,6 +303,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 					
 					// start back at the refractive surface, but this time follow reflective branch
 					r = firstRay;
+					r.direction = normalize(r.direction);
 					mask = firstMask;
 					// set/reset variables
 					reflectionTime = true;
@@ -316,6 +324,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 					
 					// start back at the refractive surface, but this time follow reflective branch
 					r = firstRay;
+					r.direction = normalize(r.direction);
 					mask = firstMask;
 					// set/reset variables
 					specularTime = true;
@@ -328,7 +337,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				break;
 			}
 
-			accumCol = mask * intersec.emission;
+			accumCol = mask * intersec.emission; // looking at light through a reflection
 			// reached a light, so we can exit
 			break;
 		} // end if (intersec.type == LIGHT)
@@ -361,7 +370,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			} */
                         
 			// choose random Diffuse sample vector
-			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+			r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
 			r.origin += nl * uEPS_intersect;
 			continue;	
                 }
@@ -401,7 +410,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			// transmit ray through surface
 			mask *= intersec.color;
 			
-			r = Ray(x, tdir);
+			r = Ray(x, normalize(tdir));
 			r.origin -= nl * uEPS_intersect;
 
 			continue;
@@ -433,8 +442,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			
 			mask *= intersec.color;
 
-			//accumCol += calcDirectLightingSphere(mask, x, nl, spheres[0], seed);
-			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+			r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
 			r.origin += nl * uEPS_intersect;
 			continue;
 			
