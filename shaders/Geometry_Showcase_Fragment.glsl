@@ -214,7 +214,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	float nc, nt, Re, Tr;
 	float weight;
 	float randChoose;
-	float diffuseColorBleeding = 0.4; // range: 0.0 - 0.5, amount of color bleeding between surfaces
+	float diffuseColorBleeding = 0.3; // range: 0.0 - 0.5, amount of color bleeding between surfaces
 
 	int diffuseCount = 0;
 
@@ -412,8 +412,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				firstRay.origin += nl * uEPS_intersect;
 
 				// choose random Diffuse sample vector
-				dirToLight = normalize(lightChoice.position - x);
-				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(dirToLight, seed)) );
+				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
@@ -520,8 +519,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			if (diffuseCount == 1 && firstTypeWasCOAT && rand(seed) < diffuseColorBleeding)
                         {
 				// choose random Diffuse sample vector
-				dirToLight = normalize(lightChoice.position - x);
-				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(dirToLight, seed)) );
+				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
 				r.origin += nl * uEPS_intersect;
 				continue;
                         }
