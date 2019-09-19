@@ -333,7 +333,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	float nc, nt, Re, Tr;
 	float weight;
 	float randChoose;
-	float diffuseColorBleeding = 0.3; // range: 0.0 - 0.5, amount of color bleeding between surfaces
+	float diffuseColorBleeding = 0.4; // range: 0.0 - 0.5, amount of color bleeding between surfaces
 
 	int diffuseCount = 0;
 
@@ -496,7 +496,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 		// useful data 
 		n = normalize(intersec.normal);
-                nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
+                //nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
+		nl = n;
+		nl = normalize(faceforward(nl, n, r.direction));
 		x = r.origin + r.direction * t;
 
 		randChoose = rand(seed) * 3.0; // 3 lights to choose from
@@ -522,19 +524,22 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			{	
 				// save intersection data for future shadowray trace
 				firstTypeWasDIFF = true;
-				weight = sampleSphereLight(x, nl, dirToLight, lightChoice, seed);
+				dirToLight = (lightChoice.position - x); // no normalize (for distance calc)
+				dirToLight = sampleSphereLight(nl, dirToLight, lightChoice, weight, seed);
 				firstMask = mask * weight;
                                 firstRay = Ray( x, normalize(dirToLight) ); // create shadow ray pointed towards light
 				firstRay.origin += nl * uEPS_intersect;
 
 				// choose random Diffuse sample vector
-				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
+				dirToLight = normalize(lightChoice.position - x);
+				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(dirToLight, seed)) );
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
                         
-			weight = sampleSphereLight(x, nl, dirToLight, lightChoice, seed);
-			mask *= clamp(weight, 0.0, 1.0);
+			dirToLight = lightChoice.position - x; // no normalize (for distance calc)
+			dirToLight = sampleSphereLight(nl, dirToLight, lightChoice, weight, seed);
+			mask *= weight;
 
 			r = Ray( x, normalize(dirToLight) );
 			r.origin += nl * uEPS_intersect;
@@ -560,6 +565,13 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			nt = 1.5; // IOR of common Glass
 			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
 			Tr = 1.0 - Re;
+
+			if (Re >= 1.0)
+			{
+				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
+				r.origin += nl * uEPS_intersect;
+				continue;
+			}
 
 			if (bounces < 2 && !firstTypeWasREFR && !firstTypeWasDIFF && !firstTypeWasCOAT)
 			{	
@@ -595,6 +607,13 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
 			Tr = 1.0 - Re;
 
+			if (Re >= 1.0)
+			{
+				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
+				r.origin += nl * uEPS_intersect;
+				continue;
+			}
+
 			if (bounces < 2 && !firstTypeWasCOAT && !firstTypeWasDIFF && !firstTypeWasREFR)
 			{	
 				// save intersection data for future reflection trace
@@ -619,17 +638,18 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 			if (diffuseCount == 1 && firstTypeWasCOAT && rand(seed) < diffuseColorBleeding)
                         {
-                                // choose random Diffuse sample vector
-				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
+				// choose random Diffuse sample vector
+				dirToLight = normalize(lightChoice.position - x);
+				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(dirToLight, seed)) );
 				r.origin += nl * uEPS_intersect;
 				continue;
                         }
                         
 			if (intersec.color.r == 1.0 && rand(seed) < 0.9)
 				lightChoice = spheres[0]; // this makes capsule more white
-			weight = sampleSphereLight(x, nl, dirToLight, lightChoice, seed);
-			mask *= clamp(weight, 0.0, 1.0);
-			
+			dirToLight = lightChoice.position - x; // no normalize (for distance calc)
+			dirToLight = sampleSphereLight(nl, dirToLight, lightChoice, weight, seed);
+			mask *= weight;
 			r = Ray( x, normalize(dirToLight) );
 			r.origin += nl * uEPS_intersect;
 
