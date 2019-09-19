@@ -200,7 +200,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			if (diffuseCount == 1 && rand(seed) < 0.5)
 			{
 				// choose random Diffuse sample vector
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+				dirToLight = normalize(spheres[0].position - x);
+				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(dirToLight, seed)) );
 				r.origin += nl;
 				
 				bounceIsSpecular = false;
@@ -208,10 +209,11 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			}
 			else
 			{
-				weight = sampleSphereLight(x, nl, dirToLight, spheres[0], seed);
-				mask *= clamp(weight, 0.0, 1.0);
+				dirToLight = spheres[0].position - x; // no normalize (for distance calc)
+				dirToLight = sampleSphereLight(nl, dirToLight, spheres[0], weight, seed);
+				mask *= weight;
 
-				r = Ray( x, dirToLight );
+				r = Ray( x, normalize(dirToLight) );
 				r.origin += nl;
 				
 				bounceIsSpecular = true;
@@ -281,18 +283,21 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			if (diffuseCount == 1 && rand(seed) < 0.5)
                         {
                                 // choose random Diffuse sample vector
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+				dirToLight = normalize(spheres[0].position - x);
+				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(dirToLight, seed)) );
 				r.origin += nl;
+				continue;
 				
 				bounceIsSpecular = false;
 				continue;
                         }
                         else
                         {
-				weight = sampleSphereLight(x, nl, dirToLight, spheres[0], seed);
-				mask *= clamp(weight, 0.0, 1.0);
+				dirToLight = spheres[0].position - x; // no normalize (for distance calc)
+				dirToLight = sampleSphereLight(nl, dirToLight, spheres[0], weight, seed);
+				mask *= weight;
 
-                                r = Ray( x, dirToLight );
+				r = Ray( x, normalize(dirToLight) );
 				r.origin += nl;
 				
 				bounceIsSpecular = true;
@@ -307,7 +312,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	// as a starting point, the ray origin. Next, Randomize the ray direction based on glass sphere's radius.
 	// Then trace towards the light source, eventually rays will refract at just the right angles to find the light!
 	r.origin = vray.origin;
-	vec3 lp = spheres[0].position + (randomSphereDirection(seed) * spheres[1].radius);
+	vec3 lp = spheres[0].position + (normalize(randomSphereDirection(seed)) * spheres[1].radius * 0.9);
 	r.direction = normalize(lp - r.origin);
 	mask = vec3(1.0); // reset color mask for this particle
 
