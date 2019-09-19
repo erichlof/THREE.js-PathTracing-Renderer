@@ -561,7 +561,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			{	
 				// save intersection data for future shadowray trace
 				firstTypeWasDIFF = true;
-				weight = sampleSphereLight(x, nl, dirToLight, light, seed);
+				dirToLight = (light.position - x); // no normalize (for distance calc)
+				dirToLight = sampleSphereLight(nl, dirToLight, light, weight, seed);
 				firstMask = mask * weight;
                                 firstRay = Ray( x, normalize(dirToLight) ); // create shadow ray pointed towards light
 				firstRay.origin += nl * uEPS_intersect;
@@ -572,8 +573,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				continue;
 			}
                         
-			weight = sampleSphereLight(x, nl, dirToLight, light, seed);
-			mask *= clamp(weight, 0.0, 1.0);
+			dirToLight = light.position - x; // no normalize (for distance calc)
+			dirToLight = sampleSphereLight(nl, dirToLight, light, weight, seed);
+			mask *= weight;
 
 			r = Ray( x, normalize(dirToLight) );
 			r.origin += nl * uEPS_intersect;
@@ -664,8 +666,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				continue;
                         }
                         
-			weight = sampleSphereLight(x, nl, dirToLight, light, seed);
-			mask *= clamp(weight, 0.0, 1.0);
+			dirToLight = light.position - x; // no normalize (for distance calc)
+			dirToLight = sampleSphereLight(nl, dirToLight, light, weight, seed);
+			mask *= weight;
 			
 			r = Ray( x, normalize(dirToLight) );
 			r.origin += nl * uEPS_intersect;
