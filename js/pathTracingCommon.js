@@ -256,84 +256,15 @@ float RectangleIntersect( vec3 pos, vec3 normal, float radiusU, float radiusV, R
 THREE.ShaderChunk[ 'pathtracing_slab_intersect' ] = `
 
 //--------------------------------------------------------------------------------------
-float YZ_SlabIntersect( float radiusX, Ray r, out vec3 n )
+float SlabIntersect( float radius, vec3 normal, Ray r, out vec3 n )
 //--------------------------------------------------------------------------------------
 {
-	vec3 pOrO;
-	float result0, result1, denom;
-
-	n = vec3(1,0,0);
-	denom = dot(n, r.direction);
-	pOrO = (-radiusX * n) - r.origin; 
-	result0 = dot(pOrO, n) / denom;
-	if (result0 < 0.0) result0 = INFINITY;
-	
-	n.x = -1.0;
-	denom = dot(n, r.direction);
-	pOrO = (-radiusX * n) - r.origin; 
-	result1 = dot(pOrO, n) / denom;
-	if (result1 < 0.0) result1 = INFINITY;
-
-	if (result0 < result1)
-	{
-		n.x = 1.0;
-		return result0;
-	}
-	else return result1;
-}
-
-//--------------------------------------------------------------------------------------
-float XZ_SlabIntersect( float radiusY, Ray r, out vec3 n )
-//--------------------------------------------------------------------------------------
-{
-	vec3 pOrO;
-	float result0, result1, denom;
-
-	n = vec3(0,1,0);
-	denom = dot(n, r.direction);
-	pOrO = (-radiusY * n) - r.origin; 
-	result0 = dot(pOrO, n) / denom;
-	if (result0 < 0.0) result0 = INFINITY;
-	
-	n.y = -1.0;
-	denom = dot(n, r.direction);
-	pOrO = (-radiusY * n) - r.origin; 
-	result1 = dot(pOrO, n) / denom;
-	if (result1 < 0.0) result1 = INFINITY;
-	
-	if (result0 < result1)
-	{
-		n.y = 1.0;
-		return result0;
-	}
-	else return result1;
-}
-
-//--------------------------------------------------------------------------------------
-float XY_SlabIntersect( float radiusZ, Ray r, out vec3 n )
-//--------------------------------------------------------------------------------------
-{
-	vec3 pOrO;
-	float result0, result1, denom;
-
-	n = vec3(0,0,1);
-	denom = dot(n, r.direction);
-	pOrO = (-radiusZ * n) - r.origin; 
-	result0 = dot(pOrO, n) / denom;
-	if (result0 < 0.0) result0 = INFINITY;
-	
-	n.z = -1.0;
-	denom = dot(n, r.direction);
-	pOrO = (-radiusZ * n) - r.origin; 
-	result1 = dot(pOrO, n) / denom;
-	if (result1 < 0.0) result1 = INFINITY;
-	
-	if (result0 < result1)
-	{
-		n.z = 1.0;
-		return result0;
-	}
-	else return result1;
+	n = dot(normal, r.direction) < 0.0 ? normal : -normal;
+	float rad = dot(r.origin, n) > radius ? radius : -radius; 
+	float denom = dot(n, r.direction);
+	vec3 pOrO = (rad * n) - r.origin; 
+	float t = dot(pOrO, n) / denom;
+	return t > 0.0 ? t : INFINITY;
 }
 
 `;
@@ -1536,7 +1467,7 @@ float rand( inout uvec2 seed )
 vec3 randomSphereDirection( inout uvec2 seed )
 {
     	vec2 r = vec2(rand(seed), rand(seed)) * TWO_PI;
-	return vec3( sin(r.x) * vec2(sin(r.y), cos(r.y)), cos(r.x) );	
+	return normalize(vec3(sin(r.x) * vec2(sin(r.y), cos(r.y)), cos(r.x)));	
 }
 
 vec3 randomDirectionInHemisphere( vec3 nl, inout uvec2 seed )
@@ -1628,19 +1559,24 @@ vec3 calcDirectLightingQuad(vec3 mask, vec3 x, vec3 nl, Quad light, inout uvec2 
 
 THREE.ShaderChunk[ 'pathtracing_sample_sphere_light' ] = `
 
-float sampleSphereLight(vec3 x, vec3 nl, out vec3 dirToLight, Sphere light, inout uvec2 seed)
+vec3 sampleSphereLight(vec3 nl, vec3 dirToLight, Sphere light, out float weight, inout uvec2 seed)
 {
-	vec3 randPointOnLight = light.position + (randomSphereDirection(seed) * light.radius);
-	dirToLight = randPointOnLight - x;
-	
 	float r2 = light.radius * light.radius;
 	float d2 = dot(dirToLight, dirToLight);
 	float cos_a_max = sqrt(1.0 - clamp( r2 / d2, 0.0, 1.0));
 
 	dirToLight = normalize(dirToLight);
 	float dotNlRayDir = max(0.0, dot(nl, dirToLight));
-	
-	return 2.0 * (1.0 - cos_a_max) * dotNlRayDir;
+	weight = clamp(2.0 * (1.0 - cos_a_max) * dotNlRayDir, 0.0, 1.0);
+
+	vec3 u = normalize( cross( abs(dirToLight.x) > 0.1 ? vec3(0, 1, 0) : vec3(1, 0, 0), dirToLight ) );
+	vec3 v = cross(dirToLight, u);
+	vec2 r = vec2(rand(seed), rand(seed));
+	r.x *= TWO_PI;
+	r.y = 1.0 - r.y * (r2 / d2);
+	float oneminus = sqrt(clamp(1.0 - r.y * r.y, 0.0, 1.0)) * 0.5; // * 0.5 narrows the cone
+
+	return normalize(cos(r.x) * oneminus * u + sin(r.x) * oneminus * v + r.y * dirToLight);
 }
 
 `;
