@@ -647,19 +647,22 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 			{	
 				// save intersection data for future shadowray trace
 				firstTypeWasDIFF = true;
-				weight = sampleSphereLight(x, nl, dirToLight, lightChoice, seed);
+				dirToLight = (lightChoice.position - x); // no normalize (for distance calc)
+				dirToLight = sampleSphereLight(nl, dirToLight, lightChoice, weight, seed);
 				firstMask = mask * weight;
                                 firstRay = Ray( x, normalize(dirToLight) ); // create shadow ray pointed towards light
 				firstRay.origin += nl * uEPS_intersect;
 
 				// choose random Diffuse sample vector
-				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
+				dirToLight = normalize(lightChoice.position - x);
+				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(dirToLight, seed)) );
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
                         
-			weight = sampleSphereLight(x, nl, dirToLight, lightChoice, seed);
-			mask *= clamp(weight, 0.0, 1.0);
+			dirToLight = (lightChoice.position - x); // no normalize (for distance calc)
+			dirToLight = sampleSphereLight(nl, dirToLight, lightChoice, weight, seed);
+			mask *= weight;
 
 			r = Ray( x, normalize(dirToLight) );
 			r.origin += nl * uEPS_intersect;
@@ -752,14 +755,15 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 			if (diffuseCount == 1 && firstTypeWasCOAT && rand(seed) < diffuseColorBleeding)
                         {
                                 // choose random Diffuse sample vector
-				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
+				dirToLight = normalize(lightChoice.position - x);
+				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(dirToLight, seed)) );
 				r.origin += nl * uEPS_intersect;
 				continue;
                         }
                         
-			weight = sampleSphereLight(x, nl, dirToLight, lightChoice, seed);
-			mask *= clamp(weight, 0.0, 1.0);
-			
+			dirToLight = lightChoice.position - x; // no normalize (for distance calc)
+			dirToLight = sampleSphereLight(nl, dirToLight, lightChoice, weight, seed);
+			mask *= weight;
 			r = Ray( x, normalize(dirToLight) );
 			r.origin += nl * uEPS_intersect;
 
