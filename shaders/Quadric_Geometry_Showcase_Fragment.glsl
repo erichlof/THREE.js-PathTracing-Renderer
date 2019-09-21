@@ -330,7 +330,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	vec3 x, n, nl;
         
 	float t;
-	float nc, nt, Re, Tr;
+	float nc, nt, ratioIoR, Re, Tr;
 	float weight;
 	float randChoose;
 	float diffuseColorBleeding = 0.3; // range: 0.0 - 0.5, amount of color bleeding between surfaces
@@ -496,9 +496,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 		// useful data 
 		n = normalize(intersec.normal);
-                //nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
-		nl = n;
-		nl = normalize(faceforward(nl, n, r.direction));
+                nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
 		x = r.origin + r.direction * t;
 
 		randChoose = rand(seed) * 3.0; // 3 lights to choose from
@@ -562,10 +560,10 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		{
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
-			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
+			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 
-			if (Re >= 1.0)
+			if (Re > 0.99)
 			{
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.origin += nl * uEPS_intersect;
@@ -591,6 +589,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			// transmit ray through surface
 			mask *= intersec.color;
 			
+			tdir = refract(r.direction, nl, ratioIoR);
 			r = Ray(x, normalize(tdir));
 			r.origin -= nl * uEPS_intersect;
 
@@ -603,10 +602,10 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		{
 			nc = 1.0; // IOR of Air
 			nt = 1.4; // IOR of Clear Coat
-			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
+			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 
-			if (Re >= 1.0)
+			if (Re > 0.99)
 			{
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.origin += nl * uEPS_intersect;
