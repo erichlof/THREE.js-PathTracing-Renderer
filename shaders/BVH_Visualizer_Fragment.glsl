@@ -265,7 +265,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	vec3 x, n, nl;
         
 	float t;
-        float nc, nt, Re, Tr;
+        float nc, nt, ratioIoR, Re, Tr;
 
 	bool bounceIsSpecular = true;
 	bool firstTypeWasREFR = false;
@@ -388,9 +388,16 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		{
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
-			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
+			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 
+			if (Re > 0.99)
+			{
+				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
+				r.origin += nl * uEPS_intersect;
+				continue;
+			}
+			
 			if (bounces < 2 && !firstTypeWasREFR && !firstTypeWasCOAT)
 			{	
 				// save intersection data for future reflection trace
@@ -410,6 +417,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			// transmit ray through surface
 			mask *= intersec.color;
 			
+			tdir = refract(r.direction, nl, ratioIoR);
 			r = Ray(x, normalize(tdir));
 			r.origin -= nl * uEPS_intersect;
 
@@ -421,8 +429,15 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		{
 			nc = 1.0; // IOR of Air
 			nt = 1.6; // IOR of Clear Coat (a little thicker for this demo)
-			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
+			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
+
+			if (Re > 0.99)
+			{
+				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
+				r.origin += nl * uEPS_intersect;
+				continue;
+			}
 			
 			if (bounces < 2 && !firstTypeWasCOAT && !firstTypeWasREFR)
 			{	
