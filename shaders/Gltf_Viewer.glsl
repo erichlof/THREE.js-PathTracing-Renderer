@@ -262,7 +262,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 	vec3 tdir;
 
 	float hitDistance;
-	float nc, nt, Re;
+	float nc, nt, ratioIoR, Re, Tr;
 	float weight;
 	float t = INFINITY;
 	float epsIntersect = 0.01;
@@ -389,7 +389,15 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
-			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
+			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
+			Tr = 1.0 - Re;
+
+			if (Re > 0.99)
+			{
+				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
+				r.origin += nl * epsIntersect;
+				continue;
+			}
 
 			if (rand(seed) < Re) // reflect ray from surface
 			{
@@ -400,6 +408,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 			else // transmit ray through surface
 			{
 				mask *= 1.0 - (intersec.color * intersec.opacity);
+				tdir = refract(r.direction, nl, ratioIoR);
 				r = Ray(x, r.direction); // TODO using r.direction instead of tdir, because going through common Glass makes everything spherical from up close...
 				r.origin += r.direction * epsIntersect;
 				
