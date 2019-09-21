@@ -850,8 +850,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 		accumCol = mix( vec3(0.0,0.05,0.05), accumCol, clamp( exp2( -hitDistance * 0.001 ), 0.0, 1.0 ) );
 	}
 
-	//return vec3(max(vec3(0), accumCol));
-	return accumCol;     
+	return max(vec3(0), accumCol); // prevents black spot artifacts appearing in the water     
 }
 
 
