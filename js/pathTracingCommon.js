@@ -1603,18 +1603,28 @@ float sampleQuadLight(vec3 x, vec3 nl, out vec3 dirToLight, Quad light, inout uv
 
 THREE.ShaderChunk[ 'pathtracing_calc_fresnel_reflectance' ] = `
 
-float calcFresnelReflectance(vec3 n, vec3 nl, vec3 rayDirection, float nc, float nt, out vec3 tdir)
+float calcFresnelReflectance(vec3 rayDirection, vec3 n, float etai, float etat, out float ratioIoR)
 {
-	float nnt = dot(rayDirection, n) < 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
-	tdir = refract(rayDirection, nl, nnt);
-		
-	// Original Fresnel equations
-	float cosThetaInc = dot(nl, rayDirection);
-	float cosThetaTra = dot(nl, tdir);
-	float coefPara = (nt * cosThetaInc - nc * cosThetaTra) / (nt * cosThetaInc + nc * cosThetaTra);
-	float coefPerp = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
+	float temp;
+	float cosi = clamp(dot(rayDirection, n), -1.0, 1.0);
+	if (cosi > 0.0)
+	{
+		temp = etai;
+		etai = etat;
+		etat = temp;
+	}
+	
+	ratioIoR = etai / etat;
+	float sint = ratioIoR * sqrt(max(0.0, 1.0 - (cosi * cosi)));
+	if (sint >= 1.0) 
+		return 1.0; // total internal reflection
 
-	return ( coefPara * coefPara + coefPerp * coefPerp ) * 0.5; // Unpolarized
+	float cost = sqrt(max(0.0, 1.0 - (sint * sint)));
+	cosi = abs(cosi);
+	float Rs = ((etat * cosi) - (etai * cost)) / ((etat * cosi) + (etai * cost));
+	float Rp = ((etai * cosi) - (etat * cost)) / ((etai * cosi) + (etat * cost));
+
+	return ((Rs * Rs) + (Rp * Rp)) * 0.5;
 }
 
 `;
