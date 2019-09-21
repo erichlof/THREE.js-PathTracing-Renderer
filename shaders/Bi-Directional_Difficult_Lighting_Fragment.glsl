@@ -382,7 +382,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 	vec2 sampleUV;
 	
-	float nc, nt, Re;
+	float nc, nt, ratioIoR, Re, Tr;
 	float t = INFINITY;
 	float epsIntersect = 0.01;
 
@@ -494,8 +494,16 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		{	
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
-			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
+			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
+			Tr = 1.0 - Re;
 			skipConnectionEyePath = true;
+
+			if (Re > 0.99)
+			{
+				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
+				r.origin += nl * epsIntersect;
+				continue;
+			}
 
 			if (rand(seed) < Re) // reflect ray from surface
 			{
@@ -513,7 +521,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				previousIntersecType = REFR;
 			
 				maskEyePath *= intersec.color;
-				r = Ray(x, tdir);
+				tdir = refract(r.direction, nl, ratioIoR);
+				r = Ray(x, normalize(tdir));
 				r.origin -= nl * epsIntersect;
 
 				continue;
@@ -524,10 +533,16 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		{	
 			nc = 1.0; // IOR of Air
 			nt = 1.4; // IOR of ClearCoat
-			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
-			
+			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
+			Tr = 1.0 - Re;
 			previousIntersecType = COAT;
 			
+			if (Re > 0.99)
+			{
+				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
+				r.origin += nl * epsIntersect;
+				continue;
+			}
 			// choose either specular reflection or diffuse
 			if( rand(seed) < Re )
 			{	
@@ -563,7 +578,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 				skipConnectionEyePath = false;
 				bounceIsSpecular = false;
-				maskEyePath *= intersec.color;
+				maskEyePath *= intersec.color * Tr;
 				
 				eyeX = x + nl;
 				nlEyePath = nl;
