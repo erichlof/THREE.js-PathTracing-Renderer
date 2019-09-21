@@ -866,7 +866,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
         
 	float t;
 	float weight;
-	float nc, nt, Re, Tr;
+	float nc, nt, ratioIoR, Re, Tr;
 	float randChoose;
 	float diffuseColorBleeding = 0.2; // range: 0.0 - 0.5, chance of color bleeding between surfaces
 
@@ -1087,9 +1087,16 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		{
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
-			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
+			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 
+			if (Re > 0.99)
+			{
+				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
+				r.origin += nl * uEPS_intersect;
+				continue;
+			}
+			
 			if (bounces < 2 && !firstTypeWasREFR && !firstTypeWasDIFF && !firstTypeWasCOAT)
 			{	
 				// save intersection data for future reflection trace
@@ -1109,6 +1116,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			// transmit ray through surface
 			mask *= intersec.color;
 			
+			tdir = refract(r.direction, nl, ratioIoR);
 			r = Ray(x, normalize(tdir));
 			r.origin -= nl * uEPS_intersect;
 
@@ -1139,11 +1147,20 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			
 			nc = 1.0; // IOR of Air
 			
-			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
+			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 
 			vec3 reflectVec = reflect(r.direction, nl);
-			vec3 glossyVec = randomDirectionInHemisphere(nl, seed);
+			vec3 glossyVec = normalize(randomDirectionInHemisphere(nl, seed));
+
+			if (Re > 0.99)
+			{
+				mask *= maskFactor;
+				r = Ray( x, mix(reflectVec, glossyVec, roughness));
+				r.direction = normalize(r.direction);
+				r.origin += nl * uEPS_intersect;
+				continue;
+			}
 			
 			// clearCoat counts as refractive surface
 			if (bounces < 2 && !firstTypeWasCOAT && !firstTypeWasDIFF && !firstTypeWasREFR)
@@ -1196,9 +1213,16 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		{
 			float nc = 1.0; // IOR of Air
 			float nt = 1.4; // IOR of Clear Coat
-			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
+			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 			
+			if (Re > 0.99)
+			{
+				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
+				r.origin += nl * uEPS_intersect;
+				continue;
+			}
+
 			if (bounces < 2 && !firstTypeWasCOAT && !firstTypeWasDIFF && !firstTypeWasREFR)
 			{	
 				// save intersection data for future reflection trace
@@ -1242,7 +1266,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                         {
                                 // choose random Diffuse sample vector
 				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
-				r.origin += r.direction * scatteringDistance;
+				r.origin += nl * uEPS_intersect;
 				continue;
                         }
                         
