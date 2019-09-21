@@ -165,7 +165,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
         
 	float t;
         float weight;
-	float nc, nt, Re, Tr;
+	float nc, nt, ratioIoR, Re, Tr;
 	float diffuseColorBleeding = 0.3; // range: 0.0 - 0.5, amount of color bleeding between surfaces
 	float randChoose;
 
@@ -365,9 +365,16 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		{
 			nc = 1.0; // IOR of Air
 			nt = 1.3; // IOR of Clear Coat
-			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
+			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 			
+			if (Re > 0.99)
+			{
+				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
+				r.origin += nl * uEPS_intersect;
+				continue;
+			}
+
 			if (bounces < 2 && !firstTypeWasCOAT && !firstTypeWasDIFF)
 			{	
 				// save intersection data for future reflection trace
@@ -413,8 +420,15 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		{
 			nc = 1.0; // IOR of Air
 			nt = 1.1; // IOR of Clear Coat
-			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
+			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
+
+			if (Re > 0.99)
+			{
+				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
+				r.origin += nl * uEPS_intersect;
+				continue;
+			}
 			
 			float spotRadius = 1.5;
 			bool isSpot = false;
