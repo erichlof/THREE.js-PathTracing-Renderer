@@ -183,7 +183,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	vec3 tdir;
 	
 	float t = INFINITY;
-	float nc, nt, Re, Tr;
+	float nc, nt, ratioIoR, Re, Tr;
 	float weight;
 	float diffuseColorBleeding = 0.5; // range: 0.0 - 0.5, amount of color bleeding between surfaces
 
@@ -307,20 +307,6 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		// if we get here and sampleLight is still true, shadow ray failed to find a light source
 		if (sampleLight) 
 		{
-			// if (firstTypeWasREFR && !reflectionTime) 
-			// {
-			// 	// start back at the refractive surface, but this time follow reflective branch
-			// 	r = firstRay;
-			// 	r.direction = normalize(r.direction);
-			// 	mask = firstMask;
-			// 	// set/reset variables
-			// 	reflectionTime = true;
-			// 	bounceIsSpecular = true;
-			// 	sampleLight = false;
-			// 	// continue with the reflection ray
-			// 	continue;
-			// }
-
 			if (firstTypeWasDIFF && !shadowTime) 
 			{
 				// start back at the diffuse surface, but this time follow shadow ray branch
@@ -404,9 +390,16 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		{
 			nc = 1.0; // IOR of Air
 			nt = 1.33; // IOR of Water
-			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
+			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 
+			if (Re > 0.99)
+			{
+				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
+				r.origin += nl * uEPS_intersect;
+				continue;
+			}
+			
 			if (diffuseCount == 0 && !firstTypeWasDIFF)
 			{	
 				// save intersection data for future reflection trace
@@ -419,6 +412,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			}
 
 			// transmit ray through surface
+			tdir = refract(r.direction, nl, ratioIoR);
 			r = Ray(x, normalize(tdir));
 			r.origin -= nl * uEPS_intersect;	
 				
