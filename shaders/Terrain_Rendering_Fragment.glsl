@@ -393,7 +393,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 	vec3 firstX = vec3(0);
 	vec3 tdir;
 	
-	float nc, nt, Re, Tr;
+	float nc, nt, ratioIoR, Re, Tr;
 	float t = INFINITY;
 
 	bool checkWater = true;
@@ -450,8 +450,8 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 		
 		
 		// useful data 
-		n = intersec.normal;
-                nl = dot(n,r.direction) <= 0.0 ? normalize(n) : normalize(n * -1.0);
+		n = normalize(intersec.normal);
+                nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
 		x = r.origin + r.direction * t;
 		
 		if (bounces == 0) 
@@ -482,7 +482,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 			}		
 			
 			vec3 shadowRayDirection = normalize(sunDirection + (randomSkyVec * max(dot(sunDirection, up), 0.1)));						
-			if ( isLightSourceVisible(x, n, shadowRayDirection) ) // in direct sunlight
+			if (bounces == 0 && isLightSourceVisible(x, n, shadowRayDirection) ) // in direct sunlight
 			{
 				mask = intersec.color * sunColor * max(0.0, dot(n, normalize(sunDirection + (randVec * 0.01))));	
 			}
@@ -513,9 +513,16 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 		{
 			nc = 1.0; // IOR of air
 			nt = 1.33; // IOR of water
-			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
+			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
-				
+
+			if (Re > 0.99)
+			{
+				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
+				r.origin += nl * uEPS_intersect;
+				continue;
+			}
+			
 			if (bounces == 0)
 			{	
 				// save intersection data for future reflection trace
@@ -529,6 +536,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 			// transmit ray through surface
 			mask *= intersec.color;
 			
+			tdir = refract(r.direction, nl, ratioIoR);
 			r = Ray(x, tdir);
 			r.origin -= nl * uEPS_intersect;
 
