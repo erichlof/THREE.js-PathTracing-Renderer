@@ -740,8 +740,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		accumCol += starVal;
 	}
 
-	//return vec3(max(vec3(0), accumCol));
-	return accumCol;      
+	return max(vec3(0), accumCol); // prevents black spot artifacts appearing in the water      
 }
 
 
