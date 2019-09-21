@@ -500,7 +500,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 	}
 	
 	
-	return vec3(max(vec3(0), accumCol));      
+	return max(vec3(0), accumCol); // prevents black spot artifacts appearing in the water      
 }
 
 /*
