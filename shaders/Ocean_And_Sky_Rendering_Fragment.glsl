@@ -452,7 +452,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 	vec3 firstX = vec3(0);
 	vec3 tdir;
 	
-	float nc, nt, Re, Tr;
+	float nc, nt, ratioIoR, Re, Tr;
 	float weight;
 	float t = INFINITY;
 	float diffuseColorBleeding = 0.5; // range: 0.0 - 0.5, amount of color bleeding between surfaces
@@ -723,9 +723,16 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 			
 			nc = 1.0; // IOR of air
 			nt = 1.33; // IOR of water
-			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
+			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
-				
+
+			if (Re > 0.99)
+			{
+				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
+				r.origin += nl * uEPS_intersect;
+				continue;
+			}
+			
 			if (diffuseCount == 0 && !firstTypeWasREFR)
 			{	
 				// save intersection data for future reflection trace
@@ -737,6 +744,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 			}
 
 			// transmit ray through surface
+			tdir = refract(r.direction, nl, ratioIoR);
 			r = Ray(x, normalize(tdir));
 			r.origin -= nl * uEPS_intersect;	
 				
@@ -759,8 +767,15 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 			
 			nc = 1.0; // IOR of air
 			nt = 1.1; // IOR of ClearCoat 
-			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
+			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
+
+			if (Re > 0.99)
+			{
+				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
+				r.origin += nl * uEPS_intersect;
+				continue;
+			}
 			
 			// clearCoat counts as refractive surface
 			if (bounces == 0)
@@ -835,7 +850,8 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 		accumCol = mix( vec3(0.0,0.05,0.05), accumCol, clamp( exp2( -hitDistance * 0.001 ), 0.0, 1.0 ) );
 	}
 
-	return vec3(max(vec3(0), accumCol));      
+	//return vec3(max(vec3(0), accumCol));
+	return accumCol;     
 }
 
 
