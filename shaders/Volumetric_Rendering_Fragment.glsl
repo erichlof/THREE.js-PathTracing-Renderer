@@ -111,7 +111,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	vec3 particlePos;
 	vec3 tdir;
 	
-	float nc, nt, Re;
+	float nc, nt, ratioIoR, Re, Tr;
         float weight;
 	float t, vt, camt;
 	float xx;
@@ -238,7 +238,15 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		{
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
-			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
+			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
+			Tr = 1.0 - Re;
+
+			if (Re > 0.99)
+			{
+				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
+				r.origin += nl;
+				continue;
+			}
 
 			if (rand(seed) < Re) // reflect ray from surface
 			{
@@ -252,6 +260,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			{
 				mask *= intersec.color;
 
+				tdir = refract(r.direction, nl, ratioIoR);
 				r = Ray(x, tdir);
 				r.origin -= nl;
 
@@ -264,7 +273,15 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		{
 			nc = 1.0; // IOR of air
 			nt = 1.4; // IOR of ClearCoat 
-			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
+			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
+			Tr = 1.0 - Re;
+
+			if (Re > 0.99)
+			{
+				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
+				r.origin += nl;
+				continue;
+			}
 			
 			// choose either specular reflection or diffuse
 			if( rand(seed) < Re )
@@ -335,7 +352,15 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		{
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
-			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
+			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
+			Tr = 1.0 - Re;
+
+			if (Re > 0.99)
+			{
+				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
+				r.origin += nl;
+				continue;
+			}
 			
 			if (rand(seed) < Re) // reflect ray from surface
 			{
@@ -348,6 +373,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			else // transmit ray through surface
 			{
 				mask *= intersec.color;
+				tdir = refract(r.direction, nl, ratioIoR);
 				r = Ray(x, tdir);
 				r.origin -= nl;
 				
