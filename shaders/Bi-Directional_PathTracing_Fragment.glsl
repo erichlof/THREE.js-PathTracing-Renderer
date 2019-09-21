@@ -212,7 +212,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 	float lightHitDistance = INFINITY;
 	float firstLightHitDistance = INFINITY;
 	float t = INFINITY;
-	float nc, nt, Re, Tr;
+	float nc, nt, ratioIoR, Re, Tr;
 	float weight;
 	float distanceEPS = uEPS_intersect * 10.0;
 	
@@ -533,9 +533,16 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 		{
 			nc = 1.0; // IOR of Air
 			nt = 1.6; // IOR of heavy Glass
-			Re = calcFresnelReflectance(n, nl, r.direction, nc, nt, tdir);
+			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 
+			if (Re > 0.99)
+			{
+				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
+				r.origin += nl * uEPS_intersect;
+				continue;
+			}
+			
 			if (bounces == 0)
 			{	
 				// save intersection data for future reflection trace
@@ -549,6 +556,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 			// transmit ray through surface
 			mask *= intersec.color;
 			
+			tdir = refract(r.direction, nl, ratioIoR);
 			r = Ray(x, normalize(tdir));
 			r.origin -= nl * uEPS_intersect;
 
