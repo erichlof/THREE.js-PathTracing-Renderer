@@ -137,7 +137,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	// transform ray into Ellipsoid Param's object space
 	rObj.origin = vec3( uEllipsoidClipInvMatrix * vec4(r.origin, 1.0) );
 	rObj.direction = vec3( uEllipsoidClipInvMatrix * vec4(r.direction, 0.0) );
-	d = EllipsoidParamIntersect(-0.8, 0.8, TWO_PI, rObj.origin, rObj.direction, n);
+	d = EllipsoidParamIntersect(-0.8, angleAmount, TWO_PI, rObj.origin, rObj.direction, n);
 
 	if (d < t)
 	{
@@ -193,7 +193,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	// transform ray into Cylinder Param's object space
 	rObj.origin = vec3( uCylinderClipInvMatrix * vec4(r.origin, 1.0) );
 	rObj.direction = vec3( uCylinderClipInvMatrix * vec4(r.direction, 0.0) );
-	d = CylinderParamIntersect(-1.0, 1.0, TWO_PI * 0.6, rObj.origin, rObj.direction, n);
+	d = CylinderParamIntersect(-angleAmount, angleAmount, TWO_PI * 0.6, rObj.origin, rObj.direction, n);
 
 	if (d < t)
 	{
@@ -544,7 +544,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 			{
 				if (!specularTime) 
 				{
-					if (sampleLight)
+					if (bounceIsSpecular || sampleLight)
 						accumCol = mask * intersec.emission;
 					
 					// start back at the coated surface, but this time follow reflective branch
@@ -563,6 +563,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 				break;	
 			}
 
+			if (bounceIsSpecular)
 			accumCol = mask * intersec.emission; // looking at light through a reflection
 			// reached a light, so we can exit
 			break;
