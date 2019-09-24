@@ -171,7 +171,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 					continue;
 				}
 				
-				accumCol += mask * intersec.emission * 0.5; // add shadow ray result to the colorbleed result (if any)
+				if (bounceIsSpecular || sampleLight)
+					accumCol += mask * intersec.emission * 0.5; // add shadow ray result to the colorbleed result (if any)
 				break;		
 			}
 
@@ -473,7 +474,6 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				r = Ray(x, normalize(r.direction));
 				r.origin += r.direction * scatteringDistance;
 
-				//bounceIsSpecular = true;
 				continue;
 			}
 
@@ -548,11 +548,11 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				r = Ray(x, normalize(r.direction));
 				r.origin += r.direction * scatteringDistance;
 
-				//bounceIsSpecular = true;
 				continue;
 			}
 
 			diffuseCount++;
+			
 			bounceIsSpecular = false;
 
 			// else scattering
