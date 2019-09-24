@@ -171,8 +171,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 					continue;
 				}
 				
-				if (bounceIsSpecular || sampleLight)
-					accumCol += mask * intersec.emission * 0.5; // add shadow ray result to the colorbleed result (if any)
+				accumCol += mask * intersec.emission * 0.5; // add shadow ray result to the colorbleed result (if any)
 				break;		
 			}
 
@@ -268,6 +267,13 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                                 firstRay = Ray( x, normalize(dirToLight) ); // create shadow ray pointed towards light
 				firstRay.origin += nl * uEPS_intersect;
 
+				// choose random Diffuse sample vector
+				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
+				r.origin += nl * uEPS_intersect;
+				continue;
+			}
+			else if (firstTypeWasREFR && diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
+			{
 				// choose random Diffuse sample vector
 				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
 				r.origin += nl * uEPS_intersect;
@@ -519,7 +525,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				continue;
 			}
 			
-			// clearCoat counts as refractive surface
+			// specsub clearcoat counts as refractive surface
 			if (bounces == 0)
 			{	
 				// save intersection data for future reflection trace
