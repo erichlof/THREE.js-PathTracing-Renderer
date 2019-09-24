@@ -204,7 +204,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 	vec3 spotlightPos1 = vec3(380.0, 290.0, -470.0);
 	vec3 spotlightPos2 = vec3(430.0, 315.0, -485.0);
 	vec3 spotlightDir = normalize(spotlightPos1 - spotlightPos2);
-	vec3 lightHitPos = lightChoice.position + randomSphereDirection(seed) * (lightChoice.radius * 0.5);
+	vec3 lightHitPos = lightChoice.position + normalize(randomSphereDirection(seed)) * (lightChoice.radius * 0.5);
 	vec3 lightNormal = vec3(0,1,0);
 	vec3 lightHitEmission = lightChoice.emission;
 	vec3 x, n, nl;
