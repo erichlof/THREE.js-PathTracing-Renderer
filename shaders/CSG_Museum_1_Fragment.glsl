@@ -954,7 +954,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			{
 				if (!specularTime) 
 				{
-					if (sampleLight)
+					if (sampleLight || bounceIsSpecular)
 						accumCol = mask * intersec.emission;
 					
 					// start back at the coated surface, but this time follow reflective branch
@@ -973,7 +973,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				break;	
 			}
 
-			accumCol = mask * intersec.emission; // looking at light through a reflection
+			if (sampleLight || bounceIsSpecular)
+				accumCol = mask * intersec.emission; // looking at light through a reflection
 			// reached a light, so we can exit
 			break;
 		} // end if (intersec.type == LIGHT)
@@ -1248,10 +1249,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			{
 				mask *= exp(-absorptionCoefficient * t);
 
-				r.origin = x;
+				r = Ray(x, normalize(r.direction));
 				r.origin += r.direction * scatteringDistance;
 
-				bounceIsSpecular = true;
 				continue;
 			}
 
@@ -1264,9 +1264,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			
 			if (diffuseCount == 1 && firstTypeWasCOAT && rand(seed) < diffuseColorBleeding)
                         {
-                                // choose random Diffuse sample vector
-				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
-				r.origin += nl * uEPS_intersect;
+                                // choose random scattering direction vector
+				r = Ray( x, normalize(randomSphereDirection(seed)) );
+				r.origin += r.direction * scatteringDistance;
 				continue;
                         }
                         
