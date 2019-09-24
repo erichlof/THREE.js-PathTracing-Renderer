@@ -142,6 +142,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	vec3 skyColor;
 	vec3 x, n, nl;
         
+	float diffuseColorBleeding = 0.4; // range: 0.0 - 0.5, amount of color bleeding between surfaces
 	float t;
 	float weight;
 	float nc, nt, ratioIoR, Re, Tr;
@@ -344,6 +345,13 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                                 firstRay = Ray( x, normalize(dirToLight) ); // create shadow ray pointed towards light
 				firstRay.origin += nl * uEPS_intersect;
 
+				// choose random Diffuse sample vector
+				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
+				r.origin += nl * uEPS_intersect;
+				continue;
+			}
+			else if (firstTypeWasREFR && rand(seed) < diffuseColorBleeding)
+			{
 				// choose random Diffuse sample vector
 				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
 				r.origin += nl * uEPS_intersect;
