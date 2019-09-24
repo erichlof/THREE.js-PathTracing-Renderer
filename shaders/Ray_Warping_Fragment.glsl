@@ -473,6 +473,13 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
+			else if (firstTypeWasREFR && rand(seed) < diffuseColorBleeding)
+			{
+				// choose random Diffuse sample vector
+				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
+				r.origin += nl * uEPS_intersect;
+				continue;
+			}
                         
 			weight = sampleQuadLight(x, nl, dirToLight, quads[5], seed);
 			mask *= clamp(weight, 0.0, 1.0);
