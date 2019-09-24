@@ -470,10 +470,10 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			{
 				mask *= exp(-absorptionCoefficient * t);
 				
-				r.origin = x;
+				r = Ray(x, normalize(r.direction));
 				r.origin += r.direction * scatteringDistance;
 
-				bounceIsSpecular = true;
+				//bounceIsSpecular = true;
 				continue;
 			}
 
@@ -484,10 +484,11 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 			bounceIsSpecular = false;
 			
-			if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
+			if (diffuseCount < 3 && rand(seed) < diffuseColorBleeding)
                         {
                                 // choose random Diffuse sample vector
-				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
+				//r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
+				r = Ray( x, normalize(randomSphereDirection(seed)) );
 				r.origin += r.direction * scatteringDistance;
 				continue;
                         }
@@ -544,10 +545,10 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			{
 				mask *= exp(-absorptionCoefficient * t);
 
-				r.origin = x;
+				r = Ray(x, normalize(r.direction));
 				r.origin += r.direction * scatteringDistance;
 
-				bounceIsSpecular = true;
+				//bounceIsSpecular = true;
 				continue;
 			}
 
@@ -557,10 +558,10 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			// else scattering
 			mask *= exp(-absorptionCoefficient * scatteringDistance);
 			
-			if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
+			if (diffuseCount < 3 && rand(seed) < diffuseColorBleeding)
                         {
-                                // choose random Diffuse sample vector
-				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
+                                // choose random scattering direction vector
+				r = Ray( x, normalize(randomSphereDirection(seed)) );
 				r.origin += r.direction * scatteringDistance;
 				continue;
                         }
