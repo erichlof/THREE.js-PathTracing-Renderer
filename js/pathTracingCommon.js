@@ -1466,33 +1466,34 @@ float rand( inout uvec2 seed )
 
 vec3 randomSphereDirection( inout uvec2 seed )
 {
-    	vec2 r = vec2(rand(seed), rand(seed)) * TWO_PI;
-	return normalize(vec3(sin(r.x) * vec2(sin(r.y), cos(r.y)), cos(r.x)));	
+    	float up = rand(seed) * 2.0 - 1.0; // range: -1 to +1
+	float over = sqrt( max(0.0, 1.0 - up * up) );
+	float around = rand(seed) * TWO_PI;
+	return normalize(vec3(cos(around) * over, sin(around) * over, up));	
 }
 
 vec3 randomDirectionInHemisphere( vec3 nl, inout uvec2 seed )
 {
-	float up = rand(seed); 
-    	float over = sqrt(1.0 - up * up); //uniform distribution
+	float up = rand(seed); // uniform distribution in hemisphere
+    	float over = sqrt(max(0.0, 1.0 - up * up));
 	float around = rand(seed) * TWO_PI;
 	
 	vec3 u = normalize( cross( abs(nl.x) > 0.1 ? vec3(0, 1, 0) : vec3(1, 0, 0), nl ) );
-	vec3 v = cross(nl, u);
+	vec3 v = normalize( cross( nl, u ) );
 
-	return normalize(cos(around) * over * u + sin(around) * over * v + up * nl); //uniform distribution
+	return normalize(cos(around) * over * u + sin(around) * over * v + up * nl);
 }
 
 vec3 randomCosWeightedDirectionInHemisphere( vec3 nl, inout uvec2 seed )
 {
-	vec2 uv = vec2(rand(seed), rand(seed));
-	float r1 = TWO_PI * uv.x;
-	float r2 = uv.y;
-	float r2s = sqrt(r2);
+	float up = sqrt(rand(seed)); // cos-weighted distribution in hemisphere
+    	float over = sqrt(max(0.0, 1.0 - up * up));
+	float around = rand(seed) * TWO_PI;
 	
 	vec3 u = normalize( cross( abs(nl.x) > 0.1 ? vec3(0, 1, 0) : vec3(1, 0, 0), nl ) );
-	vec3 v = cross(nl, u);
-	
-	return normalize(u * cos(r1) * r2s + v * sin(r1) * r2s + nl * sqrt(1.0 - r2));
+	vec3 v = normalize( cross( nl, u ) );
+
+	return normalize(cos(around) * over * u + sin(around) * over * v + up * nl);
 }
 
 `;
@@ -1570,13 +1571,13 @@ vec3 sampleSphereLight(vec3 nl, vec3 dirToLight, Sphere light, out float weight,
 	weight = clamp(2.0 * (1.0 - cos_a_max) * dotNlRayDir, 0.0, 1.0);
 
 	vec3 u = normalize( cross( abs(dirToLight.x) > 0.1 ? vec3(0, 1, 0) : vec3(1, 0, 0), dirToLight ) );
-	vec3 v = cross(dirToLight, u);
-	vec2 r = vec2(rand(seed), rand(seed));
-	r.x *= TWO_PI;
-	r.y = 1.0 - r.y * (r2 / d2);
-	float oneminus = sqrt(clamp(1.0 - r.y * r.y, 0.0, 1.0)) * 0.5; // * 0.5 narrows the cone
+	vec3 v = normalize( cross(dirToLight, u) );
+	
+	float up = 1.0 - (rand(seed) * (r2 / d2));
+	float over = sqrt(max(0.0, 1.0 - up * up)) * 0.5;// *0.5 narrows the cone a little to ensure diffuse rays find the lightsource
+	float around = rand(seed) * TWO_PI;
 
-	return normalize(cos(r.x) * oneminus * u + sin(r.x) * oneminus * v + r.y * dirToLight);
+	return normalize(cos(around) * over * u + sin(around) * over * v + up * dirToLight);
 }
 
 `;
