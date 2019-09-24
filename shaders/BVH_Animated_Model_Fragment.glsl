@@ -699,6 +699,13 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
+			else if (firstTypeWasREFR && rand(seed) < diffuseColorBleeding)
+			{
+				// choose random Diffuse sample vector
+				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
+				r.origin += nl * uEPS_intersect;
+				continue;
+			}
                         
 			dirToLight = light.position - x; // no normalize (for distance calc)
 			dirToLight = sampleSphereLight(nl, dirToLight, light, weight, seed);
