@@ -1469,7 +1469,7 @@ vec3 randomSphereDirection( inout uvec2 seed )
     	float up = rand(seed) * 2.0 - 1.0; // range: -1 to +1
 	float over = sqrt( max(0.0, 1.0 - up * up) );
 	float around = rand(seed) * TWO_PI;
-	return normalize(vec3(cos(around) * over, sin(around) * over, up));	
+	return normalize(vec3(cos(around) * over, up, sin(around) * over));	
 }
 
 vec3 randomDirectionInHemisphere( vec3 nl, inout uvec2 seed )
@@ -1479,105 +1479,47 @@ vec3 randomDirectionInHemisphere( vec3 nl, inout uvec2 seed )
 	float around = rand(seed) * TWO_PI;
 	
 	vec3 u = normalize( cross( abs(nl.x) > 0.1 ? vec3(0, 1, 0) : vec3(1, 0, 0), nl ) );
-	vec3 v = normalize( cross( nl, u ) );
+	vec3 v = cross(nl, u);
 
 	return normalize(cos(around) * over * u + sin(around) * over * v + up * nl);
 }
 
 vec3 randomCosWeightedDirectionInHemisphere( vec3 nl, inout uvec2 seed )
 {
-	float up = sqrt(rand(seed)); // cos-weighted distribution in hemisphere
+	//float up = sqrt(rand(seed)); // cos-weighted distribution in hemisphere, same as pow(rand(seed), 1.0 / 2.0) below
+	float up = pow(rand(seed), 1.0 / (rand(seed) * 1.5 + 1.0)); // mix between uniform and cos-weighted distribution in hemisphere
     	float over = sqrt(max(0.0, 1.0 - up * up));
 	float around = rand(seed) * TWO_PI;
 	
 	vec3 u = normalize( cross( abs(nl.x) > 0.1 ? vec3(0, 1, 0) : vec3(1, 0, 0), nl ) );
-	vec3 v = normalize( cross( nl, u ) );
+	vec3 v = cross(nl, u);
 
 	return normalize(cos(around) * over * u + sin(around) * over * v + up * nl);
 }
 
 `;
 
-THREE.ShaderChunk[ 'pathtracing_direct_lighting_sphere' ] = `
-
-vec3 calcDirectLightingSphere(vec3 mask, vec3 x, vec3 nl, Sphere light, inout uvec2 seed)
-{
-	vec3 dirLight = vec3(0.0);
-	Intersection shadowIntersec;
-	
-	// cast shadow ray from intersection point
-	vec3 randPointOnLight = light.position + (randomSphereDirection(seed) * light.radius);
-	vec3 srDir = normalize(randPointOnLight - x);
-		
-	Ray shadowRay = Ray(x, srDir);
-	shadowRay.origin += nl;
-	float st = SceneIntersect(shadowRay, shadowIntersec);
-	if ( shadowIntersec.type == light.type )
-	{
-		float r2 = light.radius * light.radius;
-		vec3 d = randPointOnLight - x;
-		float d2 = dot(d, d);
-		float cos_a_max = sqrt(1.0 - clamp( r2 / d2, 0.0, 1.0));
-                float weight = 2.0 * (1.0 - cos_a_max);
-                dirLight = mask * light.emission * weight * max(0.0, dot(srDir, nl));
-	}
-	
-	return dirLight;
-}
-
-`;
-
-THREE.ShaderChunk[ 'pathtracing_direct_lighting_quad' ] = `
-
-vec3 calcDirectLightingQuad(vec3 mask, vec3 x, vec3 nl, Quad light, inout uvec2 seed)
-{
-	vec3 dirLight = vec3(0.0);
-	Intersection shadowIntersec;
-	vec3 randPointOnLight;
-	randPointOnLight.x = mix(light.v0.x, light.v1.x, rand(seed));
-	randPointOnLight.y = light.v0.y;
-	randPointOnLight.z = mix(light.v0.z, light.v3.z, rand(seed));
-	vec3 srDir = normalize(randPointOnLight - x);
-		
-	// cast shadow ray from intersection point	
-	Ray shadowRay = Ray(x, srDir);
-	shadowRay.origin += nl;
-	float st = SceneIntersect(shadowRay, shadowIntersec);
-	if ( shadowIntersec.type == LIGHT )
-	{
-		float r2 = distance(light.v0, light.v1) * distance(light.v0, light.v3);
-		vec3 d = randPointOnLight - x;
-		float d2 = dot(d, d);
-		float weight = -dot(srDir, normalize(shadowIntersec.normal)) * r2 / d2;
-		float nlDotSrDir = max(dot(nl, srDir), 0.0);
-		dirLight = mask * light.emission * nlDotSrDir * clamp(weight, 0.0, 1.0);
-	}
-
-	return dirLight;
-}
-
-`;
 
 THREE.ShaderChunk[ 'pathtracing_sample_sphere_light' ] = `
 
 vec3 sampleSphereLight(vec3 nl, vec3 dirToLight, Sphere light, out float weight, inout uvec2 seed)
 {
-	float r2 = light.radius * light.radius;
-	float d2 = dot(dirToLight, dirToLight);
-	float cos_a_max = sqrt(1.0 - clamp( r2 / d2, 0.0, 1.0));
+	float cos_alpha_max = sqrt(1.0 - clamp((light.radius * light.radius) / dot(dirToLight, dirToLight), 0.0, 1.0));
+	
+	float cos_alpha = mix( cos_alpha_max, 1.0, rand(seed) ); // 1.0 + (rand(seed) * (cos_alpha_max - 1.0));
+	// * 0.75 below ensures shadow rays don't miss the light, due to shader float precision
+	float sin_alpha = sqrt(max(0.0, 1.0 - cos_alpha * cos_alpha)) * 0.75; 
+	float phi = rand(seed) * TWO_PI;
 
 	dirToLight = normalize(dirToLight);
-	float dotNlRayDir = max(0.0, dot(nl, dirToLight));
-	weight = clamp(2.0 * (1.0 - cos_a_max) * dotNlRayDir, 0.0, 1.0);
-
 	vec3 u = normalize( cross( abs(dirToLight.x) > 0.1 ? vec3(0, 1, 0) : vec3(1, 0, 0), dirToLight ) );
-	vec3 v = normalize( cross(dirToLight, u) );
-	
-	float up = 1.0 - (rand(seed) * (r2 / d2));
-	float over = sqrt(max(0.0, 1.0 - up * up)) * 0.5;// *0.5 narrows the cone a little to ensure diffuse rays find the lightsource
-	float around = rand(seed) * TWO_PI;
+	vec3 v = cross(dirToLight, u);
 
-	return normalize(cos(around) * over * u + sin(around) * over * v + up * dirToLight);
+	vec3 sampleDir = normalize(u * cos(phi) * sin_alpha + v * sin(phi) * sin_alpha + dirToLight * cos_alpha);
+	float dotNlSampleDir = max(0.0, dot(nl, sampleDir));
+	weight = clamp(2.0 * (1.0 - cos_alpha_max) * dotNlSampleDir, 0.0, 1.0);
+	
+	return sampleDir;
 }
 
 `;
@@ -1597,7 +1539,8 @@ float sampleQuadLight(vec3 x, vec3 nl, out vec3 dirToLight, Quad light, inout uv
 
 	dirToLight = normalize(dirToLight);
 	float dotNlRayDir = max(0.0, dot(nl, dirToLight)); 
-	return 2.0 * (1.0 - cos_a_max) * max(0.0, -dot(dirToLight, light.normal)) * dotNlRayDir; 
+	float weight =  2.0 * (1.0 - cos_a_max) * max(0.0, -dot(dirToLight, light.normal)) * dotNlRayDir; 
+	return clamp(weight, 0.0, 1.0);
 }
 
 `;
