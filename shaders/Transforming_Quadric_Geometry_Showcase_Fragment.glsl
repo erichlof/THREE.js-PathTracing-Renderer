@@ -564,7 +564,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 			}
 
 			if (bounceIsSpecular)
-			accumCol = mask * intersec.emission; // looking at light through a reflection
+				accumCol = mask * intersec.emission; // looking at light through a reflection
 			// reached a light, so we can exit
 			break;
 		} // end if (intersec.type == LIGHT)
@@ -648,8 +648,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 			{	
 				// save intersection data for future shadowray trace
 				firstTypeWasDIFF = true;
-				dirToLight = (lightChoice.position - x); // no normalize (for distance calc)
-				dirToLight = sampleSphereLight(nl, dirToLight, lightChoice, weight, seed);
+				dirToLight = sampleSphereLight(x, nl, lightChoice, dirToLight, weight, seed);
 				firstMask = mask * weight;
                                 firstRay = Ray( x, normalize(dirToLight) ); // create shadow ray pointed towards light
 				firstRay.origin += nl * uEPS_intersect;
@@ -661,8 +660,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 				continue;
 			}
                         
-			dirToLight = (lightChoice.position - x); // no normalize (for distance calc)
-			dirToLight = sampleSphereLight(nl, dirToLight, lightChoice, weight, seed);
+			dirToLight = sampleSphereLight(x, nl, lightChoice, dirToLight, weight, seed);
 			mask *= weight;
 
 			r = Ray( x, normalize(dirToLight) );
@@ -776,8 +774,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 				continue;
                         }
                         
-			dirToLight = lightChoice.position - x; // no normalize (for distance calc)
-			dirToLight = sampleSphereLight(nl, dirToLight, lightChoice, weight, seed);
+			dirToLight = sampleSphereLight(x, nl, lightChoice, dirToLight, weight, seed);
 			mask *= weight;
 			r = Ray( x, normalize(dirToLight) );
 			r.origin += nl * uEPS_intersect;
@@ -859,7 +856,7 @@ void main( void )
 	vec3 focalPoint = uFocusDistance * rayDir;
 	float randomAngle = rand(seed) * TWO_PI; // pick random point on aperture
 	float randomRadius = rand(seed) * uApertureSize;
-	vec3  randomAperturePos = ( cos(randomAngle) * camRight + sin(randomAngle) * camUp ) * randomRadius;
+	vec3  randomAperturePos = ( cos(randomAngle) * camRight + sin(randomAngle) * camUp ) * sqrt(randomRadius);
 	// point on aperture to focal point
 	vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
 	
