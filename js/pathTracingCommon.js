@@ -1502,8 +1502,9 @@ vec3 randomCosWeightedDirectionInHemisphere( vec3 nl, inout uvec2 seed )
 
 THREE.ShaderChunk[ 'pathtracing_sample_sphere_light' ] = `
 
-vec3 sampleSphereLight(vec3 nl, vec3 dirToLight, Sphere light, out float weight, inout uvec2 seed)
+vec3 sampleSphereLight(vec3 x, vec3 nl, Sphere light, vec3 dirToLight, out float weight, inout uvec2 seed)
 {
+	dirToLight = (light.position - x); // no normalize (for distance calc below)
 	float cos_alpha_max = sqrt(1.0 - clamp((light.radius * light.radius) / dot(dirToLight, dirToLight), 0.0, 1.0));
 	
 	float cos_alpha = mix( cos_alpha_max, 1.0, rand(seed) ); // 1.0 + (rand(seed) * (cos_alpha_max - 1.0));
@@ -1526,7 +1527,7 @@ vec3 sampleSphereLight(vec3 nl, vec3 dirToLight, Sphere light, out float weight,
 
 THREE.ShaderChunk[ 'pathtracing_sample_quad_light' ] = `
 
-float sampleQuadLight(vec3 x, vec3 nl, out vec3 dirToLight, Quad light, inout uvec2 seed)
+vec3 sampleQuadLight(vec3 x, vec3 nl, Quad light, vec3 dirToLight, out float weight, inout uvec2 seed)
 {
 	vec3 randPointOnLight;
 	randPointOnLight.x = mix(light.v0.x, light.v1.x, rand(seed));
@@ -1539,8 +1540,10 @@ float sampleQuadLight(vec3 x, vec3 nl, out vec3 dirToLight, Quad light, inout uv
 
 	dirToLight = normalize(dirToLight);
 	float dotNlRayDir = max(0.0, dot(nl, dirToLight)); 
-	float weight =  2.0 * (1.0 - cos_a_max) * max(0.0, -dot(dirToLight, light.normal)) * dotNlRayDir; 
-	return clamp(weight, 0.0, 1.0);
+	weight =  2.0 * (1.0 - cos_a_max) * max(0.0, -dot(dirToLight, light.normal)) * dotNlRayDir; 
+	weight = clamp(weight, 0.0, 1.0);
+
+	return dirToLight;
 }
 
 `;
@@ -1647,7 +1650,7 @@ void main( void )
 	vec3 focalPoint = uFocusDistance * rayDir;
 	float randomAngle = rand(seed) * TWO_PI; // pick random point on aperture
 	float randomRadius = rand(seed) * uApertureSize;
-	vec3  randomAperturePos = ( cos(randomAngle) * camRight + sin(randomAngle) * camUp ) * randomRadius;
+	vec3  randomAperturePos = ( cos(randomAngle) * camRight + sin(randomAngle) * camUp ) * sqrt(randomRadius);
 	// point on aperture to focal point
 	vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
 	
