@@ -105,24 +105,25 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 } // end float SceneIntersect( Ray r, inout Intersection intersec )
 
 
-float sampleRectangleLight(vec3 x, vec3 nl, out vec3 dirToLight, Rectangle light, inout uvec2 seed)
+vec3 sampleRectangleLight(vec3 x, vec3 nl, Rectangle light, vec3 dirToLight, out float weight, inout uvec2 seed)
 {
 	vec3 u = normalize(cross( abs(light.normal.y) < 0.9 ? vec3(0, 1, 0) : vec3(0, 0, 1), light.normal));
 	vec3 v = cross(light.normal, u);
 	vec3 randPointOnLight = light.position;
-	randPointOnLight += u * (light.radiusU * (rand(seed) * 2.0 - 1.0));
-	randPointOnLight += v * (light.radiusV * (rand(seed) * 2.0 - 1.0));
+	randPointOnLight += u * mix(-light.radiusU, light.radiusU, rand(seed));
+	randPointOnLight += v * mix(-light.radiusV, light.radiusV, rand(seed));
 	
 	dirToLight = randPointOnLight - x;
 	float r2 = (light.radiusU * light.radiusU) * (light.radiusV * light.radiusV);
-	//float r2 = (light.radiusU * 2.0) * (light.radiusV * 2.0);
 	float d2 = dot(dirToLight, dirToLight);
 	float cos_a_max = sqrt(1.0 - clamp( r2 / d2, 0.0, 1.0));
 
 	dirToLight = normalize(dirToLight);
 	float dotNlRayDir = max(0.0, dot(nl, dirToLight)); 
-	
-	return 2.0 * (1.0 - cos_a_max) * max(0.0, -dot(dirToLight, light.normal)) * dotNlRayDir;
+	weight = 2.0 * (1.0 - cos_a_max) * max(0.0, -dot(dirToLight, light.normal)) * dotNlRayDir;
+	weight = clamp(weight, 0.0, 1.0);
+
+	return dirToLight;
 }
 
 
@@ -340,7 +341,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			{	
 				// save intersection data for future shadowray trace
 				firstTypeWasDIFF = true;
-				weight = sampleRectangleLight(x, nl, dirToLight, lightChoice, seed);
+				dirToLight = sampleRectangleLight(x, nl, lightChoice, dirToLight, weight, seed);
 				firstMask = mask * weight;
                                 firstRay = Ray( x, normalize(dirToLight) ); // create shadow ray pointed towards light
 				firstRay.origin += nl * uEPS_intersect;
@@ -358,8 +359,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				continue;
 			}
                         
-			weight = sampleRectangleLight(x, nl, dirToLight, lightChoice, seed);
-			mask *= clamp(weight, 0.0, 1.0);
+			dirToLight = sampleRectangleLight(x, nl, lightChoice, dirToLight, weight, seed);
+			mask *= weight;
 
 			r = Ray( x, normalize(dirToLight) );
 			r.origin += nl * uEPS_intersect;
