@@ -344,7 +344,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			{	
 				// save intersection data for future shadowray trace
 				firstTypeWasDIFF = true;
-				weight = sampleQuadLight(x, nl, dirToLight, quads[5], seed);
+				dirToLight = sampleQuadLight(x, nl, quads[5], dirToLight, weight, seed);
 				firstMask = mask * weight;
                                 firstRay = Ray( x, normalize(dirToLight) ); // create shadow ray pointed towards light
 				firstRay.origin += nl * uEPS_intersect;
@@ -362,8 +362,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				continue;
 			}
                         
-			weight = sampleQuadLight(x, nl, dirToLight, quads[5], seed);
-			mask *= clamp(weight, 0.0, 1.0);
+			dirToLight = sampleQuadLight(x, nl, quads[5], dirToLight, weight, seed);
+			mask *= weight;
 
 			r = Ray( x, normalize(dirToLight) );
 			r.origin += nl * uEPS_intersect;
@@ -431,7 +431,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		
 	} // end for (int bounces = 0; bounces < 5; bounces++)
 	
-	return max(vec3(0), accumCol); // prevents black spot artifacts appearing in the water      
+	return max(vec3(0), accumCol); // prevents black spot artifacts appearing in the water     
 }
 
 
@@ -499,7 +499,7 @@ void main( void )
 	vec3 focalPoint = uFocusDistance * rayDir;
 	float randomAngle = rand(seed) * TWO_PI; // pick random point on aperture
 	float randomRadius = rand(seed) * uApertureSize;
-	vec3  randomAperturePos = ( cos(randomAngle) * camRight + sin(randomAngle) * camUp ) * randomRadius;
+	vec3  randomAperturePos = ( cos(randomAngle) * camRight + sin(randomAngle) * camUp ) * sqrt(randomRadius);
 	// point on aperture to focal point
 	vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
     
