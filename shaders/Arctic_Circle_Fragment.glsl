@@ -558,7 +558,7 @@ void main( void )
 	vec3 focalPoint = uFocusDistance * rayDir;
 	float randomAngle = rand(seed) * TWO_PI; // pick random point on aperture
 	float randomRadius = rand(seed) * uApertureSize;
-	vec3  randomAperturePos = ( cos(randomAngle) * camRight + sin(randomAngle) * camUp ) * randomRadius;
+	vec3  randomAperturePos = ( cos(randomAngle) * camRight + sin(randomAngle) * camUp ) * sqrt(randomRadius);
 	// point on aperture to focal point
 	vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
     
