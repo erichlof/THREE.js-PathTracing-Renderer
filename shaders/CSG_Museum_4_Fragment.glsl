@@ -1146,9 +1146,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			{	
 				// save intersection data for future shadowray trace
 				firstTypeWasDIFF = true;
-				weight = sampleQuadLight(x, nl, dirToLight, lightChoice, seed);
+				dirToLight = sampleQuadLight(x, nl, lightChoice, dirToLight, weight, seed);
 				firstMask = mask * weight;
-                                firstRay = Ray( x, dirToLight ); // create shadow ray pointed towards light
+                                firstRay = Ray( x, normalize(dirToLight) ); // create shadow ray pointed towards light
 				firstRay.origin += nl * uEPS_intersect;
 
 				// choose random Diffuse sample vector
@@ -1164,8 +1164,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				continue;
 			}
                         
-			weight = sampleQuadLight(x, nl, dirToLight, lightChoice, seed);
-			mask *= clamp(weight, 0.0, 1.0);
+			dirToLight = sampleQuadLight(x, nl, lightChoice, dirToLight, weight, seed);
+			mask *= weight;
 
 			r = Ray( x, normalize(dirToLight) );
 			r.origin += nl * uEPS_intersect;
@@ -1299,8 +1299,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				continue;
                         }
 
-			weight = sampleQuadLight(x, nl, dirToLight, lightChoice, seed);
-			mask *= clamp(weight, 0.0, 1.0);
+			dirToLight = sampleQuadLight(x, nl, lightChoice, dirToLight, weight, seed);
+			mask *= weight;
 			
 			r = Ray( x, normalize(dirToLight) );
 			r.origin += nl * uEPS_intersect;
@@ -1343,8 +1343,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				continue;
                         }
                         
-			weight = sampleQuadLight(x, nl, dirToLight, lightChoice, seed);
-			mask *= clamp(weight, 0.0, 1.0);
+			dirToLight = sampleQuadLight(x, nl, lightChoice, dirToLight, weight, seed);
+			mask *= weight;
 
 			r = Ray( x, normalize(dirToLight) );
 			r.origin += r.direction * scatteringDistance;
