@@ -209,8 +209,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			}
 			else
 			{
-				dirToLight = spheres[0].position - x; // no normalize (for distance calc)
-				dirToLight = sampleSphereLight(nl, dirToLight, spheres[0], weight, seed);
+				dirToLight = sampleSphereLight(x, nl, spheres[0], dirToLight, weight, seed);
 				mask *= weight;
 
 				r = Ray( x, normalize(dirToLight) );
@@ -310,8 +309,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                         }
                         else
                         {
-				dirToLight = spheres[0].position - x; // no normalize (for distance calc)
-				dirToLight = sampleSphereLight(nl, dirToLight, spheres[0], weight, seed);
+				dirToLight = sampleSphereLight(x, nl, spheres[0], dirToLight, weight, seed);
 				mask *= weight;
 
 				r = Ray( x, normalize(dirToLight) );
