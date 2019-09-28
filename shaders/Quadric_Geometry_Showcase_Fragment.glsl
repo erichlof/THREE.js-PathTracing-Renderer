@@ -522,8 +522,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			{	
 				// save intersection data for future shadowray trace
 				firstTypeWasDIFF = true;
-				dirToLight = (lightChoice.position - x); // no normalize (for distance calc)
-				dirToLight = sampleSphereLight(nl, dirToLight, lightChoice, weight, seed);
+				dirToLight = sampleSphereLight(x, nl, lightChoice, dirToLight, weight, seed);
 				firstMask = mask * weight;
                                 firstRay = Ray( x, normalize(dirToLight) ); // create shadow ray pointed towards light
 				firstRay.origin += nl * uEPS_intersect;
@@ -534,8 +533,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				continue;
 			}
                         
-			dirToLight = lightChoice.position - x; // no normalize (for distance calc)
-			dirToLight = sampleSphereLight(nl, dirToLight, lightChoice, weight, seed);
+			dirToLight = sampleSphereLight(x, nl, lightChoice, dirToLight, weight, seed);
 			mask *= weight;
 
 			r = Ray( x, normalize(dirToLight) );
@@ -570,7 +568,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				continue;
 			}
 
-			if (bounces < 2 && !firstTypeWasREFR && !firstTypeWasDIFF && !firstTypeWasCOAT)
+			if (!firstTypeWasREFR && !firstTypeWasDIFF && !firstTypeWasCOAT)
 			{	
 				// save intersection data for future reflection trace
 				firstTypeWasREFR = true;
@@ -612,7 +610,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				continue;
 			}
 
-			if (bounces < 2 && !firstTypeWasCOAT && !firstTypeWasDIFF && !firstTypeWasREFR)
+			if (!firstTypeWasCOAT && !firstTypeWasDIFF && !firstTypeWasREFR)
 			{	
 				// save intersection data for future reflection trace
 				firstTypeWasCOAT = true;
@@ -644,8 +642,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                         
 			if (intersec.color.r == 1.0 && rand(seed) < 0.9)
 				lightChoice = spheres[0]; // this makes capsule more white
-			dirToLight = lightChoice.position - x; // no normalize (for distance calc)
-			dirToLight = sampleSphereLight(nl, dirToLight, lightChoice, weight, seed);
+			dirToLight = sampleSphereLight(x, nl, lightChoice, dirToLight, weight, seed);
 			mask *= weight;
 			r = Ray( x, normalize(dirToLight) );
 			r.origin += nl * uEPS_intersect;
