@@ -270,15 +270,17 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 vec3 Get_HDR_Color(Ray r)
 {
 	vec2 sampleUV;
-	sampleUV.x = atan(r.direction.z, r.direction.x) * ONE_OVER_TWO_PI + 0.5;
-	sampleUV.y = asin(clamp(r.direction.y, -1.0, 1.0)) * ONE_OVER_PI + 0.5;
+	//sampleUV.x = atan(r.direction.x, -r.direction.z) * ONE_OVER_TWO_PI + 0.5;
+	//sampleUV.y = asin(clamp(r.direction.y, -1.0, 1.0)) * ONE_OVER_PI + 0.5;
+	sampleUV.x = (1.0 + atan(r.direction.x, -r.direction.z) * ONE_OVER_PI) * 0.5;
+  	sampleUV.y = acos(-r.direction.y) * ONE_OVER_PI;
 	vec4 texData = texture( tHDRTexture, sampleUV );
 	texData = RGBEToLinear(texData);
 	
 	// tone mapping options
         //vec3 texColor = LinearToneMapping(texData.rgb);
-        //vec3 texColor = ReinhardToneMapping(texData.rgb);
-        vec3 texColor = Uncharted2ToneMapping(texData.rgb);
+        vec3 texColor = ReinhardToneMapping(texData.rgb);
+        //vec3 texColor = Uncharted2ToneMapping(texData.rgb);
         //vec3 texColor = OptimizedCineonToneMapping(texData.rgb);
         //vec3 texColor = ACESFilmicToneMapping(texData.rgb);
 
