@@ -625,7 +625,7 @@ async function prepareGeometryForPT(meshList, pathTracingMaterialList, triangleM
     PerlinNoiseTexture.magFilter = THREE.LinearFilter;
     PerlinNoiseTexture.generateMipmaps = false;
 
-    hdrLoader = new THREE.HDRLoader();
+    hdrLoader = new THREE.RGBELoader();
     hdrPath = 'textures/daytime.hdr';
 
     hdrTexture = hdrLoader.load( hdrPath, function ( texture, textureData ) {
