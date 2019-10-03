@@ -271,7 +271,7 @@ function initThree() {
     renderer.setPixelRatio(pixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
     //required by WebGL 2.0 for rendering to FLOAT textures
-    renderer.context.getExtension('EXT_color_buffer_float');
+    renderer.getContext().getExtension('EXT_color_buffer_float');
     renderer.toneMappingExposure = hdrExposure;
 
     container.appendChild(renderer.domElement);
