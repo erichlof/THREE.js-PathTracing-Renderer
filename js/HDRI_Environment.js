@@ -38,7 +38,7 @@ var changeMaterialColor = false;
 function init_GUI() {
 
         HDRI_ExposureController = {
-                HDRI_Exposure: 1.3
+                HDRI_Exposure: 1.9
 	};
 	material_TypeController = {
                 Material_Type: 3
