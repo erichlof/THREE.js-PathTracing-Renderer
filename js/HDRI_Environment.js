@@ -453,7 +453,7 @@ function initSceneData() {
         aabbDataTexture.generateMipmaps = false;
         aabbDataTexture.needsUpdate = true;
 
-        hdrLoader = new THREE.HDRLoader();
+        hdrLoader = new THREE.RGBELoader();
 
         hdrPath = 'textures/symmetrical_garden_2k.hdr';
 	//hdrPath = 'textures/cloud_layers_2k.hdr';
