@@ -757,6 +757,7 @@ async function prepareGeometryForPT(meshList, pathTracingMaterialList, triangleM
 } // end function initModels()
 
 function initMenu() {
+    let context = renderer.getContext();
     if (gui)
         return;
 
@@ -766,11 +767,11 @@ function initMenu() {
     gui.add(this, 'pixelRatio', 0.25, 1).step(0.01).onChange(function (value) {
         renderer.setPixelRatio(value);
 
-        pathTracingUniforms.uResolution.value.x = renderer.context.drawingBufferWidth;
-        pathTracingUniforms.uResolution.value.y = renderer.context.drawingBufferHeight;
+        pathTracingUniforms.uResolution.value.x = context.drawingBufferWidth;
+        pathTracingUniforms.uResolution.value.y = context.drawingBufferHeight;
 
-        pathTracingRenderTarget.setSize(renderer.context.drawingBufferWidth, renderer.context.drawingBufferHeight);
-        screenTextureRenderTarget.setSize(renderer.context.drawingBufferWidth, renderer.context.drawingBufferHeight);
+        pathTracingRenderTarget.setSize(context.drawingBufferWidth, context.drawingBufferHeight);
+        screenTextureRenderTarget.setSize(context.drawingBufferWidth, context.drawingBufferHeight);
 
         forceUpdate = true;
     });
@@ -809,6 +810,7 @@ function initMenu() {
 
 function onWindowResize() {
 
+    let context = renderer.getContext();
     let screenWidth = window.innerWidth;
     let screenHeight = window.innerHeight;
 
@@ -820,11 +822,11 @@ function onWindowResize() {
     if (fontAspect < 4) fontAspect = 4;
     fontAspect *= 2;
 
-    pathTracingUniforms.uResolution.value.x = renderer.context.drawingBufferWidth;
-    pathTracingUniforms.uResolution.value.y = renderer.context.drawingBufferHeight;
+    pathTracingUniforms.uResolution.value.x = context.drawingBufferWidth;
+    pathTracingUniforms.uResolution.value.y = context.drawingBufferHeight;
 
-    pathTracingRenderTarget.setSize(renderer.context.drawingBufferWidth, renderer.context.drawingBufferHeight);
-    screenTextureRenderTarget.setSize(renderer.context.drawingBufferWidth, renderer.context.drawingBufferHeight);
+    pathTracingRenderTarget.setSize(context.drawingBufferWidth, context.drawingBufferHeight);
+    screenTextureRenderTarget.setSize(context.drawingBufferWidth, context.drawingBufferHeight);
 
     worldCamera.aspect = renderer.domElement.clientWidth / renderer.domElement.clientHeight;
     worldCamera.updateProjectionMatrix();
