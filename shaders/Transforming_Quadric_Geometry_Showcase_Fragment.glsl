@@ -36,6 +36,7 @@ uniform mat4 uHyperbolicParaboloidClipInvMatrix;
 
 #include <pathtracing_uniforms_and_defines>
 
+#define N_LIGHTS 3.0
 #define N_SPHERES 4
 
 struct Ray { vec3 origin; vec3 direction; };
@@ -648,7 +649,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 				// save intersection data for future shadowray trace
 				firstTypeWasDIFF = true;
 				dirToLight = sampleSphereLight(x, nl, lightChoice, dirToLight, weight, seed);
-				firstMask = mask * weight;
+				firstMask = mask * weight * N_LIGHTS;
                                 firstRay = Ray( x, normalize(dirToLight) ); // create shadow ray pointed towards light
 				firstRay.origin += nl * uEPS_intersect;
 
@@ -660,7 +661,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 			}
                         
 			dirToLight = sampleSphereLight(x, nl, lightChoice, dirToLight, weight, seed);
-			mask *= weight;
+			mask *= weight * N_LIGHTS;
 
 			r = Ray( x, normalize(dirToLight) );
 			r.origin += nl * uEPS_intersect;
@@ -774,7 +775,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
                         }
                         
 			dirToLight = sampleSphereLight(x, nl, lightChoice, dirToLight, weight, seed);
-			mask *= weight;
+			mask *= weight * N_LIGHTS;
 			r = Ray( x, normalize(dirToLight) );
 			r.origin += nl * uEPS_intersect;
 
@@ -795,9 +796,9 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0.0);          
-	vec3 L1 = vec3(1.0, 1.0, 1.0) * 18.0;// White light
-	vec3 L2 = vec3(1.0, 0.8, 0.2) * 15.0;// Yellow light
-	vec3 L3 = vec3(0.1, 0.7, 1.0) * 10.0;// Blue light
+	vec3 L1 = vec3(1.0, 1.0, 1.0) * 13.0;// White light
+	vec3 L2 = vec3(1.0, 0.8, 0.2) * 10.0;// Yellow light
+	vec3 L3 = vec3(0.1, 0.7, 1.0) * 5.0;// Blue light
 		
         spheres[0] = Sphere(150.0, vec3(-400, 900, 200), L1, z, LIGHT);//spherical white Light1 
 	spheres[1] = Sphere(100.0, vec3( 300, 400,-300), L2, z, LIGHT);//spherical yellow Light2
