@@ -6,6 +6,7 @@ precision highp sampler2D;
 
 #include <pathtracing_uniforms_and_defines>
 
+#define N_LIGHTS 2.0
 #define N_SPHERES 2
 #define N_PLANES 4
 #define N_QUADS 2
@@ -1147,7 +1148,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				// save intersection data for future shadowray trace
 				firstTypeWasDIFF = true;
 				dirToLight = sampleQuadLight(x, nl, lightChoice, dirToLight, weight, seed);
-				firstMask = mask * weight;
+				firstMask = mask * weight * N_LIGHTS;
                                 firstRay = Ray( x, normalize(dirToLight) ); // create shadow ray pointed towards light
 				firstRay.origin += nl * uEPS_intersect;
 
@@ -1165,7 +1166,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			}
                         
 			dirToLight = sampleQuadLight(x, nl, lightChoice, dirToLight, weight, seed);
-			mask *= weight;
+			mask *= weight * N_LIGHTS;
 
 			r = Ray( x, normalize(dirToLight) );
 			r.origin += nl * uEPS_intersect;
@@ -1300,7 +1301,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                         }
 
 			dirToLight = sampleQuadLight(x, nl, lightChoice, dirToLight, weight, seed);
-			mask *= weight;
+			mask *= weight * N_LIGHTS;
 			
 			r = Ray( x, normalize(dirToLight) );
 			r.origin += nl * uEPS_intersect;
@@ -1344,7 +1345,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                         }
                         
 			dirToLight = sampleQuadLight(x, nl, lightChoice, dirToLight, weight, seed);
-			mask *= weight;
+			mask *= weight * N_LIGHTS;
 
 			r = Ray( x, normalize(dirToLight) );
 			r.origin += r.direction * scatteringDistance;
@@ -1367,9 +1368,7 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0.0);          
-	vec3 L1 = vec3(1.0, 1.0, 1.0) * 4.0;// White light
-	vec3 L2 = vec3(1.0, 0.8, 0.2);// Yellow light
-	vec3 L3 = vec3(0.2, 0.8, 1.0);// Blue light
+	vec3 L1 = vec3(1.0, 1.0, 1.0) * 2.0;// White light
 	float ceilingHeight = 300.0;
 	
 	quads[0] = Quad( vec3( 0.0,-1.0, 0.0), vec3(-150.0, ceilingHeight,-200.0), vec3(150.0, ceilingHeight,-200.0), vec3(150.0, ceilingHeight,-25.0), vec3(-150.0, ceilingHeight,-25.0), L1, z, LIGHT);// rectangular Area Light in ceiling
