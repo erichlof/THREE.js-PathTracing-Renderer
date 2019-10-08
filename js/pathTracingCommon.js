@@ -142,6 +142,7 @@ out vec4 out_FragColor;
 #define LIGHTWOOD 15
 #define DARKWOOD 16
 #define PAINTING 17
+#define METALCOAT 18
 
 `;
 
@@ -1486,15 +1487,39 @@ vec3 randomDirectionInHemisphere( vec3 nl, inout uvec2 seed )
 
 vec3 randomCosWeightedDirectionInHemisphere( vec3 nl, inout uvec2 seed )
 {
-	float up = sqrt(rand(seed)); // cos-weighted distribution in hemisphere, same as pow(rand(seed), 1.0 / 2.0) below
-	//float up = pow(rand(seed), 1.0 / mix(1.5, 2.5, rand(seed))); // mix between uniform and cos-weighted distribution in hemisphere
-    	float over = sqrt(max(0.0, 1.0 - up * up));
+	//float up = sqrt(rand(seed)); // cos-weighted distribution in hemisphere, same as pow(rand(seed), 0.5) below
+    	float up = pow(rand(seed), 0.33); // slightly biased towards surface normal
+	float over = sqrt(max(0.0, 1.0 - up * up));
 	float around = rand(seed) * TWO_PI;
 	
 	vec3 u = normalize( cross( abs(nl.x) > 0.1 ? vec3(0, 1, 0) : vec3(1, 0, 0), nl ) );
 	vec3 v = cross(nl, u);
 
 	return normalize(cos(around) * over * u + sin(around) * over * v + up * nl);
+}
+
+// //the following alternative skips the creation of tangent and bi-tangent vectors u and v 
+// vec3 randomCosWeightedDirectionInHemisphere( vec3 nl, inout uvec2 seed )
+// {
+// 	float phi = rand(seed) * TWO_PI;
+// 	float theta = 2.0 * rand(seed) - 1.0;
+// 	return nl + vec3(sqrt(1.0 - theta * theta) * vec2(cos(phi), sin(phi)), theta);
+// }
+
+vec3 randomDirectionInPhongSpecular( vec3 reflectionDir, float roughness, inout uvec2 seed )
+{
+	float phi = rand(seed) * TWO_PI;
+	roughness = clamp(roughness, 0.0, 1.0);
+	roughness = mix(13.0, 0.0, sqrt(roughness));
+	float exponent = exp(roughness) + 1.0;
+
+	float cosTheta = pow(rand(seed), 1.0 / (exponent + 1.0));
+	float sinTheta = sqrt(max(0.0, 1.0 - cosTheta * cosTheta));
+
+	vec3 u = normalize( cross( abs(reflectionDir.x) > 0.1 ? vec3(0, 1, 0) : vec3(1, 0, 0), reflectionDir ) );
+	vec3 v = cross(reflectionDir, u);
+
+	return normalize(u * cos(phi) * sinTheta + v * sin(phi) * sinTheta + reflectionDir * cosTheta);
 }
 
 `;
@@ -1674,7 +1699,6 @@ void main( void )
 	}
 		
 	out_FragColor = vec4( pixelColor + previousColor, 1.0 );
-	
 }
 
 `;
