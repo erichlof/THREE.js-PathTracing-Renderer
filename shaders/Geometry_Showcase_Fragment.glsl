@@ -9,6 +9,7 @@ precision highp sampler2D;
 uniform mat4 uTorusInvMatrix;
 uniform mat3 uTorusNormalMatrix;
 
+#define N_LIGHTS 3.0
 #define N_SPHERES 6
 #define N_PLANES 1
 #define N_DISKS 1
@@ -404,18 +405,27 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				// save intersection data for future shadowray trace
 				firstTypeWasDIFF = true;
 				dirToLight = sampleSphereLight(x, nl, lightChoice, dirToLight, weight, seed);
-				firstMask = mask * weight;
+				firstMask = mask * weight * N_LIGHTS;
                                 firstRay = Ray( x, normalize(dirToLight) ); // create shadow ray pointed towards light
 				firstRay.origin += nl * uEPS_intersect;
 
 				// choose random Diffuse sample vector
 				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
+				// Get NdotL for our selected ray direction
+				///float NdotL = max(0.0, dot(nl, r.direction));
+
+				// Probability of sampling a cosine lobe
+				///float sampleProb = NdotL / PI;
+
+				// Do Monte Carlo integration of indirect light (i.e., rendering equation)
+				//    -> This is:  (NdotL * incoming light * BRDF) / probability-of-sample
+				///mask *= (NdotL / PI) / sampleProb;
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
                         
 			dirToLight = sampleSphereLight(x, nl, lightChoice, dirToLight, weight, seed);
-			mask *= weight;
+			mask *= weight * N_LIGHTS;
 
 			r = Ray( x, normalize(dirToLight) );
 			r.origin += nl * uEPS_intersect;
@@ -524,7 +534,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			if (intersec.color.r == 1.0 && rand(seed) < 0.9)
 				lightChoice = spheres[0]; // this makes capsule more white
 			dirToLight = sampleSphereLight(x, nl, lightChoice, dirToLight, weight, seed);
-			mask *= weight;
+			mask *= weight * N_LIGHTS;
 			r = Ray( x, normalize(dirToLight) );
 			r.origin += nl * uEPS_intersect;
 
@@ -544,9 +554,9 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0.0);          
-	vec3 L1 = vec3(1.0, 1.0, 1.0) * 18.0;// White light
-	vec3 L2 = vec3(1.0, 0.8, 0.2) * 15.0;// Yellow light
-	vec3 L3 = vec3(0.1, 0.7, 1.0) * 10.0;// Blue light
+	vec3 L1 = vec3(1.0, 1.0, 1.0) * 13.0;// White light
+	vec3 L2 = vec3(1.0, 0.8, 0.2) * 10.0;// Yellow light
+	vec3 L3 = vec3(0.1, 0.7, 1.0) * 5.0;// Blue light
 		
         spheres[0] = Sphere(150.0, vec3(-400, 900, 200), L1, z, LIGHT);//spherical white Light1 
 	spheres[1] = Sphere(100.0, vec3( 300, 400,-300), L2, z, LIGHT);//spherical yellow Light2
