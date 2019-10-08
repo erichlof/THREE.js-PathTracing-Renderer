@@ -15,6 +15,7 @@ uniform sampler2D tClothTexture;
 uniform sampler2D tDarkWoodTexture;
 uniform sampler2D tLightWoodTexture;
 
+#define N_LIGHTS 2.0
 #define N_SPHERES 3
 #define N_ELLIPSOIDS 2
 #define N_PLANES 1
@@ -340,7 +341,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				// save intersection data for future shadowray trace
 				firstTypeWasDIFF = true;
 				dirToLight = sampleQuadLight(x, nl, lightChoice, dirToLight, weight, seed);
-				firstMask = mask * weight;
+				firstMask = mask * weight * N_LIGHTS;
                                 firstRay = Ray( x, normalize(dirToLight) ); // create shadow ray pointed towards light
 				firstRay.origin += nl * uEPS_intersect;
 
@@ -351,7 +352,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			}
                         
 			dirToLight = sampleQuadLight(x, nl, lightChoice, dirToLight, weight, seed);
-			mask *= weight;
+			mask *= weight * N_LIGHTS;
 
 			r = Ray( x, normalize(dirToLight) );
 			r.origin += nl * uEPS_intersect;
@@ -406,7 +407,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                         }
                         
 			dirToLight = sampleQuadLight(x, nl, lightChoice, dirToLight, weight, seed);
-			mask *= weight;
+			mask *= weight * N_LIGHTS;
 			
 			r = Ray( x, normalize(dirToLight) );
 			r.origin += nl * uEPS_intersect;
@@ -518,7 +519,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                         }
 
 			dirToLight = sampleQuadLight(x, nl, lightChoice, dirToLight, weight, seed);
-			mask *= weight;
+			mask *= weight * N_LIGHTS;
 			
 			r = Ray( x, normalize(dirToLight) );
 			r.origin += nl * uEPS_intersect;
@@ -540,7 +541,7 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0);          
-	vec3 L1 = vec3(1.0, 1.0, 1.0) * 5.0;// Bright White light
+	vec3 L1 = vec3(1.0, 1.0, 1.0) * 3.0;// Bright White light
 	vec3 clothColor = vec3(0.0, 0.2, 1.0);
 	vec3 railWoodColor = vec3(0.05,0.0,0.0);
 	float ceilingHeight = 300.0;
