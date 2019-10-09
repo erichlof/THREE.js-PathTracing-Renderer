@@ -1487,8 +1487,8 @@ vec3 randomDirectionInHemisphere( vec3 nl, inout uvec2 seed )
 
 vec3 randomCosWeightedDirectionInHemisphere( vec3 nl, inout uvec2 seed )
 {
-	//float up = sqrt(rand(seed)); // cos-weighted distribution in hemisphere, same as pow(rand(seed), 0.5) below
-    	float up = pow(rand(seed), 0.33); // slightly biased towards surface normal
+	float up = sqrt(rand(seed)); // cos-weighted distribution in hemisphere, same as pow(rand(seed), 0.5) below
+    	//float up = pow(rand(seed), 0.33); // slightly biased towards surface normal
 	float over = sqrt(max(0.0, 1.0 - up * up));
 	float around = rand(seed) * TWO_PI;
 	
