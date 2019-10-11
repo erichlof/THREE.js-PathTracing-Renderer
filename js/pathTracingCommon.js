@@ -1485,17 +1485,36 @@ vec3 randomDirectionInHemisphere( vec3 nl, inout uvec2 seed )
 	return normalize(cos(around) * over * u + sin(around) * over * v + up * nl);
 }
 
+// vec3 randomCosWeightedDirectionInHemisphere( vec3 nl, inout uvec2 seed )
+// {
+// 	float up = sqrt(rand(seed)); // cos-weighted distribution in hemisphere
+// 	float over = sqrt(max(0.0, 1.0 - up * up));
+// 	float around = rand(seed) * TWO_PI;
+	
+// 	vec3 u = normalize( cross( abs(nl.x) > 0.1 ? vec3(0, 1, 0) : vec3(1, 0, 0), nl ) );
+// 	vec3 v = cross(nl, u);
+
+// 	return normalize(cos(around) * over * u + sin(around) * over * v + up * nl);
+// }
+
+#define N_POINTS 1024.0
+#define Inv_N_POINTS 0.0009765625 //  1 / 1024
+vec3 GetFibonacciPointOnHemisphere(float i)
+{		// the Golden angle in radians		  
+	float theta = mod(i * 2.39996322972865332, TWO_PI);
+	float r = sqrt(i * Inv_N_POINTS); // sqrt pushes points outward to prevent clumping in center of disk
+	return vec3(r * cos(theta), r * sin(theta), sqrt(1.0 - r * r)); // project XY disk points outward along Z axis
+}
+
 vec3 randomCosWeightedDirectionInHemisphere( vec3 nl, inout uvec2 seed )
 {
-	float up = sqrt(rand(seed)); // cos-weighted distribution in hemisphere, same as pow(rand(seed), 0.5) below
-    	//float up = pow(rand(seed), 0.33); // slightly biased towards surface normal
-	float over = sqrt(max(0.0, 1.0 - up * up));
-	float around = rand(seed) * TWO_PI;
+	float i = floor(N_POINTS * rand(seed));
+	vec3 p = GetFibonacciPointOnHemisphere(i);
 	
 	vec3 u = normalize( cross( abs(nl.x) > 0.1 ? vec3(0, 1, 0) : vec3(1, 0, 0), nl ) );
 	vec3 v = cross(nl, u);
 
-	return normalize(cos(around) * over * u + sin(around) * over * v + up * nl);
+	return (u * p.x + v * p.y + nl * p.z);
 }
 
 // //the following alternative skips the creation of tangent and bi-tangent vectors u and v 
