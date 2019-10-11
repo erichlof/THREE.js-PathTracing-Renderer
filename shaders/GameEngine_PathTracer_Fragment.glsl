@@ -220,7 +220,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 	float nc, nt, ratioIoR, Re, Tr;
 	float weight;
 	float randChoose;
-	float diffuseColorBleeding = 0.2; // range: 0.0 - 0.5, amount of color bleeding between surfaces
+	float diffuseColorBleeding = 0.1; // range: 0.0 - 0.5, amount of color bleeding between surfaces
 
 	int diffuseCount = 0;
 
@@ -324,7 +324,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 					// continue with the reflection ray
 					continue;
 				}
-				
+					
 				accumCol += mask * intersec.emission; // add reflective result to the refractive result (if any)
 				break;	
 			}
@@ -534,13 +534,12 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 			if (diffuseCount == 1 && firstTypeWasCOAT && rand(seed) < diffuseColorBleeding)
                         {
                                 // choose random Diffuse sample vector
-				dirToLight = normalize(lightChoice.position - x);
-				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(dirToLight, seed)) );
+				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
 				r.origin += nl * uEPS_intersect;
 				continue;
                         }
                         
-			if (intersec.color.r == 1.0 && rand(seed) < 0.8)
+			if (intersec.color.r == 1.0 && rand(seed) < 0.9)
 				lightChoice = spheres[0]; // this makes capsule more white
 			dirToLight = sampleSphereLight(x, nl, lightChoice, dirToLight, weight, seed);
 			mask *= weight * N_LIGHTS;
