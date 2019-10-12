@@ -1497,19 +1497,27 @@ vec3 randomDirectionInHemisphere( vec3 nl, inout uvec2 seed )
 // 	return normalize(cos(around) * over * u + sin(around) * over * v + up * nl);
 // }
 
-#define N_POINTS 1024.0
-#define Inv_N_POINTS 0.0009765625 //  1 / 1024
-vec3 GetFibonacciPointOnHemisphere(float i)
-{		// the Golden angle in radians		  
-	float theta = mod(i * 2.39996322972865332, TWO_PI);
-	float r = sqrt(i * Inv_N_POINTS); // sqrt pushes points outward to prevent clumping in center of disk
-	return vec3(r * cos(theta), r * sin(theta), sqrt(1.0 - r * r)); // project XY disk points outward along Z axis
-}
+#define N_POINTS 32.0
+// vec3 GetFibonacciPointOnHemisphere(float i, float roughness)
+// {			// the Golden angle in radians
+// 	float theta = i * 2.39996322972865332 + mod(uSampleCounter, TWO_PI);
+// 	theta = mod(theta, TWO_PI);
+// 	float r = sqrt(i / N_POINTS) * roughness; // sqrt pushes points outward to prevent clumping in center of disk
+// 	float x = r * cos(theta);
+// 	float y = r * sin(theta);
+// 	return vec3(x, y, sqrt(1.0 - x * x - y * y)); // project XY disk points outward along Z axis
+// }
 
 vec3 randomCosWeightedDirectionInHemisphere( vec3 nl, inout uvec2 seed )
 {
-	float i = floor(N_POINTS * rand(seed));
-	vec3 p = GetFibonacciPointOnHemisphere(i);
+	float i = floor(N_POINTS * rand(seed)) + rand(seed) * 0.5;
+			// the Golden angle in radians
+	float theta = i * 2.39996322972865332 + mod(uSampleCounter, TWO_PI);
+	theta = mod(theta, TWO_PI);
+	float r = sqrt(i / N_POINTS); // sqrt pushes points outward to prevent clumping in center of disk
+	float x = r * cos(theta);
+	float y = r * sin(theta);
+	vec3 p = vec3(x, y, sqrt(1.0 - x * x - y * y)); // project XY disk points outward along Z axis
 	
 	vec3 u = normalize( cross( abs(nl.x) > 0.1 ? vec3(0, 1, 0) : vec3(1, 0, 0), nl ) );
 	vec3 v = cross(nl, u);
@@ -1538,8 +1546,20 @@ vec3 randomDirectionInPhongSpecular( vec3 reflectionDir, float roughness, inout 
 	vec3 u = normalize( cross( abs(reflectionDir.x) > 0.1 ? vec3(0, 1, 0) : vec3(1, 0, 0), reflectionDir ) );
 	vec3 v = cross(reflectionDir, u);
 
-	return normalize(u * cos(phi) * sinTheta + v * sin(phi) * sinTheta + reflectionDir * cosTheta);
+	return (u * cos(phi) * sinTheta + v * sin(phi) * sinTheta + reflectionDir * cosTheta);
 }
+
+// vec3 randomDirectionInSpecular( vec3 reflectionDir, float roughness, inout uvec2 seed )
+// {
+// 	//roughness *= sqrt(roughness);
+// 	float i = floor(N_POINTS * rand(seed)) + rand(seed);
+// 	vec3 p = GetFibonacciPointOnHemisphere(i, roughness);
+	
+// 	vec3 u = normalize( cross( abs(reflectionDir.x) > 0.1 ? vec3(0, 1, 0) : vec3(1, 0, 0), reflectionDir ) );
+// 	vec3 v = cross(reflectionDir, u);
+
+// 	return (u * p.x + v * p.y + reflectionDir * p.z);
+// }
 
 `;
 
