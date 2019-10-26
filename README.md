@@ -50,10 +50,14 @@ Along the left wall, a study in Box vs. Cone CSG: [CSG_Museum Demo #4](https://e
 
 Important note! - There is a hidden Easter Egg in one of the 4 Museum demo rooms.  Happy hunting!
 
-<h3>Materials Demo</h3>
+<h3>Materials Demos</h3>
 
 * [Switching Materials Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Switching_Materials.html)
 This demo showcases different materials possibilities. The materials that are feautured are: Diffuse (matte wall paint/chalk), Refractive (glass/water), Specular (aluminum/gold), ClearCoat (billiard ball, plastic, porcelain), Car clearCoat (colored metal with clear coat), Translucent (skin/balloons, etc.), and shiny SubSurface scattering (polished Jade/wax/marble, etc.) <br>
+
+* [Material Roughness Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Material_Roughness.html)
+Demonstrates increasing levels of roughness on different materials.  From left to right, roughness on the left sphere is set at 0.0, then 0.1, 0.2, 0.3 etc., all the way to the max: 1.0 roughness on the right sphere. The demo starts out with a clearcoat cyan plastic-like material, but you can choose different material presets from the selection menu, as well as change the material color in realtime.  I have researched and perfected the importance sampling of different specular roughness lobes, which results in very fast convergence, especially smoother to medium-rough materials.  Try all the presets for yourself! <br>
+<br>
 
 <h3> Real-Time Transformation of Primitive Geometry</h3>
 
