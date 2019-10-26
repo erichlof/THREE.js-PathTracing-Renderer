@@ -1498,19 +1498,10 @@ vec3 randomDirectionInHemisphere( vec3 nl, inout uvec2 seed )
 // }
 
 #define N_POINTS 32.0
-// vec3 GetFibonacciPointOnHemisphere(float i, float roughness)
-// {			// the Golden angle in radians
-// 	float theta = i * 2.39996322972865332 + mod(uSampleCounter, TWO_PI);
-// 	theta = mod(theta, TWO_PI);
-// 	float r = sqrt(i / N_POINTS) * roughness; // sqrt pushes points outward to prevent clumping in center of disk
-// 	float x = r * cos(theta);
-// 	float y = r * sin(theta);
-// 	return vec3(x, y, sqrt(1.0 - x * x - y * y)); // project XY disk points outward along Z axis
-// }
 
 vec3 randomCosWeightedDirectionInHemisphere( vec3 nl, inout uvec2 seed )
 {
-	float i = floor(N_POINTS * rand(seed)) + rand(seed) * 0.5;
+	float i = floor(N_POINTS * rand(seed)) + (rand(seed) * 0.5);
 			// the Golden angle in radians
 	float theta = i * 2.39996322972865332 + mod(uSampleCounter, TWO_PI);
 	theta = mod(theta, TWO_PI);
@@ -1525,6 +1516,19 @@ vec3 randomCosWeightedDirectionInHemisphere( vec3 nl, inout uvec2 seed )
 	return (u * p.x + v * p.y + nl * p.z);
 }
 
+vec3 randomDirectionInSpecularLobe( vec3 reflectionDir, float roughness, inout uvec2 seed )
+{
+	roughness = mix( 13.0, 0.0, sqrt(clamp(roughness, 0.0, 1.0)) );
+	float cosTheta = pow(rand(seed), 1.0 / (exp(roughness) + 1.0));
+	float sinTheta = sqrt(max(0.0, 1.0 - cosTheta * cosTheta));
+	float phi = rand(seed) * TWO_PI;
+	
+	vec3 u = normalize( cross( abs(reflectionDir.x) > 0.1 ? vec3(0, 1, 0) : vec3(1, 0, 0), reflectionDir ) );
+	vec3 v = cross(reflectionDir, u);
+
+	return (u * cos(phi) * sinTheta + v * sin(phi) * sinTheta + reflectionDir * cosTheta);
+}
+
 // //the following alternative skips the creation of tangent and bi-tangent vectors u and v 
 // vec3 randomCosWeightedDirectionInHemisphere( vec3 nl, inout uvec2 seed )
 // {
@@ -1533,32 +1537,21 @@ vec3 randomCosWeightedDirectionInHemisphere( vec3 nl, inout uvec2 seed )
 // 	return nl + vec3(sqrt(1.0 - theta * theta) * vec2(cos(phi), sin(phi)), theta);
 // }
 
-vec3 randomDirectionInPhongSpecular( vec3 reflectionDir, float roughness, inout uvec2 seed )
-{
-	float phi = rand(seed) * TWO_PI;
-	roughness = clamp(roughness, 0.0, 1.0);
-	roughness = mix(13.0, 0.0, sqrt(roughness));
-	float exponent = exp(roughness) + 1.0;
-
-	float cosTheta = pow(rand(seed), 1.0 / (exponent + 1.0));
-	float sinTheta = sqrt(max(0.0, 1.0 - cosTheta * cosTheta));
-
-	vec3 u = normalize( cross( abs(reflectionDir.x) > 0.1 ? vec3(0, 1, 0) : vec3(1, 0, 0), reflectionDir ) );
-	vec3 v = cross(reflectionDir, u);
-
-	return (u * cos(phi) * sinTheta + v * sin(phi) * sinTheta + reflectionDir * cosTheta);
-}
-
-// vec3 randomDirectionInSpecular( vec3 reflectionDir, float roughness, inout uvec2 seed )
+// vec3 randomDirectionInPhongSpecular( vec3 reflectionDir, float roughness, inout uvec2 seed )
 // {
-// 	//roughness *= sqrt(roughness);
-// 	float i = floor(N_POINTS * rand(seed)) + rand(seed);
-// 	vec3 p = GetFibonacciPointOnHemisphere(i, roughness);
-	
+// 	float phi = rand(seed) * TWO_PI;
+// 	roughness = clamp(roughness, 0.0, 1.0);
+// 	roughness = mix(13.0, 0.0, sqrt(roughness));
+// 	float exponent = exp(roughness) + 1.0;
+// 	//weight = (exponent + 2.0) / (exponent + 1.0);
+
+// 	float cosTheta = pow(rand(seed), 1.0 / (exponent + 1.0));
+// 	float radius = sqrt(max(0.0, 1.0 - cosTheta * cosTheta));
+
 // 	vec3 u = normalize( cross( abs(reflectionDir.x) > 0.1 ? vec3(0, 1, 0) : vec3(1, 0, 0), reflectionDir ) );
 // 	vec3 v = cross(reflectionDir, u);
 
-// 	return (u * p.x + v * p.y + reflectionDir * p.z);
+// 	return (u * cos(phi) * radius + v * sin(phi) * radius + reflectionDir * cosTheta);
 // }
 
 `;
@@ -1594,9 +1587,9 @@ THREE.ShaderChunk[ 'pathtracing_sample_quad_light' ] = `
 vec3 sampleQuadLight(vec3 x, vec3 nl, Quad light, vec3 dirToLight, out float weight, inout uvec2 seed)
 {
 	vec3 randPointOnLight;
-	randPointOnLight.x = mix(light.v0.x, light.v1.x, rand(seed));
+	randPointOnLight.x = mix(light.v0.x, light.v1.x, clamp(rand(seed), 0.1, 0.9));
 	randPointOnLight.y = light.v0.y;
-	randPointOnLight.z = mix(light.v0.z, light.v3.z, rand(seed));
+	randPointOnLight.z = mix(light.v0.z, light.v3.z, clamp(rand(seed), 0.1, 0.9));
 	dirToLight = randPointOnLight - x;
 	float r2 = distance(light.v0, light.v1) * distance(light.v0, light.v3);
 	float d2 = dot(dirToLight, dirToLight);
