@@ -564,7 +564,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 				break;	
 			}
 
-			accumCol = mask * intersec.emission; // looking at light through a reflection
+			if (sampleLight || bounceIsSpecular)
+				accumCol = mask * intersec.emission;
 			// reached a light, so we can exit
 			break;
 		} // end if (intersec.type == LIGHT)
