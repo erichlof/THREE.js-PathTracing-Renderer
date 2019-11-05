@@ -38,7 +38,7 @@ var changeMaterialColor = false;
 function init_GUI() {
 
         HDRI_ExposureController = {
-                HDRI_Exposure: 1.9
+                HDRI_Exposure: 1.8
 	};
 	material_TypeController = {
                 Material_Type: 3
@@ -271,9 +271,10 @@ function initSceneData() {
 
         var vpa = new Float32Array(modelMesh.geometry.attributes.position.array);
         var vna = new Float32Array(modelMesh.geometry.attributes.normal.array);
+        var vta = null;
         var modelHasUVs = false;
         if (modelMesh.geometry.attributes.uv !== undefined) {
-                var vta = new Float32Array(modelMesh.geometry.attributes.uv.array);
+                vta = new Float32Array(modelMesh.geometry.attributes.uv.array);
                 modelHasUVs = true;
         }
                 
@@ -455,7 +456,7 @@ function initSceneData() {
 
         hdrLoader = new THREE.RGBELoader();
 
-        hdrPath = 'textures/symmetrical_garden_2k.hdr';
+	hdrPath = 'textures/symmetrical_garden_2k.hdr';
 	//hdrPath = 'textures/cloud_layers_2k.hdr';
         //hdrPath = 'textures/delta_2_2k.hdr';
         //hdrPath = 'textures/kiara_5_noon_2k.hdr';
