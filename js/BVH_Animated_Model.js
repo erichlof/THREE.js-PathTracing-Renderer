@@ -63,8 +63,8 @@ function load_GLTF_Model() {
                 meshGroup.traverse( function ( child ) {
 
                         if ( child.isMesh ) {
-                                let hasUVs = child.geometry.attributes.uv !== undefined ? 3 : 0
-                                let hasNormals = child.geometry.attributes.normal !== undefined ? 3 : 0
+                                let hasUVs = child.geometry.attributes.uv !== undefined ? 3 : 0;
+                                let hasNormals = child.geometry.attributes.normal !== undefined ? 3 : 0;
                                 
                                 if ( parent !== undefined && parent.name !== child.parent.name ) {
                                         matrixStack.pop();
@@ -189,9 +189,10 @@ function initSceneData() {
 
         var vpa = new Float32Array(modelMesh.geometry.attributes.position.array);
         var vna = new Float32Array(modelMesh.geometry.attributes.normal.array);
+        var vta = null;
         var modelHasUVs = false;
         if (modelMesh.geometry.attributes.uv !== undefined) {
-                var vta = new Float32Array(modelMesh.geometry.attributes.uv.array);
+                vta = new Float32Array(modelMesh.geometry.attributes.uv.array);
                 modelHasUVs = true;
         }
                 
