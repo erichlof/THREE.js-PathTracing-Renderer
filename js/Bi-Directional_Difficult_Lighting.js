@@ -227,7 +227,7 @@ function initSceneData() {
         
         var vpa = new Float32Array(modelMesh.geometry.attributes.position.array);
         var vna = new Float32Array(modelMesh.geometry.attributes.normal.array);
-        var vta;
+        var vta = null;
         var modelHasUVs = false;
         if (modelMesh.geometry.attributes.uv !== undefined) {
                 vta = new Float32Array(modelMesh.geometry.attributes.uv.array);
