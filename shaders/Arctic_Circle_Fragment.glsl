@@ -49,8 +49,8 @@ float QuadIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 v3, Ray r )
 // TERRAIN
 
 #define TERRAIN_FAR 100000.0
-#define TERRAIN_HEIGHT 1400.0 // terrain amplitude
-#define TERRAIN_LIFT  -890.0 // how much to lift/drop the entire terrain
+#define TERRAIN_HEIGHT 2000.0 // terrain amplitude
+#define TERRAIN_LIFT  -1900.0 // how much to lift/drop the entire terrain
 #define TERRAIN_SAMPLE_SCALE 0.00001
 
 float lookup_Heightmap( in vec3 pos )
@@ -61,7 +61,7 @@ float lookup_Heightmap( in vec3 pos )
 	float mult = 1.0;
 	float scaleAccum = mult;
 
-	for (int i = 0; i < 1; i ++)
+	for (int i = 0; i < 3; i ++)
 	{
 		h += mult * texture(t_PerlinNoise, uv + 0.5).x;
 		mult *= 0.5;
@@ -99,37 +99,36 @@ vec3 terrain_calcNormal( vec3 pos, float t )
 float TerrainIntersect( Ray r )
 {
 	vec3 pos = r.origin;
-	vec3 dir = (r.direction);
+	vec3 dir = normalize(r.direction);
 	float h = 0.0;
 	float t = 0.0;
 	float epsilon = 1.0;
 	
-	for(int i = 0; i < 300; i++)
+	for(int i = 0; i < 200; i++)
 	{
 		h = pos.y - lookup_Heightmap(pos);
 		if (t > TERRAIN_FAR || h < epsilon) break;
-		t += h * 0.5;
-		pos += dir * h * 0.5; 
+		t += h * 0.6;
+		pos += dir * h * 0.6; 
 	}
 	return (h <= epsilon) ? t : INFINITY;	    
 }
 
 bool isLightSourceVisible( vec3 pos, vec3 n, vec3 dirToLight)
 {
+	dirToLight = normalize(dirToLight);
 	float h = 1.0;
 	float t = 0.0;
 	float terrainHeight = TERRAIN_HEIGHT * 1.5 + TERRAIN_LIFT;
-	pos += n * 2.0; // large outdoor scene requires moving away from surface a lot, 
-	// otherwise, black patches from incorrect self-shadowing occur on mobile due to less precision
-
-	for(int i = 0; i < 300; i++)
+	
+	for(int i = 0; i < 100; i++)
 	{
 		h = pos.y - lookup_Heightmap(pos);
-		pos += dirToLight * h;
 		if ( pos.y > terrainHeight || h < 0.0) break;
+		pos += dirToLight * h;
 	}
 
-	return h >= 0.0;
+	return h > 0.0;
 }
 
 // WATER
@@ -293,7 +292,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 	Ray cameraRay = r;
 
 	vec3 randVec = vec3(rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0);
-	vec3 initialSkyColor = Get_Sky_Color(r, sunDirection);
+	vec3 initialSkyColor = Get_Sky_Color(r, normalize(sunDirection));
 	
 	//Ray skyRay = Ray( r.origin * vec3(0.05), normalize(vec3(r.direction.x, abs(r.direction.y), r.direction.z)) );
 	//float dc = SphereIntersect( 10000.0, vec3(skyRay.origin.x, -9800, skyRay.origin.z) + vec3(rand(seed) * 2.0), skyRay );
@@ -337,7 +336,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 			{
 				if (!reflectionTime) 
 				{
-					accumCol = mask * Get_Sky_Color(r, sunDirection);
+					accumCol = mask * Get_Sky_Color(r, normalize(sunDirection));
 					
 					// start back at the refractive surface, but this time follow reflective branch
 					r = firstRay;
@@ -348,11 +347,9 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 					continue;
 				}
 
-				accumCol += mask * Get_Sky_Color(r, sunDirection); // add reflective result to the refractive result (if any)
+				accumCol += mask * Get_Sky_Color(r, normalize(sunDirection)); // add reflective result to the refractive result (if any)
 				break;
 			}
-			else 
-				accumCol = mask * Get_Sky_Color(r, sunDirection);
 			
 			// reached the sky light, so we can exit
 			break;
@@ -373,25 +370,22 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 			float rockNoise = texture(t_PerlinNoise, (0.0001 * x.xz) + 0.5).x;
 			vec3 rockColor0 = vec3(0.2, 0.2, 0.2) * 0.01 * rockNoise;
 			vec3 rockColor1 = vec3(0.2, 0.2, 0.2) * rockNoise;
-			vec3 snowColor = vec3(0.7);
-			vec3 up = vec3(0, 1, 0);
+			vec3 snowColor = vec3(0.9);
+			vec3 up = normalize(vec3(0, 1, 0));
 			vec3 randomSkyVec = normalize(vec3(randVec.x, abs(randVec.y), randVec.z));
-			vec3 skyColor = clamp(Get_Sky_Color(Ray(x, randomSkyVec), sunDirection), 0.0, 1.0);
-			vec3 sunColor = clamp(Get_Sky_Color(Ray(x, normalize(sunDirection + (randVec * 0.02))), sunDirection), 0.0, 1.0);
-			float terrainLayer = clamp( ((x.y + -TERRAIN_LIFT) + (rockNoise * 1000.0) * n.y) / (TERRAIN_HEIGHT * 1.0), 0.0, 1.0 );
-
-		
-		
+			vec3 skyColor = clamp(Get_Sky_Color( Ray(x, normalize(up + (n * 0.1))), normalize(sunDirection) ), 0.0, 1.0);
+			vec3 sunColor = clamp(Get_Sky_Color( Ray(x, normalize(normalize(vec3(sunDirection.x, sunDirection.y + 0.05, sunDirection.z)) + (randomSkyVec * 0.02))), normalize(sunDirection) ), 0.0, 1.0);
+			float terrainLayer = clamp( ((x.y + -TERRAIN_LIFT) + (rockNoise * 1000.0) * n.y) / (TERRAIN_HEIGHT * 1.2), 0.0, 1.0 );
+			
 			if (x.y > uWaterLevel && terrainLayer > 0.95 && terrainLayer > 0.9 - n.y)
 			{
-				intersec.color = snowColor;
-				mask = skyColor * max(0.0, dot(up, n)); // ambient color from sky light
-				n = normalize(mix(n, sunDirection, terrainLayer * 0.5));
+				intersec.color = mix(vec3(0.5), snowColor, n.y);
+				mask = mix(intersec.color * skyColor, intersec.color * sunColor, 0.7);// ambient color from sky light
 			}	
 			else
 			{
 				intersec.color = mix(rockColor0, rockColor1, clamp(terrainLayer * n.y, 0.0, 1.0) );
-				mask = intersec.color * skyColor * max(0.0, dot(randomSkyVec, n)); // ambient color from sky light
+				mask = intersec.color * 0.4 * dot(up, normalize(sunDirection));
 				if (x.y > uWaterLevel && cameraUnderWaterValue == 0.0 && bounces == 0)
 				{
 					nc = 1.0; // IOR of air
@@ -401,25 +395,26 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 					firstTypeWasREFR = true;
 					reflectionTime = false;
 					firstRay = Ray( x, reflect(r.direction, n) );
-					firstRay.origin += n * uEPS_intersect;
+					firstRay.origin += nl * uEPS_intersect;
 					mask *= Tr;
 					firstMask = vec3(1) * Re;
 				}
 			}
 				
-			vec3 shadowRayDirection = normalize(sunDirection + (randomSkyVec * max(dot(sunDirection, up), 0.1)));						
+			vec3 shadowRayDirection = normalize(normalize(sunDirection) + (randomSkyVec * 0.3));						
 			if ( isLightSourceVisible(x, n, shadowRayDirection) && x.y > uWaterLevel ) // in direct sunlight
 			{
-				mask = intersec.color * sunColor * max(0.0, dot(n, normalize(sunDirection + (randVec * 0.01))));	
+				mask = intersec.color * sunColor;	
 			}
 				
-			if (firstTypeWasREFR)
+			if (firstTypeWasREFR )
 			{
 				if (!reflectionTime) 
 				{	
 					accumCol = mask;
 					// start back at the refractive surface, but this time follow reflective branch
 					r = firstRay;
+					r.direction = normalize(r.direction);
 					mask = firstMask;
 					// set/reset variables
 					reflectionTime = true;
@@ -479,7 +474,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 	float hitDistance = distance(cameraRay.origin, firstX);
 	float fogDistance;
 
-	if ( skyHit && cameraUnderWaterValue == 0.0 ) // sky and clouds
+	if (skyHit && cameraUnderWaterValue == 0.0 ) // sky and clouds
 	{
 		//vec3 cloudColor = cld.rgb / (cld.a + 0.00001);
 		//vec3 sunColor = clamp(Get_Sky_Color( Ray(skyPos, normalize((randVec * 0.03) + sunDirection)), sunDirection ), 0.0, 1.0);
@@ -496,11 +491,12 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 
 		// underwater fog effect
 		hitDistance *= cameraUnderWaterValue;
-		accumCol = mix( vec3(0.0,0.001,0.001), accumCol, clamp( exp2( -hitDistance * 0.0005 ), 0.0, 1.0 ) );
+		accumCol = mix( vec3(0.0,0.001,0.001), accumCol, clamp( exp2( -hitDistance * 0.001 ), 0.0, 1.0 ) );
 	}
 	
 	
-	return max(vec3(0), accumCol); // prevents black spot artifacts appearing in the water      
+	return max(vec3(0), accumCol); // prevents black spot artifacts appearing in the water 
+	     
 }
 
 /*
