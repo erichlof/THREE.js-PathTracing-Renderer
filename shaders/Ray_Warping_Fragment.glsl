@@ -36,6 +36,25 @@ Box boxes[N_BOXES];
 #include <pathtracing_box_intersect>
 
 #include <pathtracing_sample_quad_light>
+// vec3 sampleQuadLight(vec3 x, vec3 nl, Quad light, vec3 dirToLight, out float weight, inout uvec2 seed)
+// {
+// 	float steps = 20.0;
+// 	vec3 randPointOnLight;
+// 	randPointOnLight.x = mix(light.v0.x, light.v1.x, clamp(floor((1.0 + steps) * rand(seed)) / steps, 0.1, 0.9));
+// 	randPointOnLight.y = light.v0.y;
+// 	randPointOnLight.z = mix(light.v0.z, light.v3.z, clamp(floor((1.0 + steps) * rand(seed)) / steps, 0.1, 0.9));
+// 	dirToLight = randPointOnLight - x;
+// 	float r2 = distance(light.v0, light.v1) * distance(light.v0, light.v3);
+// 	float d2 = dot(dirToLight, dirToLight);
+// 	float cos_a_max = sqrt(1.0 - clamp( r2 / d2, 0.0, 1.0));
+
+// 	dirToLight = normalize(dirToLight);
+// 	float dotNlRayDir = max(0.0, dot(nl, dirToLight)); 
+// 	weight =  2.0 * (1.0 - cos_a_max) * max(0.0, -dot(dirToLight, light.normal)) * dotNlRayDir; 
+// 	weight = clamp(weight, 0.0, 1.0);
+
+// 	return dirToLight;
+// }
 
 
 mat4 makeRotateY(float rot)
@@ -603,7 +622,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		
 	} // end for (int bounces = 0; bounces < 6; bounces++)
 	
-	return accumCol;      
+	
+	return max(vec3(0), accumCol);
+     
 } // end vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 
