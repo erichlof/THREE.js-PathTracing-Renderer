@@ -1240,7 +1240,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		
 	} // end for (int bounces = 0; bounces < 7; bounces++)
 	
-	return accumCol;      
+
+	return max(vec3(0), accumCol);
+	      
 } // end vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 
@@ -1249,7 +1251,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 void SetupScene(void)
 //-----------------------------------------------------------------------
 {
-	vec3 z  = vec3(0.0);          
+	vec3 z  = vec3(0);          
 	vec3 L1 = vec3(1.0, 1.0, 1.0) * 2.0;// White light
 	float ceilingHeight = 300.0;
 	
