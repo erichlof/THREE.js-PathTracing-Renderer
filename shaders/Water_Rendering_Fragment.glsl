@@ -431,7 +431,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		
 	} // end for (int bounces = 0; bounces < 5; bounces++)
 	
-	return max(vec3(0), accumCol); // prevents black spot artifacts appearing in the water     
+	
+	return max(vec3(0), accumCol); // prevents black spot artifacts appearing in the water 
+	     
 }
 
 
