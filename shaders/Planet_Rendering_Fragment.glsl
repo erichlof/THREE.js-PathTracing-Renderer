@@ -35,6 +35,7 @@ Sphere spheres[N_SPHERES];
 
 #define EARTH_RADIUS      6360.0 // in Km
 #define ATMOSPHERE_RADIUS 6420.0 // in Km
+#define SUN_POWER 30.0
 
 vec3 hash33(vec3 p)
 {
@@ -148,7 +149,7 @@ vec3 computeIncidentLight(Ray r, float tmin, float tmax)
 		} 
 		tCurrent += segmentLength; 
     	} 
-    return (sumR * betaR * phaseR + sumM * betaM * phaseM) * 20.0; 
+    return (sumR * betaR * phaseR + sumM * betaM * phaseM) * SUN_POWER;
 } 
 
 
@@ -186,7 +187,7 @@ float getTerrainHeight_Detail( in vec3 pos )
 	float h = 0.0;
 	float amp = TERRAIN_HEIGHT;
 
-	for (int i = 0; i < 12; i ++)
+	for (int i = 0; i < 9; i ++)
 	{
 		h += amp * texture(t_PerlinNoise, uv + 0.5).x;
 		amp *= 0.5;
@@ -218,11 +219,12 @@ vec3 terrain_calcNormal( vec3 pos, float t )
 
 bool terrain_isSunVisible( vec3 pos, vec3 n, vec3 dirToLight)
 {
+	dirToLight = normalize(dirToLight);
 	float h = 1.0;
 	float a = 0.0;
 	float t = 0.0;
 	float terrainHeight = TERRAIN_HEIGHT * 2.0 + TERRAIN_LIFT + EARTH_RADIUS;
-	pos += n * 0.02;
+	pos += n * 0.01;
 
 	if (dot(n, dirToLight) < 0.0)
 		return false;
@@ -483,7 +485,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	bool isDayTime = true;
 	
 	
-	if (uCameraWithinAtmosphere && dot(uSunDirection, uCameraFrameUp) < 0.0)
+	if (dot(normalize(uSunDirection), normalize(uCameraFrameUp)) <= 0.0)
 	{
 		isDayTime = false;
 	}
@@ -553,7 +555,6 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			firstX = x;
 		
 		
-
 		// ray hits terrain
 		if (intersec.type == TERRAIN)
 		{
@@ -563,48 +564,51 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			vec2 uv;
 			uv.x = dot(x, uCameraFrameRight);
 			uv.y = dot(x, uCameraFrameForward);
-			float rockNoise = texture(t_PerlinNoise, (0.2 * uv)).x;
-			vec3 rockColor0 = vec3(0.2, 0.2, 0.2) * 0.01 * rockNoise;
-			vec3 rockColor1 = vec3(0.2, 0.2, 0.2) * rockNoise;
-			vec3 snowColor = vec3(0.7);
+			float rockNoise = texture(t_PerlinNoise, (0.05 * uv)).x;
+			vec3 rockColor0 = vec3(0.04, 0.01, 0.01) * clamp(rockNoise + 0.1, 0.1, 1.0);
+			vec3 rockColor1 = vec3(0.08, 0.07, 0.07) * clamp(rockNoise + 0.1, 0.1, 1.0);
+			vec3 snowColor = vec3(1);
 			vec3 up = normalize(x);
 			float nY = max(0.0, dot(n, up));
-			vec3 sunDirection = uSunDirection;
+			vec3 sunDirection = normalize(uSunDirection);
 			vec3 randomSkyVec = normalize(n + (randVec * 0.2));
-			vec3 skyColor = computeIncidentLight(Ray(x, randomSkyVec), 0.0, tMax);
-			vec3 sunColor = computeIncidentLight(Ray(x, sunDirection), 0.0, tMax);
-			sunColor = clamp(sunColor + 0.5, 0.0, 1.0);
+			vec3 skyColor = computeIncidentLight(Ray(x, normalize(up)), 0.0, tMax);
+			vec3 sunColor = computeIncidentLight(Ray(x, normalize(normalize(sunDirection) + (randomSkyVec * 0.02))), 0.0, tMax);
 			float terrainLayer = clamp( (altitude + (rockNoise * 1.0) * nY) / (TERRAIN_HEIGHT * 1.5 + TERRAIN_LIFT), 0.0, 1.0 );
 
 			if (!isDayTime)
-				sunDirection *= -1.0;
+				sunDirection = normalize(-sunDirection);
+			else
+				sunColor = sunColor + 0.3;
+			
+				
 
-			if (terrainLayer > 0.7 && terrainLayer > 1.0 - nY)
+			if (terrainLayer > 0.8 && terrainLayer > 1.0 - nY)
 			{
-				intersec.color = snowColor;
-				mask = skyColor * max(0.0, dot(up, n)); // ambient color from sky light
-				n = normalize(mix(n, sunDirection, terrainLayer * 0.5));
+				intersec.color = mix(vec3(0.7), snowColor, terrainLayer * nY);
+				mask = mix(intersec.color * skyColor, intersec.color * sunColor, dot(normalize(sunDirection), up));// ambient color from sky light
 			}	
 			else
 			{
-				intersec.color = mix(rockColor0, rockColor1, clamp(terrainLayer * nY, 0.0, 1.0) );
-				mask = intersec.color * skyColor * max(0.0, dot(randomSkyVec, n)); // ambient color from sky light
+				intersec.color = mix(rockColor0, rockColor1, clamp(nY, 0.0, 1.0) );
+				//skyColor = (uCameraWithinAtmosphere && isDayTime) ? (skyColor + 0.5) : skyColor;
+				mask = intersec.color * skyColor; // ambient color from sky light
 			}		
 				
-			vec3 shadowRayDirection = normalize(sunDirection + (0.1 * randomSkyVec * max(dot(sunDirection, up), 0.0)));
+			vec3 shadowRayDirection = normalize(normalize(sunDirection) + (randomSkyVec * 0.05));
 									
 			if ( bounces == 0 && terrain_isSunVisible(x, n, shadowRayDirection) ) // in direct sunlight
 			{
 				if (isDayTime)
-					mask = intersec.color * sunColor * max(0.0, dot(n, normalize(sunDirection + (randVec * 0.01))));
+					mask = intersec.color * sunColor;
 				else 	
-					mask = intersec.color * 0.002 * max(0.0, dot(n, normalize(sunDirection + (randVec * 0.01))));
+					mask = intersec.color * 0.002;
 			}
 			
-			// if (isDayTime && altitude < 1.0) // terrain is under water
-			// {
-			// 	mask = mix(rockColor0, mask, clamp(0.1*altitude, 0.0, 1.0));
-			// }
+			if (isDayTime && altitude < 1.0) // terrain is under water
+			{
+				mask = mix(rockColor0, mask, clamp(0.1*altitude, 0.0, 1.0)) * 0.1;
+			}
 			
 			if (firstTypeWasREFR)
 			{
@@ -696,14 +700,15 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	}
 
 	// SUN
-	if (((waterHit && uCameraWithinAtmosphere) || !terrainHit) && intersec.type == LIGHT)
+	if ((uCameraUnderWater > 0.0 || uCameraWithinAtmosphere || !terrainHit) && intersec.type == LIGHT)
 	{	
 		vec3 sampleSkyCol = computeIncidentLight(r, 0.0, tMax);
-		accumCol = mix(sampleSkyCol, intersec.emission, 0.5);
+		mask = mix(sampleSkyCol, intersec.emission, 0.5);
+		accumCol = mask;
 	}
 	
 	// MOON
-	if (((waterHit && uCameraWithinAtmosphere) || !terrainHit) && intersec.type == DIFF)
+	if ((uCameraUnderWater > 0.0 || uCameraWithinAtmosphere || !terrainHit) && intersec.type == DIFF)
 	{
 		vec2 uv;
 		vec3 mn = intersec.normal;
@@ -740,7 +745,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		accumCol += starVal;
 	}
 
-	return max(vec3(0), accumCol); // prevents black spot artifacts appearing in the water      
+
+        return max(vec3(0), accumCol); // prevents black spot artifacts appearing in the water
+
 }
 
 
@@ -749,9 +756,9 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0); // no color value, black        
-        vec3 L1 = vec3(1.0, 0.9, 0.8) * 5.0;// Sun Light
+        vec3 L1 = vec3(1.0, 0.9, 0.8) * SUN_POWER;// Sun Light
 	spheres[0] = Sphere( 100.0, cameraPosition + (normalize( uSunDirection) * 5000.0), L1, z, LIGHT);//Sun
-	spheres[1] = Sphere( 150.0, cameraPosition + (normalize(-uSunDirection) * 5000.0), z, vec3(1.5), DIFF);//Moon	
+	spheres[1] = Sphere( 150.0, cameraPosition + (normalize(-uSunDirection) * 5000.0), z, vec3(1), DIFF);//Moon	
 }
 
 // tentFilter from Peter Shirley's 'Realistic Ray Tracing (2nd Edition)' book, pg. 60		
