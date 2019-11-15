@@ -663,7 +663,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		accumCol = (maskEyePath * maskLightPath);
 	}
 	
-	return accumCol;      
+	return max(vec3(0), accumCol);      
 }
 
 
@@ -671,9 +671,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 void SetupScene(void)
 //-----------------------------------------------------------------------
 {
-	vec3 z  = vec3(0.0);// No color value, Black        
-	//vec3 L1 = vec3(1.0) * 6.0;// Bright White light
-	vec3 L2 = vec3(1.0, 0.9, 0.8) * 3.0;// Bright Yellowish light
+	vec3 z  = vec3(0);// No color value, Black
+	vec3 L2 = vec3(1.0, 0.9, 0.8) * 6.0;// Bright Yellowish light
 	vec3 tableColor = vec3(1.0, 0.7, 0.4) * 0.6;
 	vec3 brassColor = vec3(1.0, 0.7, 0.5) * 0.7;
 	
