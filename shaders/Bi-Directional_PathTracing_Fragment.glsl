@@ -480,7 +480,6 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 				// save intersection data for future shadow ray trace
 				firstTypeWasDIFF = true;
 				
-				//weight = sampleSphereLight(x, nl, dirToLight, lightChoice, seed);
 				dirToLight = normalize(lightHitPos - x);
 				firstLightHitDistance = distance(lightHitPos, x);
 				lightHitDistance = firstLightHitDistance;
@@ -568,7 +567,9 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 		
 	} // end for (int bounces = 0; bounces < 6; bounces++)
 	
-	return accumCol;      
+
+	return max(vec3(0), accumCol);
+
 } // end vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 
@@ -578,8 +579,8 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0);// No color value, Black        
-	vec3 L1 = vec3(1.0, 1.0, 1.0) * 8.0;// Bright White light
-	vec3 L2 = vec3(0.936507, 0.642866, 0.310431) * 8.0;// Bright Yellowish light
+	vec3 L1 = vec3(1.0) * 15.0;// Bright White light
+	vec3 L2 = vec3(0.936507, 0.642866, 0.310431) * 10.0;// Bright Yellowish light
 	vec3 wallColor = vec3(1.0, 0.98, 1.0) * 0.7;
 	vec3 tableColor = vec3(1.0, 0.7, 0.4) * 0.8;
 	vec3 lampColor = vec3(1.0, 1.0, 0.8) * 0.7;
