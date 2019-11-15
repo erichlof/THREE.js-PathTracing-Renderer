@@ -401,7 +401,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 			if (bounces == 0)
 			{
-				accumCol = mask * clamp(intersec.emission, 0.0, 1.0);
+				accumCol = mask * clamp(intersec.emission, 0.0, 10.0);
 				break;
 			}
 
@@ -433,7 +433,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 					if (sampleLight)
 						accumCol = mask * intersec.emission;
 					else if (bounceIsSpecular)
-						accumCol = mask * clamp(intersec.emission, 0.0, 1.0);
+						accumCol = mask * clamp(intersec.emission, 0.0, 10.0);
 					
 					// start back at the refractive surface, but this time follow reflective branch
 					r = firstRay;
@@ -453,7 +453,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				}	
 				else if (bounceIsSpecular)
 				{
-					accumCol += mask * clamp(intersec.emission, 0.0, 1.0);
+					accumCol += mask * clamp(intersec.emission, 0.0, 10.0);
 					break;
 				}
 			}
@@ -481,7 +481,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				break;	
 			}
 
-			accumCol = mask * clamp(intersec.emission, 0.0, 1.0); // looking at light through a reflection
+			accumCol = mask * clamp(intersec.emission, 0.0, 10.0); // looking at light through a reflection
 			// reached a light, so we can exit
 			break;
 		} // end if (intersec.type == POINT_LIGHT)
@@ -699,7 +699,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		
 	} // end for (int bounces = 0; bounces < 5; bounces++)
 	
-	return accumCol;      
+	
+	return max(vec3(0), accumCol);
+	    
 } // end vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 
