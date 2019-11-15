@@ -50,6 +50,7 @@ Cone cones[N_CONES];
 #include <pathtracing_cone_intersect>
 #include <pathtracing_sample_quad_light>
 
+
 //-----------------------------------------------------------------------
 float SceneIntersect( Ray r, inout Intersection intersec )
 //-----------------------------------------------------------------------
@@ -330,7 +331,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			diffuseCount++;
 
 			if (intersec.type == CLOTH)
-				intersec.color *= pow(texture(tClothTexture, (10.0 * x.xz) / 512.0).rgb, vec3(2.2));
+				intersec.color *= pow(clamp(texture(tClothTexture, (10.0 * x.xz) / 512.0).rgb, 0.0, 1.0), vec3(2.2));
 					
 			mask *= intersec.color;
 
@@ -475,13 +476,13 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				isSpot = true;
 			
 			if (intersec.type == DARKWOOD)
-				intersec.color *= pow(texture(tDarkWoodTexture, 3.5 * x.xz / 512.0).rgb, vec3(2.2));
+				intersec.color *= pow(clamp(texture(tDarkWoodTexture, 3.5 * x.xz / 512.0).rgb, 0.0, 1.0), vec3(2.2));
 			
 			if (isSpot)
 				intersec.color = clamp(intersec.color + 0.5, 0.0, 1.0);
 				
 			if (intersec.type == LIGHTWOOD)
-				intersec.color *= pow(texture(tLightWoodTexture, 6.0 * x.xz / 512.0).rgb, vec3(2.2));	
+				intersec.color *= pow(clamp(texture(tLightWoodTexture, 6.0 * x.xz / 512.0).rgb, 0.0, 1.0), vec3(2.2));	
 				
 		
 			vec3 reflectVec = reflect(r.direction, nl);
@@ -530,9 +531,11 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		} //end if (intersec.type == LIGHTWOOD || intersec.type == DARKWOOD)
 		
 		
-	} // end for (int depth = 0; depth < 4; depth++)
+	} // end for (int bounces = 0; bounces < 4; bounces++)
 	
-	return accumCol;      
+
+	return max(vec3(0), accumCol);
+
 }
 
 
@@ -541,21 +544,21 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0);          
-	vec3 L1 = vec3(1.0, 1.0, 1.0) * 3.0;// Bright White light
-	vec3 clothColor = vec3(0.0, 0.2, 1.0);
+	vec3 L1 = vec3(1.0, 1.0, 1.0) * 4.0;// Bright White light
+	vec3 clothColor = vec3(0.0, 0.2, 1.0) * 0.7;
 	vec3 railWoodColor = vec3(0.05,0.0,0.0);
 	float ceilingHeight = 300.0;
 	
-	quads[0] = Quad( vec3(0,-1, 0), vec3(-150, ceilingHeight,-300), vec3(-50, ceilingHeight,-300), vec3(-50, ceilingHeight,300), vec3(-150, ceilingHeight,300), L1, z, 0.0, LIGHT);// rectangular Area Light in ceiling
-	quads[1] = Quad( vec3(0,-1, 0), vec3(50, ceilingHeight,-300), vec3(150, ceilingHeight,-300), vec3(150, ceilingHeight,300), vec3(50, ceilingHeight,300), L1, z, 0.0, LIGHT);// rectangular Area Light in ceiling
+	quads[0] = Quad( normalize(vec3(0,-1, 0)), vec3(-150, ceilingHeight,-300), vec3(-50, ceilingHeight,-300), vec3(-50, ceilingHeight,300), vec3(-150, ceilingHeight,300), L1, z, 0.0, LIGHT);// rectangular Area Light in ceiling
+	quads[1] = Quad( normalize(vec3(0,-1, 0)), vec3(50, ceilingHeight,-300), vec3(150, ceilingHeight,-300), vec3(150, ceilingHeight,300), vec3(50, ceilingHeight,300), L1, z, 0.0, LIGHT);// rectangular Area Light in ceiling
 	quads[2] = Quad( normalize(vec3(1,-1, 0)), vec3(-200,0,-400), vec3(-190,10,-400), vec3(-190,10,400), vec3(-200,0,400), z, clothColor, 0.0, CLOTH);// Cloth left Rail bottom portion
 	quads[3] = Quad( normalize(vec3(-1,-1, 0)), vec3(190,10,-400), vec3(200,0,-400),  vec3(200,0,400), vec3(190,10,400), z, clothColor, 0.0, CLOTH);// Cloth right Rail bottom portion
 	quads[4] = Quad( normalize(vec3(0,-1, 1)), vec3(-200,0,-400), vec3(200,0,-400), vec3(200,10,-390), vec3(-200,10,-390), z, clothColor, 0.0, CLOTH);// Cloth back Rail bottom portion
 	quads[5] = Quad( normalize(vec3(0,-1, -1)), vec3(200,0,400), vec3(-200,0,400),  vec3(-200,10,390), vec3(200,10,390), z, clothColor, 0.0, CLOTH);// Cloth front Rail bottom portion
 	
-	spheres[0] = Sphere(9.0, vec3( 25, 9, 25), z, vec3(0.7, 0.7, 0.5), 0.0, COAT);// White Ball
-	spheres[1] = Sphere(9.0, vec3(-50, 9, 0),   z, vec3(0.9, 0.5, 0.0), 0.0, COAT);// Yellow Ball
-	spheres[2] = Sphere(9.0, vec3( 50, 9, 0), z, vec3(0.3, 0.0, 0.0), 0.0, COAT);// Red Ball
+	spheres[0] = Sphere(9.0, vec3( 25, 9, 25), z, vec3(0.8, 0.7, 0.4), 0.0, COAT);// White Ball
+	spheres[1] = Sphere(9.0, vec3(-50, 9, 0),   z, vec3(0.9, 0.4, 0.0), 0.0, COAT);// Yellow Ball
+	spheres[2] = Sphere(9.0, vec3( 50, 9, 0), z, vec3(0.25, 0.0, 0.0), 0.0, COAT);// Red Ball
         
 	ellipsoids[0] = Ellipsoid(  vec3(1.97,1.97,1), vec3(0,2,79), z, vec3(0,0.3,0.7), 0.0, DIFF);//CueStick blue chalked tip
 	ellipsoids[1] = Ellipsoid(  vec3(4.5,4.5,2), vec3(0,4.5,-375), z, vec3(0.01), 0.0, DIFF);//CueStick rubber butt-end cap
