@@ -396,7 +396,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
         } // end for (int bounces = 0; bounces < 3; bounces++)
 
 
-	return accumCol;      
+	return max(vec3(0), accumCol);
+
 }
 
 //-----------------------------------------------------------------------
