@@ -78,7 +78,11 @@ var screenOutputShader = {
 		'void main()',
 		'{',
 			'vec3 pixelColor = texelFetch(tPathTracedImageTexture, ivec2(gl_FragCoord.xy), 0).rgb * uOneOverSampleCounter;',
-			'out_FragColor = vec4( pow(pixelColor, vec3(0.4545)), 1.0 );',	
+			'pixelColor = ReinhardToneMapping(pixelColor);',
+			'//pixelColor = Uncharted2ToneMapping(pixelColor);',
+			'//pixelColor = OptimizedCineonToneMapping(pixelColor);',
+			'//pixelColor = ACESFilmicToneMapping(pixelColor);',
+			'out_FragColor = clamp(vec4( pow(pixelColor, vec3(0.4545)), 0.0 ), 0.0, 1.0);',	
 		'}'
 		
         ].join( '\n' )
@@ -148,11 +152,11 @@ out vec4 out_FragColor;
 
 THREE.ShaderChunk[ 'pathtracing_skymodel_defines' ] = `
 
-#define TURBIDITY 0.3
-#define RAYLEIGH_COEFFICIENT 2.0
+#define TURBIDITY 0.2//0.3
+#define RAYLEIGH_COEFFICIENT 2.5//2.0
 
-#define MIE_COEFFICIENT 0.05
-#define MIE_DIRECTIONAL_G 0.76
+#define MIE_COEFFICIENT 0.05//0.05
+#define MIE_DIRECTIONAL_G 0.76//0.76
 
 // constants for atmospheric scattering
 #define THREE_OVER_SIXTEENPI 0.05968310365946075
@@ -173,9 +177,9 @@ THREE.ShaderChunk[ 'pathtracing_skymodel_defines' ] = `
 #define MIE_ZENITH_LENGTH 1250.0
 #define UP_VECTOR vec3(0.0, 1.0, 0.0)
 
-#define SUN_INTENSITY 20.0 //800.0 if Uncharted2ToneMap is used
+#define SUN_POWER 50.0
 #define SUN_ANGULAR_DIAMETER_COS 0.99983194915 // 66 arc seconds -> degrees, and the cosine of that
-#define CUTOFF_ANGLE 1.66 // original value (PI / 1.9) 
+#define CUTOFF_ANGLE 1.6 
 
 `;
 
@@ -1396,7 +1400,7 @@ vec3 totalMie()
 
 float SunIntensity(float zenithAngleCos)
 {
-	return SUN_INTENSITY * max( 0.0, 1.0 - exp( -( CUTOFF_ANGLE - acos(zenithAngleCos) ) ) );
+	return SUN_POWER * max( 0.0, 1.0 - exp( -( CUTOFF_ANGLE - acos(zenithAngleCos) ) ) );
 }
 
 vec3 Get_Sky_Color(Ray r, vec3 sunDirection)
@@ -1407,9 +1411,9 @@ vec3 Get_Sky_Color(Ray r, vec3 sunDirection)
 	/* most of the following code is borrowed from the three.js shader file: SkyShader.js */
 
     	// Cosine angles
-	float cosViewSunAngle = max(0.001, dot(viewDir, sunDirection));
+	float cosViewSunAngle = dot(viewDir, sunDirection);
     	float cosSunUpAngle = dot(sunDirection, UP_VECTOR); // allowed to be negative: + is daytime, - is nighttime
-    	float cosUpViewAngle = max(0.001, dot(UP_VECTOR, viewDir)); // cannot be 0, used as divisor
+    	float cosUpViewAngle = max(0.0001, dot(UP_VECTOR, viewDir)); // cannot be 0, used as divisor
 	
         // Get sun intensity based on how high in the sky it is
     	float sunE = SunIntensity(cosSunUpAngle);
@@ -1444,9 +1448,9 @@ vec3 Get_Sky_Color(Ray r, vec3 sunDirection)
     	sky *= mix( vec3(1.0), pow(somethingElse * Fex,vec3(0.5)), 
 	    clamp(oneMinusCosSun * oneMinusCosSun * oneMinusCosSun * oneMinusCosSun * oneMinusCosSun, 0.0, 1.0) );
 
-	// composition + solar disc
+	// composition + solar disk
     	float sundisk = smoothstep(SUN_ANGULAR_DIAMETER_COS - 0.0001, SUN_ANGULAR_DIAMETER_COS, cosViewSunAngle);
-	vec3 sun = (sunE * SUN_INTENSITY * Fex) * sundisk;
+	vec3 sun = (sunE * SUN_POWER * Fex) * sundisk;
 	
 	return sky + sun;
 }
