@@ -458,7 +458,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 			if (bounces == 0)
 			{
-				accumCol = mask * clamp(intersec.emission, 0.0, 1.0);
+				accumCol = mask * clamp(intersec.emission, 0.0, 10.0);
 				break;
 			}
 
@@ -490,7 +490,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 					if (sampleLight)
 						accumCol = mask * intersec.emission;
 					else if (bounceIsSpecular)
-						accumCol = mask * clamp(intersec.emission, 0.0, 1.0);
+						accumCol = mask * clamp(intersec.emission, 0.0, 10.0);
 					
 					// start back at the refractive surface, but this time follow reflective branch
 					r = firstRay;
@@ -510,7 +510,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				}	
 				else if (bounceIsSpecular)
 				{
-					accumCol += mask * clamp(intersec.emission, 0.0, 1.0);
+					accumCol += mask * clamp(intersec.emission, 0.0, 10.0);
 					break;
 				}
 			}
@@ -538,7 +538,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				break;
 			}
 
-			accumCol = mask * clamp(intersec.emission, 0.0, 1.0); // looking at light through a reflection
+			accumCol = mask * clamp(intersec.emission, 0.0, 10.0); // looking at light through a reflection
 			// reached a light, so we can exit
 			break;
 		} // end if (intersec.type == SPOTLIGHT)
@@ -756,7 +756,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		
 	} // end for (int bounces = 0; bounces < 5; bounces++)
 	
-	return accumCol;      
+
+	return max(vec3(0), accumCol);
+
 } // end vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 
@@ -766,7 +768,7 @@ void SetupScene(void)
 {
 	vec3 z  = vec3(0);
 	vec3 L1 = vec3(0.5, 0.7, 1.0) * 0.01; // Blueish sky light
-	vec3 L2 = vec3(1.0, 1.0, 1.0) * 500.0; // Bright white light bulb
+	vec3 L2 = vec3(1.0, 1.0, 1.0) * 400.0; // Bright white light bulb
 	
 	spheres[0] = Sphere( 10000.0, vec3(0, 0, 0), L1, z, LIGHT);//large spherical sky light
 	spheres[1] = Sphere( 3.0, vec3(-10, 100, -50), L2, z, SPOT_LIGHT);//small spherical light
