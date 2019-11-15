@@ -125,7 +125,7 @@ float sea_octave( vec2 uv, float choppy )
 	uv += noise(uv);        
 	vec2 wv = 1.0 - abs(sin(uv));
 	vec2 swv = abs(cos(uv));    
-	wv = mix(wv, swv, wv);
+	wv = mix(wv, swv, clamp(wv, 0.0, 1.0));
 	return pow(1.0 - pow(wv.x * wv.y, 0.65), choppy);
 }
 
@@ -248,7 +248,7 @@ vec4 render_clouds( Ray eye, vec3 p, vec3 sunDirection )
 		T *= T_i;
 		cloudLight = cloud_light(pos, light_step, coverage);
 		C += T * cloudLight * dens * march_step;
-		C = mix(C * 0.95, C, cloudLight);
+		C = mix(C * 0.95, C, clamp(cloudLight, 0.0, 1.0));
 		alpha += (1.0 - T_i) * (1.0 - alpha);
 		pos += dir_step;
 	}
@@ -503,7 +503,8 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 			{
 				if (!reflectionTime) 
 				{
-					accumCol = mask * skyColor;
+					//weight = dot(r.direction, sunDirection) < 0.99 ? 1.0 : 0.0;
+					accumCol = mask * skyColor;// * weight;
 					
 					// start back at the refractive surface, but this time follow reflective branch
 					r = firstRay;
@@ -525,9 +526,8 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 			{
 				if (!shadowTime) 
 				{
-					accumCol = mask * 0.03 * skyColor;
-					if (dot(r.direction, sunDirection) < 0.98)
-						accumCol = mask * 1.0 * skyColor;
+					weight = dot(r.direction, sunDirection) < 0.99 ? 1.0 : 0.0;
+					accumCol = mask * skyColor * weight;// * 0.5;
 					
 					// start back at the diffuse surface, but this time follow shadow ray branch
 					r = firstRay;
@@ -540,14 +540,12 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 					// continue with the shadow ray
 					continue;
 				}
-				else if (bounceIsSpecular || sampleLight)
-				{
-					accumCol += mask * skyColor * 0.5; // add shadow ray result to the colorbleed result (if any)
-					break;
-				}		
+				
+				accumCol += mask * skyColor * 0.5; // add shadow ray result to the colorbleed result (if any)
+				break;
+						
 			}
 
-			accumCol = mask * skyColor;
 			// reached the sky light, so we can exit
 			break;
 		} // end if (t == INFINITY)
@@ -670,18 +668,19 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 			{	
 				// save intersection data for future shadowray trace
 				firstTypeWasDIFF = true;
-				firstRay = Ray( x, normalize(sunDirection + (randVec * 0.01)) );
+				firstRay = Ray( x, normalize(sunDirection) );// create shadow ray pointed towards light
+				firstRay.direction = normalize(randomDirectionInSpecularLobe(firstRay.direction, 0.02, seed ));
 				firstRay.origin += nl * uEPS_intersect;
 				
-				weight = max(0.0, dot(firstRay.direction, nl)) * 0.03; // down-weight directSunLight contribution
-				firstMask = mask * clamp(weight, 0.0, 1.0) * cloudShadowFactor;
+				weight = max(0.0, dot(firstRay.direction, nl)) * 0.005; // down-weight directSunLight contribution
+				firstMask = mask * weight * cloudShadowFactor;
 
 				// choose random Diffuse sample vector
 				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
-			if (!firstTypeWasDIFF && diffuseCount < 2 && rand(seed) < diffuseColorBleeding)
+			if (!firstTypeWasDIFF && diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
 			{
 				// choose random Diffuse sample vector
 				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
@@ -689,11 +688,12 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 				continue;
 			}
                         
-			r = Ray( x, normalize(sunDirection + (randVec * 0.01)) );
+			r = Ray( x, normalize(sunDirection) );// create shadow ray pointed towards light
+			r.direction = normalize(randomDirectionInSpecularLobe(r.direction, 0.02, seed ));
 			r.origin += nl * uEPS_intersect;
 			
-			weight = max(0.0, dot(r.direction, nl)) * 0.03; // down-weight directSunLight contribution
-			mask *= clamp(weight, 0.0, 1.0) * cloudShadowFactor;
+			weight = max(0.0, dot(r.direction, nl)) * 0.005; // down-weight directSunLight contribution
+			mask *= weight * cloudShadowFactor;
 			
 			sampleLight = true;
 			continue;
@@ -801,6 +801,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 			mask *= intersec.color;
 
 			diffuseCount++;
+
 			bounceIsSpecular = false;
 
 			if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
@@ -811,11 +812,12 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 				continue;
                         }
 			
-			r = Ray( x, normalize(sunDirection + (randVec * 0.01)) );
+			r = Ray( x, normalize(sunDirection) );// create shadow ray pointed towards light
+			r.direction = normalize(randomDirectionInSpecularLobe(r.direction, 0.02, seed ));
 			r.origin += nl * uEPS_intersect;
 
-			weight = max(0.0, dot(r.direction, nl)) * 0.03; // down-weight directSunLight contribution
-			mask *= clamp(weight, 0.0, 1.0);
+			weight = max(0.0, dot(r.direction, nl)) * 0.005; // down-weight directSunLight contribution
+			mask *= weight;
 			
 			sampleLight = true;
 			continue;
@@ -850,7 +852,9 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 		accumCol = mix( vec3(0.0,0.05,0.05), accumCol, clamp( exp2( -hitDistance * 0.001 ), 0.0, 1.0 ) );
 	}
 
-	return max(vec3(0), accumCol); // prevents black spot artifacts appearing in the water   
+
+	return max(vec3(0), accumCol); // prevents black spot artifacts appearing in the water
+
 }
 
 
