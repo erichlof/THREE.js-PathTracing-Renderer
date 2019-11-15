@@ -664,7 +664,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		
 	} // end for (int bounces = 0; bounces < 6; bounces++)
 	
-	return accumCol;      
+	
+	return max(vec3(0), accumCol);
+	      
 } // end vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 
@@ -673,10 +675,10 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 void SetupScene(void)
 //-----------------------------------------------------------------------
 {
-	vec3 z  = vec3(0.0);          
+	vec3 z  = vec3(0);          
 	vec3 L1 = vec3(1.0, 1.0, 1.0) * 13.0;// White light
 	vec3 L2 = vec3(1.0, 0.8, 0.2) * 10.0;// Yellow light
-	vec3 L3 = vec3(0.1, 0.7, 1.0) * 5.0;// Blue light
+	vec3 L3 = vec3(0.1, 0.7, 1.0) * 5.0; // Blue light
 		
         spheres[0] = Sphere(150.0, vec3(-400, 900, 200), L1, z, LIGHT);//spherical white Light1 
 	spheres[1] = Sphere(100.0, vec3(300, 400, -300), L2, z, LIGHT);//spherical yellow Light2
