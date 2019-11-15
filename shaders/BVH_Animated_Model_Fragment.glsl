@@ -450,7 +450,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 					continue;
 				}
 				
-				accumCol += mask * intersec.emission; // add reflective result to the refractive result (if any)
+				if (bounceIsSpecular)
+					accumCol += mask * intersec.emission; // add reflective result to the refractive result (if any)
 				break;
 			}
 
@@ -488,7 +489,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 
 			if (bounces == 0)
 			{
-				accumCol = mask * clamp(intersec.emission, 0.0, 1.0);
+				accumCol = mask * clamp(intersec.emission, 0.0, 10.0);
 				break;
 			}
 
@@ -520,7 +521,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 					if (sampleLight)
 						accumCol = mask * intersec.emission;
 					else if (bounceIsSpecular)
-						accumCol = mask * clamp(intersec.emission, 0.0, 1.0);
+						accumCol = mask * clamp(intersec.emission, 0.0, 10.0);
 					
 					// start back at the refractive surface, but this time follow reflective branch
 					r = firstRay;
@@ -540,7 +541,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 				}	
 				else if (bounceIsSpecular)
 				{
-					accumCol += mask * clamp(intersec.emission, 0.0, 1.0);
+					accumCol += mask * clamp(intersec.emission, 0.0, 10.0);
 					break;
 				}
 			}
@@ -564,11 +565,12 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 					continue;
 				}
 				
-				accumCol += mask * intersec.emission; // add reflective result to the refractive result (if any)
+				accumCol += mask * clamp(intersec.emission, 0.0, 10.0); // add reflective result to the refractive result (if any)
 				break;	
 			}
 
-			accumCol = mask * clamp(intersec.emission, 0.0, 1.0); // looking at light through a reflection
+			accumCol = mask * clamp(intersec.emission, 0.0, 10.0); // looking at light through a reflection
+			
 			// reached a light, so we can exit
 			break;
 		} // end if (intersec.type == SPOTLIGHT)
@@ -761,6 +763,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 			r = Ray(x, normalize(tdir));
 			r.origin -= nl * uEPS_intersect;
 			
+			bounceIsSpecular = true;
 			continue;
 			
 		} // end if (intersec.type == REFR)
@@ -822,7 +825,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 		
 	} // end for (int bounces = 0; bounces < 5; bounces++)
 	
-	return accumCol;      
+
+	return max(vec3(0), accumCol);
+	    
 } // end vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 
 
@@ -832,7 +837,7 @@ void SetupScene(void)
 {
 	vec3 z  = vec3(0);          
 	vec3 L1 = vec3(0.5, 0.7, 1.0) * 0.02;// Blueish sky light
-	vec3 L2 = vec3(1.0, 1.0, 1.0) * 800.0;// Bright white light bulb
+	vec3 L2 = vec3(1.0, 1.0, 1.0) * 300.0;// Bright white light bulb
 	
 	spheres[0] = Sphere( 10000.0,     vec3(0, 0, 0), L1, z, LIGHT, false);//spherical white Light1
 	spheres[1] = Sphere( 3.0, vec3(-10, 100, -50), L2, z, SPOT_LIGHT, false);//spotlight
