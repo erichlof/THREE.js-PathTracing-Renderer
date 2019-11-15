@@ -158,7 +158,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 			if (bounces == 0)
 			{
-				accumCol = mask * intersec.emission;
+				accumCol = intersec.emission;
 				break;
 			}
 
@@ -234,7 +234,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				break;
 
 			// create caustic ray
-                        if (diffuseCount == 1 && rand(seed) < 0.2)
+                        if (diffuseCount == 1 && rand(seed) < 0.2) // 0.2
                         {
 				createCausticRay = true;
 
@@ -245,7 +245,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				r.origin += nl * uEPS_intersect;
 				
 				weight = max(0.0, dot(nl, r.direction));
-				mask *= weight * 0.8;
+				mask *= weight;
 
 				continue;
 			}
@@ -290,7 +290,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		
 	} // end for (int bounces = 0; bounces < 5; bounces++)
 	
-	return accumCol;      
+
+	return max(vec3(0), accumCol);
+
 }
 
 
@@ -299,7 +301,7 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0);// No color value, Black        
-	vec3 L1 = vec3(1.0, 0.7, 0.38) * 35.0;// Bright Yellowish light
+	vec3 L1 = vec3(1.0, 0.7, 0.38) * 30.0;// Bright Yellowish light
 	
 	quads[0] = Quad( vec3( 0.0, 0.0, 1.0), vec3(  0.0,   0.0,-559.2), vec3(549.6,   0.0,-559.2), vec3(549.6, 548.8,-559.2), vec3(  0.0, 548.8,-559.2),  z, vec3(1),  DIFF);// Back Wall
 	quads[1] = Quad( vec3( 1.0, 0.0, 0.0), vec3(  0.0,   0.0,   0.0), vec3(  0.0,   0.0,-559.2), vec3(  0.0, 548.8,-559.2), vec3(  0.0, 548.8,   0.0),  z, vec3(0.7, 0.12,0.05),  DIFF);// Left Wall Red
