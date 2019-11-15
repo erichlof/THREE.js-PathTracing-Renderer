@@ -21,7 +21,7 @@ For comparison, here is a real photograph of the original Cornell Box vs. a rend
 
 * [Terrain Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Terrain_Rendering.html) combines traditional raytracing with raymarching to render stunning outdoor environments in real time!  Land is procedurally generated, can be altered with simple parameters. Total number of triangles processed for these worlds: 2! (for screen size quad) :-)
 
-* [Arctic Circle Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Arctic_Circle.html) I was experimenting with my ray marching engine and what types of environments I could get out of it by just altering some parameters.  I'm still trying to figure out how to render the blueish color deep inside polar ice, but I'm happy with how the demo feels though.  When the scene first opens, it's almost like you're transported to the far north! The time of year for this demo is summer - notice how the sun never quite sets below the horizon.  As path tracing gets faster in the future, this is how we will travel!  ;-) <br>
+* [Arctic Circle Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Arctic_Circle.html) I was experimenting with my ray marching engine and what types of environments I could get out of it by just altering some parameters.  I'm still trying to figure out how to render the blueish color deep inside polar ice, but I'm happy with how the demo feels now.  When the scene first opens, it's almost like you're transported to the far north! The time of year for this demo is summer - notice how the sun never quite sets below the horizon.  As path tracing gets faster in the future, this is how we will travel!  ;-) <br>
 
 * [Planet Demo (W.I.P.)](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Planet_Rendering.html) takes raymarching and raytracing to the extreme and renders an entire Earth-like planet with physically-based atmosphere!  Still a work in progress, the terrain is procedurely generated.  Although the mountains/lakes are too repetitious (W.I.P.), this simulation demonstrates the power of path tracing: you can hover above the planet at high orbit (5000 Km altitude), then drop all the way down and land your camera right on top of a single rock or single lake water wave (1 meter). All planet/atmosphere measurements are to scale.  The level of detail possible with raytracing is extraordinary! *Note: demo is for desktop only - mobile lacks the precision to explore the terrain correctly and has rendering artifacts. Mobile is a W.I.P.*
 
@@ -30,7 +30,8 @@ For comparison, here is a real photograph of the original Cornell Box vs. a rend
 * [Water Rendering Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Water_Rendering.html) Renders photo-realistic water and simulates waves at 60 FPS. No triangle meshes are needed, as opposed to other traditional engines/renderers. The water surface is achieved through ray marching.
 
 <h3>BVH Acceleration Structure Demos (Desktop only)</h3>
-*Note: the following BVH demos are for Desktop only.  Mobile is a Work in Progress*
+
+*Note: the following BVH demos are for Desktop only.  Mobile is still a Work in Progress*
 
 * [BVH Point Light Source Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/BVH_Point_Light_Source.html) Demonstrates use of a point light to illuminate the famous Stanford Bunny (30,000+ triangles!).  Normally a dark scene like this with a very bright small light would be super-noisy, but thanks to randomized direct light targeting, the image converges almost instantly!
 
@@ -102,7 +103,7 @@ The following classic scene rendering comes from later in the same paper by Veac
 ![](readme-Images/Veach-DifficultLighting.jpg)
 
 And here is that scene rendered in real-time by the three.js path tracer: Try pressing 'E' and 'R' to open and close the door! <br>
-* [Difficult Lighting Classic Test Scene Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Bi-Directional_Difficult_Lighting.html) *Note: because it uses a BVH, this demo is for desktop only - mobile is a W.I.P.* <br>
+* [Difficult Lighting Classic Test Scene Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Bi-Directional_Difficult_Lighting.html) *Note: because it uses a BVH, this demo is for Desktop only - Mobile is a W.I.P.* <br>
 
 I had the above images only to go on - there are no scene dimensions specifications that I am aware of.  However, I feel that I have captured the essence and purpose of his test scene rooms.  I think Veach would be interested to know that his scenes, which probably took several minutes if not hours to render back in the 1990's, are now rendering real-time (30-60 fps) on a web browser! :-D
 
