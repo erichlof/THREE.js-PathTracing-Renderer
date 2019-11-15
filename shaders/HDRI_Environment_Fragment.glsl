@@ -20,6 +20,7 @@ uniform float uHDRI_Exposure;
 //float InvTextureWidth = 0.0009765625;   // (1 / 1024 texture width)
 
 #define INV_TEXTURE_WIDTH 0.00048828125
+#define SUN_DIRECTION vec3(-0.555, 1.0, 0.205)
 
 #define N_SPHERES 4
 #define N_BOXES 2
@@ -28,10 +29,12 @@ uniform float uHDRI_Exposure;
 
 struct Ray { vec3 origin; vec3 direction; };
 struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; int type; };
+struct OpenCylinder { vec3 p0; vec3 p1; float radius; vec3 emission; vec3 color; int type; };
 struct Box { vec3 minCorner; vec3 maxCorner; vec3 emission; vec3 color; int type; };
 struct Intersection { vec3 normal; vec3 emission; vec3 color; vec2 uv; int type; int albedoTextureID; };
 
 Sphere spheres[N_SPHERES];
+OpenCylinder openCylinders[1];
 Box boxes[N_BOXES];
 
 
@@ -46,6 +49,8 @@ Box boxes[N_BOXES];
 #include <pathtracing_boundingbox_intersect>
 
 #include <pathtracing_bvhTriangle_intersect>
+
+#include <pathtracing_opencylinder_intersect>
 	
 
 struct StackLevelData
@@ -128,6 +133,18 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.albedoTextureID = -1;
 		}
         }
+
+	/* // this long cylinder helps to show the direction that points to the sun in the HDR image
+	d = OpenCylinderIntersect( openCylinders[0].p0, openCylinders[0].p1, openCylinders[0].radius, r, n );
+	if (d < t)
+	{
+		t = d;
+		intersec.normal = normalize(n);
+		intersec.emission = openCylinders[0].emission;
+		intersec.color = openCylinders[0].color;
+		intersec.type = openCylinders[0].type;
+	} */
+	
 	
 	for (int i = 0; i < N_BOXES; i++)
         {
@@ -275,11 +292,10 @@ vec3 Get_HDR_Color(Ray r)
 	sampleUV.x = (1.0 + atan(r.direction.x, -r.direction.z) * ONE_OVER_PI) * 0.5;
   	sampleUV.y = acos(-r.direction.y) * ONE_OVER_PI;
 	vec4 texData = texture( tHDRTexture, sampleUV );
-	texData = RGBEToLinear(texData);
+	vec3 texColor = vec3(RGBEToLinear(texData));
 	
 	// tone mapping options
-        //vec3 texColor = LinearToneMapping(texData.rgb);
-        vec3 texColor = ReinhardToneMapping(texData.rgb);
+        //vec3 texColor = ReinhardToneMapping(texData.rgb);
         //vec3 texColor = Uncharted2ToneMapping(texData.rgb);
         //vec3 texColor = OptimizedCineonToneMapping(texData.rgb);
         //vec3 texColor = ACESFilmicToneMapping(texData.rgb);
@@ -305,15 +321,22 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
         
 	float t;
         float nc, nt, ratioIoR, Re, Tr;
+	float weight;
+	float diffuseColorBleeding = 0.5; // range: 0.0 - 0.5, amount of color bleeding between surfaces
+
+	int diffuseCount = 0;
 
 	bool bounceIsSpecular = true;
+	bool sampleLight = false;
 	bool firstTypeWasREFR = false;
 	bool reflectionTime = false;
+	bool firstTypeWasDIFF = false;
+	bool shadowTime = false;
 	bool firstTypeWasCOAT = false;
 	bool specularTime = false;
 	
 	
-	for (int bounces = 0; bounces < 6; bounces++)
+	for (int bounces = 0; bounces < 7; bounces++)
 	{
 		
 		t = SceneIntersect(r, intersec);
@@ -325,15 +348,41 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 			if (bounces == 0)
 			{
-				accumCol = mask * environmentCol;
+				accumCol = environmentCol;
 				break;
+			}
+
+			if (firstTypeWasDIFF)
+			{
+				if (!shadowTime) 
+				{
+					weight = dot(r.direction, normalize(SUN_DIRECTION)) < 0.98 ? 1.0 : 0.0;
+					accumCol = mask * environmentCol * weight * 0.5;
+					if (bounces == 3)
+						accumCol = mask * environmentCol * weight * 2.0;
+					
+					// start back at the diffuse surface, but this time follow shadow ray branch
+					r = firstRay;
+					r.direction = normalize(r.direction);
+					mask = firstMask;
+					// set/reset variables
+					shadowTime = true;
+					bounceIsSpecular = false;
+					sampleLight = true;
+					// continue with the shadow ray
+					continue;
+				}
+				
+				accumCol += mask * environmentCol * 0.5; // add shadow ray result to the colorbleed result (if any)
+				break;		
 			}
 
 			if (firstTypeWasREFR)
 			{
 				if (!reflectionTime) 
 				{
-					accumCol = mask * environmentCol;
+					if (sampleLight || bounceIsSpecular)
+						accumCol = mask * environmentCol;
 					
 					// start back at the refractive surface, but this time follow reflective branch
 					r = firstRay;
@@ -341,12 +390,14 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 					mask = firstMask;
 					// set/reset variables
 					reflectionTime = true;
-					
+					bounceIsSpecular = true;
+					sampleLight = false;
 					// continue with the reflection ray
 					continue;
 				}
 				
-				accumCol += mask * environmentCol; // add reflective result to the refractive result (if any)
+				if (bounceIsSpecular)
+					accumCol += mask * environmentCol; // add reflective result to the refractive result (if any)
 				break;
 			}
 
@@ -354,15 +405,18 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			{
 				if (!specularTime) 
 				{
-					accumCol = mask * environmentCol;
-					
+					weight = dot(r.direction, normalize(SUN_DIRECTION)) < 0.98 ? 1.0 : 0.0;
+					accumCol = mask * environmentCol * weight;
+					if (sampleLight)
+						accumCol = mask * environmentCol;
 					// start back at the refractive surface, but this time follow reflective branch
 					r = firstRay;
 					r.direction = normalize(r.direction);
 					mask = firstMask;
 					// set/reset variables
 					specularTime = true;
-					
+					bounceIsSpecular = true;
+					sampleLight = false;
 					// continue with the reflection ray
 					continue;
 				}
@@ -371,10 +425,63 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				break;
 			}
 
-			accumCol = mask * environmentCol; // looking at HDRI sky light through a reflection
+			//if (bounceIsSpecular)
+				accumCol = mask * environmentCol; // looking at HDRI sky light through a reflection
+			
 			// reached the HDRI sky light, so we can exit
 			break;
 		} // end if (t == INFINITY)
+
+
+		// if we get here and sampleLight is still true, shadow ray failed to find a light source
+		if (sampleLight) 
+		{
+
+			if (firstTypeWasDIFF && !shadowTime) 
+			{
+				// start back at the diffuse surface, but this time follow shadow ray branch
+				r = firstRay;
+				r.direction = normalize(r.direction);
+				mask = firstMask;
+				// set/reset variables
+				shadowTime = true;
+				bounceIsSpecular = false;
+				sampleLight = true;
+				// continue with the shadow ray
+				continue;
+			}
+
+			if (firstTypeWasREFR && !reflectionTime) 
+			{
+				// start back at the refractive surface, but this time follow reflective branch
+				r = firstRay;
+				r.direction = normalize(r.direction);
+				mask = firstMask;
+				// set/reset variables
+				reflectionTime = true;
+				bounceIsSpecular = true;
+				sampleLight = false;
+				// continue with the reflection ray
+				continue;
+			}
+
+			if (firstTypeWasCOAT && !specularTime) 
+			{
+				// start back at the coated surface, but this time follow reflective branch
+				r = firstRay;
+				r.direction = normalize(r.direction);
+				mask = firstMask;
+				// set/reset variables
+				specularTime = true;
+				bounceIsSpecular = true;
+				sampleLight = false;
+				// continue with the reflection ray
+				continue;
+			}
+
+			// nothing left to calculate, so exit	
+			break;
+		}
 		
 		
 		// useful data 
@@ -385,18 +492,43 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		    
                 if (intersec.type == DIFF || intersec.type == CHECK) // Ideal DIFFUSE reflection
                 {
+			diffuseCount++;
+
 			if( intersec.type == CHECK )
 			{
 				float q = clamp( mod( dot( floor(x.xz * 0.04), vec2(1.0) ), 2.0 ) , 0.0, 1.0 );
 				intersec.color = checkCol0 * q + checkCol1 * (1.0 - q);	
 			}
-			
+
 			mask *= intersec.color;
+
+			bounceIsSpecular = false;
                         
-			// choose random Diffuse sample vector
-			r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
+			if (diffuseCount == 1 && !firstTypeWasDIFF && !firstTypeWasREFR && !firstTypeWasCOAT)
+			{	
+				// save intersection data for future shadowray trace
+				firstTypeWasDIFF = true;
+				firstRay = Ray( x, normalize(SUN_DIRECTION) );// create shadow ray pointed towards light
+				firstRay.direction = normalize(randomDirectionInSpecularLobe(firstRay.direction, 0.01, seed ));
+				weight = max(0.0, dot(firstRay.direction, nl)) * 0.00002; // down-weight directSunLight contribution
+				firstMask = mask * weight;
+				firstRay.origin += nl * uEPS_intersect;
+
+				// choose random Diffuse sample vector
+				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
+				r.origin += nl * uEPS_intersect;
+				continue;
+			}
+
+			r = Ray( x, normalize(SUN_DIRECTION) );
+			r.direction = normalize(randomDirectionInSpecularLobe(r.direction, 0.01, seed ));
 			r.origin += nl * uEPS_intersect;
-			continue;	
+			weight = max(0.0, dot(r.direction, nl)) * 0.00002; // down-weight directSunLight contribution
+			mask *= weight;
+
+			sampleLight = true;
+			continue;
+			
                 }
 		
                 if (intersec.type == SPEC)  // Ideal SPECULAR reflection
@@ -421,8 +553,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
-			
-			if (bounces < 2 && !firstTypeWasREFR && !firstTypeWasCOAT)
+
+			if (!firstTypeWasREFR && !firstTypeWasDIFF && !firstTypeWasCOAT)
 			{	
 				// save intersection data for future reflection trace
 				firstTypeWasREFR = true;
@@ -437,7 +569,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
-			
+
 			// transmit ray through surface
 			mask *= intersec.color;
 			
@@ -445,6 +577,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			r = Ray(x, normalize(tdir));
 			r.origin -= nl * uEPS_intersect;
 
+			if (bounces < 2)
+				bounceIsSpecular = true; // turn on refracting caustics
 			continue;
 			
 		} // end if (intersec.type == REFR)
@@ -452,7 +586,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top (like car, or shiny pool ball)
 		{
 			nc = 1.0; // IOR of Air
-			nt = 1.6; // IOR of Clear Coat (a little thicker for this demo)
+			nt = 1.5; // IOR of Clear Coat
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 
@@ -462,8 +596,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
-			
-			if (bounces < 2 && !firstTypeWasCOAT && !firstTypeWasREFR)
+
+			if (!firstTypeWasCOAT && !firstTypeWasDIFF && !firstTypeWasREFR)
 			{	
 				// save intersection data for future reflection trace
 				firstTypeWasCOAT = true;
@@ -479,18 +613,37 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				continue;
 			}
 
+			diffuseCount++;
+
 			mask *= intersec.color;
 			
-			r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
+			bounceIsSpecular = false;
+
+			if (diffuseCount == 1 && firstTypeWasCOAT && rand(seed) < diffuseColorBleeding)
+                        {
+				// choose random Diffuse sample vector
+				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
+				r.origin += nl * uEPS_intersect;
+				continue;
+                        }
+
+			r = Ray( x, normalize(SUN_DIRECTION) );
+			r.direction = normalize(randomDirectionInSpecularLobe(r.direction, 0.01, seed ));
 			r.origin += nl * uEPS_intersect;
+			weight = max(0.0, dot(r.direction, nl)) * 0.00002; // down-weight directSunLight contribution
+			mask *= weight;
+
+			sampleLight = true;
 			continue;
 			
 		} //end if (intersec.type == COAT)
 		
 		
-	} // end for (int bounces = 0; bounces < 6; bounces++)
+	} // end for (int bounces = 0; bounces < 7; bounces++)
 	
-	return accumCol;      
+
+	return max(vec3(0), accumCol);
+
 } // end vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 
@@ -498,13 +651,17 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 void SetupScene(void)
 //-----------------------------------------------------------------------
 {
+	
 	vec3 z  = vec3(0);          
 	
 	spheres[0] = Sphere(  4000.0, vec3(0, -4000, 0),  z, vec3(0.4,0.4,0.4), CHECK);//Checkered Floor
 	spheres[1] = Sphere(     6.0, vec3(55, 36, -45),  z,         vec3(0.9),  SPEC);//small mirror ball
 	spheres[2] = Sphere(     6.0, vec3(55, 24, -45),  z, vec3(0.5,1.0,1.0),  REFR);//small glass ball
 	spheres[3] = Sphere(     6.0, vec3(60, 24, -30),  z,         vec3(1.0),  COAT);//small plastic ball
-		
+	
+	openCylinders[0] = OpenCylinder(vec3(0, 0, 0), normalize(SUN_DIRECTION) * 100000.0, 10.0, z, vec3(0.9, 0.01, 0.01), SPEC);
+
+									// vec3(0.2,0.9,0.7)
 	boxes[0] = Box( vec3(-20.0,11.0,-110.0), vec3(70.0,18.0,-20.0), z, vec3(0.2,0.9,0.7), REFR);//Glass Box
 	boxes[1] = Box( vec3(-14.0,13.0,-104.0), vec3(64.0,16.0,-26.0), z, vec3(0),           DIFF);//Inner Box
 }
