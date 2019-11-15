@@ -28,9 +28,9 @@ function initSceneData() {
         clothTexture.wrapS = THREE.RepeatWrapping;
         clothTexture.wrapT = THREE.RepeatWrapping;
         clothTexture.flipY = false;
-        clothTexture.minFilter = THREE.LinearFilter; 
-        clothTexture.magFilter = THREE.LinearFilter;
-        clothTexture.generateMipmaps = false;
+        //clothTexture.minFilter = THREE.LinearFilter; 
+        //clothTexture.magFilter = THREE.LinearFilter;
+        //clothTexture.generateMipmaps = false;
         
         darkWoodTexture = new THREE.TextureLoader().load( 'textures/darkWood.jpg' );
         darkWoodTexture.wrapS = THREE.RepeatWrapping;
