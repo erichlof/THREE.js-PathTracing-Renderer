@@ -351,7 +351,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, out bool rayHitIsDynamic )
 	} // end for (int bounces = 0; bounces < 6; bounces++)
 	
 	
-	return accumCol;      
+	return max(vec3(0), accumCol);
+
 }
 
 
