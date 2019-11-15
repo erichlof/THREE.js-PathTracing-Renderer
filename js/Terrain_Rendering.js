@@ -19,7 +19,7 @@ function initSceneData() {
 
         // position and orient camera
         cameraControlsObject.position.set(-837, 1350, 2156);
-	cameraControlsYawObject.rotation.y = 0.8;
+	cameraControlsYawObject.rotation.y = 3.0;
 	cameraControlsPitchObject.rotation.x = 0.0;
         
         PerlinNoiseTexture = new THREE.TextureLoader().load( 'textures/perlin256.png' );
@@ -118,7 +118,7 @@ function updateVariablesAndUniforms() {
                 cameraUnderWater = true;
         else cameraUnderWater = false;
         
-        sunAngle = (elapsedTime * 0.03) % Math.PI;
+        sunAngle = (elapsedTime * 0.03) % (Math.PI * 1.1);
         sunDirection.set(Math.cos(sunAngle) * 1.2, Math.sin(sunAngle), -Math.cos(sunAngle) * 3.0);
         sunDirection.normalize();
         
