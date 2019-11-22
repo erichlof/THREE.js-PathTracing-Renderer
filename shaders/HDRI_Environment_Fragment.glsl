@@ -134,7 +134,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		}
         }
 
-	/* // this long cylinder helps to show the direction that points to the sun in the HDR image
+	/* // this long cylinder helps to show the direction that points to the sun in this particular HDR image
 	d = OpenCylinderIntersect( openCylinders[0].p0, openCylinders[0].p1, openCylinders[0].radius, r, n );
 	if (d < t)
 	{
@@ -293,12 +293,6 @@ vec3 Get_HDR_Color(Ray r)
   	sampleUV.y = acos(-r.direction.y) * ONE_OVER_PI;
 	vec4 texData = texture( tHDRTexture, sampleUV );
 	vec3 texColor = vec3(RGBEToLinear(texData));
-	
-	// tone mapping options
-        //vec3 texColor = ReinhardToneMapping(texData.rgb);
-        //vec3 texColor = Uncharted2ToneMapping(texData.rgb);
-        //vec3 texColor = OptimizedCineonToneMapping(texData.rgb);
-        //vec3 texColor = ACESFilmicToneMapping(texData.rgb);
 
 	return texColor * uHDRI_Exposure;
 }
@@ -332,8 +326,6 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	bool reflectionTime = false;
 	bool firstTypeWasDIFF = false;
 	bool shadowTime = false;
-	bool firstTypeWasCOAT = false;
-	bool specularTime = false;
 	
 	
 	for (int bounces = 0; bounces < 7; bounces++)
@@ -359,7 +351,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 					weight = dot(r.direction, normalize(SUN_DIRECTION)) < 0.98 ? 1.0 : 0.0;
 					accumCol = mask * environmentCol * weight * 0.5;
 					if (bounces == 3)
-						accumCol = mask * environmentCol * weight * 2.0;
+						accumCol = mask * environmentCol * weight * 2.0; // ground beneath glass table
 					
 					// start back at the diffuse surface, but this time follow shadow ray branch
 					r = firstRay;
@@ -381,6 +373,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			{
 				if (!reflectionTime) 
 				{
+					weight = dot(r.direction, normalize(SUN_DIRECTION)) < 0.98 ? 1.0 : 0.0;
+					accumCol = mask * environmentCol * weight;
 					if (sampleLight || bounceIsSpecular)
 						accumCol = mask * environmentCol;
 					
@@ -396,36 +390,12 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 					continue;
 				}
 				
-				if (bounceIsSpecular)
+				if (bounceIsSpecular || sampleLight)
 					accumCol += mask * environmentCol; // add reflective result to the refractive result (if any)
 				break;
 			}
 
-			if (firstTypeWasCOAT)
-			{
-				if (!specularTime) 
-				{
-					weight = dot(r.direction, normalize(SUN_DIRECTION)) < 0.98 ? 1.0 : 0.0;
-					accumCol = mask * environmentCol * weight;
-					if (sampleLight)
-						accumCol = mask * environmentCol;
-					// start back at the refractive surface, but this time follow reflective branch
-					r = firstRay;
-					r.direction = normalize(r.direction);
-					mask = firstMask;
-					// set/reset variables
-					specularTime = true;
-					bounceIsSpecular = true;
-					sampleLight = false;
-					// continue with the reflection ray
-					continue;
-				}
-				
-				accumCol += mask * environmentCol; // add reflective result to the refractive result (if any)
-				break;
-			}
-
-			//if (bounceIsSpecular)
+			if (bounceIsSpecular || sampleLight)
 				accumCol = mask * environmentCol; // looking at HDRI sky light through a reflection
 			
 			// reached the HDRI sky light, so we can exit
@@ -458,21 +428,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				r.direction = normalize(r.direction);
 				mask = firstMask;
 				// set/reset variables
+				diffuseCount = 0;
 				reflectionTime = true;
-				bounceIsSpecular = true;
-				sampleLight = false;
-				// continue with the reflection ray
-				continue;
-			}
-
-			if (firstTypeWasCOAT && !specularTime) 
-			{
-				// start back at the coated surface, but this time follow reflective branch
-				r = firstRay;
-				r.direction = normalize(r.direction);
-				mask = firstMask;
-				// set/reset variables
-				specularTime = true;
 				bounceIsSpecular = true;
 				sampleLight = false;
 				// continue with the reflection ray
@@ -504,7 +461,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 			bounceIsSpecular = false;
                         
-			if (diffuseCount == 1 && !firstTypeWasDIFF && !firstTypeWasREFR && !firstTypeWasCOAT)
+			if (diffuseCount == 1 && !firstTypeWasDIFF && !firstTypeWasREFR)
 			{	
 				// save intersection data for future shadowray trace
 				firstTypeWasDIFF = true;
@@ -554,7 +511,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				continue;
 			}
 
-			if (!firstTypeWasREFR && !firstTypeWasDIFF && !firstTypeWasCOAT)
+			if (bounces == 0)
 			{	
 				// save intersection data for future reflection trace
 				firstTypeWasREFR = true;
@@ -563,7 +520,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				firstRay.origin += nl * uEPS_intersect;
 				mask *= Tr;
 			}
-			else if (rand(seed) < Re)
+			else if (diffuseCount == 0 && rand(seed) < Re)
 			{
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.origin += nl * uEPS_intersect;
@@ -577,8 +534,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			r = Ray(x, normalize(tdir));
 			r.origin -= nl * uEPS_intersect;
 
-			if (bounces < 2)
+			if (diffuseCount == 1)
 				bounceIsSpecular = true; // turn on refracting caustics
+
 			continue;
 			
 		} // end if (intersec.type == REFR)
@@ -597,16 +555,17 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				continue;
 			}
 
-			if (!firstTypeWasCOAT && !firstTypeWasDIFF && !firstTypeWasREFR)
+			// clearCoat counts as refractive surface
+			if (bounces == 0)
 			{	
 				// save intersection data for future reflection trace
-				firstTypeWasCOAT = true;
+				firstTypeWasREFR = true;
 				firstMask = mask * Re;
 				firstRay = Ray( x, reflect(r.direction, nl) ); // create reflection ray from surface
 				firstRay.origin += nl * uEPS_intersect;
 				mask *= Tr;
 			}
-			else if (rand(seed) < Re)
+			else if (diffuseCount == 0 && rand(seed) < Re)
 			{
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.origin += nl * uEPS_intersect;
@@ -619,7 +578,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && firstTypeWasCOAT && rand(seed) < diffuseColorBleeding)
+			if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
                         {
 				// choose random Diffuse sample vector
 				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
@@ -651,7 +610,6 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 void SetupScene(void)
 //-----------------------------------------------------------------------
 {
-	
 	vec3 z  = vec3(0);          
 	
 	spheres[0] = Sphere(  4000.0, vec3(0, -4000, 0),  z, vec3(0.4,0.4,0.4), CHECK);//Checkered Floor
@@ -659,9 +617,10 @@ void SetupScene(void)
 	spheres[2] = Sphere(     6.0, vec3(55, 24, -45),  z, vec3(0.5,1.0,1.0),  REFR);//small glass ball
 	spheres[3] = Sphere(     6.0, vec3(60, 24, -30),  z,         vec3(1.0),  COAT);//small plastic ball
 	
-	openCylinders[0] = OpenCylinder(vec3(0, 0, 0), normalize(SUN_DIRECTION) * 100000.0, 10.0, z, vec3(0.9, 0.01, 0.01), SPEC);
+	// this long red metal cylinder points to the sun in an HDR image.  Unfortunately for a random image, the SUN_DIRECTION
+	// vector pointing directly to the sun has to be found by trial and error. To see this helper, uncomment cylinder intersection code above 
+	openCylinders[0] = OpenCylinder(vec3(0, 0, 0), normalize(SUN_DIRECTION) * 100000.0, 10.0, z, vec3(1, 0, 0), SPEC);
 
-									// vec3(0.2,0.9,0.7)
 	boxes[0] = Box( vec3(-20.0,11.0,-110.0), vec3(70.0,18.0,-20.0), z, vec3(0.2,0.9,0.7), REFR);//Glass Box
 	boxes[1] = Box( vec3(-14.0,13.0,-104.0), vec3(64.0,16.0,-26.0), z, vec3(0),           DIFF);//Inner Box
 }
