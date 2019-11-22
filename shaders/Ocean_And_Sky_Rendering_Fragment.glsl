@@ -503,14 +503,17 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 			{
 				if (!reflectionTime) 
 				{
-					//weight = dot(r.direction, sunDirection) < 0.99 ? 1.0 : 0.0;
-					accumCol = mask * skyColor;// * weight;
+					weight = dot(r.direction, sunDirection) < 0.99 ? 1.0 : 0.0;
+					accumCol = mask * skyColor * weight;
+					if (sampleLight || bounceIsSpecular)
+						accumCol = mask * skyColor;
 					
 					// start back at the refractive surface, but this time follow reflective branch
 					r = firstRay;
 					r.direction = normalize(r.direction);
 					mask = firstMask;
 					// set/reset variables
+					diffuseCount = 0;
 					reflectionTime = true;
 					bounceIsSpecular = true;
 					sampleLight = false;
@@ -518,7 +521,9 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 					continue;
 				}
 
-				accumCol += mask * skyColor; // add reflective result to the refractive result (if any)
+				if (bounceIsSpecular || sampleLight)
+					accumCol += mask * skyColor; // add reflective result to the refractive result (if any)
+				
 				break;
 			}
 
@@ -542,9 +547,11 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 				}
 				
 				accumCol += mask * skyColor * 0.5; // add shadow ray result to the colorbleed result (if any)
-				break;
-						
+				break;			
 			}
+
+			if (bounceIsSpecular || sampleLight)
+				accumCol = mask * skyColor; // looking at HDRI sky light through a reflection
 
 			// reached the sky light, so we can exit
 			break;
@@ -575,6 +582,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 					r.direction = normalize(r.direction);
 					mask = firstMask;
 					// set/reset variables
+					diffuseCount = 0;
 					reflectionTime = true;
 					bounceIsSpecular = true;
 					sampleLight = false;
@@ -621,6 +629,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 				r.direction = normalize(r.direction);
 				mask = firstMask;
 				// set/reset variables
+				diffuseCount = 0;
 				reflectionTime = true;
 				bounceIsSpecular = true;
 				sampleLight = false;
@@ -664,7 +673,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && !firstTypeWasREFR)
+			if (diffuseCount == 1 && !firstTypeWasDIFF && !firstTypeWasREFR)
 			{	
 				// save intersection data for future shadowray trace
 				firstTypeWasDIFF = true;
@@ -680,7 +689,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
-			if (!firstTypeWasDIFF && diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
+			else if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
 			{
 				// choose random Diffuse sample vector
 				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
@@ -742,6 +751,12 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 				firstRay.origin += nl * uEPS_intersect;
 				mask *= Tr;
 			}
+			else if (diffuseCount == 0 && rand(seed) < Re)
+			{
+				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
+				r.origin += nl * uEPS_intersect;
+				continue;
+			}
 
 			// transmit ray through surface
 			tdir = refract(r.direction, nl, ratioIoR);
@@ -787,7 +802,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 				firstRay.origin += nl * uEPS_intersect;
 				mask *= Tr;
 			}
-			else if (rand(seed) < Re)
+			else if (diffuseCount == 0 && rand(seed) < Re)
 			{
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.origin += nl * uEPS_intersect;
