@@ -268,10 +268,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
         float nc, nt, ratioIoR, Re, Tr;
 
 	bool bounceIsSpecular = true;
+	bool sampleLight = false;
 	bool firstTypeWasREFR = false;
 	bool reflectionTime = false;
-	bool firstTypeWasCOAT = false;
-	bool specularTime = false;
 	
 	// need more bounces than usual, because there could be lots of yellow glass boxes in a row
 	for (int bounces = 0; bounces < 10; bounces++)
@@ -315,28 +314,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				accumCol += mask * intersec.emission; // add reflective result to the refractive result (if any)
 				break;
 			}
-
-			if (firstTypeWasCOAT)
-			{
-				if (!specularTime) 
-				{
-					accumCol = mask * intersec.emission;
-					
-					// start back at the refractive surface, but this time follow reflective branch
-					r = firstRay;
-					r.direction = normalize(r.direction);
-					mask = firstMask;
-					// set/reset variables
-					specularTime = true;
-					
-					// continue with the reflection ray
-					continue;
-				}
-
-				accumCol += mask * intersec.emission; // add reflective result to the refractive result (if any)
-				break;
-			}
-
+			
 			accumCol = mask * intersec.emission; // looking at light through a reflection
 			// reached a light, so we can exit
 			break;
@@ -398,7 +376,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				continue;
 			}
 			
-			if (bounces < 2 && !firstTypeWasREFR && !firstTypeWasCOAT)
+			if (bounces == 0)
 			{	
 				// save intersection data for future reflection trace
 				firstTypeWasREFR = true;
@@ -438,11 +416,12 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
-			
-			if (bounces < 2 && !firstTypeWasCOAT && !firstTypeWasREFR)
+
+			// clearCoat counts as refractive surface
+			if (bounces == 0)
 			{	
 				// save intersection data for future reflection trace
-				firstTypeWasCOAT = true;
+				firstTypeWasREFR = true;
 				firstMask = mask * Re;
 				firstRay = Ray( x, reflect(r.direction, nl) ); // create reflection ray from surface
 				firstRay.origin += nl * uEPS_intersect;
