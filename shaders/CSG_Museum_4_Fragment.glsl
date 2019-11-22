@@ -1019,7 +1019,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 					continue;
 				}
 				
-				if (sampleLight || bounceIsSpecular)
+				if (sampleLight)
 					accumCol += mask * intersec.emission * 0.5; // add shadow ray result to the colorbleed result (if any)
 				break;		
 			}
