@@ -378,11 +378,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 	bool reflectionTime = false;
 	bool firstTypeWasDIFF = false;
 	bool shadowTime = false;
-	bool firstTypeWasCOAT = false;
-	bool specularTime = false;
 
 	
-        for (int bounces = 0; bounces < 5; bounces++)
+        for (int bounces = 0; bounces < 6; bounces++)
 	{
 
 		t = SceneIntersect(r, intersec);
@@ -400,9 +398,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 			rayHitIsDynamic = false;
 
 
+
 		if (intersec.type == LIGHT)
 		{	
-
 			if (bounces == 0)
 			{
 				accumCol = mask * intersec.emission;
@@ -413,7 +411,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 			{
 				if (!shadowTime) 
 				{
-					accumCol = mask * intersec.emission * 0.5;
+					accumCol = mask * intersec.emission;
 					
 					// start back at the diffuse surface, but this time follow shadow ray branch
 					r = firstRay;
@@ -427,53 +425,28 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 					continue;
 				}
 				
-				accumCol += mask * intersec.emission * 0.5; // add shadow ray result to the colorbleed result (if any)
-				break;
+				break;		
 			}
 
 			if (firstTypeWasREFR)
 			{
 				if (!reflectionTime) 
 				{
-					if (sampleLight || bounceIsSpecular)
-						accumCol = mask * intersec.emission;
+					accumCol = mask * intersec.emission;
 					
 					// start back at the refractive surface, but this time follow reflective branch
 					r = firstRay;
 					r.direction = normalize(r.direction);
 					mask = firstMask;
 					// set/reset variables
+					diffuseCount = 0;
 					reflectionTime = true;
 					bounceIsSpecular = true;
 					sampleLight = false;
 					// continue with the reflection ray
 					continue;
 				}
-				
-				if (bounceIsSpecular)
-					accumCol += mask * intersec.emission; // add reflective result to the refractive result (if any)
-				break;
-			}
 
-			if (firstTypeWasCOAT)
-			{
-				if (!specularTime) 
-				{
-					if (sampleLight)
-						accumCol = mask * intersec.emission;
-					
-					// start back at the coated surface, but this time follow reflective branch
-					r = firstRay;
-					r.direction = normalize(r.direction);
-					mask = firstMask;
-					// set/reset variables
-					specularTime = true;
-					bounceIsSpecular = true;
-					sampleLight = false;
-					// continue with the reflection ray
-					continue;
-				}
-				
 				accumCol += mask * intersec.emission; // add reflective result to the refractive result (if any)
 				break;	
 			}
@@ -481,6 +454,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 			accumCol = mask * intersec.emission; // looking at light through a reflection
 			// reached a light, so we can exit
 			break;
+
 		} // end if (intersec.type == LIGHT)
 
 
@@ -497,6 +471,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 			{
 				if (!shadowTime) 
 				{
+					if (sampleLight)
+						accumCol = mask * intersec.emission * 0.5;
+
 					// start back at the diffuse surface, but this time follow shadow ray branch
 					r = firstRay;
 					r.direction = normalize(r.direction);
@@ -509,7 +486,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 					continue;
 				}
 
-				accumCol += mask * intersec.emission * 0.5;
+				if (sampleLight)
+					accumCol += mask * intersec.emission * 0.5;
 				
 				break;
 			}
@@ -528,6 +506,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 					r.direction = normalize(r.direction);
 					mask = firstMask;
 					// set/reset variables
+					diffuseCount = 0;
 					reflectionTime = true;
 					bounceIsSpecular = true;
 					sampleLight = false;
@@ -546,30 +525,10 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 				}
 			}
 
-			if (firstTypeWasCOAT)
-			{
-				if (!specularTime) 
-				{
-					if (sampleLight)
-						accumCol = mask * intersec.emission;
-					
-					// start back at the coated surface, but this time follow reflective branch
-					r = firstRay;
-					r.direction = normalize(r.direction);
-					mask = firstMask;
-					// set/reset variables
-					specularTime = true;
-					bounceIsSpecular = true;
-					sampleLight = false;
-					// continue with the reflection ray
-					continue;
-				}
-				
-				accumCol += mask * clamp(intersec.emission, 0.0, 10.0); // add reflective result to the refractive result (if any)
-				break;	
-			}
-
-			accumCol = mask * clamp(intersec.emission, 0.0, 10.0); // looking at light through a reflection
+			if (sampleLight)
+				accumCol = mask * intersec.emission; // looking at light through a reflection
+			else if (bounceIsSpecular)
+				accumCol = mask * clamp(intersec.emission, 0.0, 1.0); // looking at light through a reflection
 			
 			// reached a light, so we can exit
 			break;
@@ -600,21 +559,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 				r.direction = normalize(r.direction);
 				mask = firstMask;
 				// set/reset variables
+				diffuseCount = 0;
 				reflectionTime = true;
-				bounceIsSpecular = true;
-				sampleLight = false;
-				// continue with the reflection ray
-				continue;
-			}
-
-			if (firstTypeWasCOAT && !specularTime) 
-			{
-				// start back at the coated surface, but this time follow reflective branch
-				r = firstRay;
-				r.direction = normalize(r.direction);
-				mask = firstMask;
-				// set/reset variables
-				specularTime = true;
 				bounceIsSpecular = true;
 				sampleLight = false;
 				// continue with the reflection ray
@@ -658,7 +604,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 			intersec.emission = pow(intersec.emission,vec3(2.2));
 			
 			float maxEmission = max(intersec.emission.r, max(intersec.emission.g, intersec.emission.b));
-			if (maxEmission > 0.01) //if (rand(seed) < maxEmission)
+			if (bounceIsSpecular && maxEmission > 0.01) //if (rand(seed) < maxEmission)
 			{
 				accumCol = mask * intersec.emission;
 				break;
@@ -686,7 +632,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 
                         bounceIsSpecular = false;
 
-                        if (diffuseCount == 1 && !firstTypeWasDIFF && !firstTypeWasREFR && !firstTypeWasCOAT)
+                        if (diffuseCount == 1 && !firstTypeWasDIFF && !firstTypeWasREFR)
 			{	
 				// save intersection data for future shadowray trace
 				firstTypeWasDIFF = true;
@@ -700,7 +646,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
-			else if (firstTypeWasREFR && rand(seed) < diffuseColorBleeding)
+			else if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
 			{
 				// choose random Diffuse sample vector
 				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
@@ -746,7 +692,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 				continue;
 			}
 			
-			if (bounces < 2 && !firstTypeWasREFR && !firstTypeWasDIFF && !firstTypeWasCOAT)
+			if (bounces == 0)
 			{	
 				// save intersection data for future reflection trace
 				firstTypeWasREFR = true;
@@ -754,6 +700,12 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 				firstRay = Ray( x, reflect(r.direction, nl) ); // create reflection ray from surface
 				firstRay.origin += nl * uEPS_intersect;
 				mask *= Tr;
+			}
+			else if (diffuseCount == 0 && rand(seed) < Re)
+			{
+				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
+				r.origin += nl * uEPS_intersect;
+				continue;
 			}
 
 			// transmit ray through surface
@@ -763,7 +715,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 			r = Ray(x, normalize(tdir));
 			r.origin -= nl * uEPS_intersect;
 			
-			bounceIsSpecular = true;
+			if (diffuseCount == 1)
+				bounceIsSpecular = true; // turn on refracting caustics
+
 			continue;
 			
 		} // end if (intersec.type == REFR)
@@ -782,16 +736,17 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 				continue;
 			}
 
-			if (bounces < 2 && !firstTypeWasCOAT && !firstTypeWasDIFF && !firstTypeWasREFR)
+			// clearCoat counts as refractive surface
+			if (bounces == 0)
 			{	
 				// save intersection data for future reflection trace
-				firstTypeWasCOAT = true;
+				firstTypeWasREFR = true;
 				firstMask = mask * Re;
 				firstRay = Ray( x, reflect(r.direction, nl) ); // create reflection ray from surface
 				firstRay.origin += nl * uEPS_intersect;
 				mask *= Tr;
 			}
-			else if (rand(seed) < Re)
+			else if (diffuseCount == 0 && rand(seed) < Re)
 			{
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.origin += nl * uEPS_intersect;
@@ -804,7 +759,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 			
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && firstTypeWasCOAT && rand(seed) < diffuseColorBleeding)
+			if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
                         {
                                 // choose random Diffuse sample vector
 				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
@@ -823,7 +778,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
                         
 		} //end if (intersec.type == COAT)
 		
-	} // end for (int bounces = 0; bounces < 5; bounces++)
+	} // end for (int bounces = 0; bounces < 6; bounces++)
 	
 
 	return max(vec3(0), accumCol);
@@ -836,7 +791,7 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0);          
-	vec3 L1 = vec3(0.5, 0.7, 1.0) * 0.02;// Blueish sky light
+	vec3 L1 = vec3(0.5, 0.7, 1.0) * 0.01;// Blueish sky light
 	vec3 L2 = vec3(1.0, 1.0, 1.0) * 300.0;// Bright white light bulb
 	
 	spheres[0] = Sphere( 10000.0,     vec3(0, 0, 0), L1, z, LIGHT, false);//spherical white Light1
