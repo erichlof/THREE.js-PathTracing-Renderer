@@ -103,7 +103,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	bool shadowTime = false;
 
 	
-	for (int bounces = 0; bounces < 7; bounces++)
+	for (int bounces = 0; bounces < 6; bounces++)
 	{
 
 		t = SceneIntersect(r, intersec);
@@ -132,6 +132,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				r.direction = normalize(r.direction);
 				mask = firstMask;
 				// set/reset variables
+				diffuseCount = 0;
 				reflectionTime = true;
 				bounceIsSpecular = true;
 				sampleLight = false;
@@ -156,7 +157,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			{
 				if (!shadowTime) 
 				{
-					if (bounceIsSpecular || sampleLight)
+					if (bounceIsSpecular)
+						accumCol = mask * intersec.emission;
+					if (sampleLight)
 						accumCol = mask * intersec.emission * 0.5;
 					
 					// start back at the diffuse surface, but this time follow shadow ray branch
@@ -171,7 +174,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 					continue;
 				}
 				
-				accumCol += mask * intersec.emission * 0.5; // add shadow ray result to the colorbleed result (if any)
+				if (sampleLight || bounceIsSpecular)
+					accumCol += mask * intersec.emission * 0.5; // add shadow ray result to the colorbleed result (if any)
 				break;		
 			}
 
@@ -187,14 +191,16 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 					r.direction = normalize(r.direction);
 					mask = firstMask;
 					// set/reset variables
+					diffuseCount = 0;
 					reflectionTime = true;
 					bounceIsSpecular = true;
 					sampleLight = false;
 					// continue with the reflection ray
 					continue;
 				}
-				
-				accumCol += mask * intersec.emission; // add reflective result to the refractive result (if any)
+
+				if (bounceIsSpecular || sampleLight)
+					accumCol += mask * intersec.emission; // add reflective result to the refractive result (if any)
 				break;	
 			}
 
@@ -232,6 +238,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				r.direction = normalize(r.direction);
 				mask = firstMask;
 				// set/reset variables
+				diffuseCount = 0;
 				reflectionTime = true;
 				bounceIsSpecular = true;
 				sampleLight = false;
@@ -272,9 +279,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
-			else if (firstTypeWasREFR && diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
+			else if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
 			{
-				// choose random Diffuse sample vector
 				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
 				r.origin += nl * uEPS_intersect;
 				continue;
@@ -325,7 +331,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				firstRay.origin += nl * uEPS_intersect;
 				mask *= Tr;
 			}
-			else if (rand(seed) < Re)
+			else if (diffuseCount == 0 && rand(seed) < Re)
 			{
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.origin += nl * uEPS_intersect;
@@ -339,7 +345,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			r = Ray(x, normalize(tdir));
 			r.origin -= nl * uEPS_intersect;
 
-			bounceIsSpecular = true; // turn on refracting caustics
+			if (diffuseCount == 1)
+				bounceIsSpecular = true; // turn on refracting caustics
+
 			continue;
 			
 		} // end if (intersec.type == REFR)
@@ -368,19 +376,19 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				firstRay.origin += nl * uEPS_intersect;
 				mask *= Tr;
 			}
-			else if (rand(seed) < Re)
+			else if (diffuseCount == 0 && rand(seed) < Re)
 			{
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
-			
+
 			diffuseCount++;
 
 			mask *= intersec.color;
-			
-			bounceIsSpecular = false;
 
+			bounceIsSpecular = false;
+			
 			if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
                         {
                                 // choose random Diffuse sample vector
@@ -425,7 +433,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				mask *= Tr;
 			}
 			// choose either specular reflection, metallic, or diffuse
-			else if (rand(seed) < Re)
+			else if (diffuseCount == 0 && rand(seed) < Re)
 			{
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.origin += nl * uEPS_intersect;
@@ -490,7 +498,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 			bounceIsSpecular = false;
 			
-			if (diffuseCount < 3 && rand(seed) < diffuseColorBleeding)
+			if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
                         {
                                 // choose random Diffuse sample vector
 				//r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
@@ -498,7 +506,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				r.origin += r.direction * scatteringDistance;
 				continue;
                         }
-                        
+
 			dirToLight = sampleQuadLight(x, nl, quads[5], dirToLight, weight, seed);
 			mask *= weight;
 
@@ -535,7 +543,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				firstRay.origin += nl * uEPS_intersect;
 				mask *= Tr;
 			}
-			else if (rand(seed) < Re)
+			else if (diffuseCount == 0 && rand(seed) < Re)
 			{
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.origin += nl * uEPS_intersect;
@@ -556,22 +564,22 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 				continue;
 			}
-
-			diffuseCount++;
 			
-			bounceIsSpecular = false;
+			diffuseCount++;
 
 			// else scattering
 			mask *= exp(-absorptionCoefficient * scatteringDistance);
+
+			bounceIsSpecular = false;
 			
-			if (diffuseCount < 3 && rand(seed) < diffuseColorBleeding)
+			if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
                         {
                                 // choose random scattering direction vector
 				r = Ray( x, normalize(randomSphereDirection(seed)) );
 				r.origin += r.direction * scatteringDistance;
 				continue;
                         }
-                        
+
 			dirToLight = sampleQuadLight(x, nl, quads[5], dirToLight, weight, seed);
 			mask *= weight;
 
