@@ -82,7 +82,7 @@ var screenOutputShader = {
 			'//pixelColor = Uncharted2ToneMapping(pixelColor);',
 			'//pixelColor = OptimizedCineonToneMapping(pixelColor);',
 			'//pixelColor = ACESFilmicToneMapping(pixelColor);',
-			'out_FragColor = clamp(vec4( pow(pixelColor, vec3(0.4545)), 0.0 ), 0.0, 1.0);',	
+			'out_FragColor = clamp(vec4( pow(pixelColor, vec3(0.4545)), 1.0 ), 0.0, 1.0);',	
 		'}'
 		
         ].join( '\n' )
