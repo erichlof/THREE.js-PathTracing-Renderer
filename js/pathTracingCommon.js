@@ -247,13 +247,13 @@ float RectangleIntersect( vec3 pos, vec3 normal, float radiusU, float radiusV, R
 	vec3 hit = r.origin + r.direction * t;
 	vec3 vi = hit - pos;
 
-	vec3 u = normalize(cross( abs(normal.y) < 0.9 ? vec3(0, 1, 0) : vec3(0, 0, 1), normal));
-	vec3 v = cross(normal, u);
-
-	if (abs(dot(u, vi)) > radiusU || abs(dot(v, vi)) > radiusV)
-		return INFINITY;
-	
-	return t;
+	// from "Building an Orthonormal Basis, Revisited" http://jcgt.org/published/0006/01/01/
+	float signf = normal.z >= 0.0 ? 1.0 : -1.0;
+	float a = -1.0 / (signf + normal.z);
+	float b = normal.x * normal.y * a;
+	vec3 T = vec3( b, signf + normal.y * normal.y * a, -normal.y );
+	vec3 B = vec3( 1.0 + signf * normal.x * normal.x * a, signf * b, -signf * normal.x );
+	return (abs(dot(T, vi)) > radiusU || abs(dot(B, vi)) > radiusV) ? INFINITY : t;
 }
 
 `;
@@ -1279,9 +1279,7 @@ float BoundingBoxIntersect( vec3 minCorner, vec3 maxCorner, vec3 rayOrigin, vec3
 	float t0 = max( max(tmin.x, tmin.y), tmin.z);
 	float t1 = min( min(tmax.x, tmax.y), tmax.z);
 	
-	if (t0 > t1 || t1 < 0.0) return INFINITY;
-	
-	return t0;	
+	return (t0 > t1 || t1 < 0.0) ? INFINITY : t0;	
 }
 
 `;
@@ -1328,22 +1326,12 @@ float BVH_TriangleIntersect( vec3 v0, vec3 v1, vec3 v2, Ray r, out float u, out 
 	vec3 edge2 = v2 - v0;
 	vec3 pvec = cross(r.direction, edge2);
 	float det = 1.0 / dot(edge1, pvec);
-
-	// comment out the following line if double-sided triangles are wanted, or ...
-	// uncomment the following line if back-face culling is desired (front-facing triangles only)
-	if (det < 0.0) return INFINITY;
-
 	vec3 tvec = r.origin - v0;
 	u = dot(tvec, pvec) * det;
-
-	if (u < 0.0 || u > 1.0) return INFINITY;
-
 	vec3 qvec = cross(tvec, edge1);
 	v = dot(r.direction, qvec) * det;
 
-	if (v < 0.0 || u + v > 1.0) return INFINITY;
-
-	return dot(edge2, qvec) * det;
+	return (det < 0.0 || u < 0.0 || u > 1.0 || v < 0.0 || u + v > 1.0) ? INFINITY : (dot(edge2, qvec) * det);
 }
 
 `;
@@ -1358,22 +1346,12 @@ float BVH_DoubleSidedTriangleIntersect( vec3 v0, vec3 v1, vec3 v2, Ray r, out fl
 	vec3 edge2 = v2 - v0;
 	vec3 pvec = cross(r.direction, edge2);
 	float det = 1.0 / dot(edge1, pvec);
-
-	// comment out the following line if double-sided triangles are wanted, or ...
-	// uncomment the following line if back-face culling is desired (front-facing triangles only)
-	//if (det < 0.0) return INFINITY;
-
 	vec3 tvec = r.origin - v0;
 	u = dot(tvec, pvec) * det;
-
-	if (u < 0.0 || u > 1.0) return INFINITY;
-
 	vec3 qvec = cross(tvec, edge1);
 	v = dot(r.direction, qvec) * det;
 
-	if (v < 0.0 || u + v > 1.0) return INFINITY;
-
-	return dot(edge2, qvec) * det;
+	return (u < 0.0 || u > 1.0 || v < 0.0 || u + v > 1.0) ? INFINITY : (dot(edge2, qvec) * det);
 }
 
 `;
@@ -1482,11 +1460,14 @@ vec3 randomDirectionInHemisphere( vec3 nl, inout uvec2 seed )
 	float up = rand(seed); // uniform distribution in hemisphere
     	float over = sqrt(max(0.0, 1.0 - up * up));
 	float around = rand(seed) * TWO_PI;
-	
-	vec3 u = normalize( cross( abs(nl.x) > 0.1 ? vec3(0, 1, 0) : vec3(1, 0, 0), nl ) );
-	vec3 v = cross(nl, u);
 
-	return normalize(cos(around) * over * u + sin(around) * over * v + up * nl);
+	// from "Building an Orthonormal Basis, Revisited" http://jcgt.org/published/0006/01/01/
+	float signf = nl.z >= 0.0 ? 1.0 : -1.0;
+	float a = -1.0 / (signf + nl.z);
+	float b = nl.x * nl.y * a;
+	vec3 T = vec3( b, signf + nl.y * nl.y * a, -nl.y );
+	vec3 B = vec3( 1.0 + signf * nl.x * nl.x * a, signf * b, -signf * nl.x );
+	return normalize(cos(around) * over * T + sin(around) * over * B + up * nl);
 }
 
 // vec3 randomCosWeightedDirectionInHemisphere( vec3 nl, inout uvec2 seed )
@@ -1513,11 +1494,14 @@ vec3 randomCosWeightedDirectionInHemisphere( vec3 nl, inout uvec2 seed )
 	float x = r * cos(theta);
 	float y = r * sin(theta);
 	vec3 p = vec3(x, y, sqrt(1.0 - x * x - y * y)); // project XY disk points outward along Z axis
-	
-	vec3 u = normalize( cross( abs(nl.x) > 0.1 ? vec3(0, 1, 0) : vec3(1, 0, 0), nl ) );
-	vec3 v = cross(nl, u);
 
-	return (u * p.x + v * p.y + nl * p.z);
+	// from "Building an Orthonormal Basis, Revisited" http://jcgt.org/published/0006/01/01/
+	float signf = nl.z >= 0.0 ? 1.0 : -1.0;
+	float a = -1.0 / (signf + nl.z);
+	float b = nl.x * nl.y * a;
+	vec3 T = vec3( b, signf + nl.y * nl.y * a, -nl.y );
+	vec3 B = vec3( 1.0 + signf * nl.x * nl.x * a, signf * b, -signf * nl.x );
+	return (T * p.x + B * p.y + nl * p.z);
 }
 
 vec3 randomDirectionInSpecularLobe( vec3 reflectionDir, float roughness, inout uvec2 seed )
@@ -1526,11 +1510,14 @@ vec3 randomDirectionInSpecularLobe( vec3 reflectionDir, float roughness, inout u
 	float cosTheta = pow(rand(seed), 1.0 / (exp(roughness) + 1.0));
 	float sinTheta = sqrt(max(0.0, 1.0 - cosTheta * cosTheta));
 	float phi = rand(seed) * TWO_PI;
-	
-	vec3 u = normalize( cross( abs(reflectionDir.x) > 0.1 ? vec3(0, 1, 0) : vec3(1, 0, 0), reflectionDir ) );
-	vec3 v = cross(reflectionDir, u);
 
-	return (u * cos(phi) * sinTheta + v * sin(phi) * sinTheta + reflectionDir * cosTheta);
+	// from "Building an Orthonormal Basis, Revisited" http://jcgt.org/published/0006/01/01/
+	float signf = reflectionDir.z >= 0.0 ? 1.0 : -1.0;
+	float a = -1.0 / (signf + reflectionDir.z);
+	float b = reflectionDir.x * reflectionDir.y * a;
+	vec3 T = vec3( b, signf + reflectionDir.y * reflectionDir.y * a, -reflectionDir.y );
+	vec3 B = vec3( 1.0 + signf * reflectionDir.x * reflectionDir.x * a, signf * b, -signf * reflectionDir.x );
+	return (T * cos(phi) * sinTheta + B * sin(phi) * sinTheta + reflectionDir * cosTheta);
 }
 
 // //the following alternative skips the creation of tangent and bi-tangent vectors u and v 
@@ -1574,10 +1561,15 @@ vec3 sampleSphereLight(vec3 x, vec3 nl, Sphere light, vec3 dirToLight, out float
 	float phi = rand(seed) * TWO_PI;
 
 	dirToLight = normalize(dirToLight);
-	vec3 u = normalize( cross( abs(dirToLight.x) > 0.1 ? vec3(0, 1, 0) : vec3(1, 0, 0), dirToLight ) );
-	vec3 v = cross(dirToLight, u);
+	
+	// from "Building an Orthonormal Basis, Revisited" http://jcgt.org/published/0006/01/01/
+	float signf = dirToLight.z >= 0.0 ? 1.0 : -1.0;
+	float a = -1.0 / (signf + dirToLight.z);
+	float b = dirToLight.x * dirToLight.y * a;
+	vec3 T = vec3( b, signf + dirToLight.y * dirToLight.y * a, -dirToLight.y );
+	vec3 B = vec3( 1.0 + signf * dirToLight.x * dirToLight.x * a, signf * b, -signf * dirToLight.x );
+	vec3 sampleDir = normalize(T * cos(phi) * sin_alpha + B * sin(phi) * sin_alpha + dirToLight * cos_alpha);
 
-	vec3 sampleDir = normalize(u * cos(phi) * sin_alpha + v * sin(phi) * sin_alpha + dirToLight * cos_alpha);
 	float dotNlSampleDir = max(0.0, dot(nl, sampleDir));
 	weight = clamp(2.0 * (1.0 - cos_alpha_max) * dotNlSampleDir, 0.0, 1.0);
 	
@@ -1613,21 +1605,20 @@ THREE.ShaderChunk[ 'pathtracing_calc_fresnel_reflectance' ] = `
 
 float calcFresnelReflectance(vec3 rayDirection, vec3 n, float etai, float etat, out float ratioIoR)
 {
-	float temp;
+	float temp = etai;
 	float cosi = clamp(dot(rayDirection, n), -1.0, 1.0);
 	if (cosi > 0.0)
 	{
-		temp = etai;
 		etai = etat;
 		etat = temp;
 	}
 	
 	ratioIoR = etai / etat;
-	float sint = ratioIoR * sqrt(max(0.0, 1.0 - (cosi * cosi)));
+	float sint = ratioIoR * sqrt(1.0 - (cosi * cosi));
 	if (sint >= 1.0) 
 		return 1.0; // total internal reflection
 
-	float cost = sqrt(max(0.0, 1.0 - (sint * sint)));
+	float cost = sqrt(1.0 - (sint * sint));
 	cosi = abs(cosi);
 	float Rs = ((etat * cosi) - (etai * cost)) / ((etat * cosi) + (etai * cost));
 	float Rp = ((etai * cosi) - (etat * cost)) / ((etai * cosi) + (etat * cost));
@@ -1642,9 +1633,7 @@ THREE.ShaderChunk[ 'pathtracing_main' ] = `
 // tentFilter from Peter Shirley's 'Realistic Ray Tracing (2nd Edition)' book, pg. 60		
 float tentFilter(float x)
 {
-	if (x < 0.5) 
-		return sqrt(2.0 * x) - 1.0;
-	else return 1.0 - sqrt(2.0 - (2.0 * x));
+	return (x < 0.5) ? sqrt(2.0 * x) - 1.0 : 1.0 - sqrt(2.0 - (2.0 * x));
 }
 
 /*
