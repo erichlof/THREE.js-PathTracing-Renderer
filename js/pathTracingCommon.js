@@ -251,9 +251,10 @@ float RectangleIntersect( vec3 pos, vec3 normal, float radiusU, float radiusV, R
 	float signf = normal.z >= 0.0 ? 1.0 : -1.0;
 	float a = -1.0 / (signf + normal.z);
 	float b = normal.x * normal.y * a;
-	vec3 T = vec3( b, signf + normal.y * normal.y * a, -normal.y );
 	vec3 B = vec3( 1.0 + signf * normal.x * normal.x * a, signf * b, -signf * normal.x );
-	return (abs(dot(T, vi)) > radiusU || abs(dot(B, vi)) > radiusV) ? INFINITY : t;
+	vec3 T = vec3( b, signf + normal.y * normal.y * a, -normal.y );
+	
+	return (abs(dot(B, vi)) > radiusU || abs(dot(T, vi)) > radiusV) ? INFINITY : t;
 }
 
 `;
