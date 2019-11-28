@@ -96,8 +96,6 @@ void SetupScene(void)
 {
 	vec3 z  = vec3(0);          
 	vec3 L1 = vec3(1.0, 1.0, 1.0) * 13.0;// White light
-	vec3 L2 = vec3(1.0, 0.8, 0.2) * 10.0;// Yellow light
-	vec3 L3 = vec3(0.1, 0.7, 1.0) * 5.0; // Blue light
 	
 	spheres[0]  = Sphere(1000.0, vec3(0.0, 1000.0, 0.0), L1, z, LIGHT);
 }
