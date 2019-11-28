@@ -646,7 +646,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
-			else if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
+			else if (firstTypeWasREFR && diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
 			{
 				// choose random Diffuse sample vector
 				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
