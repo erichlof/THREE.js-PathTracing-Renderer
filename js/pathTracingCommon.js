@@ -251,10 +251,10 @@ float RectangleIntersect( vec3 pos, vec3 normal, float radiusU, float radiusV, R
 	float signf = normal.z >= 0.0 ? 1.0 : -1.0;
 	float a = -1.0 / (signf + normal.z);
 	float b = normal.x * normal.y * a;
-	vec3 B = vec3( 1.0 + signf * normal.x * normal.x * a, signf * b, -signf * normal.x );
-	vec3 T = vec3( b, signf + normal.y * normal.y * a, -normal.y );
-	
-	return (abs(dot(B, vi)) > radiusU || abs(dot(T, vi)) > radiusV) ? INFINITY : t;
+	vec3 B = vec3( b, signf + normal.y * normal.y * a, -normal.y );
+	vec3 T = vec3( 1.0 + signf * normal.x * normal.x * a, signf * b, -signf * normal.x );
+
+	return (abs(dot(T, vi)) > radiusU || abs(dot(B, vi)) > radiusV) ? INFINITY : t;
 }
 
 `;
@@ -1466,8 +1466,8 @@ vec3 randomDirectionInHemisphere( vec3 nl, inout uvec2 seed )
 	float signf = nl.z >= 0.0 ? 1.0 : -1.0;
 	float a = -1.0 / (signf + nl.z);
 	float b = nl.x * nl.y * a;
-	vec3 T = vec3( b, signf + nl.y * nl.y * a, -nl.y );
-	vec3 B = vec3( 1.0 + signf * nl.x * nl.x * a, signf * b, -signf * nl.x );
+	vec3 B = vec3( b, signf + nl.y * nl.y * a, -nl.y );
+	vec3 T = vec3( 1.0 + signf * nl.x * nl.x * a, signf * b, -signf * nl.x );
 	return normalize(cos(around) * over * T + sin(around) * over * B + up * nl);
 }
 
@@ -1500,8 +1500,8 @@ vec3 randomCosWeightedDirectionInHemisphere( vec3 nl, inout uvec2 seed )
 	float signf = nl.z >= 0.0 ? 1.0 : -1.0;
 	float a = -1.0 / (signf + nl.z);
 	float b = nl.x * nl.y * a;
-	vec3 T = vec3( b, signf + nl.y * nl.y * a, -nl.y );
-	vec3 B = vec3( 1.0 + signf * nl.x * nl.x * a, signf * b, -signf * nl.x );
+	vec3 B = vec3( b, signf + nl.y * nl.y * a, -nl.y );
+	vec3 T = vec3( 1.0 + signf * nl.x * nl.x * a, signf * b, -signf * nl.x );
 	return (T * p.x + B * p.y + nl * p.z);
 }
 
@@ -1516,8 +1516,8 @@ vec3 randomDirectionInSpecularLobe( vec3 reflectionDir, float roughness, inout u
 	float signf = reflectionDir.z >= 0.0 ? 1.0 : -1.0;
 	float a = -1.0 / (signf + reflectionDir.z);
 	float b = reflectionDir.x * reflectionDir.y * a;
-	vec3 T = vec3( b, signf + reflectionDir.y * reflectionDir.y * a, -reflectionDir.y );
-	vec3 B = vec3( 1.0 + signf * reflectionDir.x * reflectionDir.x * a, signf * b, -signf * reflectionDir.x );
+	vec3 B = vec3( b, signf + reflectionDir.y * reflectionDir.y * a, -reflectionDir.y );
+	vec3 T = vec3( 1.0 + signf * reflectionDir.x * reflectionDir.x * a, signf * b, -signf * reflectionDir.x );
 	return (T * cos(phi) * sinTheta + B * sin(phi) * sinTheta + reflectionDir * cosTheta);
 }
 
@@ -1567,8 +1567,8 @@ vec3 sampleSphereLight(vec3 x, vec3 nl, Sphere light, vec3 dirToLight, out float
 	float signf = dirToLight.z >= 0.0 ? 1.0 : -1.0;
 	float a = -1.0 / (signf + dirToLight.z);
 	float b = dirToLight.x * dirToLight.y * a;
-	vec3 T = vec3( b, signf + dirToLight.y * dirToLight.y * a, -dirToLight.y );
-	vec3 B = vec3( 1.0 + signf * dirToLight.x * dirToLight.x * a, signf * b, -signf * dirToLight.x );
+	vec3 B = vec3( b, signf + dirToLight.y * dirToLight.y * a, -dirToLight.y );
+	vec3 T = vec3( 1.0 + signf * dirToLight.x * dirToLight.x * a, signf * b, -signf * dirToLight.x );
 	vec3 sampleDir = normalize(T * cos(phi) * sin_alpha + B * sin(phi) * sin_alpha + dirToLight * cos_alpha);
 
 	float dotNlSampleDir = max(0.0, dot(nl, sampleDir));
