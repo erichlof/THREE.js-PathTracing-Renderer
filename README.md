@@ -160,6 +160,10 @@ Some pretty interesting shapes can be obtained by deforming objects and/or warpi
 
 * [Ray/Object Warping Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Ray_Warping.html)<br>
 
+When rendering/raytracing Terrain, you can either raymarch a perlin noise texture (as I have demonstrated in the above Terrain_Rendering and Planet_Rendering demos), or you can just load in a large pre-existing triangle terrain mesh and raytrace it in the traditional way.  Both have their advantages and disadvantages, however, if you want to go the classical raytracing route, to make the land contours a little more convincing, there needs to be a *lot* of triangles!  The following WIP preview demo uses the BVH acceleration structure to load in and quickly render a huge terrain mesh consisting of no less than 734,464 triangles!  It really pushes my BVH code to the max, we're almost at a million triangles here, pathtracing in WebGL!  For now I just stuck a checker texture across the terrain and the environment is simply a large skylight dome.  But the good news is that it doesn't crash the browser, and it runs slightly above 30 fps even on my humble laptop - it's amazing that all of this is happening inside a browser webpage!  Warning: because of the large BVH data set that needs to be built at startup, this demo is Desktop only and will take at least 10 seconds to compile - please be patient, it's worth the wait! ;-) <br>
+
+* [BVH Large Terrain Demo (W.I.P.)](https://erichlof.github.io/THREE.js-PathTracing-Renderer/BVH_Terrain.html) *Note: because it uses a BVH, this demo is for Desktop only - Warning: due to the large data set, it will take 10 seconds or more to compile*<br>
+
 
 
 <h2>Updates</h2>
