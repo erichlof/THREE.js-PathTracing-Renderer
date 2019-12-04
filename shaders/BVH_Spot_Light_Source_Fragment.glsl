@@ -55,18 +55,12 @@ Box boxes[N_BOXES];
 #include <pathtracing_sample_sphere_light>
 
 
-struct StackLevelData
-{
-        float id;
-        float rayT;
-} stackLevels[24];
+vec2 stackLevels[24];
 
 struct BoxNode
 {
-	float branch_A_Index;
-	vec3 minCorner;
-	float branch_B_Index;
-	vec3 maxCorner;  
+	vec4 data0; // corresponds to .x: idLeftChild, .y: aabbMin.x, .z: aabbMin.y, .w: aabbMin.z
+	vec4 data1; // corresponds to .x: idRightChild .y: aabbMax.x, .z: aabbMax.y, .w: aabbMax.z
 };
 
 BoxNode GetBoxNode(const in float i)
@@ -76,39 +70,33 @@ BoxNode GetBoxNode(const in float i)
 	// (iX2 + 0.0) corresponds to .x: idLeftChild, .y: aabbMin.x, .z: aabbMin.y, .w: aabbMin.z 
 	// (iX2 + 1.0) corresponds to .x: idRightChild .y: aabbMax.x, .z: aabbMax.y, .w: aabbMax.z 
 
-	ivec2 uv0 = ivec2( mod(iX2 + 0.0, 2048.0), floor((iX2 + 0.0) * INV_TEXTURE_WIDTH) );
-	ivec2 uv1 = ivec2( mod(iX2 + 1.0, 2048.0), floor((iX2 + 1.0) * INV_TEXTURE_WIDTH) );
+	ivec2 uv0 = ivec2( mod(iX2 + 0.0, 2048.0), (iX2 + 0.0) * INV_TEXTURE_WIDTH ); // data0
+	ivec2 uv1 = ivec2( mod(iX2 + 1.0, 2048.0), (iX2 + 1.0) * INV_TEXTURE_WIDTH ); // data1
 	
-	vec4 aabbNodeData0 = texelFetch(tAABBTexture, uv0, 0);
-	vec4 aabbNodeData1 = texelFetch(tAABBTexture, uv1, 0);
-	
-
-	BoxNode BN = BoxNode( aabbNodeData0.x,
-			      aabbNodeData0.yzw,
-			      aabbNodeData1.x,
-			      aabbNodeData1.yzw );
+	BoxNode BN = BoxNode( texelFetch(tAABBTexture, uv0, 0), texelFetch(tAABBTexture, uv1, 0) );
 
         return BN;
 }
+
 
 //----------------------------------------------------------
 float SceneIntersect( Ray r, inout Intersection intersec )
 //----------------------------------------------------------
 {
-	vec3 n;
-	float d = INFINITY;
-	float t = INFINITY;
+	BoxNode currentBoxNode, nodeA, nodeB, tmpNode;
 	
-	// AABB BVH Intersection variables
-	vec4 aabbNodeData0, aabbNodeData1, aabbNodeData2;
 	vec4 vd0, vd1, vd2, vd3, vd4, vd5, vd6, vd7;
-	vec3 aabbMin, aabbMax;
+
 	vec3 inverseDir = 1.0 / r.direction;
+	vec3 normal;
 	vec3 hitPos, toLightBulb;
+
+	vec2 currentStackData, stackDataA, stackDataB, tmpStackData;
 	ivec2 uv0, uv1, uv2, uv3, uv4, uv5, uv6, uv7;
 
-        float stackptr = 0.0;	
-	float bc, bd;
+	float d;
+	float t = INFINITY;
+        float stackptr = 0.0;
 	float id = 0.0;
 	float tu, tv;
 	float triangleID = 0.0;
@@ -119,8 +107,6 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	bool skip = false;
 	bool triangleLookupNeeded = false;
 
-	BoxNode currentBoxNode, nodeA, nodeB, tnp;
-	StackLevelData currentStackData, slDataA, slDataB, tmp;
 
 	for (int i = 0; i < N_SPHERES; i++)
         {
@@ -133,22 +119,20 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.color = spheres[i].color;
 			intersec.type = spheres[i].type;
 			intersec.albedoTextureID = -1;
-			triangleLookupNeeded = false;
 		}
 	}
 	
 	for (int i = 0; i < N_BOXES; i++)
         {
-		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, r, n );
+		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, r, normal );
 		if (d < t)
 		{
 			t = d;
-			intersec.normal = normalize(n);
+			intersec.normal = normalize(normal);
 			intersec.emission = boxes[i].emission;
 			intersec.color = boxes[i].color;
 			intersec.type = boxes[i].type;
 			intersec.albedoTextureID = -1;
-			triangleLookupNeeded = false;
 		}
 	}
 	
@@ -172,14 +156,13 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.type = DIFF;
 		}
 		intersec.albedoTextureID = -1;
-		triangleLookupNeeded = false;
 	}
 
-	d = OpenCylinderIntersect( openCylinders[0].pos0, openCylinders[0].pos1, openCylinders[0].radius, r, n );
+	d = OpenCylinderIntersect( openCylinders[0].pos0, openCylinders[0].pos1, openCylinders[0].radius, r, normal );
 	if (d < t)
 	{
 		t = d;
-		intersec.normal = normalize(n);
+		intersec.normal = normalize(normal);
 		intersec.emission = openCylinders[0].emission;
 		hitPos = r.origin + r.direction * t;
 		toLightBulb = normalize(spheres[1].position - hitPos);
@@ -195,27 +178,25 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.type = DIFF;
 		}
 		intersec.albedoTextureID = -1;
-		triangleLookupNeeded = false;
 	}
 	
 
 	currentBoxNode = GetBoxNode(stackptr);
-	currentStackData = StackLevelData(stackptr, BoundingBoxIntersect(currentBoxNode.minCorner, currentBoxNode.maxCorner, r.origin, inverseDir));
+	currentStackData = vec2(stackptr, BoundingBoxIntersect(currentBoxNode.data0.yzw, currentBoxNode.data1.yzw, r.origin, inverseDir));
 	stackLevels[0] = currentStackData;
 	
 	while (true)
         {
-
-		if (currentStackData.rayT < t) 
+		if (currentStackData.y < t) 
                 {
-                        if (currentBoxNode.branch_A_Index < 0.0) //  < 0.0 signifies a leaf node
+                        if (currentBoxNode.data0.x < 0.0) //  < 0.0 signifies a leaf node
                         {
 				// each triangle's data is encoded in 8 rgba(or xyzw) texture slots
-				id = 8.0 * (-currentBoxNode.branch_A_Index - 1.0);
+				id = 8.0 * (-currentBoxNode.data0.x - 1.0);
 
-				uv0 = ivec2( mod(id + 0.0, 2048.0), floor((id + 0.0) * INV_TEXTURE_WIDTH) );
-				uv1 = ivec2( mod(id + 1.0, 2048.0), floor((id + 1.0) * INV_TEXTURE_WIDTH) );
-				uv2 = ivec2( mod(id + 2.0, 2048.0), floor((id + 2.0) * INV_TEXTURE_WIDTH) );
+				uv0 = ivec2( mod(id + 0.0, 2048.0), (id + 0.0) * INV_TEXTURE_WIDTH );
+				uv1 = ivec2( mod(id + 1.0, 2048.0), (id + 1.0) * INV_TEXTURE_WIDTH );
+				uv2 = ivec2( mod(id + 2.0, 2048.0), (id + 2.0) * INV_TEXTURE_WIDTH );
 				
 				vd0 = texelFetch(tTriangleTexture, uv0, 0);
 				vd1 = texelFetch(tTriangleTexture, uv1, 0);
@@ -223,7 +204,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 
 				d = BVH_TriangleIntersect( vec3(vd0.xyz), vec3(vd0.w, vd1.xy), vec3(vd1.zw, vd2.x), r, tu, tv );
 
-				if (d < t && d > 0.0)
+				if (d < t)
 				{
 					t = d;
 					triangleID = id;
@@ -234,49 +215,49 @@ float SceneIntersect( Ray r, inout Intersection intersec )
                         }
                         else // else this is a branch
                         {
-                                nodeA = GetBoxNode(currentBoxNode.branch_A_Index);
-                                nodeB = GetBoxNode(currentBoxNode.branch_B_Index);
-                                slDataA = StackLevelData(currentBoxNode.branch_A_Index, BoundingBoxIntersect(nodeA.minCorner, nodeA.maxCorner, r.origin, inverseDir));
-                                slDataB = StackLevelData(currentBoxNode.branch_B_Index, BoundingBoxIntersect(nodeB.minCorner, nodeB.maxCorner, r.origin, inverseDir));
+                                nodeA = GetBoxNode(currentBoxNode.data0.x);
+                                nodeB = GetBoxNode(currentBoxNode.data1.x);
+                                stackDataA = vec2(currentBoxNode.data0.x, BoundingBoxIntersect(nodeA.data0.yzw, nodeA.data1.yzw, r.origin, inverseDir));
+                                stackDataB = vec2(currentBoxNode.data1.x, BoundingBoxIntersect(nodeB.data0.yzw, nodeB.data1.yzw, r.origin, inverseDir));
 				
 				// first sort the branch node data so that 'a' is the smallest
-				if (slDataB.rayT < slDataA.rayT)
+				if (stackDataB.y < stackDataA.y)
 				{
-					tmp = slDataB;
-					slDataB = slDataA;
-					slDataA = tmp;
+					tmpStackData = stackDataB;
+					stackDataB = stackDataA;
+					stackDataA = tmpStackData;
 
-					tnp = nodeB;
+					tmpNode = nodeB;
 					nodeB = nodeA;
-					nodeA = tnp;
+					nodeA = tmpNode;
 				} // branch 'b' now has the larger rayT value of 'a' and 'b'
 
-				if (slDataB.rayT < t) // see if branch 'b' (the larger rayT) needs to be processed
+				if (stackDataB.y < t) // see if branch 'b' (the larger rayT) needs to be processed
 				{
-					currentStackData = slDataB;
+					currentStackData = stackDataB;
 					currentBoxNode = nodeB;
 					skip = true; // this will prevent the stackptr from decreasing by 1
 				}
-				if (slDataA.rayT < t) // see if branch 'a' (the smaller rayT) needs to be processed 
+				if (stackDataA.y < t) // see if branch 'a' (the smaller rayT) needs to be processed 
 				{
-					if (skip == true) // if larger branch 'b' needed to be processed also,
-						stackLevels[int(stackptr++)] = slDataB; // cue larger branch 'b' for future round
+					if (skip) // if larger branch 'b' needed to be processed also,
+						stackLevels[int(stackptr++)] = stackDataB; // cue larger branch 'b' for future round
 								// also, increase pointer by 1
 					
-					currentStackData = slDataA;
+					currentStackData = stackDataA;
 					currentBoxNode = nodeA;
 					skip = true; // this will prevent the stackptr from decreasing by 1
 				}
                         }
-		} // end if (currentStackData.rayT < t)
+		} // end if (currentStackData.y < t)
 
-		if (skip == false) 
+		if (!skip) 
                 {
                         // decrease pointer by 1 (0.0 is root level, 24.0 is maximum depth)
                         if (--stackptr < 0.0) // went past the root level, terminate loop
                                 break;
                         currentStackData = stackLevels[int(stackptr)];
-                        currentBoxNode = GetBoxNode(currentStackData.id);
+                        currentBoxNode = GetBoxNode(currentStackData.x);
                 }
 		skip = false; // reset skip
 
@@ -286,14 +267,14 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 
 	if (triangleLookupNeeded)
 	{
-		uv0 = ivec2( mod(triangleID + 0.0, 2048.0), floor((triangleID + 0.0) * INV_TEXTURE_WIDTH) );
-		uv1 = ivec2( mod(triangleID + 1.0, 2048.0), floor((triangleID + 1.0) * INV_TEXTURE_WIDTH) );
-		uv2 = ivec2( mod(triangleID + 2.0, 2048.0), floor((triangleID + 2.0) * INV_TEXTURE_WIDTH) );
-		uv3 = ivec2( mod(triangleID + 3.0, 2048.0), floor((triangleID + 3.0) * INV_TEXTURE_WIDTH) );
-		uv4 = ivec2( mod(triangleID + 4.0, 2048.0), floor((triangleID + 4.0) * INV_TEXTURE_WIDTH) );
-		uv5 = ivec2( mod(triangleID + 5.0, 2048.0), floor((triangleID + 5.0) * INV_TEXTURE_WIDTH) );
-		uv6 = ivec2( mod(triangleID + 6.0, 2048.0), floor((triangleID + 6.0) * INV_TEXTURE_WIDTH) );
-		uv7 = ivec2( mod(triangleID + 7.0, 2048.0), floor((triangleID + 7.0) * INV_TEXTURE_WIDTH) );
+		uv0 = ivec2( mod(triangleID + 0.0, 2048.0), (triangleID + 0.0) * INV_TEXTURE_WIDTH );
+		uv1 = ivec2( mod(triangleID + 1.0, 2048.0), (triangleID + 1.0) * INV_TEXTURE_WIDTH );
+		uv2 = ivec2( mod(triangleID + 2.0, 2048.0), (triangleID + 2.0) * INV_TEXTURE_WIDTH );
+		uv3 = ivec2( mod(triangleID + 3.0, 2048.0), (triangleID + 3.0) * INV_TEXTURE_WIDTH );
+		uv4 = ivec2( mod(triangleID + 4.0, 2048.0), (triangleID + 4.0) * INV_TEXTURE_WIDTH );
+		uv5 = ivec2( mod(triangleID + 5.0, 2048.0), (triangleID + 5.0) * INV_TEXTURE_WIDTH );
+		uv6 = ivec2( mod(triangleID + 6.0, 2048.0), (triangleID + 6.0) * INV_TEXTURE_WIDTH );
+		uv7 = ivec2( mod(triangleID + 7.0, 2048.0), (triangleID + 7.0) * INV_TEXTURE_WIDTH );
 		
 		vd0 = texelFetch(tTriangleTexture, uv0, 0);
 		vd1 = texelFetch(tTriangleTexture, uv1, 0);
