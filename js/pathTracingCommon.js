@@ -1280,7 +1280,8 @@ float BoundingBoxIntersect( vec3 minCorner, vec3 maxCorner, vec3 rayOrigin, vec3
 	float t0 = max( max(tmin.x, tmin.y), tmin.z);
 	float t1 = min( min(tmax.x, tmax.y), tmax.z);
 	
-	return (t0 > t1 || t1 < 0.0) ? INFINITY : t0;	
+	return (t0 > t1 || t1 < 0.0) ? INFINITY : t0;
+	//return (t1 < 0.0 || t0 > t1) ? INFINITY : t0;
 }
 
 `;
@@ -1331,8 +1332,9 @@ float BVH_TriangleIntersect( vec3 v0, vec3 v1, vec3 v2, Ray r, out float u, out 
 	u = dot(tvec, pvec) * det;
 	vec3 qvec = cross(tvec, edge1);
 	v = dot(r.direction, qvec) * det;
+	float t = dot(edge2, qvec) * det;
 
-	return (det < 0.0 || u < 0.0 || u > 1.0 || v < 0.0 || u + v > 1.0) ? INFINITY : (dot(edge2, qvec) * det);
+	return (det < 0.0 || u < 0.0 || u > 1.0 || v < 0.0 || u + v > 1.0 || t < 0.0) ? INFINITY : t;
 }
 
 `;
@@ -1351,8 +1353,9 @@ float BVH_DoubleSidedTriangleIntersect( vec3 v0, vec3 v1, vec3 v2, Ray r, out fl
 	u = dot(tvec, pvec) * det;
 	vec3 qvec = cross(tvec, edge1);
 	v = dot(r.direction, qvec) * det;
+	float t = dot(edge2, qvec) * det;
 
-	return (u < 0.0 || u > 1.0 || v < 0.0 || u + v > 1.0) ? INFINITY : (dot(edge2, qvec) * det);
+	return (u < 0.0 || u > 1.0 || v < 0.0 || u + v > 1.0 || t < 0.0) ? INFINITY : t;
 }
 
 `;
