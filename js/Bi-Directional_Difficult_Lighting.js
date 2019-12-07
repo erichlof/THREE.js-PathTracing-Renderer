@@ -18,29 +18,12 @@ var vt0 = new THREE.Vector2(); // vertex texture-coordinates(UV) data
 var vt1 = new THREE.Vector2();
 var vt2 = new THREE.Vector2();
 
-var modelMesh_0;
-var modelScale_0 = 1.0;
-var modelPositionOffset_0 = new THREE.Vector3();
-//var albedoMap_0, emissiveMap_0, metallicRoughnessMap_0, normalMap_0;
-var triangleMaterialMarkers = [];
-var pathTracingMaterialList = [];
-var meshList = [];
-var geoList_0 = [];
-
-var modelMesh_1;
-var modelScale_1 = 1.0;
-var modelPositionOffset_1 = new THREE.Vector3();
-//var albedoMap_1, emissiveMap_1, metallicRoughnessMap_1, normalMap_1;
-var geoList_1 = [];
-
-var modelMesh_2;
-var modelScale_2 = 1.0;
-var modelPositionOffset_2 = new THREE.Vector3();
-//var albedoMap_2, emissiveMap_2, metallicRoughnessMap_2, normalMap_2;
-var geoList_2 = [];
 
 var modelMesh;
-var triangleIDMarker0, triangleIDMarker1, triangleIDMarker2;
+var modelPositionOffset = new THREE.Vector3();
+var modelScale = 1.0;
+//var triangleIDMarker0, triangleIDMarker1, triangleIDMarker2;
+var meshList = [];
 var geoList = [];
 var triangleDataTexture;
 var aabbDataTexture;
@@ -51,6 +34,8 @@ var triangle_array = new Float32Array(2048 * 2048 * 4);
 // 2048 = width of texture, 2048 = height of texture, 4 = r,g,b, and a components
 var aabb_array = new Float32Array(2048 * 2048 * 4);
 // 2048 = width of texture, 2048 = height of texture, 4 = r,g,b, and a components
+var triangleMaterialMarkers = [];
+var pathTracingMaterialList = [];
 
 
 function MaterialObject() {
@@ -69,8 +54,8 @@ function load_GLTF_Models() {
 
         var gltfLoader = new THREE.GLTFLoader();
 
-        // teapot_0
-        gltfLoader.load("models/UtahTeapot.glb", function( meshGroup ) { // Triangles: 4,032
+        //gltfLoader.load("models/StanfordBunny.glb", function( meshGroup ) { // Triangles: 30,338
+        gltfLoader.load("models/UtahTeapot.glb", function( meshGroup ) { // Triangles: 30,338
 
                 if (meshGroup.scene) 
                         meshGroup = meshGroup.scene;
@@ -80,95 +65,36 @@ function load_GLTF_Models() {
                         if ( child.isMesh ) {
                                 
                                 let mat = new MaterialObject();
-                                mat.type = 3;
-                                mat.albedoTextureID = 0; // allow albedo texturing
-                                mat.color.setRGB(0.7, 0.7, 0.7);
+                                mat.type = 1;
+                                mat.albedoTextureID = -1;
+                                mat.color = child.material.color;
                                 mat.roughness = child.material.roughness || 0.0;
                                 mat.metalness = child.material.metalness || 0.0;
                                 mat.opacity = child.material.opacity || 1.0;
                                 mat.refractiveIndex = 1.0;
                                 pathTracingMaterialList.push(mat);
-                                totalGeometryCount += child.geometry.index.count / 3;
-                                triangleMaterialMarkers.push(totalGeometryCount);
+                                triangleMaterialMarkers.push(child.geometry.attributes.position.array.length / 9);
                                 meshList.push(child);
-                                geoList_0.push(child.geometry);
                         }
                 } );
 
-                modelMesh_0 = new THREE.Mesh();
-                modelMesh_0.geometry.copy(geoList_0[0]);
-                // settings for UtahTeapot model_0
-                modelScale_0 = 2.3;
-                modelPositionOffset_0.set(-70, -38.7, -180);
+                modelMesh = meshList[0].clone();
+
+                for (let i = 1; i < triangleMaterialMarkers.length; i++) {
+                        triangleMaterialMarkers[i] += triangleMaterialMarkers[i-1];
+                }
                 
-        }); // end gltfLoader.load()
-
-        // teapot_1
-        gltfLoader.load("models/UtahTeapot.glb", function( meshGroup ) { // Triangles: 4,032
-
-                if (meshGroup.scene) 
-                        meshGroup = meshGroup.scene;
-
-                meshGroup.traverse( function ( child ) {
-
-                        if ( child.isMesh ) {
-                                
-                                let mat = new MaterialObject();
-                                mat.type = 4;
-                                mat.albedoTextureID = 0; // allow albedo texturing
-                                mat.color.setRGB(1, 1, 1);
-                                mat.roughness = child.material.roughness || 0.0;
-                                mat.metalness = child.material.metalness || 0.0;
-                                mat.opacity = child.material.opacity || 1.0;
-                                mat.refractiveIndex = 1.0;
-                                pathTracingMaterialList.push(mat);
-                                totalGeometryCount += child.geometry.index.count / 3;
-                                triangleMaterialMarkers.push(totalGeometryCount);
-                                meshList.push(child);
-                                geoList_1.push(child.geometry);
-                        }
-                } );
-
-                modelMesh_1 = new THREE.Mesh();
-                modelMesh_1.geometry.copy(geoList_1[0]);
-                // settings for UtahTeapot model_1
-                modelScale_1 = 2.3;
-                modelPositionOffset_1.set(0, -38.7, -180);
+                for (let i = 0; i < meshList.length; i++) {
+                        geoList.push(meshList[i].geometry);
+                }
                 
-        }); // end gltfLoader.load()
-
-        // teapot_2
-        gltfLoader.load("models/UtahTeapot.glb", function( meshGroup ) { // Triangles: 4,032
-
-                if (meshGroup.scene) 
-                        meshGroup = meshGroup.scene;
-
-                meshGroup.traverse( function ( child ) {
-
-                        if ( child.isMesh ) {
-                                
-                                let mat = new MaterialObject();
-                                mat.type = 2;
-                                mat.albedoTextureID = 0; // allow albedo texturing
-                                mat.color.setRGB(1, 1, 1);
-                                mat.roughness = child.material.roughness || 0.0;
-                                mat.metalness = child.material.metalness || 0.0;
-                                mat.opacity = child.material.opacity || 1.0;
-                                mat.refractiveIndex = 1.0;
-                                pathTracingMaterialList.push(mat);
-                                totalGeometryCount += child.geometry.index.count / 3;
-                                triangleMaterialMarkers.push(totalGeometryCount);
-                                meshList.push(child);
-                                geoList_2.push(child.geometry);
-                        }
-                } );
-
-                modelMesh_2 = new THREE.Mesh();
-                modelMesh_2.geometry.copy(geoList_2[0]);
-                // settings for UtahTeapot model_2
-                modelScale_2 = 2.3;
-                modelPositionOffset_2.set(70, -38.7, -180);
+                //if (modelMesh.geometry.index)
+                  //      modelMesh.geometry = modelMesh.geometry.toNonIndexed();
                 
+                
+                // settings for UtahTeapot model
+                modelScale = 2.3;
+                modelPositionOffset.set(-70, -38.7, -180);
                 // now that the models have been loaded, we can init 
                 init();
         }); // end gltfLoader.load()
@@ -190,32 +116,9 @@ function initSceneData() {
         cameraControlsObject.position.set(-11, -15, 30);
 	// look slightly to the right
         cameraControlsYawObject.rotation.y = -0.2;
-        
-
-        
-        triangleIDMarker0 = (modelMesh_0.geometry.index.count / 3);
-        triangleIDMarker1 = triangleIDMarker0 + (modelMesh_1.geometry.index.count / 3);
-        triangleIDMarker2 = triangleIDMarker1 + (modelMesh_2.geometry.index.count / 3);
-        
-        var geoList = [];
-        geoList.push(modelMesh_0.geometry);
-        geoList.push(modelMesh_1.geometry);
-        geoList.push(modelMesh_2.geometry);
-        modelMesh = new THREE.Mesh();
-        modelMesh.geometry = THREE.BufferGeometryUtils.mergeBufferGeometries(geoList);
-        
-        if (modelMesh.geometry.index)
-                modelMesh.geometry = modelMesh.geometry.toNonIndexed();
-        
-        
-        for (let i = 0; i < meshList.length; i++) {
-                if (meshList[i].material.map != undefined) {
-                        pathTracingMaterialList[i].albedoTextureID = 0;	
-                }				
-        }
                 
 
-        total_number_of_triangles = (modelMesh.geometry.attributes.position.array.length / 9);
+        total_number_of_triangles = modelMesh.geometry.index.count / 3;
         console.log("Triangle count:" + total_number_of_triangles);
 
         totalWork = new Uint32Array(total_number_of_triangles);
@@ -269,34 +172,14 @@ function initSceneData() {
                 vp0.set( vpa[9 * i + 0], vpa[9 * i + 1], vpa[9 * i + 2] );
                 vp1.set( vpa[9 * i + 3], vpa[9 * i + 4], vpa[9 * i + 5] );
                 vp2.set( vpa[9 * i + 6], vpa[9 * i + 7], vpa[9 * i + 8] );
-                if (i < triangleIDMarker0) {
-                        vp0.multiplyScalar(modelScale_0);
-                        vp1.multiplyScalar(modelScale_0);
-                        vp2.multiplyScalar(modelScale_0);
 
-                        vp0.add(modelPositionOffset_0);
-                        vp1.add(modelPositionOffset_0);
-                        vp2.add(modelPositionOffset_0);
-                }
-                else if (i < triangleIDMarker1) {
-                        vp0.multiplyScalar(modelScale_1);
-                        vp1.multiplyScalar(modelScale_1);
-                        vp2.multiplyScalar(modelScale_1);
+                vp0.multiplyScalar(modelScale);
+                vp1.multiplyScalar(modelScale);
+                vp2.multiplyScalar(modelScale);
 
-                        vp0.add(modelPositionOffset_1);
-                        vp1.add(modelPositionOffset_1);
-                        vp2.add(modelPositionOffset_1);
-                }
-                else if (i < triangleIDMarker2) {
-                        vp0.multiplyScalar(modelScale_2);
-                        vp1.multiplyScalar(modelScale_2);
-                        vp2.multiplyScalar(modelScale_2);
-
-                        vp0.add(modelPositionOffset_2);
-                        vp1.add(modelPositionOffset_2);
-                        vp2.add(modelPositionOffset_2);
-                }
-                
+                vp0.add(modelPositionOffset);
+                vp1.add(modelPositionOffset);
+                vp2.add(modelPositionOffset);
 
                 //slot 0
                 triangle_array[32 * i +  0] = vp0.x; // r or x
@@ -449,38 +332,38 @@ function initSceneData() {
         paintingTexture = new THREE.TextureLoader().load( 'textures/painting.jpg' );
         paintingTexture.wrapS = THREE.RepeatWrapping;
         paintingTexture.wrapT = THREE.RepeatWrapping;
-        paintingTexture.minFilter = THREE.LinearFilter; 
-        paintingTexture.magFilter = THREE.LinearFilter;
+        paintingTexture.minFilter = THREE.NearestFilter;
+        paintingTexture.magFilter = THREE.NearestFilter;
         paintingTexture.generateMipmaps = false;
         
         darkWoodTexture = new THREE.TextureLoader().load( 'textures/darkWood.jpg' );
         darkWoodTexture.wrapS = THREE.RepeatWrapping;
         darkWoodTexture.wrapT = THREE.RepeatWrapping;
-        darkWoodTexture.minFilter = THREE.LinearFilter; 
-        darkWoodTexture.magFilter = THREE.LinearFilter;
+        darkWoodTexture.minFilter = THREE.NearestFilter; 
+        darkWoodTexture.magFilter = THREE.NearestFilter;
         darkWoodTexture.generateMipmaps = false;
         
         lightWoodTexture = new THREE.TextureLoader().load( 'textures/tableWood.jpg' );
         lightWoodTexture.wrapS = THREE.RepeatWrapping;
         lightWoodTexture.wrapT = THREE.RepeatWrapping;
-        lightWoodTexture.minFilter = THREE.LinearFilter; 
-        lightWoodTexture.magFilter = THREE.LinearFilter;
+        lightWoodTexture.minFilter = THREE.NearestFilter; 
+        lightWoodTexture.magFilter = THREE.NearestFilter;
         lightWoodTexture.generateMipmaps = false;
         
         marbleTexture = new THREE.TextureLoader().load( 'textures/whiteMarbleThinVein.jpg' );
         marbleTexture.wrapS = THREE.RepeatWrapping;
         marbleTexture.wrapT = THREE.RepeatWrapping;
         //marbleTexture.flipY = true;
-        marbleTexture.minFilter = THREE.LinearFilter; 
-        marbleTexture.magFilter = THREE.LinearFilter;
+        marbleTexture.minFilter = THREE.NearestFilter;
+        marbleTexture.magFilter = THREE.NearestFilter;
         marbleTexture.generateMipmaps = false;
 
         hammeredMetalNormalMapTexture = new THREE.TextureLoader().load( 'textures/hammeredMetal_NormalMap.jpg' );
         hammeredMetalNormalMapTexture.wrapS = THREE.RepeatWrapping;
         hammeredMetalNormalMapTexture.wrapT = THREE.RepeatWrapping;
-        hammeredMetalNormalMapTexture.flipY = true;
-        hammeredMetalNormalMapTexture.minFilter = THREE.LinearFilter;
-        hammeredMetalNormalMapTexture.magFilter = THREE.LinearFilter;
+        //hammeredMetalNormalMapTexture.flipY = true;
+        hammeredMetalNormalMapTexture.minFilter = THREE.NearestFilter;
+        hammeredMetalNormalMapTexture.magFilter = THREE.NearestFilter;
         hammeredMetalNormalMapTexture.generateMipmaps = false;
 
 } // end function initSceneData()
