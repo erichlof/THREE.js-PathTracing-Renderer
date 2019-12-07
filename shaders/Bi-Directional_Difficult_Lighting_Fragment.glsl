@@ -22,7 +22,7 @@ uniform mat3 uDoorObjectNormalMatrix;
 #define INV_TEXTURE_WIDTH 0.00048828125
 
 #define N_SPHERES 2
-#define N_OPENCYLINDERS 4
+#define N_OPENCYLINDERS 3
 #define N_QUADS 8
 #define N_BOXES 10
 
@@ -62,9 +62,7 @@ Box boxes[N_BOXES];
 float QuadIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 v3, Ray r )
 //----------------------------------------------------------------------------
 {
-	float tTri1 = TriangleIntersect( v0, v1, v2, r );
-	float tTri2 = TriangleIntersect( v0, v2, v3, r );
-	return min(tTri1, tTri2);
+	return min(TriangleIntersect(v0, v1, v2, r), TriangleIntersect(v0, v2, v3, r));
 }
 
 vec3 perturbNormal(vec3 nl, vec2 normalScale, vec2 uv)
@@ -106,7 +104,7 @@ BoxNode GetBoxNode(const in float i)
 
 
 //-----------------------------------------------------------------------
-float SceneIntersect( Ray r, inout Intersection intersec )
+float SceneIntersect( Ray r, inout Intersection intersec, bool checkModels )
 //-----------------------------------------------------------------------
 {
 	BoxNode currentBoxNode, nodeA, nodeB, tmpNode;
@@ -128,9 +126,11 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	float triangleU = 0.0;
 	float triangleV = 0.0;
 	float triangleW = 0.0;
+
+	int modelID = 0;
 	
 	bool skip = false;
-	bool triangleHit = false;
+	bool triangleLookupNeeded = false;
 
 	
 			
@@ -222,6 +222,10 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		}
 	}
 
+	if (!checkModels)
+		return t;
+
+	// teapot 0
 	currentBoxNode = GetBoxNode(stackptr);
 	currentStackData = vec2(stackptr, BoundingBoxIntersect(currentBoxNode.data0.yzw, currentBoxNode.data1.yzw, r.origin, inverseDir));
 	stackLevels[0] = currentStackData;
@@ -251,7 +255,8 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 					triangleID = id;
 					triangleU = tu;
 					triangleV = tv;
-					triangleHit = true;
+					triangleLookupNeeded = true;
+					modelID = 0;
 				}
                         }
                         else // else this is a branch
@@ -305,7 +310,181 @@ float SceneIntersect( Ray r, inout Intersection intersec )
         } // end while (true)
 
 
-	if (triangleHit)
+	stackptr = 0.0;
+	r.origin.x -= 70.0;
+	// teapot 1
+	currentBoxNode = GetBoxNode(stackptr);
+	currentStackData = vec2(stackptr, BoundingBoxIntersect(currentBoxNode.data0.yzw, currentBoxNode.data1.yzw, r.origin, inverseDir));
+	stackLevels[0] = currentStackData;
+	
+	while (true)
+        {
+		if (currentStackData.y < t) 
+                {
+                        if (currentBoxNode.data0.x < 0.0) //  < 0.0 signifies a leaf node
+                        {
+				// each triangle's data is encoded in 8 rgba(or xyzw) texture slots
+				id = 8.0 * (-currentBoxNode.data0.x - 1.0);
+
+				uv0 = ivec2( mod(id + 0.0, 2048.0), (id + 0.0) * INV_TEXTURE_WIDTH );
+				uv1 = ivec2( mod(id + 1.0, 2048.0), (id + 1.0) * INV_TEXTURE_WIDTH );
+				uv2 = ivec2( mod(id + 2.0, 2048.0), (id + 2.0) * INV_TEXTURE_WIDTH );
+				
+				vd0 = texelFetch(tTriangleTexture, uv0, 0);
+				vd1 = texelFetch(tTriangleTexture, uv1, 0);
+				vd2 = texelFetch(tTriangleTexture, uv2, 0);
+
+				d = BVH_DoubleSidedTriangleIntersect( vec3(vd0.xyz), vec3(vd0.w, vd1.xy), vec3(vd1.zw, vd2.x), r, tu, tv );
+
+				if (d < t)
+				{
+					t = d;
+					triangleID = id;
+					triangleU = tu;
+					triangleV = tv;
+					triangleLookupNeeded = true;
+					modelID = 1;
+				}
+                        }
+                        else // else this is a branch
+                        {
+                                nodeA = GetBoxNode(currentBoxNode.data0.x);
+                                nodeB = GetBoxNode(currentBoxNode.data1.x);
+                                stackDataA = vec2(currentBoxNode.data0.x, BoundingBoxIntersect(nodeA.data0.yzw, nodeA.data1.yzw, r.origin, inverseDir));
+                                stackDataB = vec2(currentBoxNode.data1.x, BoundingBoxIntersect(nodeB.data0.yzw, nodeB.data1.yzw, r.origin, inverseDir));
+				
+				// first sort the branch node data so that 'a' is the smallest
+				if (stackDataB.y < stackDataA.y)
+				{
+					tmpStackData = stackDataB;
+					stackDataB = stackDataA;
+					stackDataA = tmpStackData;
+
+					tmpNode = nodeB;
+					nodeB = nodeA;
+					nodeA = tmpNode;
+				} // branch 'b' now has the larger rayT value of 'a' and 'b'
+
+				if (stackDataB.y < t) // see if branch 'b' (the larger rayT) needs to be processed
+				{
+					currentStackData = stackDataB;
+					currentBoxNode = nodeB;
+					skip = true; // this will prevent the stackptr from decreasing by 1
+				}
+				if (stackDataA.y < t) // see if branch 'a' (the smaller rayT) needs to be processed 
+				{
+					if (skip) // if larger branch 'b' needed to be processed also,
+						stackLevels[int(stackptr++)] = stackDataB; // cue larger branch 'b' for future round
+								// also, increase pointer by 1
+					
+					currentStackData = stackDataA;
+					currentBoxNode = nodeA;
+					skip = true; // this will prevent the stackptr from decreasing by 1
+				}
+                        }
+		} // end if (currentStackData.y < t)
+
+		if (!skip) 
+                {
+                        // decrease pointer by 1 (0.0 is root level, 24.0 is maximum depth)
+                        if (--stackptr < 0.0) // went past the root level, terminate loop
+                                break;
+                        currentStackData = stackLevels[int(stackptr)];
+                        currentBoxNode = GetBoxNode(currentStackData.x);
+                }
+		skip = false; // reset skip
+
+        } // end while (true)
+
+
+	stackptr = 0.0;
+	r.origin.x -= 70.0;
+	// teapot 2
+	currentBoxNode = GetBoxNode(stackptr);
+	currentStackData = vec2(stackptr, BoundingBoxIntersect(currentBoxNode.data0.yzw, currentBoxNode.data1.yzw, r.origin, inverseDir));
+	stackLevels[0] = currentStackData;
+	
+	while (true)
+        {
+		if (currentStackData.y < t) 
+                {
+                        if (currentBoxNode.data0.x < 0.0) //  < 0.0 signifies a leaf node
+                        {
+				// each triangle's data is encoded in 8 rgba(or xyzw) texture slots
+				id = 8.0 * (-currentBoxNode.data0.x - 1.0);
+
+				uv0 = ivec2( mod(id + 0.0, 2048.0), (id + 0.0) * INV_TEXTURE_WIDTH );
+				uv1 = ivec2( mod(id + 1.0, 2048.0), (id + 1.0) * INV_TEXTURE_WIDTH );
+				uv2 = ivec2( mod(id + 2.0, 2048.0), (id + 2.0) * INV_TEXTURE_WIDTH );
+				
+				vd0 = texelFetch(tTriangleTexture, uv0, 0);
+				vd1 = texelFetch(tTriangleTexture, uv1, 0);
+				vd2 = texelFetch(tTriangleTexture, uv2, 0);
+
+				d = BVH_DoubleSidedTriangleIntersect( vec3(vd0.xyz), vec3(vd0.w, vd1.xy), vec3(vd1.zw, vd2.x), r, tu, tv );
+
+				if (d < t)
+				{
+					t = d;
+					triangleID = id;
+					triangleU = tu;
+					triangleV = tv;
+					triangleLookupNeeded = true;
+					modelID = 2;
+				}
+                        }
+                        else // else this is a branch
+                        {
+                                nodeA = GetBoxNode(currentBoxNode.data0.x);
+                                nodeB = GetBoxNode(currentBoxNode.data1.x);
+                                stackDataA = vec2(currentBoxNode.data0.x, BoundingBoxIntersect(nodeA.data0.yzw, nodeA.data1.yzw, r.origin, inverseDir));
+                                stackDataB = vec2(currentBoxNode.data1.x, BoundingBoxIntersect(nodeB.data0.yzw, nodeB.data1.yzw, r.origin, inverseDir));
+				
+				// first sort the branch node data so that 'a' is the smallest
+				if (stackDataB.y < stackDataA.y)
+				{
+					tmpStackData = stackDataB;
+					stackDataB = stackDataA;
+					stackDataA = tmpStackData;
+
+					tmpNode = nodeB;
+					nodeB = nodeA;
+					nodeA = tmpNode;
+				} // branch 'b' now has the larger rayT value of 'a' and 'b'
+
+				if (stackDataB.y < t) // see if branch 'b' (the larger rayT) needs to be processed
+				{
+					currentStackData = stackDataB;
+					currentBoxNode = nodeB;
+					skip = true; // this will prevent the stackptr from decreasing by 1
+				}
+				if (stackDataA.y < t) // see if branch 'a' (the smaller rayT) needs to be processed 
+				{
+					if (skip) // if larger branch 'b' needed to be processed also,
+						stackLevels[int(stackptr++)] = stackDataB; // cue larger branch 'b' for future round
+								// also, increase pointer by 1
+					
+					currentStackData = stackDataA;
+					currentBoxNode = nodeA;
+					skip = true; // this will prevent the stackptr from decreasing by 1
+				}
+                        }
+		} // end if (currentStackData.y < t)
+
+		if (!skip) 
+                {
+                        // decrease pointer by 1 (0.0 is root level, 24.0 is maximum depth)
+                        if (--stackptr < 0.0) // went past the root level, terminate loop
+                                break;
+                        currentStackData = stackLevels[int(stackptr)];
+                        currentBoxNode = GetBoxNode(currentStackData.x);
+                }
+		skip = false; // reset skip
+
+        } // end while (true)
+
+
+	if (triangleLookupNeeded)
 	{
 		//uv0 = ivec2( mod(triangleID + 0.0, 2048.0), (triangleID + 0.0) * INV_TEXTURE_WIDTH );
 		//uv1 = ivec2( mod(triangleID + 1.0, 2048.0), (triangleID + 1.0) * INV_TEXTURE_WIDTH );
@@ -313,8 +492,8 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		uv3 = ivec2( mod(triangleID + 3.0, 2048.0), (triangleID + 3.0) * INV_TEXTURE_WIDTH );
 		uv4 = ivec2( mod(triangleID + 4.0, 2048.0), (triangleID + 4.0) * INV_TEXTURE_WIDTH );
 		uv5 = ivec2( mod(triangleID + 5.0, 2048.0), (triangleID + 5.0) * INV_TEXTURE_WIDTH );
-		uv6 = ivec2( mod(triangleID + 6.0, 2048.0), (triangleID + 6.0) * INV_TEXTURE_WIDTH );
-		uv7 = ivec2( mod(triangleID + 7.0, 2048.0), (triangleID + 7.0) * INV_TEXTURE_WIDTH );
+		//uv6 = ivec2( mod(triangleID + 6.0, 2048.0), (triangleID + 6.0) * INV_TEXTURE_WIDTH );
+		//uv7 = ivec2( mod(triangleID + 7.0, 2048.0), (triangleID + 7.0) * INV_TEXTURE_WIDTH );
 		
 		//vd0 = texelFetch(tTriangleTexture, uv0, 0);
 		//vd1 = texelFetch(tTriangleTexture, uv1, 0);
@@ -322,8 +501,8 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		vd3 = texelFetch(tTriangleTexture, uv3, 0);
 		vd4 = texelFetch(tTriangleTexture, uv4, 0);
 		vd5 = texelFetch(tTriangleTexture, uv5, 0);
-		vd6 = texelFetch(tTriangleTexture, uv6, 0);
-		vd7 = texelFetch(tTriangleTexture, uv7, 0);
+		//vd6 = texelFetch(tTriangleTexture, uv6, 0);
+		//vd7 = texelFetch(tTriangleTexture, uv7, 0);
 
 		// face normal for flat-shaded polygon look
 		//intersec.normal = normalize( cross(vec3(vd0.w, vd1.xy) - vec3(vd0.xyz), vec3(vd1.zw, vd2.x) - vec3(vd0.xyz)) );
@@ -332,10 +511,24 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		triangleW = 1.0 - triangleU - triangleV;
 		intersec.normal = normalize(triangleW * vec3(vd2.yzw) + triangleU * vec3(vd3.xyz) + triangleV * vec3(vd3.w, vd4.xy));
 		intersec.emission = vec3(1, 0, 1); // use this if intersec.type will be LIGHT
-		intersec.color = vd6.yzw;
+		//intersec.color = vd6.yzw;
 		intersec.uv = triangleW * vec2(vd4.zw) + triangleU * vec2(vd5.xy) + triangleV * vec2(vd5.zw);
-		intersec.type = int(vd6.x);
+		//intersec.type = int(vd6.x);
 		//intersec.albedoTextureID = int(vd7.x);
+		intersec.color = vec3(0.7);
+		intersec.type = SPEC;
+		if (modelID == 1)
+		{
+			intersec.color = vec3(1);
+			intersec.type = COAT;
+		}
+		
+		if (modelID == 2)
+		{
+			intersec.color = vec3(1);
+			intersec.type = REFR;
+		}
+		
 		intersec.isModel = true;
 	}
 	
@@ -344,79 +537,132 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 }
 
 
-#define EYE_PATH_LENGTH    4
-#define LIGHT_PATH_LENGTH  1  // Only 1 ray cast from light source is necessary because the light just needs to find its way through
-				// the crack in the doorway and land on a wall, where it can be connected with the eye path later
 
 //-----------------------------------------------------------------------
-vec3 CalculateRadiance( Ray r, inout uvec2 seed )
+vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 //-----------------------------------------------------------------------
 {
 	Intersection intersec;
 	vec4 texColor;
 
-	vec3 randVec = vec3(rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0);
+	//vec3 randVec = vec3(rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0);
 	vec3 accumCol = vec3(0);
-	vec3 maskEyePath = vec3(1);
-	vec3 maskLightPath = vec3(1);
-	vec3 eyeX = vec3(0);
-	vec3 lightX = vec3(0);
+	vec3 mask = vec3(1);
 	vec3 checkCol0 = vec3(0.01);
 	vec3 checkCol1 = vec3(1.0);
 	vec3 nl, n, x;
-	vec3 nlEyePath = vec3(0);
 	vec3 tdir;
+	vec3 dirToLight;
 
 	vec2 sampleUV;
 	
 	float nc, nt, ratioIoR, Re, Tr;
 	float t = INFINITY;
 	float epsIntersect = 0.01;
+	float distanceEPS = epsIntersect * 10.0;
+	float lightHitDistance = INFINITY;
+	float weight;
 
 	int diffuseCount = 0;
 	int previousIntersecType = -1;
 
+	bool sampleLight = false;
 	bool bounceIsSpecular = true;
-	//set following flag to true - we haven't found a diffuse surface yet and can exit early (keeps frame rate high)
-	bool skipConnectionEyePath = true;
+	bool ableToJoinPaths = false;
+	bool checkModels = false;
+
+
+	// Light path tracing (from Light source) /////////////////////////////////////////////////////////////////////
+
+	vec3 lightHitEmission = quads[0].emission;
+	vec3 randPointOnLight;
+	randPointOnLight.x = mix(quads[0].v0.x, quads[0].v1.x, rand(seed));
+	randPointOnLight.y = mix(quads[0].v0.y, quads[0].v3.y, rand(seed));
+	randPointOnLight.z = quads[0].v0.z;
+	vec3 lightHitPos = randPointOnLight;
+	vec3 lightNormal = normalize(vec3(0,0,1));
+	vec3 randLightDir = normalize(randomCosWeightedDirectionInHemisphere(lightNormal, seed));
+	
+	Ray r = Ray( randPointOnLight, randLightDir );
+	r.origin += nl; // move light ray out to prevent self-intersection with light
+	
+	t = SceneIntersect(r, intersec, checkModels);
+		
+	if (intersec.type == DIFF || intersec.type == CHECK)
+	{
+		lightHitPos = r.origin + r.direction * t;
+		weight = max(0.0, dot(-r.direction, normalize(intersec.normal)));
+		lightHitEmission *= intersec.color * weight;
+	}
+
+	// // reset intersec struct fields
+	// intersec.normal = vec3(0);
+	// intersec.emission = vec3(0);
+	// intersec.color = vec3(0);
+	// intersec.roughness = 0.0;
+	// intersec.type = -100;
+	// t = INFINITY;
+
+	// regular path tracing from camera
+	r = originalRay;
+	r.direction = normalize(r.direction);
+	checkModels = true;
 
 	
 	// Eye path tracing (from Camera) ///////////////////////////////////////////////////////////////////////////
 	
-	for (int bounces = 0; bounces < EYE_PATH_LENGTH; bounces++)
+	for (int bounces = 0; bounces < 5; bounces++)
 	{
 	
-		t = SceneIntersect(r, intersec);
+		t = SceneIntersect(r, intersec, checkModels);
 		
-		// not needed, light can't escape from the small room in this scene
-		/*
 		if (t == INFINITY)
 		{
 			break;
 		}
-		*/
+		
 		
 		if (intersec.type == LIGHT)
 		{
-			if (bounceIsSpecular)
+			if (bounceIsSpecular || sampleLight)
 			{
-				accumCol = maskEyePath * intersec.emission;
-			
-				skipConnectionEyePath = true;
+				accumCol = mask * intersec.emission;
 			}
-			
+
 			break;
 		}
+
+		if (intersec.type == DIFF && sampleLight)
+		{
+			ableToJoinPaths = abs(lightHitDistance - t) < distanceEPS;
+			
+			if (ableToJoinPaths)
+			{
+				accumCol = mask * lightHitEmission;
+			}
+
+			break;
+		}
+
+		// if we reached this point and sampleLight is still true, then we can either
+		//  continue with the reflection/shadow ray or exit because the light was not found
+		if (sampleLight)
+			break;
 		
 		// useful data 
 		n = normalize(intersec.normal);
-		nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(n * -1.0);
+		nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
 		x = r.origin + r.direction * t;
 		
 		
 		if ( intersec.type == DIFF || intersec.type == LIGHTWOOD ||
 		     intersec.type == DARKWOOD || intersec.type == PAINTING ) // Ideal DIFFUSE reflection
 		{
+
+			diffuseCount++;
+
+			if (diffuseCount > 2)
+				break;
 			
 			if (intersec.type == LIGHTWOOD)
 			{
@@ -439,40 +685,46 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				intersec.color *= GammaToLinear(texColor, 2.2).rgb;
 			}
 					
-			maskEyePath *= intersec.color;
-			eyeX = x + nl;
-			nlEyePath = nl;
-			skipConnectionEyePath = false;
+			mask *= intersec.color;
+
 			bounceIsSpecular = false;
+
 			previousIntersecType = DIFF;
 			
-			diffuseCount++;
-			if (diffuseCount > 1 || rand(seed) < 0.5)
+			
+			if (diffuseCount == 1 && rand(seed) < 0.5)
 			{
-				break;
+				// choose random Diffuse sample vector
+				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
+				r.origin += nl * epsIntersect;
+				continue;
 			}
-				
-			// choose random Diffuse sample vector
-			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+
+			dirToLight = normalize(lightHitPos - x);
+			lightHitDistance = distance(lightHitPos, x);
+			weight = max(0.0, dot(nl, dirToLight));
+			mask *= weight;
+			
+			r = Ray( x, normalize(dirToLight) );
 			r.origin += nl * epsIntersect;
-			eyeX = r.origin;
+			sampleLight = true;
 			continue;
 		}
 		
 		if (intersec.type == SPEC)  // Ideal SPECULAR reflection
 		{
-			maskEyePath *= intersec.color;
+			mask *= intersec.color;
 			
 			if (intersec.isModel)
 				nl = perturbNormal(nl, vec2(-0.2, 0.2), intersec.uv * 2.0);
 
 			vec3 reflectVec = reflect(r.direction, nl);
-			vec3 glossyVec = randomDirectionInHemisphere(nl, seed);
+			vec3 glossyVec = normalize(randomDirectionInHemisphere(nl, seed));
 			r = Ray( x, mix(reflectVec, glossyVec, intersec.roughness) );
+			r.direction = normalize(r.direction);
 			r.origin += nl * epsIntersect;
 
 			previousIntersecType = SPEC;
-			skipConnectionEyePath = true;
 			continue;
 		}
 		
@@ -483,12 +735,12 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			nt = 1.5; // IOR of common Glass
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
-			skipConnectionEyePath = true;
 
 			if (Re > 0.99)
 			{
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.origin += nl * epsIntersect;
+				previousIntersecType = REFR;
 				continue;
 			}
 
@@ -503,11 +755,11 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			else // transmit ray through surface
 			{
 				if (previousIntersecType == DIFF) 
-					maskEyePath *= 4.0;
+					mask *= 4.0;
 			
 				previousIntersecType = REFR;
 			
-				maskEyePath *= intersec.color;
+				mask *= intersec.color;
 				tdir = refract(r.direction, nl, ratioIoR);
 				r = Ray(x, normalize(tdir));
 				r.origin -= nl * epsIntersect;
@@ -534,121 +786,60 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			if( rand(seed) < Re )
 			{	
 				vec3 reflectVec = reflect(r.direction, nl);
-				vec3 glossyVec = randomDirectionInHemisphere(nl, seed);
+				vec3 glossyVec = normalize(randomDirectionInHemisphere(nl, seed));
 				r = Ray( x, mix(reflectVec, glossyVec, intersec.roughness) );
+				r.direction = normalize(r.direction);
 				r.origin += nl * epsIntersect;
 				
-				skipConnectionEyePath = true;
 				continue;	
 			}
-			else
+			
+			if (intersec.type == CHECK)
 			{
-				if (intersec.type == CHECK)
-				{
-					float q = clamp( mod( dot( floor(x.xz * 0.04), vec2(1.0) ), 2.0 ) , 0.0, 1.0 );
-					intersec.color = checkCol0 * q + checkCol1 * (1.0 - q);	
-				}
+				float q = clamp( mod( dot( floor(x.xz * 0.04), vec2(1.0) ), 2.0 ) , 0.0, 1.0 );
+				intersec.color = checkCol0 * q + checkCol1 * (1.0 - q);	
+			}
+			
+			else if (intersec.type == COAT)
+			{
+				// spherical coordinates
+				//sampleUV.x = atan(-nl.z, nl.x) * ONE_OVER_TWO_PI + 0.5;
+				//sampleUV.y = asin(clamp(nl.y, -1.0, 1.0)) * ONE_OVER_PI + 0.5;
+				texColor = texture(tMarbleTexture, intersec.uv * vec2(-1.0, 1.0));
+				//texColor = pow(texColor, vec4(2));
+				texColor = clamp(texColor + vec4(0.1), 0.0, 1.0);
+				intersec.color = GammaToLinear(texColor, 2.2).rgb;
 				
-				//if (intersec.color.r == 0.99) // tag for marble ellipsoid
-				if (intersec.type == COAT)
-				{
-					// spherical coordinates
-					//sampleUV.x = atan(-nl.z, nl.x) * ONE_OVER_TWO_PI + 0.5;
-					//sampleUV.y = asin(clamp(nl.y, -1.0, 1.0)) * ONE_OVER_PI + 0.5;
-					texColor = texture(tMarbleTexture, intersec.uv);
-					texColor = clamp(texColor + vec4(0.1), 0.0, 1.0);
-					//intersec.color *= GammaToLinear(texColor, 2.2).rgb;
-					intersec.color = GammaToLinear(texColor, 2.2).rgb;
-				}
-				
-				diffuseCount++;
+			}
+			
+			diffuseCount++;
 
-				skipConnectionEyePath = false;
-				bounceIsSpecular = false;
-				maskEyePath *= intersec.color * Tr;
-				
-				eyeX = x + nl;
-				nlEyePath = nl;
-				
-				// choose random sample vector for diffuse material underneath ClearCoat
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+			bounceIsSpecular = false;
+
+			mask *= intersec.color;
+			
+			if (diffuseCount == 1 && rand(seed) < 0.5)
+			{
+				// choose random Diffuse sample vector
+				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
 				r.origin += nl * epsIntersect;
-				continue;	
-			}	
+				continue;
+			}
+
+			dirToLight = normalize(lightHitPos - x);
+			lightHitDistance = distance(lightHitPos, x);
+			weight = max(0.0, dot(nl, dirToLight));
+			mask *= weight;
+			
+			r = Ray( x, normalize(dirToLight) );
+			r.origin += nl * epsIntersect;
+			sampleLight = true;
+			continue;	
+				
 		} //end if (intersec.type == COAT)
 		
 	} // end for (int bounces = 0; bounces < EYE_PATH_LENGTH; bounces++)
 	
-	
-	if (skipConnectionEyePath)
-		return accumCol;
-	
-	
-	// Light path tracing (from Light source) /////////////////////////////////////////////////////////////////////
-
-	vec3 randPointOnLight;
-	randPointOnLight.x = mix(quads[0].v0.x, quads[0].v1.x, rand(seed));
-	randPointOnLight.y = mix(quads[0].v0.y, quads[0].v3.y, rand(seed));
-	randPointOnLight.z = quads[0].v0.z;
-	vec3 randLightDir = randomCosWeightedDirectionInHemisphere(vec3(0,0,1), seed);
-	vec3 nlLightPath = vec3(0,0,1);
-	bool diffuseReached = false;
-	randLightDir = normalize(randLightDir);
-	r = Ray( randPointOnLight, randLightDir );
-	r.origin += r.direction; // move light ray out to prevent self-intersection with light
-	lightX = r.origin;
-	maskLightPath = quads[0].emission;
-	
-	
-	for (int bounces = 0; bounces < LIGHT_PATH_LENGTH; bounces++)
-	{
-		// this lets the original light be the only node on the light path, about 50% of the time
-		if (rand(seed) < 0.5)
-		{
-			break;
-		}
-				
-		t = SceneIntersect(r, intersec);
-
-		if ( intersec.type != DIFF )
-		{
-			break;
-		}
-		
-		// useful data 
-		n = normalize(intersec.normal);
-		nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(n * -1.0);
-		x = r.origin + r.direction * t;
-		
-		
-		//if (intersec.type == DIFF)
-		{
-			maskLightPath *= intersec.color;
-			lightX = x + nl;
-			nlLightPath = nl;
-			diffuseReached = true;
-			break;
-		}
-		
-	} // end for (int bounces = 0; bounces < LIGHT_PATH_LENGTH; bounces++)
-	
-	
-	// Connect Camera path and Light path ////////////////////////////////////////////////////////////
-	
-	Ray connectRay = Ray(eyeX, normalize(lightX - eyeX));
-	float connectDist = distance(eyeX, lightX);
-	float c = SceneIntersect(connectRay, intersec);
-	if (c < connectDist)
-		return accumCol;
-	else
-	{
-		maskEyePath *= max(0.0, dot(connectRay.direction, nlEyePath));
-
-		if (diffuseReached)
-			maskLightPath *= max(0.0, dot(-connectRay.direction, nlLightPath));
-
-		accumCol = (maskEyePath * maskLightPath);
-	}
 	
 	return max(vec3(0), accumCol);      
 }
@@ -659,18 +850,19 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0);// No color value, Black
-	vec3 L2 = vec3(1.0, 0.9, 0.8) * 6.0;// Bright Yellowish light
+	vec3 L2 = vec3(1.0, 0.9, 0.8) * 15.0;// Bright Yellowish light
+	vec3 wallColor = vec3(0.5);
 	vec3 tableColor = vec3(1.0, 0.7, 0.4) * 0.6;
 	vec3 brassColor = vec3(1.0, 0.7, 0.5) * 0.7;
 	
-	quads[0] = Quad( vec3( 180,-100,-299), vec3( 280,-100,-299), vec3( 280,  90,-299), vec3( 180,  90,-299), L2, z, 0.0, LIGHT, false);// Area Light Quad in doorway
+	quads[0] = Quad( vec3( 180,-100,-298.5), vec3( 280,-100,-298.5), vec3( 280,  90,-298.5), vec3( 180,  90,-298.5), L2, z, 0.0, LIGHT, false);// Area Light Quad in doorway
 	
-	quads[1] = Quad( vec3(-350,-100,-300), vec3( 350,-100,-300), vec3( 350, 150,-300), vec3(-350, 150,-300),  z, vec3(1.0), 0.0,   DIFF, false);// Back Wall (in front of camera, visible at startup)
-	quads[2] = Quad( vec3( 350,-100, 200), vec3(-350,-100, 200), vec3(-350, 150, 200), vec3( 350, 150, 200),  z, vec3(1.0), 0.0,   DIFF, false);// Front Wall (behind camera, not visible at startup)
-	quads[3] = Quad( vec3(-350,-100, 200), vec3(-350,-100,-300), vec3(-350, 150,-300), vec3(-350, 150, 200),  z, vec3(1.0), 0.0,   DIFF, false);// Left Wall
-	quads[4] = Quad( vec3( 350,-100,-300), vec3( 350,-100, 200), vec3( 350, 150, 200), vec3( 350, 150,-300),  z, vec3(1.0), 0.0,   DIFF, false);// Right Wall
-	quads[5] = Quad( vec3(-350, 150,-300), vec3( 350, 150,-300), vec3( 350, 150, 200), vec3(-350, 150, 200),  z, vec3(1.0), 0.0,   DIFF, false);// Ceiling
-	quads[6] = Quad( vec3(-350,-100,-300), vec3(-350,-100, 200), vec3( 350,-100, 200), vec3( 350,-100,-300),  z, vec3(1.0), 0.0,  CHECK, false);// Floor
+	quads[1] = Quad( vec3(-350,-100,-300), vec3( 350,-100,-300), vec3( 350, 150,-300), vec3(-350, 150,-300),  z, wallColor, 0.0,   DIFF, false);// Back Wall (in front of camera, visible at startup)
+	quads[2] = Quad( vec3( 350,-100, 200), vec3(-350,-100, 200), vec3(-350, 150, 200), vec3( 350, 150, 200),  z, wallColor, 0.0,   DIFF, false);// Front Wall (behind camera, not visible at startup)
+	quads[3] = Quad( vec3(-350,-100, 200), vec3(-350,-100,-300), vec3(-350, 150,-300), vec3(-350, 150, 200),  z, wallColor, 0.0,   DIFF, false);// Left Wall
+	quads[4] = Quad( vec3( 350,-100,-300), vec3( 350,-100, 200), vec3( 350, 150, 200), vec3( 350, 150,-300),  z, wallColor, 0.0,   DIFF, false);// Right Wall
+	quads[5] = Quad( vec3(-350, 150,-300), vec3( 350, 150,-300), vec3( 350, 150, 200), vec3(-350, 150, 200),  z, vec3(1), 0.0,   DIFF, false);// Ceiling
+	quads[6] = Quad( vec3(-350,-100,-300), vec3(-350,-100, 200), vec3( 350,-100, 200), vec3( 350,-100,-300),  z, vec3(1), 0.0,  CHECK, false);// Floor
 	
 	quads[7] = Quad( vec3(-55, 20,-295), vec3( 55, 20,-295), vec3( 55, 65,-295), vec3(-55, 65,-295), z, vec3(1.0), 0.0, PAINTING, false);// Wall Painting
 	
