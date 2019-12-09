@@ -409,13 +409,6 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			nt = 1.33; // IOR of Water
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
-
-			if (Re > 0.99)
-			{
-				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
-				r.origin += nl * uEPS_intersect;
-				continue;
-			}
 			
 			if (diffuseCount == 0 && !firstTypeWasDIFF)
 			{	
