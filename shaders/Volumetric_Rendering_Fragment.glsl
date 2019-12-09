@@ -240,13 +240,6 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 
-			if (Re > 0.99)
-			{
-				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
-				r.origin += nl;
-				continue;
-			}
-
 			if (rand(seed) < Re) // reflect ray from surface
 			{
 				r = Ray( x, reflect(r.direction, nl) );
@@ -274,13 +267,6 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			nt = 1.4; // IOR of ClearCoat 
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
-
-			if (Re > 0.99)
-			{
-				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
-				r.origin += nl;
-				continue;
-			}
 			
 			// choose either specular reflection or diffuse
 			if( rand(seed) < Re )
