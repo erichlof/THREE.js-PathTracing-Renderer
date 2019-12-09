@@ -558,8 +558,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 	
 	float nc, nt, ratioIoR, Re, Tr;
 	float t = INFINITY;
-	float epsIntersect = 0.01;
-	float distanceEPS = epsIntersect * 10.0;
+	float distanceEPS = uEPS_intersect * 10.0;
 	float lightHitDistance = INFINITY;
 	float weight;
 
@@ -696,7 +695,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 			{
 				// choose random Diffuse sample vector
 				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
-				r.origin += nl * epsIntersect;
+				r.origin += nl * uEPS_intersect;
 				continue;
 			}
 
@@ -706,7 +705,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 			mask *= weight;
 			
 			r = Ray( x, normalize(dirToLight) );
-			r.origin += nl * epsIntersect;
+			r.origin += nl * uEPS_intersect;
 			sampleLight = true;
 			continue;
 		}
@@ -722,7 +721,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 			vec3 glossyVec = normalize(randomDirectionInHemisphere(nl, seed));
 			r = Ray( x, mix(reflectVec, glossyVec, intersec.roughness) );
 			r.direction = normalize(r.direction);
-			r.origin += nl * epsIntersect;
+			r.origin += nl * uEPS_intersect;
 
 			previousIntersecType = SPEC;
 			continue;
@@ -739,7 +738,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 			if (rand(seed) < Re) // reflect ray from surface
 			{
 				r = Ray( x, reflect(r.direction, nl) );
-				r.origin += nl * epsIntersect;
+				r.origin += nl * uEPS_intersect;
 				
 				previousIntersecType = REFR;
 				continue;	
@@ -754,7 +753,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 				mask *= intersec.color;
 				tdir = refract(r.direction, nl, ratioIoR);
 				r = Ray(x, normalize(tdir));
-				r.origin -= nl * epsIntersect;
+				r.origin -= nl * uEPS_intersect;
 
 				continue;
 			}	
@@ -775,7 +774,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 				vec3 glossyVec = normalize(randomDirectionInHemisphere(nl, seed));
 				r = Ray( x, mix(reflectVec, glossyVec, intersec.roughness) );
 				r.direction = normalize(r.direction);
-				r.origin += nl * epsIntersect;
+				r.origin += nl * uEPS_intersect;
 				
 				continue;	
 			}
@@ -808,7 +807,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 			{
 				// choose random Diffuse sample vector
 				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
-				r.origin += nl * epsIntersect;
+				r.origin += nl * uEPS_intersect;
 				continue;
 			}
 
@@ -818,13 +817,13 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 			mask *= weight;
 			
 			r = Ray( x, normalize(dirToLight) );
-			r.origin += nl * epsIntersect;
+			r.origin += nl * uEPS_intersect;
 			sampleLight = true;
 			continue;	
 				
 		} //end if (intersec.type == COAT)
 		
-	} // end for (int bounces = 0; bounces < EYE_PATH_LENGTH; bounces++)
+	} // end for (int bounces = 0; bounces < 5; bounces++)
 	
 	
 	return max(vec3(0), accumCol);      
