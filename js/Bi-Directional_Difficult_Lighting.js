@@ -1,5 +1,5 @@
 // scene/demo-specific variables go here
-
+var EPS_intersect;
 var doorObject;
 var paintingTexture, darkWoodTexture, lightWoodTexture, marbleTexture;
 var hammeredMetalNormalMapTexture;
@@ -107,6 +107,7 @@ function load_GLTF_Models() {
 function initSceneData() {
         
         // scene/demo-specific three.js objects setup goes here
+        EPS_intersect = mouseControl ? 0.01 : 1.0; // less precision on mobile
 
         // set camera's field of view
         worldCamera.fov = 50;
@@ -388,6 +389,8 @@ function initPathTracingShaders() {
                 
                 uCameraIsMoving: { type: "b1", value: false },
                 uCameraJustStartedMoving: { type: "b1", value: false },
+
+                uEPS_intersect: { type: "f", value: EPS_intersect },
                 uTime: { type: "f", value: 0.0 },
                 uSampleCounter: { type: "f", value: 0.0 },
                 uFrameCounter: { type: "f", value: 1.0 },
