@@ -392,13 +392,6 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 
-			if (Re > 0.99)
-			{
-				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
-				r.origin += nl * epsIntersect;
-				continue;
-			}
-
 			if (rand(seed) < Re) // reflect ray from surface
 			{
 				r = Ray( x, reflect(r.direction, nl) );
