@@ -204,8 +204,14 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 	vec3 spotlightPos1 = vec3(380.0, 290.0, -470.0);
 	vec3 spotlightPos2 = vec3(430.0, 315.0, -485.0);
 	vec3 spotlightDir = normalize(spotlightPos1 - spotlightPos2);
-	vec3 lightHitPos = lightChoice.position + normalize(randomSphereDirection(seed)) * (lightChoice.radius * 0.5);
+	//vec3 lightHitPos = lightChoice.position + normalize(randomSphereDirection(seed)) * (lightChoice.radius * 0.5);
+	
 	vec3 lightNormal = vec3(0,1,0);
+	if (randChoose > 0)
+		lightNormal = spotlightDir;
+	lightNormal = normalize(lightNormal);
+	vec3 lightDir = normalize(randomCosWeightedDirectionInHemisphere(lightNormal, seed));
+	vec3 lightHitPos = lightChoice.position + lightDir;
 	vec3 lightHitEmission = lightChoice.emission;
 	vec3 x, n, nl;
         
@@ -227,10 +233,8 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 	bool ableToJoinPaths = false;
 
 	// light trace
-	if (randChoose > 0)
-		lightNormal = spotlightDir;
-	lightNormal = normalize(lightNormal);
-	Ray r = Ray(lightChoice.position, randomCosWeightedDirectionInHemisphere(lightNormal, seed));
+	
+	Ray r = Ray(lightChoice.position, lightDir);
 	r.direction = normalize(r.direction);
 	r.origin += r.direction * (lightChoice.radius * 1.1);
 	t = SceneIntersect(r, intersec);
@@ -241,13 +245,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 		lightHitEmission *= intersec.color * weight;
 	}
 
-	// reset intersec struct fields
-	intersec.normal = vec3(0);
-	intersec.emission = vec3(0);
-	intersec.color = vec3(0);
-	intersec.roughness = 0.0;
-	intersec.type = -100;
-	t = INFINITY;
+	
 	// regular path tracing from camera
 	r = originalRay;
 	r.direction = normalize(r.direction);
@@ -266,6 +264,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 				r.direction = normalize(r.direction);
 				mask = firstMask;
 				// set/reset variables
+				diffuseCount = 0;
 				reflectionTime = true;
 				bounceIsSpecular = true;
 				sampleLight = false;
@@ -313,6 +312,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 					r.direction = normalize(r.direction);
 					mask = firstMask;
 					// set/reset variables
+					diffuseCount = 0;
 					reflectionTime = true;
 					bounceIsSpecular = true;
 					sampleLight = false;
@@ -332,7 +332,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 				if (!shadowTime) 
 				{
 					if (bounceIsSpecular)
-						accumCol = mask * intersec.emission * 10.0;
+						accumCol = mask * intersec.emission * 20.0;
 					else if (sampleLight)
 						accumCol = mask * intersec.emission * 0.5;
 					
@@ -350,15 +350,13 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 				}
 				
 				// add shadow ray result to the colorbleed result (if any)
-				if (bounceIsSpecular)
-					accumCol += mask * intersec.emission * 10.0;
-				else if (sampleLight)
-					accumCol += mask * intersec.emission * 0.5;
+				accumCol += mask * intersec.emission * 0.5;
 
 				break;
 						
 			}
 
+			if (bounceIsSpecular)
 			accumCol = mask * intersec.emission; // looking at light through a reflection
 			// reached a light, so we can exit
 			break;
@@ -407,6 +405,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 					r.direction = normalize(r.direction);
 					mask = firstMask;
 					// set/reset variables
+					diffuseCount = 0;
 					reflectionTime = true;
 					bounceIsSpecular = true;
 					sampleLight = false;
@@ -421,7 +420,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 				break;	
 			}
 
-			break;
+			//break;
 		}
 
 		// if we reached this point and sampleLight is still true, then we can either
@@ -435,6 +434,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 				r.direction = normalize(r.direction);
 				mask = firstMask;
 				// set/reset variables
+				diffuseCount = 0;
 				reflectionTime = true;
 				bounceIsSpecular = true;
 				sampleLight = false;
@@ -470,6 +470,9 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
                 if (intersec.type == DIFF) // Ideal DIFFUSE reflection
 		{
 			diffuseCount++;
+
+			if (diffuseCount > 2)
+				break;
 
 			mask *= intersec.color;
 
@@ -531,16 +534,9 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 		if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
 			nc = 1.0; // IOR of Air
-			nt = 1.6; // IOR of heavy Glass
+			nt = 1.5; // IOR of heavy Glass
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
-
-			if (Re > 0.99)
-			{
-				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
-				r.origin += nl * uEPS_intersect;
-				continue;
-			}
 			
 			if (bounces == 0)
 			{	
@@ -560,6 +556,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 			r.origin -= nl * uEPS_intersect;
 
 			bounceIsSpecular = true; // turn on refracting caustics
+
 			continue;
 			
 		} // end if (intersec.type == REFR)
@@ -579,10 +576,10 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0);// No color value, Black        
-	vec3 L1 = vec3(1.0) * 15.0;// Bright White light
-	vec3 L2 = vec3(0.936507, 0.642866, 0.310431) * 10.0;// Bright Yellowish light
-	vec3 wallColor = vec3(1.0, 0.98, 1.0) * 0.7;
-	vec3 tableColor = vec3(1.0, 0.7, 0.4) * 0.8;
+	vec3 L1 = vec3(1.0) * 20.0;// Bright White light
+	vec3 L2 = vec3(0.936507, 0.642866, 0.310431) * 15.0;// Bright Yellowish light
+	vec3 wallColor = vec3(1.0, 0.98, 1.0) * 0.5;
+	vec3 tableColor = vec3(1.0, 0.55, 0.2) * 0.6;
 	vec3 lampColor = vec3(1.0, 1.0, 0.8) * 0.7;
 	vec3 spotlightPos1 = vec3(380.0, 290.0, -470.0);
 	vec3 spotlightPos2 = vec3(430.0, 315.0, -485.0);
@@ -592,7 +589,7 @@ void SetupScene(void)
 	quads[0] = Quad( vec3( 0.0, 0.0, 1.0), vec3(  0.0,   0.0,-559.2), vec3(549.6,   0.0,-559.2), vec3(549.6, 548.8,-559.2), vec3(  0.0, 548.8,-559.2),  z, wallColor, 0.0, DIFF);// Back Wall
 	quads[1] = Quad( vec3( 1.0, 0.0, 0.0), vec3(  0.0,   0.0,   0.0), vec3(  0.0,   0.0,-559.2), vec3(  0.0, 548.8,-559.2), vec3(  0.0, 548.8,   0.0),  z, wallColor, 0.0, DIFF);// Left Wall
 	quads[2] = Quad( vec3(-1.0, 0.0, 0.0), vec3(549.6,   0.0,-559.2), vec3(549.6,   0.0,   0.0), vec3(549.6, 548.8,   0.0), vec3(549.6, 548.8,-559.2),  z, wallColor, 0.0, DIFF);// Right Wall
-	quads[3] = Quad( vec3( 0.0,-1.0, 0.0), vec3(  0.0, 548.8,-559.2), vec3(549.6, 548.8,-559.2), vec3(549.6, 548.8,   0.0), vec3(  0.0, 548.8,   0.0),  z, wallColor, 0.0, DIFF);// Ceiling
+	quads[3] = Quad( vec3( 0.0,-1.0, 0.0), vec3(  0.0, 548.8,-559.2), vec3(549.6, 548.8,-559.2), vec3(549.6, 548.8,   0.0), vec3(  0.0, 548.8,   0.0),  z, vec3(1.0), 0.0, DIFF);// Ceiling
 	quads[4] = Quad( vec3( 0.0, 1.0, 0.0), vec3(  0.0,   0.0,   0.0), vec3(549.6,   0.0,   0.0), vec3(549.6,   0.0,-559.2), vec3(  0.0,   0.0,-559.2),  z, wallColor, 0.0, DIFF);// Floor
 	
 	boxes[0] = Box( vec3(180.0, 145.0, -540.0), vec3(510.0, 155.0, -310.0), z, tableColor, 0.0, DIFF);// Table Top
@@ -603,9 +600,9 @@ void SetupScene(void)
 	openCylinders[3] = OpenCylinder( 8.5, vec3(485.0, 0.0, -335.0), vec3(485.0, 145.0, -335.0), z, tableColor, 0.0, DIFF);// Table Leg
 	
 	openCylinders[4] = OpenCylinder( 6.0, vec3(80.0, 0.0, -430.0), vec3(80.0, 366.0, -430.0), z, lampColor, 0.0, SPEC);// Floor Lamp Post
-	openCylinders[5] = OpenCylinder( spotlightRadius, spotlightPos1, spotlightPos2, z, vec3(1.0,0.9,0.9), 0.6, SPEC);// Spotlight Casing
+	openCylinders[5] = OpenCylinder( spotlightRadius, spotlightPos1, spotlightPos2, z, vec3(1.0,1.0,1.0), 0.0, SPEC);// Spotlight Casing
 	
-	disks[0] = Disk( spotlightRadius, spotlightPos2, spotlightDir, z, vec3(0.4), 1.0, SPEC);// disk backing of spotlight
+	disks[0] = Disk( spotlightRadius, spotlightPos2, spotlightDir, z, vec3(1), 0.0, SPEC);// disk backing of spotlight
 	
 	cones[0] = Cone( vec3(80.0, 405.0, -430.0), 70.0, vec3(80.0, 365.0, -430.0), 6.0, z, lampColor, 0.2, SPEC);// Floor Lamp Shade
 	
