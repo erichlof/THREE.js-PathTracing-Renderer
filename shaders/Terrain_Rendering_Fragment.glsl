@@ -264,7 +264,7 @@ bool isLightSourceVisible( vec3 pos, vec3 n, vec3 dirToLight)
 	dirToLight = normalize(dirToLight);
 	float h = 1.0;
 	float t = 0.0;
-	float terrainHeight = TERRAIN_HEIGHT * 1.5 + TERRAIN_LIFT;
+	float terrainHeight = TERRAIN_HEIGHT * 2.0 + TERRAIN_LIFT;
 
 	for(int i = 0; i < 300; i++)
 	{
