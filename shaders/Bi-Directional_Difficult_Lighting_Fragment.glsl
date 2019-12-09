@@ -736,14 +736,6 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 
-			if (Re > 0.99)
-			{
-				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
-				r.origin += nl * epsIntersect;
-				previousIntersecType = REFR;
-				continue;
-			}
-
 			if (rand(seed) < Re) // reflect ray from surface
 			{
 				r = Ray( x, reflect(r.direction, nl) );
@@ -776,12 +768,6 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 			Tr = 1.0 - Re;
 			previousIntersecType = COAT;
 			
-			if (Re > 0.99)
-			{
-				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
-				r.origin += nl * epsIntersect;
-				continue;
-			}
 			// choose either specular reflection or diffuse
 			if( rand(seed) < Re )
 			{	
