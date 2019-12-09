@@ -390,13 +390,6 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			nt = 1.3; // IOR of Clear Coat
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
-			
-			if (Re > 0.99)
-			{
-				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
-				r.origin += nl * uEPS_intersect;
-				continue;
-			}
 
 			// clearCoat counts as refractive surface
 			if (bounces == 0)
