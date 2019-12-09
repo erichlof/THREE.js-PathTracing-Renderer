@@ -338,13 +338,6 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			nt = 1.5; // IOR of common Glass
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
-
-			if (Re > 0.99)
-			{
-				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
-				r.origin += nl;
-				continue;
-			}
 			
 			if (rand(seed) < Re) // reflect ray from surface
 			{
