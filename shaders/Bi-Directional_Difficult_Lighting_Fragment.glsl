@@ -636,7 +636,8 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 			
 			if (ableToJoinPaths)
 			{
-				accumCol = mask * lightHitEmission;
+				weight = max(0.0, dot(intersec.normal, -r.direction));
+				accumCol = mask * lightHitEmission * weight;
 			}
 
 			break;
