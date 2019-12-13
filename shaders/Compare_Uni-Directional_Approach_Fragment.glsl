@@ -81,8 +81,8 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		t = d;
 		
 		// transfom normal back into world space
+		normal = normalize(normal);
 		normal = vec3(uTallBoxNormalMatrix * normal);
-		
 		intersec.normal = normalize(normal);
 		intersec.emission = boxes[0].emission;
 		intersec.color = boxes[0].color;
@@ -101,8 +101,8 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		t = d;
 		
 		// transfom normal back into world space
+		normal = normalize(normal);
 		normal = vec3(uShortBoxNormalMatrix * normal);
-		
 		intersec.normal = normalize(normal);
 		intersec.emission = boxes[1].emission;
 		intersec.color = boxes[1].color;
@@ -119,62 +119,81 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 //-----------------------------------------------------------------------
 {
 	Intersection intersec;
+
 	vec3 accumCol = vec3(0);
-	vec3 maskEyePath = vec3(1);
-	vec3 nl, n, x;
-	float t = INFINITY;
-	int diffuseSampleCount = 0;
-	
-	// Eye path tracing (from Camera) ///////////////////////////////////////////////////////////////////////////
-	
-	for (int depth = 0; depth < 5; depth++)
+        vec3 mask = vec3(1);
+	vec3 x, n, nl;
+
+	float t;
+
+	bool bounceIsSpecular = true;
+
+	while (true)
 	{
-	
+                
 		t = SceneIntersect(r, intersec);
 		
 		if (t == INFINITY)
 		{
-			break;
+                        break;
 		}
 		
-		if (intersec.type == LIGHT)
+		// if we reached something bright, don't spawn any more rays
+		if (intersec.type == LIGHT )
 		{
-			accumCol = maskEyePath * intersec.emission;
+			accumCol = mask * intersec.emission;
+			
 			break;
 		}
 		
-		// useful data 
+		// useful data
 		n = normalize(intersec.normal);
-		nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(n * -1.0);
+                nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
+		//nl = n;
+		//normalize(faceforward(nl, n, r.direction));
 		x = r.origin + r.direction * t;
 		
-		
-		if (intersec.type == DIFF) // Ideal DIFFUSE reflection
-		{
-			maskEyePath *= intersec.color;
-			
-			if (rand(seed) < 0.5)
+		    
+                if (intersec.type == DIFF) // Ideal DIFFUSE reflection
+                {
+			mask *= intersec.color;
+
+			bounceIsSpecular = false;
+
+			/* // Russian Roulette
+			float p = max(mask.r, max(mask.g, mask.b));
+			if (rand(seed) > p) 
 				break;
+			mask /= p; */
 			
+			// Russian Roulette (from pbrt book)
+			float q = max(mask.r, max(mask.g, mask.b));
+			q = max(0.05, 1.0 - q);
+			if (rand(seed) < q) break;
+			mask /= (1.0 - q);
+			
+
 			// choose random Diffuse sample vector
-			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
-			r.origin += nl;
+			r = Ray( x, normalize(randomDirectionInHemisphere(nl, seed)) );
+			//r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
+			r.origin += nl * uEPS_intersect;
+
+			mask *= max(0.0, dot(nl, r.direction));
 			
-			continue;
-		}
+                	continue;
+                }
 		
-		if (intersec.type == SPEC)  // Ideal SPECULAR reflection
-		{
-			maskEyePath *= intersec.color;
+                if (intersec.type == SPEC)  // Ideal SPECULAR reflection
+                {
+			mask *= intersec.color;
+
 			r = Ray( x, reflect(r.direction, nl) );
-			r.origin += nl;
+			r.origin += nl * uEPS_intersect;
 			
-			continue;
-		}
+                        continue;
+                }
 		
-		
-	} // end for (int depth = 0; depth < 5; depth++)
-	
+	} // end while(true)
 	
 	return accumCol;      
 }
@@ -185,7 +204,7 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0);// No color value, Black
-	vec3 L1 = vec3(1.0, 0.75, 0.4) * 40.0;// Bright Yellowish light
+	vec3 L1 = vec3(1.0, 0.75, 0.4) * 30.0;// Bright Yellowish light
 	
 	quads[0] = Quad( vec3( 0.0, 0.0, 1.0), vec3(  0.0,   0.0,-559.2), vec3(549.6,   0.0,-559.2), vec3(549.6, 548.8,-559.2), vec3(  0.0, 548.8,-559.2),  z, vec3(1),  DIFF);// Back Wall
 	quads[1] = Quad( vec3( 1.0, 0.0, 0.0), vec3(  0.0,   0.0,   0.0), vec3(  0.0,   0.0,-559.2), vec3(  0.0, 548.8,-559.2), vec3(  0.0, 548.8,   0.0),  z, vec3(0.7, 0.12,0.05), DIFF);// Left Wall Red
