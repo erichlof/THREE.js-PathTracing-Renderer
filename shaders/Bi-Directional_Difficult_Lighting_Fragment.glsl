@@ -53,8 +53,6 @@ Box boxes[N_BOXES];
 
 #include <pathtracing_boundingbox_intersect>
 
-#include <pathtracing_bvhTriangle_intersect>
-
 #include <pathtracing_bvhDoubleSidedTriangle_intersect>
 
 
@@ -504,6 +502,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkModels )
 		//vd6 = texelFetch(tTriangleTexture, uv6, 0);
 		//vd7 = texelFetch(tTriangleTexture, uv7, 0);
 
+	
 		// face normal for flat-shaded polygon look
 		//intersec.normal = normalize( cross(vec3(vd0.w, vd1.xy) - vec3(vd0.xyz), vec3(vd1.zw, vd2.x) - vec3(vd0.xyz)) );
 		
