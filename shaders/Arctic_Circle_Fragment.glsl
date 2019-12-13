@@ -28,22 +28,8 @@ struct Intersection { vec3 normal; vec3 emission; vec3 color; vec2 uv; int type;
 
 #include <pathtracing_sphere_intersect>
 
-#include <pathtracing_plane_intersect>
-
-#include <pathtracing_triangle_intersect>
-
-#include <pathtracing_box_intersect>
-
 #include <pathtracing_physical_sky_functions>
 
-//----------------------------------------------------------------------------
-float QuadIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 v3, Ray r )
-//----------------------------------------------------------------------------
-{
-	float tTri1 = TriangleIntersect( v0, v1, v2, r );
-	float tTri2 = TriangleIntersect( v0, v2, v3, r );
-	return min(tTri1, tTri2);
-}
 
 
 // TERRAIN
