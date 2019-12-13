@@ -53,13 +53,12 @@ Box boxes[N_BOXES];
 
 #include <pathtracing_physical_sky_functions>
 
+
 //----------------------------------------------------------------------------
 float QuadIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 v3, Ray r )
 //----------------------------------------------------------------------------
 {
-	float tTri1 = TriangleIntersect( v0, v1, v2, r );
-	float tTri2 = TriangleIntersect( v0, v2, v3, r );
-	return min(tTri1, tTri2);
+	return min(TriangleIntersect(v0, v1, v2, r), TriangleIntersect(v0, v2, v3, r));
 }
 
 
