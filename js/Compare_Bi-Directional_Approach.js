@@ -1,4 +1,5 @@
 // scene/demo-specific variables go here
+var EPS_intersect;
 var sceneIsDynamic = false;
 var camFlightSpeed = 300;
 var tallBoxGeometry, tallBoxMaterial, tallBoxMesh;
@@ -8,6 +9,7 @@ var shortBoxGeometry, shortBoxMaterial, shortBoxMesh;
 function initSceneData() {
         
         // scene/demo-specific three.js objects setup goes here
+        EPS_intersect = mouseControl ? 0.1 : 1.0; // less precision on mobile
         
         // Boxes
         tallBoxGeometry = new THREE.BoxGeometry(1,1,1);
@@ -66,6 +68,7 @@ function initPathTracingShaders() {
                 uCameraIsMoving: { type: "b1", value: false },
                 uCameraJustStartedMoving: { type: "b1", value: false },
 
+                uEPS_intersect: { type: "f", value: EPS_intersect },
                 uTime: { type: "f", value: 0.0 },
                 uSampleCounter: { type: "f", value: 0.0 },
                 uFrameCounter: { type: "f", value: 1.0 },
@@ -75,8 +78,6 @@ function initPathTracingShaders() {
                 uFocusDistance: { type: "f", value: focusDistance },
                 
                 uResolution: { type: "v2", value: new THREE.Vector2() },
-                
-                uRandomVector: { type: "v3", value: new THREE.Vector3() },
         
                 uCameraMatrix: { type: "m4", value: new THREE.Matrix4() },
                 
@@ -162,7 +163,6 @@ function updateVariablesAndUniforms() {
         pathTracingUniforms.uCameraJustStartedMoving.value = cameraJustStartedMoving;
         pathTracingUniforms.uSampleCounter.value = sampleCounter;
         pathTracingUniforms.uFrameCounter.value = frameCounter;
-        pathTracingUniforms.uRandomVector.value = randomVector.set(Math.random(), Math.random(), Math.random());
         
         // BOXES
         pathTracingUniforms.uTallBoxInvMatrix.value.getInverse( tallBoxMesh.matrixWorld );
