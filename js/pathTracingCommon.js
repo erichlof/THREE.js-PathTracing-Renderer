@@ -1236,6 +1236,7 @@ THREE.ShaderChunk[ 'pathtracing_box_intersect' ] = `
 float BoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r, out vec3 normal )
 //--------------------------------------------------------------------------
 {
+	//r.direction = normalize(r.direction);
 	vec3 invDir = 1.0 / r.direction;
 	vec3 near = (minCorner - r.origin) * invDir;
 	vec3 far  = (maxCorner - r.origin) * invDir;
@@ -1253,7 +1254,7 @@ float BoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r, out vec3 normal )
 		normal = -sign(r.direction) * step(tmin.yzx, tmin) * step(tmin.zxy, tmin);
 		return t0;	
 	}
-	
+
 	if (t1 > 0.0) // if we are inside the box
 	{
 		normal = -sign(r.direction) * step(tmax, tmax.yzx) * step(tmax, tmax.zxy);
@@ -1281,7 +1282,7 @@ float BoundingBoxIntersect( vec3 minCorner, vec3 maxCorner, vec3 rayOrigin, vec3
 	float t1 = min( min(tmax.x, tmax.y), tmax.z);
 	
 	return (t0 > t1 || t1 < 0.0) ? INFINITY : t0;
-	//return (t1 < 0.0 || t0 > t1) ? INFINITY : t0;
+	//return t0 > t1 ? INFINITY : t1 > 0.0 ? t0 : INFINITY;
 }
 
 `;
@@ -1303,17 +1304,12 @@ float TriangleIntersect( vec3 v0, vec3 v1, vec3 v2, Ray r )
 
 	vec3 tvec = r.origin - v0;
 	float u = dot(tvec, pvec) * det;
-
-	if (u < 0.0 || u > 1.0)
-		return INFINITY;
-
 	vec3 qvec = cross(tvec, edge1);
 	float v = dot(r.direction, qvec) * det;
 
-	if (v < 0.0 || u + v > 1.0)
-		return INFINITY;
+	float t = dot(edge2, qvec) * det;
 
-	return dot(edge2, qvec) * det;
+	return (u < 0.0 || u > 1.0 || v < 0.0 || u + v > 1.0 || t <= 0.0) ? INFINITY : t;
 }
 
 `;
@@ -1334,7 +1330,7 @@ float BVH_TriangleIntersect( vec3 v0, vec3 v1, vec3 v2, Ray r, out float u, out 
 	v = dot(r.direction, qvec) * det;
 	float t = dot(edge2, qvec) * det;
 
-	return (det < 0.0 || u < 0.0 || u > 1.0 || v < 0.0 || u + v > 1.0 || t < 0.0) ? INFINITY : t;
+	return (det < 0.0 || u < 0.0 || u > 1.0 || v < 0.0 || u + v > 1.0 || t <= 0.0) ? INFINITY : t;
 }
 
 `;
@@ -1355,7 +1351,7 @@ float BVH_DoubleSidedTriangleIntersect( vec3 v0, vec3 v1, vec3 v2, Ray r, out fl
 	v = dot(r.direction, qvec) * det;
 	float t = dot(edge2, qvec) * det;
 
-	return (u < 0.0 || u > 1.0 || v < 0.0 || u + v > 1.0 || t < 0.0) ? INFINITY : t;
+	return (u < 0.0 || u > 1.0 || v < 0.0 || u + v > 1.0 || t <= 0.0) ? INFINITY : t;
 }
 
 `;
