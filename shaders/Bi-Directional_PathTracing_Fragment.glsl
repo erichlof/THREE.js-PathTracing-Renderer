@@ -305,7 +305,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 				if (!reflectionTime) 
 				{
 					if (bounceIsSpecular || sampleLight)
-						accumCol = mask * intersec.emission;
+						accumCol += mask * intersec.emission;
 					
 					// start back at the refractive surface, but this time follow reflective branch
 					r = firstRay;
@@ -332,9 +332,9 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 				if (!shadowTime) 
 				{
 					if (bounceIsSpecular)
-						accumCol = mask * intersec.emission * 20.0;
+						accumCol += mask * intersec.emission * 20.0;
 					else if (sampleLight)
-						accumCol = mask * intersec.emission * 0.5;
+						accumCol += mask * intersec.emission * 0.5;
 					
 					// start back at the diffuse surface, but this time follow shadow ray branch
 					r = firstRay;
@@ -357,7 +357,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 			}
 
 			if (bounceIsSpecular)
-			accumCol = mask * intersec.emission; // looking at light through a reflection
+				accumCol = mask * intersec.emission; // looking at light through a reflection
 			// reached a light, so we can exit
 			break;
 		} // end if (intersec.type == LIGHT)
@@ -372,7 +372,10 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 				if (!shadowTime) 
 				{	
 					if (ableToJoinPaths)
-						accumCol = mask * lightHitEmission * 0.5;
+					{
+						weight = max(0.0, dot(intersec.normal, -r.direction));
+						accumCol += mask * lightHitEmission * weight * 0.5;
+					}
 					// start back at the diffuse surface, but this time follow shadow ray branch
 					r = firstRay;
 					r.direction = normalize(r.direction);
@@ -388,7 +391,10 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 				
 				// add shadow ray result to the colorbleed result (if any)
 				if (ableToJoinPaths)
-					accumCol += mask * lightHitEmission * 0.5;
+				{
+					weight = max(0.0, dot(intersec.normal, -r.direction));
+					accumCol += mask * lightHitEmission * weight * 0.5;
+				}
 
 				break;
 			}
@@ -398,7 +404,10 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 				if (!reflectionTime) 
 				{
 					if (ableToJoinPaths)
-						accumCol = mask * lightHitEmission;
+					{
+						weight = max(0.0, dot(intersec.normal, -r.direction));
+						accumCol += mask * lightHitEmission * weight * 0.5;
+					}
 					
 					// start back at the refractive surface, but this time follow reflective branch
 					r = firstRay;
@@ -415,7 +424,10 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 				
 				// add reflective result to the refractive result (if any)
 				if (ableToJoinPaths)
-					accumCol += mask * lightHitEmission;
+				{
+					weight = max(0.0, dot(intersec.normal, -r.direction));
+					accumCol += mask * lightHitEmission * weight * 0.5;
+				}
 
 				break;	
 			}
