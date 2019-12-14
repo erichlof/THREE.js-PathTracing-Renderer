@@ -32,8 +32,6 @@ Box boxes[N_BOXES];
 
 #include <pathtracing_quad_intersect>
 
-#include <pathtracing_triangle_intersect>
-
 #include <pathtracing_box_intersect>
 
 #include <pathtracing_sample_quad_light>
@@ -71,8 +69,8 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkWater )
 	
 	for (int i = 0; i < N_QUADS; i++)
         {
-		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, quads[i].normal, r );
-		if (d < t && d > 0.0)
+		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, r, false );
+		if (d < t)
 		{
 			t = d;
 			intersec.normal = normalize( quads[i].normal );
@@ -295,6 +293,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				
 				if (sampleLight)
 					accumCol += mask * intersec.emission * 0.5; // add shadow ray result to the colorbleed result (if any)
+				
 				break;		
 			}
 
