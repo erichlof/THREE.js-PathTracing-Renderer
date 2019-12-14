@@ -29,7 +29,6 @@ Plane plane;
 #include <pathtracing_calc_fresnel_reflectance>
 #include <pathtracing_sphere_intersect>
 #include <pathtracing_plane_intersect>
-#include <pathtracing_triangle_intersect>
 #include <pathtracing_boundingbox_intersect>
 #include <pathtracing_bvhTriangle_intersect>
 
