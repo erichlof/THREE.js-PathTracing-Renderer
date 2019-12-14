@@ -231,24 +231,25 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 
         if (triangleLookupNeeded)
 	{
-		uv0 = ivec2( mod(triangleID + 0.0, 2048.0), (triangleID + 0.0) * INV_TEXTURE_WIDTH );
-		uv1 = ivec2( mod(triangleID + 1.0, 2048.0), (triangleID + 1.0) * INV_TEXTURE_WIDTH );
+		//uv0 = ivec2( mod(triangleID + 0.0, 2048.0), (triangleID + 0.0) * INV_TEXTURE_WIDTH );
+		//uv1 = ivec2( mod(triangleID + 1.0, 2048.0), (triangleID + 1.0) * INV_TEXTURE_WIDTH );
 		uv2 = ivec2( mod(triangleID + 2.0, 2048.0), (triangleID + 2.0) * INV_TEXTURE_WIDTH );
 		uv3 = ivec2( mod(triangleID + 3.0, 2048.0), (triangleID + 3.0) * INV_TEXTURE_WIDTH );
 		uv4 = ivec2( mod(triangleID + 4.0, 2048.0), (triangleID + 4.0) * INV_TEXTURE_WIDTH );
 		uv5 = ivec2( mod(triangleID + 5.0, 2048.0), (triangleID + 5.0) * INV_TEXTURE_WIDTH );
-		uv6 = ivec2( mod(triangleID + 6.0, 2048.0), (triangleID + 6.0) * INV_TEXTURE_WIDTH );
-		uv7 = ivec2( mod(triangleID + 7.0, 2048.0), (triangleID + 7.0) * INV_TEXTURE_WIDTH );
+		//uv6 = ivec2( mod(triangleID + 6.0, 2048.0), (triangleID + 6.0) * INV_TEXTURE_WIDTH );
+		//uv7 = ivec2( mod(triangleID + 7.0, 2048.0), (triangleID + 7.0) * INV_TEXTURE_WIDTH );
 		
-		vd0 = texelFetch(tTriangleTexture, uv0, 0);
-		vd1 = texelFetch(tTriangleTexture, uv1, 0);
+		//vd0 = texelFetch(tTriangleTexture, uv0, 0);
+		//vd1 = texelFetch(tTriangleTexture, uv1, 0);
 		vd2 = texelFetch(tTriangleTexture, uv2, 0);
 		vd3 = texelFetch(tTriangleTexture, uv3, 0);
 		vd4 = texelFetch(tTriangleTexture, uv4, 0);
 		vd5 = texelFetch(tTriangleTexture, uv5, 0);
-		vd6 = texelFetch(tTriangleTexture, uv6, 0);
-		vd7 = texelFetch(tTriangleTexture, uv7, 0);
+		//vd6 = texelFetch(tTriangleTexture, uv6, 0);
+		//vd7 = texelFetch(tTriangleTexture, uv7, 0);
 
+	
 		// face normal for flat-shaded polygon look
 		//intersec.normal = normalize( cross(vec3(vd0.w, vd1.xy) - vec3(vd0.xyz), vec3(vd1.zw, vd2.x) - vec3(vd0.xyz)) );
 		
