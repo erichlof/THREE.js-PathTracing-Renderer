@@ -38,19 +38,13 @@ float SceneIntersect( Ray r, inout Intersection intersec )
         float d;
 	float t = INFINITY;
 	
-	// clear fields out
-	intersec.normal = vec3(0);
-	intersec.emission = vec3(0);
-	intersec.color = vec3(0);
-	intersec.type = -1;
-	
 	for (int i = 0; i < N_QUADS; i++)
         {
-		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, quads[i].normal, r );
+		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, r, false );
 		if (d < t)
 		{
 			t = d;
-			intersec.normal = quads[i].normal;
+			intersec.normal = normalize(quads[i].normal);
 			intersec.emission = quads[i].emission;
 			intersec.color = quads[i].color;
 			intersec.type = quads[i].type;
