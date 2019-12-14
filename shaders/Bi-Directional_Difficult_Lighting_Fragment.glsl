@@ -47,7 +47,7 @@ Box boxes[N_BOXES];
 
 #include <pathtracing_opencylinder_intersect>
 
-#include <pathtracing_triangle_intersect>
+#include <pathtracing_quad_intersect>
 
 #include <pathtracing_box_intersect>
 
@@ -56,12 +56,6 @@ Box boxes[N_BOXES];
 #include <pathtracing_bvhDoubleSidedTriangle_intersect>
 
 
-//----------------------------------------------------------------------------
-float QuadIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 v3, Ray r )
-//----------------------------------------------------------------------------
-{
-	return min(TriangleIntersect(v0, v1, v2, r), TriangleIntersect(v0, v2, v3, r));
-}
 
 vec3 perturbNormal(vec3 nl, vec2 normalScale, vec2 uv)
 {
@@ -135,7 +129,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkModels )
 	// ROOM
 	for (int i = 0; i < N_QUADS; i++)
         {
-		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, r );
+		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, r, true );
 		if (d < t)
 		{
 			if (i == 1) // check back wall quad for door portal opening
@@ -592,14 +586,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 		weight = max(0.0, dot(-r.direction, normalize(intersec.normal)));
 		lightHitEmission *= intersec.color * weight;
 	}
-
-	// // reset intersec struct fields
-	// intersec.normal = vec3(0);
-	// intersec.emission = vec3(0);
-	// intersec.color = vec3(0);
-	// intersec.roughness = 0.0;
-	// intersec.type = -100;
-	// t = INFINITY;
+	
 
 	// regular path tracing from camera
 	r = originalRay;
