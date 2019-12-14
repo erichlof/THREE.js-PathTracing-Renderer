@@ -1151,80 +1151,31 @@ float TorusIntersect( float rad0, float rad1, vec3 pos, Ray ray )
 
 THREE.ShaderChunk[ 'pathtracing_quad_intersect' ] = `
 
-//----------------------------------------------------------------------------
-float QuadIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 v3, vec3 normal, Ray r )
-//----------------------------------------------------------------------------
+float TriangleIntersect( vec3 v0, vec3 v1, vec3 v2, Ray r, bool isDoubleSided )
 {
-	vec3 u, v, n;    // triangle vectors
-	vec3 w0, w, x;   // ray and intersection vectors
-	float rt, a, b;  // params to calc ray-plane intersect
-	
-	// get first triangle edge vectors and plane normal
-	v = v2 - v0;
-	u = v1 - v0; // switched u and v names to save calculation later below
-	//n = cross(v, u); // switched u and v names to save calculation later below
-	n = -normal; // can avoid cross product if normal is already known
-	    
-	w0 = r.origin - v0;
-	a = -dot(n,w0);
-	b = dot(n, r.direction);
-	if (b < 0.0001)   // ray is parallel to quad plane
+	vec3 edge1 = v1 - v0;
+	vec3 edge2 = v2 - v0;
+	vec3 pvec = cross(r.direction, edge2);
+	float det = 1.0 / dot(edge1, pvec);
+
+	if ( !isDoubleSided && det < 0.0 ) 
 		return INFINITY;
 
-	// get intersect point of ray with quad plane
-	rt = a / b;
-	if (rt < 0.0)          // ray goes away from quad
-		return INFINITY;   // => no intersect
-	    
-	x = r.origin + rt * r.direction; // intersect point of ray and plane
+	vec3 tvec = r.origin - v0;
+	float u = dot(tvec, pvec) * det;
+	vec3 qvec = cross(tvec, edge1);
+	float v = dot(r.direction, qvec) * det;
 
-	// is x inside first Triangle?
-	float uu, uv, vv, wu, wv, D;
-	uu = dot(u,u);
-	uv = dot(u,v);
-	vv = dot(v,v);
-	w = x - v0;
-	wu = dot(w,u);
-	wv = dot(w,v);
-	D = 1.0 / (uv * uv - uu * vv);
+	float t = dot(edge2, qvec) * det;
 
-	// get and test parametric coords
-	float s, t;
-	s = (uv * wv - vv * wu) * D;
-	if (s >= 0.0 && s <= 1.0)
-	{
-		t = (uv * wu - uu * wv) * D;
-		if (t >= 0.0 && (s + t) <= 1.0)
-		{
-			return rt;
-		}
-	}
-	
-	// is x inside second Triangle?
-	u = v3 - v0;
-	///v = v2 - v0;  //optimization - already calculated above
+	return (u < 0.0 || u > 1.0 || v < 0.0 || u + v > 1.0 || t <= 0.0) ? INFINITY : t;
+}
 
-	uu = dot(u,u);
-	uv = dot(u,v);
-	///vv = dot(v,v);//optimization - already calculated above
-	///w = x - v0;   //optimization - already calculated above
-	wu = dot(w,u);
-	///wv = dot(w,v);//optimization - already calculated above
-	D = 1.0 / (uv * uv - uu * vv);
-
-	// get and test parametric coords
-	s = (uv * wv - vv * wu) * D;
-	if (s >= 0.0 && s <= 1.0)
-	{
-		t = (uv * wu - uu * wv) * D;
-		if (t >= 0.0 && (s + t) <= 1.0)
-		{
-			return rt;
-		}
-	}
-
-
-	return INFINITY;
+//----------------------------------------------------------------------------------
+float QuadIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 v3, Ray r, bool isDoubleSided )
+//----------------------------------------------------------------------------------
+{
+	return min(TriangleIntersect(v0, v1, v2, r, isDoubleSided), TriangleIntersect(v0, v2, v3, r, isDoubleSided));
 }
 
 `;
@@ -1287,32 +1238,7 @@ float BoundingBoxIntersect( vec3 minCorner, vec3 maxCorner, vec3 rayOrigin, vec3
 
 `;
 
-THREE.ShaderChunk[ 'pathtracing_triangle_intersect' ] = `
 
-//---------------------------------------------------------
-float TriangleIntersect( vec3 v0, vec3 v1, vec3 v2, Ray r )
-//---------------------------------------------------------
-{
-	vec3 edge1 = v1 - v0;
-	vec3 edge2 = v2 - v0;
-	vec3 pvec = cross(r.direction, edge2);
-	float det = 1.0 / dot(edge1, pvec);
-
-	// comment out the following line if double-sided triangles are wanted, or
-	// uncomment the following line if back-face culling is desired (single-sided triangles)
-	//if (det <= 0.0) return INFINITY;
-
-	vec3 tvec = r.origin - v0;
-	float u = dot(tvec, pvec) * det;
-	vec3 qvec = cross(tvec, edge1);
-	float v = dot(r.direction, qvec) * det;
-
-	float t = dot(edge2, qvec) * det;
-
-	return (u < 0.0 || u > 1.0 || v < 0.0 || u + v > 1.0 || t <= 0.0) ? INFINITY : t;
-}
-
-`;
 
 THREE.ShaderChunk[ 'pathtracing_bvhTriangle_intersect' ] = `
 
