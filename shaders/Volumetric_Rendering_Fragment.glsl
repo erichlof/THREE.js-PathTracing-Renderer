@@ -55,7 +55,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	for (int i = 0; i < N_QUADS; i++)
         {
 		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, r, false );
-		if (d < t && d > 0.0)
+		if (d < t)
 		{
 			t = d;
 			intersec.normal = normalize( quads[i].normal );
