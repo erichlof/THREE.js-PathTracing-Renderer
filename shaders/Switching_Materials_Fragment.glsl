@@ -58,11 +58,11 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	
 	for (int i = 0; i < N_QUADS; i++)
         {
-		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, quads[i].normal, r );
+		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, r, false );
 		if (d < t)
 		{
 			t = d;
-			intersec.normal = (quads[i].normal);
+			intersec.normal = normalize(quads[i].normal);
 			intersec.emission = quads[i].emission;
 			intersec.color = quads[i].color;
 			intersec.type = quads[i].type;
@@ -176,6 +176,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				
 				if (sampleLight)
 					accumCol += mask * intersec.emission * 0.5; // add shadow ray result to the colorbleed result (if any)
+				
 				break;		
 			}
 
@@ -504,6 +505,13 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			nt = 1.3; // IOR of clear coating (for polished jade)
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
+
+			if (Re > 0.99)
+			{
+				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
+				r.origin += nl * uEPS_intersect;
+				continue;
+			}
 			
 			// specsub clearcoat counts as refractive surface
 			if (bounces == 0)
