@@ -134,7 +134,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 	float t = INFINITY;
 	float t2 = INFINITY;
 	float weight = 0.0;
-	float distanceEPS = uEPS_intersect * 10.0;
+	float distanceEPS = uEPS_intersect * 2.0;
 	
 	int diffuseCount = 0;
 
