@@ -325,7 +325,7 @@ function initSceneData() {
         // doorObject is just a data placeholder as well as an Object3D that can be transformed/manipulated by 
         // using familiar Three.js library commands. It is then fed into the GPU path tracing renderer
         // through its 'matrixWorld' matrix.
-        doorObject.rotation.set(0, Math.PI * 2.0 - 0.4, 0);
+        doorObject.rotation.set(0, TWO_PI - 0.25, 0);
         doorObject.position.set(179, -5, -298);
         doorObject.updateMatrixWorld(true); // 'true' forces immediate matrix update
         
