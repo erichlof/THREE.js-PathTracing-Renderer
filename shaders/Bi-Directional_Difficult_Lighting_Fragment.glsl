@@ -29,7 +29,7 @@ uniform mat3 uDoorObjectNormalMatrix;
 struct Ray { vec3 origin; vec3 direction; };
 struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; float roughness; int type; bool isModel; };
 struct OpenCylinder { float radius; vec3 pos1; vec3 pos2; vec3 emission; vec3 color; float roughness; int type; bool isModel; };
-struct Quad { vec3 v0; vec3 v1; vec3 v2; vec3 v3; vec3 emission; vec3 color; float roughness; int type; bool isModel; };
+struct Quad { vec3 normal; vec3 v0; vec3 v1; vec3 v2; vec3 v3; vec3 emission; vec3 color; float roughness; int type; bool isModel; };
 struct Box { vec3 minCorner; vec3 maxCorner; vec3 emission; vec3 color; float roughness; int type; bool isModel; };
 struct Intersection { vec3 normal; vec3 emission; vec3 color; float roughness; vec2 uv; int type; bool isModel; };
 
@@ -140,7 +140,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkModels )
 			}
 			
 			t = d;
-			intersec.normal = normalize( cross(quads[i].v1 - quads[i].v0, quads[i].v2 - quads[i].v0) );
+			intersec.normal = normalize( quads[i].normal );
 			intersec.emission = quads[i].emission;
 			intersec.color = quads[i].color;
 			intersec.type = quads[i].type;
@@ -572,15 +572,15 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 	randPointOnLight.y = mix(quads[0].v0.y, quads[0].v3.y, rand(seed));
 	randPointOnLight.z = quads[0].v0.z;
 	vec3 lightHitPos = randPointOnLight;
-	vec3 lightNormal = normalize(vec3(0,0,1));
+	vec3 lightNormal = normalize(quads[0].normal);
 	vec3 randLightDir = normalize(randomCosWeightedDirectionInHemisphere(lightNormal, seed));
 	
 	Ray r = Ray( randPointOnLight, randLightDir );
-	r.origin += nl; // move light ray out to prevent self-intersection with light
+	r.origin += lightNormal * uEPS_intersect; // move light ray out to prevent self-intersection with light
 	
 	t = SceneIntersect(r, intersec, checkModels);
 		
-	if (intersec.type == DIFF || intersec.type == CHECK)
+	if (intersec.type == DIFF)
 	{
 		lightHitPos = r.origin + r.direction * t;
 		weight = max(0.0, dot(-r.direction, normalize(intersec.normal)));
@@ -619,7 +619,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 
 		if (intersec.type == DIFF && sampleLight)
 		{
-			ableToJoinPaths = abs(lightHitDistance - t) < distanceEPS;
+			ableToJoinPaths = abs(t - lightHitDistance) < 1.0;
 			
 			if (ableToJoinPaths)
 			{
@@ -630,8 +630,8 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 			break;
 		}
 
-		// if we reached this point and sampleLight is still true, then we can either
-		//  continue with the reflection/shadow ray or exit because the light was not found
+		// if we reached this point and sampleLight is still true, then we can
+		// exit because the light was not found
 		if (sampleLight)
 			break;
 		
@@ -827,16 +827,16 @@ void SetupScene(void)
 	vec3 tableColor = vec3(1.0, 0.7, 0.4) * 0.6;
 	vec3 brassColor = vec3(1.0, 0.7, 0.5) * 0.7;
 	
-	quads[0] = Quad( vec3( 180,-100,-298.5), vec3( 280,-100,-298.5), vec3( 280,  90,-298.5), vec3( 180,  90,-298.5), L2, z, 0.0, LIGHT, false);// Area Light Quad in doorway
+	quads[0] = Quad( vec3(0,0,1), vec3( 180,-100,-298.5), vec3( 280,-100,-298.5), vec3( 280,  90,-298.5), vec3( 180,  90,-298.5), L2, z, 0.0, LIGHT, false);// Area Light Quad in doorway
 	
-	quads[1] = Quad( vec3(-350,-100,-300), vec3( 350,-100,-300), vec3( 350, 150,-300), vec3(-350, 150,-300),  z, wallColor, 0.0,   DIFF, false);// Back Wall (in front of camera, visible at startup)
-	quads[2] = Quad( vec3( 350,-100, 200), vec3(-350,-100, 200), vec3(-350, 150, 200), vec3( 350, 150, 200),  z, wallColor, 0.0,   DIFF, false);// Front Wall (behind camera, not visible at startup)
-	quads[3] = Quad( vec3(-350,-100, 200), vec3(-350,-100,-300), vec3(-350, 150,-300), vec3(-350, 150, 200),  z, wallColor, 0.0,   DIFF, false);// Left Wall
-	quads[4] = Quad( vec3( 350,-100,-300), vec3( 350,-100, 200), vec3( 350, 150, 200), vec3( 350, 150,-300),  z, wallColor, 0.0,   DIFF, false);// Right Wall
-	quads[5] = Quad( vec3(-350, 150,-300), vec3( 350, 150,-300), vec3( 350, 150, 200), vec3(-350, 150, 200),  z, vec3(1), 0.0,   DIFF, false);// Ceiling
-	quads[6] = Quad( vec3(-350,-100,-300), vec3(-350,-100, 200), vec3( 350,-100, 200), vec3( 350,-100,-300),  z, vec3(1), 0.0,  CHECK, false);// Floor
+	quads[1] = Quad( vec3(0,0,1), vec3(-350,-100,-300), vec3( 350,-100,-300), vec3( 350, 150,-300), vec3(-350, 150,-300),  z, wallColor, 0.0,   DIFF, false);// Back Wall (in front of camera, visible at startup)
+	quads[2] = Quad( vec3(0,0,-1), vec3( 350,-100, 200), vec3(-350,-100, 200), vec3(-350, 150, 200), vec3( 350, 150, 200),  z, wallColor, 0.0,   DIFF, false);// Front Wall (behind camera, not visible at startup)
+	quads[3] = Quad( vec3(1,0,0), vec3(-350,-100, 200), vec3(-350,-100,-300), vec3(-350, 150,-300), vec3(-350, 150, 200),  z, wallColor, 0.0,   DIFF, false);// Left Wall
+	quads[4] = Quad( vec3(-1,0,0), vec3( 350,-100,-300), vec3( 350,-100, 200), vec3( 350, 150, 200), vec3( 350, 150,-300),  z, wallColor, 0.0,   DIFF, false);// Right Wall
+	quads[5] = Quad( vec3(0,-1,0), vec3(-350, 150,-300), vec3( 350, 150,-300), vec3( 350, 150, 200), vec3(-350, 150, 200),  z, vec3(1), 0.0,   DIFF, false);// Ceiling
+	quads[6] = Quad( vec3(0,1,0), vec3(-350,-100,-300), vec3(-350,-100, 200), vec3( 350,-100, 200), vec3( 350,-100,-300),  z, vec3(1), 0.0,  CHECK, false);// Floor
 	
-	quads[7] = Quad( vec3(-55, 20,-295), vec3( 55, 20,-295), vec3( 55, 65,-295), vec3(-55, 65,-295), z, vec3(1.0), 0.0, PAINTING, false);// Wall Painting
+	quads[7] = Quad( vec3(0,0,1), vec3(-55, 20,-295), vec3( 55, 20,-295), vec3( 55, 65,-295), vec3(-55, 65,-295), z, vec3(1.0), 0.0, PAINTING, false);// Wall Painting
 	
 	boxes[0] = Box( vec3(-100,-60,-230), vec3(100,-57,-130), z, vec3(1.0), 0.0, LIGHTWOOD, false);// Table Top
 	boxes[1] = Box( vec3(-90,-100,-150), vec3(-84,-60,-144), z, vec3(0.8, 0.85, 0.9),  0.1, SPEC, false);// Table leg left front
