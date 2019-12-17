@@ -46,8 +46,6 @@ function initPathTracingShaders() {
         
                 uResolution: { type: "v2", value: new THREE.Vector2() },
         
-                uRandomVector: { type: "v3", value: new THREE.Vector3() },
-        
                 uCameraMatrix: { type: "m4", value: new THREE.Matrix4() }
         
         };
@@ -126,7 +124,6 @@ function updateVariablesAndUniforms() {
         pathTracingUniforms.uCameraJustStartedMoving.value = cameraJustStartedMoving;
         pathTracingUniforms.uSampleCounter.value = sampleCounter;
         pathTracingUniforms.uFrameCounter.value = frameCounter;
-        pathTracingUniforms.uRandomVector.value = randomVector.set(Math.random(), Math.random(), Math.random());
         
         // CAMERA
         cameraControlsObject.updateMatrixWorld(true);
