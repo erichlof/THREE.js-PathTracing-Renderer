@@ -551,7 +551,6 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 	
 	float nc, nt, ratioIoR, Re, Tr;
 	float t = INFINITY;
-	float distanceEPS = uEPS_intersect * 2.0;
 	float lightHitDistance = INFINITY;
 	float weight;
 
@@ -619,7 +618,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 
 		if (intersec.type == DIFF && sampleLight)
 		{
-			ableToJoinPaths = abs(t - lightHitDistance) < 1.0;
+			ableToJoinPaths = abs(t - lightHitDistance) < 0.5;
 			
 			if (ableToJoinPaths)
 			{
