@@ -1640,12 +1640,12 @@ void main( void )
 	vec3 pixelColor = CalculateRadiance( ray, seed );
 	
 	vec3 previousColor = texelFetch(tPreviousTexture, ivec2(gl_FragCoord.xy), 0).rgb;
-	
-	if ( uCameraJustStartedMoving )
+
+	if (uFrameCounter == 1.0) // camera just moved after being still
 	{
-		previousColor = vec3(0.0); // clear rendering accumulation buffer
+		previousColor = vec3(0); // clear rendering accumulation buffer
 	}
-	else if ( uCameraIsMoving )
+	else if (uCameraIsMoving) // camera is currently moving
 	{
 		previousColor *= 0.5; // motion-blur trail amount (old image)
 		pixelColor *= 0.5; // brightness of new image (noisy)
