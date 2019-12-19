@@ -645,7 +645,6 @@ async function prepareGeometryForPT(meshList, pathTracingMaterialList, triangleM
         tHDRTexture: { type: "t", value: hdrTexture },
 
         uCameraIsMoving: {type: "b1", value: false},
-        uCameraJustStartedMoving: {type: "b1", value: false},
 
         uTime: {type: "f", value: 0.0},
         uFrameCounter: {type: "f", value: 1.0},
@@ -901,8 +900,6 @@ function animate() {
         cameraIsMoving = true;
         forceUpdate = false;
     }
-
-    cameraJustStartedMoving = false;
 
     // check user controls
     if (mouseControl) {
