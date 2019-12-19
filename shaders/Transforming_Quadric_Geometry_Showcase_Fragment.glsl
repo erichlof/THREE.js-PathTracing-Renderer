@@ -841,7 +841,7 @@ void main( void )
                 previousColor *= 0.5; // motion-blur trail amount (old image)
                 pixelColor *= 0.5; // brightness of new image (noisy)
         }
-	else if (previousImage.a > 0.1)
+	else if (previousImage.a > 0.0)
 	{
                 previousColor *= 0.8; // motion-blur trail amount (old image)
                 pixelColor *= 0.2; // brightness of new image (noisy)
