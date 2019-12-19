@@ -391,7 +391,6 @@ function initPathTracingShaders() {
                 tNormalMap: { type: "t", value: normalMap },
 
                 uCameraIsMoving: { type: "b1", value: false },
-                uCameraJustStartedMoving: { type: "b1", value: false },
 
                 uEPS_intersect: { type: "f", value: EPS_intersect },
                 uTime: { type: "f", value: 0.0 },
@@ -461,33 +460,29 @@ function createPathTracingMaterial() {
 // called automatically from within the animate() function
 function updateVariablesAndUniforms() {
 
-        if ( cameraIsMoving ) {
-					
+        if ( !cameraIsMoving ) {
+                
+                if (sceneIsDynamic)
+                        sampleCounter = 1.0; // reset for continuous updating of image
+                else sampleCounter += 1.0; // for progressive refinement of image
+                
+                frameCounter += 1.0;
+
+                cameraRecentlyMoving = false;  
+        }
+
+        if (cameraIsMoving) {
                 sampleCounter = 1.0;
-                frameCounter  += 1.0;
-                        
-                if ( !cameraRecentlyMoving ) {
-                        cameraJustStartedMoving = true;
+                frameCounter += 1.0;
+
+                if (!cameraRecentlyMoving) {
+                        frameCounter = 1.0;
                         cameraRecentlyMoving = true;
                 }
-                        
-        }
-                
-        if ( !cameraIsMoving ) {
-
-                sampleCounter = 1.0; // for continuous updating of image
-                //sampleCounter += 1.0; // for progressive refinement of image
-                frameCounter += 1.0;
-                if (cameraRecentlyMoving)
-                        frameCounter = 1.0;
-
-                cameraRecentlyMoving = false;
-                
         }
 
         
         pathTracingUniforms.uCameraIsMoving.value = cameraIsMoving;
-        pathTracingUniforms.uCameraJustStartedMoving.value = cameraJustStartedMoving;
         pathTracingUniforms.uSampleCounter.value = sampleCounter;
         pathTracingUniforms.uFrameCounter.value = frameCounter;
         pathTracingUniforms.uRandomVector.value = randomVector.set(Math.random(), Math.random(), Math.random());
