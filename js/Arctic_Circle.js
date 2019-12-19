@@ -45,7 +45,6 @@ function initPathTracingShaders() {
                 t_PerlinNoise: { type: "t", value: PerlinNoiseTexture },
                 
                 uCameraIsMoving: { type: "b1", value: false },
-                uCameraJustStartedMoving: { type: "b1", value: false },
                 
                 uEPS_intersect: { type: "f", value: EPS_intersect },
                 uWaterLevel: { type: "f", value: 0.0 },
@@ -122,26 +121,25 @@ function updateVariablesAndUniforms() {
         sunDirection.set(Math.cos(sunAngle), Math.cos(sunAngle) * 0.2 + 0.2, Math.sin(sunAngle));
         sunDirection.normalize();
         
+        if ( !cameraIsMoving ) {
+                
+                if (sceneIsDynamic)
+                        sampleCounter = 1.0; // reset for continuous updating of image
+                else sampleCounter += 1.0; // for progressive refinement of image
+                
+                frameCounter += 1.0;
+
+                cameraRecentlyMoving = false;  
+        }
+
         if (cameraIsMoving) {
                 sampleCounter = 1.0;
                 frameCounter += 1.0;
 
                 if (!cameraRecentlyMoving) {
-                        cameraJustStartedMoving = true;
+                        frameCounter = 1.0;
                         cameraRecentlyMoving = true;
                 }
-        }
-
-        if ( !cameraIsMoving ) {
-                sampleCounter += 1.0; // for progressive refinement of image
-                if (sceneIsDynamic)
-                        sampleCounter = 1.0; // reset for continuous updating of image
-                
-                frameCounter  += 1.0;
-                if (cameraRecentlyMoving)
-                        frameCounter = 1.0;
-
-                cameraRecentlyMoving = false;  
         }
         
         // scene/demo-specific uniforms
@@ -149,7 +147,6 @@ function updateVariablesAndUniforms() {
         pathTracingUniforms.uSunDirection.value.copy(sunDirection);
         pathTracingUniforms.uTime.value = elapsedTime;
         pathTracingUniforms.uCameraIsMoving.value = cameraIsMoving;
-        pathTracingUniforms.uCameraJustStartedMoving.value = cameraJustStartedMoving;
         pathTracingUniforms.uSampleCounter.value = sampleCounter;
         pathTracingUniforms.uFrameCounter.value = frameCounter;
         pathTracingUniforms.uRandomVector.value.copy(randomVector.set( Math.random(), Math.random(), Math.random() ));
