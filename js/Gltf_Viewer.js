@@ -1090,29 +1090,26 @@ function animate() {
         sunColorChanged = false;
     }
 
-    if (cameraIsMoving) {
+    if ( !cameraIsMoving ) {
+                
+    	if (sceneIsDynamic)
+        	sampleCounter = 1.0; // reset for continuous updating of image
+    	else sampleCounter += 1.0; // for progressive refinement of image
+                
+    	frameCounter += 1.0;
 
-        sampleCounter = 1.0;
-        frameCounter += 1.0;
+    	cameraRecentlyMoving = false;  
+	}
 
-        if (!cameraRecentlyMoving) {
-            cameraJustStartedMoving = true;
-            cameraRecentlyMoving = true;
-        }
+	if (cameraIsMoving) {
+		sampleCounter = 1.0;
+		frameCounter += 1.0;
 
-    }
-
-    if (!cameraIsMoving) {
-
-        //sampleCounter = 1.0; // for continuous updating of image
-        sampleCounter += 1.0; // for progressive refinement of image
-        frameCounter += 1.0;
-        if (cameraRecentlyMoving)
-            frameCounter = 1.0;
-
-        cameraRecentlyMoving = false;
-
-    }
+		if (!cameraRecentlyMoving) {
+				frameCounter = 1.0;
+				cameraRecentlyMoving = true;
+		}
+	}
 
     //sunAngle = (elapsedTime * 0.03) % Math.PI;
     // sunAngle = Math.PI / 2.5;
