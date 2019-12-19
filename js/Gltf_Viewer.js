@@ -20,6 +20,7 @@ var pixelRatio = 0.5; // 1 is full resolution, 0.5 is half, 0.25 is quarter, etc
 var sunAngle = Math.PI / 2.5;
 var sampleCounter = 1.0, frameCounter = 1.0;
 var forceUpdate = false, cameraIsMoving = false, cameraRecentlyMoving = false;
+var sceneIsDynamic = false;
 // Input variables
 var isPaused = true;
 var oldYawRotation = 0, oldPitchRotation = 0, oldDeltaX = 0, oldDeltaY = 0, newDeltaX = 0, newDeltaY = 0;
