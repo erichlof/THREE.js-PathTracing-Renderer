@@ -485,7 +485,6 @@ function initPathTracingShaders() {
                 tHDRTexture: { type: "t", value: hdrTexture },
 
                 uCameraIsMoving: { type: "b1", value: false },
-                uCameraJustStartedMoving: { type: "b1", value: false },
 
 		uMaterialType: { type: "i", value: 0 },
 
@@ -576,31 +575,29 @@ function updateVariablesAndUniforms() {
                 changeMaterialColor = false;
         }
 
+        if ( !cameraIsMoving ) {
+                
+                if (sceneIsDynamic)
+                        sampleCounter = 1.0; // reset for continuous updating of image
+                else sampleCounter += 1.0; // for progressive refinement of image
+                
+                frameCounter += 1.0;
+
+                cameraRecentlyMoving = false;  
+        }
+
         if (cameraIsMoving) {
                 sampleCounter = 1.0;
                 frameCounter += 1.0;
 
                 if (!cameraRecentlyMoving) {
-                        cameraJustStartedMoving = true;
+                        frameCounter = 1.0;
                         cameraRecentlyMoving = true;
                 }
         }
 
-        if ( !cameraIsMoving ) {
-                sampleCounter += 1.0; // for progressive refinement of image
-                if (sceneIsDynamic)
-                        sampleCounter = 1.0; // reset for continuous updating of image
-                
-                frameCounter  += 1.0;
-                if (cameraRecentlyMoving)
-                        frameCounter = 1.0;
-
-                cameraRecentlyMoving = false;  
-        }
-
         
         pathTracingUniforms.uCameraIsMoving.value = cameraIsMoving;
-        pathTracingUniforms.uCameraJustStartedMoving.value = cameraJustStartedMoving;
         pathTracingUniforms.uSampleCounter.value = sampleCounter;
         pathTracingUniforms.uFrameCounter.value = frameCounter;
         pathTracingUniforms.uRandomVector.value = randomVector.set(Math.random(), Math.random(), Math.random());
