@@ -934,8 +934,8 @@ void main( void )
 
 	if (uCameraIsMoving)
 	{
-                previousColor *= 0.8; // motion-blur trail amount (old image)
-                pixelColor *= 0.2; // brightness of new image (noisy)
+                previousColor *= 0.7; // motion-blur trail amount (old image)
+                pixelColor *= 0.3; // brightness of new image (noisy)
         }
 	else if (previousImage.a > 0.0)
 	{
