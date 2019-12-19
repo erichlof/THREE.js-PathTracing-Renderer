@@ -93,7 +93,6 @@ function initPathTracingShaders() {
                 t_PerlinNoise: { type: "t", value: PerlinNoiseTexture },
                 
                 uCameraIsMoving: { type: "b1", value: false },
-                uCameraJustStartedMoving: { type: "b1", value: false },
                 uCameraWithinAtmosphere: { type: "b1", value: cameraWithinAtmosphere },
                 
                 uEPS_intersect: { type: "f", value: EPS_intersect },
@@ -248,28 +247,25 @@ function updateVariablesAndUniforms() {
                 cameraControlsObject.position.add(centerOfEarthToCameraVec.multiplyScalar(amountToMoveCamera));
         }
         
-        if ( cameraIsMoving ) {
-					
-                sampleCounter = 1.0;
-                frameCounter  += 1.0;
+        if ( !cameraIsMoving ) {
                 
-                if ( !cameraRecentlyMoving ) {
-                        cameraJustStartedMoving = true;
+                if (sceneIsDynamic)
+                        sampleCounter = 1.0; // reset for continuous updating of image
+                else sampleCounter += 1.0; // for progressive refinement of image
+                
+                frameCounter += 1.0;
+
+                cameraRecentlyMoving = false;  
+        }
+
+        if (cameraIsMoving) {
+                sampleCounter = 1.0;
+                frameCounter += 1.0;
+
+                if (!cameraRecentlyMoving) {
+                        frameCounter = 1.0;
                         cameraRecentlyMoving = true;
                 }
-                
-        }
-        
-        if ( !cameraIsMoving ) {
-
-                sampleCounter = 1.0; // for continuous updating of image
-                //sampleCounter += 1.0; // for progressive refinement of image
-                frameCounter  += 1.0;
-                if (cameraRecentlyMoving)
-                        frameCounter = 1.0;
-
-                cameraRecentlyMoving = false;
-                
         }
 
         if (altitude < 1.0) // in Km
@@ -286,7 +282,6 @@ function updateVariablesAndUniforms() {
         pathTracingUniforms.uSunDirection.value.copy(sunDirection);
         pathTracingUniforms.uTime.value = elapsedTime;
         pathTracingUniforms.uCameraIsMoving.value = cameraIsMoving;
-        pathTracingUniforms.uCameraJustStartedMoving.value = cameraJustStartedMoving;
         pathTracingUniforms.uCameraWithinAtmosphere.value = cameraWithinAtmosphere;
         pathTracingUniforms.uSampleCounter.value = sampleCounter;
         pathTracingUniforms.uFrameCounter.value = frameCounter;
