@@ -33,7 +33,6 @@ var sampleCounter = 1.0;
 var frameCounter = 1.0;
 var keyboard = new THREEx.KeyboardState();
 var cameraIsMoving = false;
-var cameraJustStartedMoving = false;
 var cameraRecentlyMoving = false;
 var isPaused = true;
 var oldYawRotation, oldPitchRotation;
@@ -404,7 +403,7 @@ function animate() {
 
         // reset flags
         cameraIsMoving = false;
-        cameraJustStartedMoving = false;
+        
         if (windowIsBeingResized) {
                 cameraIsMoving = true;
                 windowIsBeingResized = false;
