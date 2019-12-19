@@ -7,7 +7,7 @@ var camFlightSpeed = 70;
 function initSceneData() {
         
         // scene/demo-specific three.js objects setup goes here
-        EPS_intersect = mouseControl ? 0.01 : 1.0; // less precision on mobile
+        EPS_intersect = mouseControl ? 0.1 : 1.0; // less precision on mobile
 
         // set camera's field of view
         worldCamera.fov = 60;
@@ -32,7 +32,6 @@ function initPathTracingShaders() {
                 tPreviousTexture: { type: "t", value: screenTextureRenderTarget.texture },
                 
                 uCameraIsMoving: { type: "b1", value: false },
-                uCameraJustStartedMoving: { type: "b1", value: false },
         
                 uEPS_intersect: { type: "f", value: EPS_intersect },
                 uTime: { type: "f", value: 0.0 },
@@ -101,31 +100,29 @@ function updateVariablesAndUniforms() {
         // clamp camera height for walking on Museum floor
 	cameraControlsObject.position.y = 20;
         
+        if ( !cameraIsMoving ) {
+                
+                if (sceneIsDynamic)
+                        sampleCounter = 1.0; // reset for continuous updating of image
+                else sampleCounter += 1.0; // for progressive refinement of image
+                
+                frameCounter += 1.0;
+
+                cameraRecentlyMoving = false;  
+        }
+
         if (cameraIsMoving) {
                 sampleCounter = 1.0;
                 frameCounter += 1.0;
 
                 if (!cameraRecentlyMoving) {
-                        cameraJustStartedMoving = true;
+                        frameCounter = 1.0;
                         cameraRecentlyMoving = true;
                 }
         }
 
-        if ( !cameraIsMoving ) {
-                sampleCounter += 1.0; // for progressive refinement of image
-                if (sceneIsDynamic)
-                        sampleCounter = 1.0; // reset for continuous updating of image
-                
-                frameCounter  += 1.0;
-                if (cameraRecentlyMoving)
-                        frameCounter = 1.0;
-
-                cameraRecentlyMoving = false;  
-        }
-
         
         pathTracingUniforms.uCameraIsMoving.value = cameraIsMoving;
-        pathTracingUniforms.uCameraJustStartedMoving.value = cameraJustStartedMoving;
         pathTracingUniforms.uSampleCounter.value = sampleCounter;
         pathTracingUniforms.uFrameCounter.value = frameCounter;
         pathTracingUniforms.uRandomVector.value = randomVector.set(Math.random(), Math.random(), Math.random());
