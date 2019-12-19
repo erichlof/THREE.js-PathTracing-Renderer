@@ -1122,7 +1122,6 @@ function animate() {
     pathTracingUniforms.uSunDirection.value.copy(sunDirection);
     //pathTracingUniforms.uTime.value = elapsedTime;
     pathTracingUniforms.uCameraIsMoving.value = cameraIsMoving;
-    pathTracingUniforms.uCameraJustStartedMoving.value = cameraJustStartedMoving;
     pathTracingUniforms.uFrameCounter.value = frameCounter;
     // CAMERA
     cameraControlsObject.updateMatrixWorld(true);
