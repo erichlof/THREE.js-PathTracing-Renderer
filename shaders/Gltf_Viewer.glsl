@@ -475,7 +475,7 @@ void main( void )
 
 	vec3 previousColor = texelFetch(tPreviousTexture, ivec2(gl_FragCoord.xy), 0).rgb;
 	
-	if ( uCameraJustStartedMoving )
+	if ( uFrameCounter == 1.0 )
 	{
 		previousColor = vec3(0.0); // clear rendering accumulation buffer
 	}
