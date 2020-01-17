@@ -44,9 +44,11 @@ Box boxes[N_BOXES];
 float SceneIntersect( Ray r, inout Intersection intersec )
 //-----------------------------------------------------------------------
 {
+	vec3 n;
 	float d;
 	float t = INFINITY;
-	vec3 n;
+	bool isRayExiting = false;
+	
 	
         for (int i = 0; i < N_SPHERES; i++)
         {
@@ -77,7 +79,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
         
 	for (int i = 0; i < N_BOXES; i++)
         {
-		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, r, n );
+		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, r, n, isRayExiting );
 		if (d < t)
 		{
 			t = d;
@@ -150,6 +152,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	float weight;
 	float nc, nt, ratioIoR, Re, Tr;
 	float randChoose;
+	float thickness = 0.1;
 
 	int diffuseCount = 0;
 
@@ -258,6 +261,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				
 				if (sampleLight)
 					accumCol += mask * intersec.emission * 0.5; // add shadow ray result to the colorbleed result (if any)
+				
 				break;		
 			}
 
@@ -387,7 +391,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			nt = 1.5; // IOR of common Glass
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
-
+			
 			if (bounces == 0)
 			{	
 				// save intersection data for future reflection trace
@@ -405,7 +409,13 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			}
 
 			// transmit ray through surface
-			mask *= intersec.color;
+
+			// is ray leaving a solid object from the inside? 
+			// If so, attenuate ray color with object color by how far ray has travelled through the medium
+			if (n != nl)
+			{
+				mask *= exp(log(intersec.color) * thickness * t);
+			}
 			
 			tdir = refract(r.direction, nl, ratioIoR);
 			r = Ray(x, normalize(tdir));
@@ -439,7 +449,7 @@ void SetupScene(void)
 	vec3 L1 = lightColor * 40.0;
 	vec3 L2 = lightColor * 60.0;
 	vec3 L3 = lightColor * 100.0;
-	vec3 glassColor = vec3(0.5, 1.0, 0.9);
+	vec3 glassColor = vec3(0.3, 1.0, 0.9);
 	vec3 diffuseColor = vec3(1);
 	
         spheres[0] = Sphere( 10.0, vec3(   0,   10,    0), z, glassColor, REFR);//Glass sphere
