@@ -123,7 +123,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkModels )
 	
 	bool skip = false;
 	bool triangleLookupNeeded = false;
-
+	bool isRayExiting = false;
 	
 			
 	// ROOM
@@ -150,7 +150,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkModels )
 	
 	for (int i = 0; i < N_BOXES - 1; i++)
         {
-		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, r, normal );
+		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, r, normal, isRayExiting );
 		if (d < t)
 		{
 			t = d;
@@ -167,7 +167,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkModels )
 	// transform ray into Tall Box's object space
 	rObj.origin = vec3( uDoorObjectInvMatrix * vec4(r.origin, 1.0) );
 	rObj.direction = vec3( uDoorObjectInvMatrix * vec4(r.direction, 0.0) );
-	d = BoxIntersect( boxes[9].minCorner, boxes[9].maxCorner, rObj, normal );
+	d = BoxIntersect( boxes[9].minCorner, boxes[9].maxCorner, rObj, normal, isRayExiting );
 	
 	if (d < t)
 	{	
