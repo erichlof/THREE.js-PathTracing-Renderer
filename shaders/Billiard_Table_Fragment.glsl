@@ -55,9 +55,11 @@ Cone cones[N_CONES];
 float SceneIntersect( Ray r, inout Intersection intersec )
 //-----------------------------------------------------------------------
 {
+	vec3 n;
 	float d;
 	float t = INFINITY;
-	vec3 n;
+	bool isRayExiting = false;
+	
 	
 	for (int i = 0; i < N_QUADS; i++)
         {
@@ -104,7 +106,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	for (int i = 0; i < N_BOXES; i++)
         {
 	
-		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, r, n );
+		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, r, n, isRayExiting );
 		if (d < t)
 		{
 			t = d;
