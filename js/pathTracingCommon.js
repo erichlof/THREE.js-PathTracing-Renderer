@@ -209,13 +209,12 @@ THREE.ShaderChunk[ 'pathtracing_disk_intersect' ] = `
 float DiskIntersect( float radius, vec3 pos, vec3 normal, Ray r )
 //-----------------------------------------------------------------------
 {
-	vec3 n = normalize(-normal);
 	vec3 pOrO = pos - r.origin;
-	float denom = dot(n, r.direction);
+	float denom = dot(-normal, r.direction);
 	// use the following for one-sided disk
 	//if (denom <= 0.0) return INFINITY;
 	
-        float result = dot(pOrO, n) / denom;
+        float result = dot(pOrO, -normal) / denom;
 	if (result < 0.0) return INFINITY;
 
         vec3 intersectPos = r.origin + r.direction * result;
@@ -1015,6 +1014,7 @@ float ParaboloidIntersect( float rad, float height, vec3 pos, Ray r, out vec3 n 
 			return t1;		
 	}
 	
+	
 	return INFINITY;	
 }
 
@@ -1183,9 +1183,9 @@ float QuadIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 v3, Ray r, bool isDoubleSid
 THREE.ShaderChunk[ 'pathtracing_box_intersect' ] = `
 
 
-//--------------------------------------------------------------------------
-float BoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r, out vec3 normal )
-//--------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------
+float BoxIntersect( vec3 minCorner, vec3 maxCorner, inout Ray r, out vec3 normal, out bool isRayExiting )
+//-------------------------------------------------------------------------------------------------------
 {
 	//r.direction = normalize(r.direction);
 	vec3 invDir = 1.0 / r.direction;
@@ -1203,12 +1203,14 @@ float BoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r, out vec3 normal )
 	if (t0 > 0.0) // if we are outside the box
 	{
 		normal = -sign(r.direction) * step(tmin.yzx, tmin) * step(tmin.zxy, tmin);
+		isRayExiting = false;
 		return t0;	
 	}
 
 	if (t1 > 0.0) // if we are inside the box
 	{
 		normal = -sign(r.direction) * step(tmax, tmax.yzx) * step(tmax, tmax.zxy);
+		isRayExiting = true;
 		return t1;
 	}
 
