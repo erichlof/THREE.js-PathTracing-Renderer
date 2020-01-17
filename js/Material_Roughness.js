@@ -211,7 +211,7 @@ function updateVariablesAndUniforms() {
                 }
                 else if (material_TypeController.getValue() == 'Transparent Refractive') {
                         pathTracingUniforms.uMaterialType.value = 2;
-                        pathTracingUniforms.uMaterialColor.value.setRGB(1.0, 1.0, 1.0);
+                        pathTracingUniforms.uMaterialColor.value.setRGB(0.1, 1.0, 0.6);
                 }
                 else if (material_TypeController.getValue() == 'Copper Metal') {
                         pathTracingUniforms.uMaterialType.value = 3;
