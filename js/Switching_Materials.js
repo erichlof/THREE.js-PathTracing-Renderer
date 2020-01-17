@@ -267,24 +267,17 @@ function updateVariablesAndUniforms() {
                         pathTracingUniforms.uLeftSphereColor.value.setRGB(0.7, 0.001, 0.001);   
                 }
                 else if (matType == 6) { // TRANSLUCENT
-                        pathTracingUniforms.uLeftSphereColor.value.setRGB(0.5, 0.1, 0.0); //absorptionCoefficient 
+                        pathTracingUniforms.uLeftSphereColor.value.setRGB(0.5, 0.9, 1.0);
                 }
                 else if (matType == 7) { // SPECSUB
-                        pathTracingUniforms.uLeftSphereColor.value.setRGB(0.01, 0.01, 0.04); //absorptionCoefficient   
+                        pathTracingUniforms.uLeftSphereColor.value.setRGB(0.99, 0.99, 0.96);  
                 }
 
-		if (matType == 6 || matType == 7) {
-			material_LColorController.setValue([ 255 - (pathTracingUniforms.uLeftSphereColor.value.r * 255),
-							     255 - (pathTracingUniforms.uLeftSphereColor.value.g * 255),
-							     255 - (pathTracingUniforms.uLeftSphereColor.value.b * 255) ]);
-		}
-		else {
-			material_LColorController.setValue([ pathTracingUniforms.uLeftSphereColor.value.r * 255,
-							     pathTracingUniforms.uLeftSphereColor.value.g * 255,
-							     pathTracingUniforms.uLeftSphereColor.value.b * 255 ]);
-		}
 		
-
+		material_LColorController.setValue([ pathTracingUniforms.uLeftSphereColor.value.r * 255,
+						     pathTracingUniforms.uLeftSphereColor.value.g * 255,
+						     pathTracingUniforms.uLeftSphereColor.value.b * 255 ]);
+		
                 cameraIsMoving = true;
                 changeLeftSphereMaterialType = false;
         }
@@ -316,22 +309,16 @@ function updateVariablesAndUniforms() {
                         pathTracingUniforms.uRightSphereColor.value.setRGB(0.1, 0.2, 0.45);
                 }
                 else if (matType == 6) { // TRANSLUCENT
-                        pathTracingUniforms.uRightSphereColor.value.setRGB(0.0, 0.18, 0.2); //absorptionCoefficient
+                        pathTracingUniforms.uRightSphereColor.value.setRGB(1.0, 0.82, 0.8);
                 }
                 else if (matType == 7) { // SPECSUB
-                        pathTracingUniforms.uRightSphereColor.value.setRGB(1.0, 0.01, 0.2); //absorptionCoefficient    
+                        pathTracingUniforms.uRightSphereColor.value.setRGB(0.0, 0.99, 0.8); 
                 }
 
-		if (matType == 6 || matType == 7) {
-			material_RColorController.setValue([ 255 - (pathTracingUniforms.uRightSphereColor.value.r * 255),
-							     255 - (pathTracingUniforms.uRightSphereColor.value.g * 255),
-							     255 - (pathTracingUniforms.uRightSphereColor.value.b * 255) ]);
-		}
-		else {
-			material_RColorController.setValue([ pathTracingUniforms.uRightSphereColor.value.r * 255,
-							     pathTracingUniforms.uRightSphereColor.value.g * 255,
-							     pathTracingUniforms.uRightSphereColor.value.b * 255 ]);
-		}
+		
+                material_RColorController.setValue([ pathTracingUniforms.uRightSphereColor.value.r * 255,
+                                                     pathTracingUniforms.uRightSphereColor.value.g * 255,
+                                                     pathTracingUniforms.uRightSphereColor.value.b * 255 ]);
 		
                 cameraIsMoving = true;
                 changeRightSphereMaterialType = false;
@@ -340,17 +327,11 @@ function updateVariablesAndUniforms() {
         if (changeLeftSphereMaterialColor) {
 		matType = Math.floor(material_LTypeController.getValue());
 
-		if (matType == 6 || matType == 7) {
-			pathTracingUniforms.uLeftSphereColor.value.setRGB( 1.0 - material_LColorController.getValue()[0] / 255, 
-                        					   	   1.0 - material_LColorController.getValue()[1] / 255, 
-                        					   	   1.0 - material_LColorController.getValue()[2] / 255 );
-		}
-		else {
-			pathTracingUniforms.uLeftSphereColor.value.setRGB( material_LColorController.getValue()[0] / 255, 
-                        					   	   material_LColorController.getValue()[1] / 255, 
-                        					   	   material_LColorController.getValue()[2] / 255 );
-		}
-                
+		
+                pathTracingUniforms.uLeftSphereColor.value.setRGB( material_LColorController.getValue()[0] / 255, 
+                                                                   material_LColorController.getValue()[1] / 255, 
+                                                                   material_LColorController.getValue()[2] / 255 );
+		
                 cameraIsMoving = true;
                 changeLeftSphereMaterialColor = false;
 	}
@@ -358,16 +339,11 @@ function updateVariablesAndUniforms() {
 	if (changeRightSphereMaterialColor) {
 		matType = Math.floor(material_RTypeController.getValue());
 
-                if (matType == 6 || matType == 7) {
-			pathTracingUniforms.uRightSphereColor.value.setRGB( 1.0 - material_RColorController.getValue()[0] / 255, 
-                        					   	    1.0 - material_RColorController.getValue()[1] / 255, 
-                        					   	    1.0 - material_RColorController.getValue()[2] / 255 );
-		}
-		else {
-			pathTracingUniforms.uRightSphereColor.value.setRGB( material_RColorController.getValue()[0] / 255, 
-                        					   	    material_RColorController.getValue()[1] / 255, 
-                        					   	    material_RColorController.getValue()[2] / 255 );
-		}
+                
+                pathTracingUniforms.uRightSphereColor.value.setRGB( material_RColorController.getValue()[0] / 255, 
+                                                                    material_RColorController.getValue()[1] / 255, 
+                                                                    material_RColorController.getValue()[2] / 255 );
+		
 
                 cameraIsMoving = true;
                 changeRightSphereMaterialColor = false;
