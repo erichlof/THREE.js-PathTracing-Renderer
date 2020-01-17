@@ -87,11 +87,14 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	vec3 dirToLight;
 	vec3 tdir;
 	vec3 x, n, nl;
+	vec3 absorptionCoefficient;
         
 	float t;
 	float nc, nt, ratioIoR, Re, Tr;
 	float weight;
 	float diffuseColorBleeding = 0.4; // range: 0.0 - 0.5, amount of color bleeding between surfaces
+	float thickness = 0.05;
+	float scatteringDistance;
 
 	int diffuseCount = 0;
 
@@ -254,7 +257,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 		// useful data 
 		n = normalize(intersec.normal);
-                nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
+                nl = dot(n, r.direction) < 0.0 ? n : normalize(-n);
 		x = r.origin + r.direction * t;
 
 		    
@@ -333,7 +336,15 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			}
 
 			// transmit ray through surface
-			mask *= intersec.color;
+			
+			// is ray leaving a solid object from the inside? 
+			// If so, attenuate ray color with object color by how far ray has travelled through the medium
+			if (n != nl)
+			{
+				thickness = 0.05;
+				absorptionCoefficient = clamp(vec3(1) - intersec.color, 0.0, 1.0);
+				mask *= exp(-absorptionCoefficient * thickness * t); 
+			}
 			
 			tdir = refract(r.direction, nl, ratioIoR);
 			r = Ray(x, normalize(tdir));
@@ -456,12 +467,12 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 		if (intersec.type == TRANSLUCENT)  // Translucent Sub-Surface Scattering material
 		{
-			float translucentDensity = 0.25;
-			float scatteringDistance = -log(rand(seed)) / translucentDensity;
-			vec3 absorptionCoefficient = intersec.color;
+			thickness = 0.25;
+			scatteringDistance = -log(rand(seed)) / thickness;
+			absorptionCoefficient = clamp(vec3(1) - intersec.color, 0.0, 1.0);
 
 			// transmission?
-			if (scatteringDistance > t) 
+			if (t < scatteringDistance) 
 			{
 				mask *= exp(-absorptionCoefficient * t);
 				
@@ -530,12 +541,12 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				continue;
 			}
 
-			vec3 absorptionCoefficient = intersec.color;
-			float translucentDensity = 0.1;
-			float scatteringDistance = -log(rand(seed)) / translucentDensity;
+			thickness = 0.1;
+			scatteringDistance = -log(rand(seed)) / thickness;
+			absorptionCoefficient = clamp(vec3(1) - intersec.color, 0.0, 1.0);
 			
 			// transmission?
-			if (scatteringDistance > t) 
+			if (t < scatteringDistance) 
 			{
 				mask *= exp(-absorptionCoefficient * t);
 
