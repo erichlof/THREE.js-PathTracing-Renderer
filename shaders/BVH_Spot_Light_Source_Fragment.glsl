@@ -79,9 +79,9 @@ BoxNode GetBoxNode(const in float i)
 }
 
 
-//----------------------------------------------------------
-float SceneIntersect( Ray r, inout Intersection intersec )
-//----------------------------------------------------------
+//-------------------------------------------------------------------------------
+float SceneIntersect( Ray r, inout Intersection intersec, out bool isRayExiting )
+//-------------------------------------------------------------------------------
 {
 	BoxNode currentBoxNode, nodeA, nodeB, tmpNode;
 	
@@ -124,7 +124,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	
 	for (int i = 0; i < N_BOXES; i++)
         {
-		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, r, normal );
+		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, r, normal, isRayExiting );
 		if (d < t)
 		{
 			t = d;
@@ -326,6 +326,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	float nc, nt, ratioIoR, Re, Tr;
 	float weight;
 	float diffuseColorBleeding = 0.3; // range: 0.0 - 0.5, amount of color bleeding between surfaces
+	float thickness = 0.1;
 
 	int diffuseCount = 0;
 
@@ -335,12 +336,13 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	bool reflectionTime = false;
 	bool firstTypeWasDIFF = false;
 	bool shadowTime = false;
+	bool isRayExiting = false;
 
 	
         for (int bounces = 0; bounces < 6; bounces++)
 	{
 
-		t = SceneIntersect(r, intersec);
+		t = SceneIntersect(r, intersec, isRayExiting);
 		
 		/*
 		if (t == INFINITY)
@@ -609,13 +611,19 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			}
 
 			// transmit ray through surface
-			mask *= intersec.color;
+
+			// is ray leaving a solid object from the inside? 
+			// If so, attenuate ray color with object color by how far ray has travelled through the medium
+			if (isRayExiting)
+			{
+				mask *= exp(log(intersec.color) * thickness * t);
+			}
 			
 			tdir = refract(r.direction, nl, ratioIoR);
 			r = Ray(x, normalize(tdir));
 			r.origin -= nl * uEPS_intersect;
-
-			if (bounces == 1)
+			
+			if (diffuseCount == 1 && bounces == 1)
 				bounceIsSpecular = true; // turn on refracting caustics
 
 			continue;
