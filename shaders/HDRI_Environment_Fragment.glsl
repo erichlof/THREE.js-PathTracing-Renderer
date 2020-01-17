@@ -20,7 +20,10 @@ uniform float uHDRI_Exposure;
 //float InvTextureWidth = 0.0009765625;   // (1 / 1024 texture width)
 
 #define INV_TEXTURE_WIDTH 0.00048828125
-#define SUN_DIRECTION vec3(-0.555, 1.0, 0.205)
+
+// the following directions pointing at the sun were found by trial and error using the large red metal cylinder as a guide
+#define SUN_DIRECTION normalize(vec3(-0.555, 1.0, 0.205)) // use this vec3 for the symmetrical_garden_2k.hdr environment
+//#define SUN_DIRECTION normalize(vec3(0.54, 1.0, -0.595)) // use this vec3 for the kiara_5_noon_2k.hdr environment
 
 #define N_SPHERES 4
 #define N_BOXES 2
@@ -50,6 +53,8 @@ Box boxes[N_BOXES];
 
 #include <pathtracing_bvhTriangle_intersect>
 
+//#include <pathtracing_bvhDoubleSidedTriangle_intersect>
+
 #include <pathtracing_opencylinder_intersect>
 	
 
@@ -77,9 +82,9 @@ BoxNode GetBoxNode(const in float i)
 }
 
 
-//----------------------------------------------------------
-float SceneIntersect( Ray r, inout Intersection intersec )
-//----------------------------------------------------------
+//------------------------------------------------------------------------------------
+float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExiting )
+//------------------------------------------------------------------------------------
 {
         BoxNode currentBoxNode, nodeA, nodeB, tmpNode;
 	
@@ -103,6 +108,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	
 	bool skip = false;
 	bool triangleLookupNeeded = false;
+	bool isRayExiting = false;
 
 	
 	for (int i = 0; i < N_SPHERES; i++)
@@ -115,7 +121,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.emission = spheres[i].emission;
 			intersec.color = spheres[i].color;
 			intersec.type = spheres[i].type;
-			intersec.albedoTextureID = -1;
+			//intersec.albedoTextureID = -1;
 		}
         }
 
@@ -133,7 +139,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	
 	for (int i = 0; i < N_BOXES; i++)
         {
-		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, r, normal );
+		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, r, normal, isRayExiting );
 		if (d < t)
 		{
 			t = d;
@@ -141,7 +147,8 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.emission = boxes[i].emission;
 			intersec.color = boxes[i].color;
 			intersec.type = boxes[i].type;
-			intersec.albedoTextureID = -1;
+			//intersec.albedoTextureID = -1;
+			finalIsRayExiting = isRayExiting;
 		}
 	}
 	
@@ -260,7 +267,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		intersec.color = uMaterialColor;//vd6.yzw;
 		intersec.uv = triangleW * vec2(vd4.zw) + triangleU * vec2(vd5.xy) + triangleV * vec2(vd5.zw); 
 		intersec.type = int(uMaterialType);//int(vd6.x);
-		intersec.albedoTextureID = -1;//int(vd7.x);
+		//intersec.albedoTextureID = -1;//int(vd7.x);
 	}
 
 	return t;
@@ -302,6 +309,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
         float nc, nt, ratioIoR, Re, Tr;
 	float weight;
 	float diffuseColorBleeding = 0.5; // range: 0.0 - 0.5, amount of color bleeding between surfaces
+	float thickness = 0.1;
 
 	int diffuseCount = 0;
 
@@ -311,12 +319,13 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	bool reflectionTime = false;
 	bool firstTypeWasDIFF = false;
 	bool shadowTime = false;
+	bool isRayExiting = false;
 	
 	
-	for (int bounces = 0; bounces < 7; bounces++)
+	for (int bounces = 0; bounces < 6; bounces++)
 	{
 		
-		t = SceneIntersect(r, intersec);
+		t = SceneIntersect(r, intersec, isRayExiting);
 		
 		
 		if (t == INFINITY)
@@ -428,7 +437,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		
 		// useful data 
 		n = normalize(intersec.normal);
-                nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
+                nl = dot(n, r.direction) < 0.0 ? n : normalize(-n);
 		x = r.origin + r.direction * t;
 		
 		    
@@ -506,7 +515,16 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			}
 
 			// transmit ray through surface
-			mask *= intersec.color;
+
+			// is ray leaving a solid object from the inside? 
+			// If so, attenuate ray color with object color by how far ray has travelled through the medium
+			if (n != nl || isRayExiting)
+			{
+				isRayExiting = false;
+				mask *= exp(log(intersec.color) * thickness * t);
+			}
+			else 
+				mask *= intersec.color;
 			
 			tdir = refract(r.direction, nl, ratioIoR);
 			r = Ray(x, normalize(tdir));
