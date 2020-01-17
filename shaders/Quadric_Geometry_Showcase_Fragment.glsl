@@ -174,13 +174,14 @@ float HyperbolicParaboloidIntersect( float rad, float height, vec3 pos, Ray r, o
 
 
 
-//-----------------------------------------------------------------------
-float SceneIntersect( Ray r, inout Intersection intersec )
-//-----------------------------------------------------------------------
+//------------------------------------------------------------------------------------
+float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExiting )
+//------------------------------------------------------------------------------------
 {
+	vec3 n;
 	float d;
 	float t = INFINITY;
-	vec3 n;
+	bool isRayExiting = false;
 	
         for (int i = 0; i < N_SPHERES; i++)
         {
@@ -335,6 +336,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	float randChoose;
 	float weight;
 	float diffuseColorBleeding = 0.3; // range: 0.0 - 0.5, amount of color bleeding between surfaces
+	float thickness = 0.1;
 
 	int diffuseCount = 0;
 
@@ -344,12 +346,13 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	bool reflectionTime = false;
 	bool firstTypeWasDIFF = false;
 	bool shadowTime = false;
+	bool isRayExiting = false;
 
 	
 	for (int bounces = 0; bounces < 7; bounces++)
 	{
 
-		t = SceneIntersect(r, intersec);
+		t = SceneIntersect(r, intersec, isRayExiting);
 		
 		/*
 		//not used in this scene because we are inside a huge sphere - no rays can escape
@@ -391,6 +394,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				
 				if (sampleLight)
 					accumCol += mask * intersec.emission * 0.5; // add shadow ray result to the colorbleed result (if any)
+				
 				break;		
 			}
 
@@ -556,7 +560,16 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			}
 
 			// transmit ray through surface
-			mask *= intersec.color;
+			
+			// is ray leaving a solid object from the inside? 
+			// If so, attenuate ray color with object color by how far ray has travelled through the medium
+			if (isRayExiting)
+			{
+				isRayExiting = false;
+				mask *= exp(log(intersec.color) * thickness * t);
+			}
+			else 
+				mask *= intersec.color;
 			
 			tdir = refract(r.direction, nl, ratioIoR);
 			r = Ray(x, normalize(tdir));
