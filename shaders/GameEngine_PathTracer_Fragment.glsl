@@ -76,18 +76,14 @@ Box boxes[N_BOXES];
 
 
 
-//-----------------------------------------------------------------------
-float SceneIntersect( Ray r, inout Intersection intersec )
-//-----------------------------------------------------------------------
+//------------------------------------------------------------------------------------
+float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExiting )
+//------------------------------------------------------------------------------------
 {
-	// intersec.normal = vec3(0);
-	// intersec.emission = vec3(0);
-	// intersec.color = vec3(0);
-	// intersec.type = -100;
-
+	vec3 n;
 	float d;
 	float t = INFINITY;
-	vec3 n;
+	bool isRayExiting = false;
 	
         for (int i = 0; i < N_SPHERES; i++)
         {
@@ -104,7 +100,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	
 	for (int i = 0; i < N_BOXES; i++)
         {
-		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, r, n );
+		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, r, n, isRayExiting );
 		if (d < t)
 		{
 			t = d;
@@ -112,6 +108,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.emission = boxes[i].emission;
 			intersec.color = boxes[i].color;
 			intersec.type = boxes[i].type;
+			finalIsRayExiting = isRayExiting;
 		}
         }
 	
@@ -221,6 +218,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 	float weight;
 	float randChoose;
 	float diffuseColorBleeding = 0.3; // range: 0.0 - 0.5, amount of color bleeding between surfaces
+	float thickness = 0.1;
 
 	int diffuseCount = 0;
 
@@ -230,12 +228,13 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 	bool reflectionTime = false;
 	bool firstTypeWasDIFF = false;
 	bool shadowTime = false;
+	bool isRayExiting = false;
 
 
 	for (int bounces = 0; bounces < 6; bounces++)
 	{
 
-		t = SceneIntersect(r, intersec);
+		t = SceneIntersect(r, intersec, isRayExiting);
 
 		if (intersec.type == CHECK || intersec.type == COAT || intersec.type == DIFF)
 			rayHitIsDynamic = false;
@@ -446,11 +445,20 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed, inout bool rayHitIsDynamic )
 			}
 
 			// transmit ray through surface
-			mask *= intersec.color;
 
 			// hack to make real time caustics 
 			if (shadowTime)
 				mask *= 3.0;
+			
+			// is ray leaving a solid object from the inside? 
+			// If so, attenuate ray color with object color by how far ray has travelled through the medium
+			if (isRayExiting)
+			{
+				isRayExiting = false;
+				mask *= exp(log(intersec.color) * thickness * t);
+			}
+			else 
+				mask *= intersec.color;
 			
 			tdir = refract(r.direction, nl, ratioIoR);
 			r = Ray(x, normalize(tdir));
