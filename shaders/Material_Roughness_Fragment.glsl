@@ -80,6 +80,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	float randChoose;
 	float weight;
 	float diffuseColorBleeding = 0.5; // range: 0.0 - 0.5, amount of color bleeding between surfaces
+	float thickness = 0.05;
 
 	int diffuseCount = 0;
 
@@ -136,6 +137,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				
 				if (sampleLight)
 					accumCol += mask * intersec.emission * 0.5; // add shadow ray result to the colorbleed result (if any)
+				
 				break;		
 			}
 
@@ -303,7 +305,12 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			}
 
 			// transmit ray through surface
-			mask *= intersec.color;
+			// is ray leaving a solid object from the inside? 
+			// If so, attenuate ray color with object color by how far ray has travelled through the medium
+			if (n != nl)
+			{
+				mask *= exp(log(intersec.color) * thickness * t);
+			}
 			
 			tdir = refract(r.direction, nl, ratioIoR);
 			r = Ray(x, normalize(tdir));
