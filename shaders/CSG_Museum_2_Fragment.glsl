@@ -785,12 +785,13 @@ float operation_HollowA_Overlap_HollowB( float A_near, float A_far, float B_near
 float SceneIntersect( Ray r, inout Intersection intersec )
 //-----------------------------------------------------------------------
 {
+	vec3 n, n2, A_n1, A_n2, B_n1, B_n2;
 	float d = INFINITY;
 	float f = INFINITY;
 	float A_near, A_far;
 	float B_near, B_far;
 	float t = INFINITY;
-	vec3 n, n2, A_n1, A_n2, B_n1, B_n2;
+	bool isRayExiting = false;
 	
 	// first, intersect all regular objects in the scene
 	
@@ -822,7 +823,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	for (int i = 0; i < N_BOXES; i++)
         {
 	
-		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, r, n );
+		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, r, n, isRayExiting );
 		if (d < t)
 		{
 			t = d;
