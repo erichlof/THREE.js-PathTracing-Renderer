@@ -283,6 +283,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkOcean )
 	float t = INFINITY;
         float eps = 0.1;
 	float waterWaveHeight;
+	bool isRayExiting = false;
 	
 
 	// SEA FLOOR
@@ -326,7 +327,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkOcean )
 	// transform ray into Tall Box's object space
 	rObj.origin = vec3( uTallBoxInvMatrix * vec4(r.origin, 1.0) );
 	rObj.direction = vec3( uTallBoxInvMatrix * vec4(r.direction, 0.0) );
-	d = BoxIntersect( boxes[0].minCorner, boxes[0].maxCorner, rObj, normal );
+	d = BoxIntersect( boxes[0].minCorner, boxes[0].maxCorner, rObj, normal, isRayExiting );
 	
 	if (d < t)
 	{	
@@ -346,7 +347,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkOcean )
 	// transform ray into Short Box's object space
 	rObj.origin = vec3( uShortBoxInvMatrix * vec4(r.origin, 1.0) );
 	rObj.direction = vec3( uShortBoxInvMatrix * vec4(r.direction, 0.0) );
-	d = BoxIntersect( boxes[1].minCorner, boxes[1].maxCorner, rObj, normal );
+	d = BoxIntersect( boxes[1].minCorner, boxes[1].maxCorner, rObj, normal, isRayExiting );
 	
 	if (d < t)
 	{	
