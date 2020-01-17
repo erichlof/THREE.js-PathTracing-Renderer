@@ -39,6 +39,7 @@ Box boxes[N_BOXES];
 
 #define STILL_WATER_LEVEL 100.0
 #define WATER_WAVE_AMP 20.0
+#define WATER_COLOR vec3(0.6, 1.0, 1.0)
 
 float getWaterWaveHeight( vec3 pos )
 {
@@ -60,11 +61,14 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkWater )
 //------------------------------------------------------------------------------------------------
 {
 	Ray rObj;
+	vec3 hitWorldSpace;
+	vec3 normal;
+
         float d = INFINITY;
 	float t = INFINITY;
 	float waterWaveDepth;
-	vec3 hitWorldSpace;
-	vec3 normal;
+	
+	bool isRayExiting = false;
 	
 	
 	for (int i = 0; i < N_QUADS; i++)
@@ -84,7 +88,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkWater )
 	// transform ray into Tall Box's object space
 	rObj.origin = vec3( uTallBoxInvMatrix * vec4(r.origin, 1.0) );
 	rObj.direction = vec3( uTallBoxInvMatrix * vec4(r.direction, 0.0) );
-	d = BoxIntersect( boxes[0].minCorner, boxes[0].maxCorner, rObj, normal );
+	d = BoxIntersect( boxes[0].minCorner, boxes[0].maxCorner, rObj, normal, isRayExiting );
 	
 	if (d < t)
 	{	
@@ -101,7 +105,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkWater )
 	// transform ray into Short Box's object space
 	rObj.origin = vec3( uShortBoxInvMatrix * vec4(r.origin, 1.0) );
 	rObj.direction = vec3( uShortBoxInvMatrix * vec4(r.direction, 0.0) );
-	d = BoxIntersect( boxes[1].minCorner, boxes[1].maxCorner, rObj, normal );
+	d = BoxIntersect( boxes[1].minCorner, boxes[1].maxCorner, rObj, normal, isRayExiting );
 	
 	if (d < t)
 	{	
@@ -115,12 +119,12 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkWater )
 	}
 	
 	
-	// color surfaces beneath the water a bluish color
+	// color surfaces beneath the water
 	vec3 underwaterHitPos = r.origin + r.direction * t;
 	float testPosWaveHeight = getWaterWaveHeight(underwaterHitPos);
 	if (underwaterHitPos.y < testPosWaveHeight)
 	{
-		intersec.color *= vec3(0.6, 1.0, 1.0);
+		intersec.color *= WATER_COLOR;
 	}
 
 	if ( !checkWater )
@@ -157,7 +161,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkWater )
 		
 		intersec.normal = normalize(vec3(dx,dy,dz));
 		intersec.emission = vec3(0);
-		intersec.color = vec3(0.6, 1.0, 1.0);
+		intersec.color = WATER_COLOR;
 		intersec.type = REFR;
 	}
 
@@ -184,6 +188,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	float nc, nt, ratioIoR, Re, Tr;
 	float weight;
 	float diffuseColorBleeding = 0.5; // range: 0.0 - 0.5, amount of color bleeding between surfaces
+	float thickness = 0.01; // 0.02
 
 	int diffuseCount = 0;
 
@@ -194,6 +199,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	bool reflectionTime = false;
 	bool firstTypeWasDIFF = false;
 	bool shadowTime = false;
+	bool rayEnteredWater = false;
 
 
 	for (int bounces = 0; bounces < 5; bounces++)
@@ -344,7 +350,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 		// useful data 
 		n = normalize(intersec.normal);
-                nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
+                nl = dot(n, r.direction) < 0.0 ? n : normalize(-n);
 		x = r.origin + r.direction * t;
 
 		    
@@ -352,7 +358,13 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		{
 			diffuseCount++;
 
-			mask *= intersec.color;
+			if (!rayEnteredWater)
+				mask *= intersec.color;
+			else
+			{
+				rayEnteredWater = false;
+				mask *= exp(log(WATER_COLOR) * thickness * t); 
+			}
 
 			bounceIsSpecular = false;
 
@@ -391,7 +403,12 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		
                 if (intersec.type == SPEC)  // Ideal SPECULAR reflection
 		{
-			mask *= intersec.color;
+			if (!rayEnteredWater)
+				mask *= intersec.color;
+			else
+			{
+				mask *= exp(log(WATER_COLOR) * thickness * t);
+			}
 
 			r = Ray( x, reflect(r.direction, nl) );
 			r.origin += nl * uEPS_intersect;
@@ -420,20 +437,22 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				mask *= Tr;
 			}
 
-			// transmit ray through surface
+			// transmit ray through surface	
+
+			rayEnteredWater = true;
+
+			// is ray leaving a solid object from the inside? 
+			// If so, attenuate ray color with object color by how far ray has travelled through the medium
+			if (n != nl)
+			{
+				rayEnteredWater = false;
+				mask *= exp(log(WATER_COLOR) * thickness * t);
+			}
+			
 			tdir = refract(r.direction, nl, ratioIoR);
 			r = Ray(x, normalize(tdir));
-			r.origin -= nl * uEPS_intersect;	
-				
-			if (shadowTime)
-			{
-				mask = intersec.color;
-				mask *= Tr * 0.1;
-				//sampleLight = true; // turn on refracting caustics
-			}
-			else
-				mask *= intersec.color;
-				
+			r.origin -= nl * uEPS_intersect;
+
 			continue;
 			
 		} // end if (intersec.type == REFR)
