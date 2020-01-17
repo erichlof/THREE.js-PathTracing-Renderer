@@ -61,6 +61,8 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	vec3 normal;
         float d;
 	float t = INFINITY;
+	bool isRayExiting = false;
+
 			
 	// ROOM
 	for (int i = 0; i < N_QUADS; i++)
@@ -78,7 +80,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
         }
 	
 	// TABLETOP
-	d = BoxIntersect( boxes[0].minCorner, boxes[0].maxCorner, r, normal );
+	d = BoxIntersect( boxes[0].minCorner, boxes[0].maxCorner, r, normal, isRayExiting );
 	if (d < t)
 	{
 		t = d;
