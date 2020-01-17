@@ -69,9 +69,9 @@ BoxNode GetBoxNode(const in float i)
 }
 
 
-//----------------------------------------------------------
-float SceneIntersect( Ray r, inout Intersection intersec )
-//----------------------------------------------------------
+//------------------------------------------------------------------------------------
+float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExiting )
+//------------------------------------------------------------------------------------
 {
 	BoxNode currentBoxNode, nodeA, nodeB, tmpNode;
 	
@@ -96,6 +96,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	
 	bool skip = false;
 	bool triangleLookupNeeded = false;
+	bool isRayExiting = false;
 
 	
 	for (int i = 0; i < N_SPHERES; i++)
@@ -114,7 +115,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	
 	for (int i = 0; i < N_BOXES; i++)
         {
-		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, r, normal );
+		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, r, normal, isRayExiting );
 		if (d < t)
 		{
 			t = d;
@@ -123,6 +124,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.color = boxes[i].color;
 			intersec.type = boxes[i].type;
 			intersec.albedoTextureID = -1;
+			finalIsRayExiting = isRayExiting;
 		}
 	}
 	
@@ -137,7 +139,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			// render selected nodes
 			if (levelCounter == uBVH_NodeLevel)
 			{
-				d = BoxIntersect(currentBoxNode.data0.yzw, currentBoxNode.data1.yzw, r, normal);
+				d = BoxIntersect(currentBoxNode.data0.yzw, currentBoxNode.data1.yzw, r, normal, isRayExiting);
 				if (d < t)
 				{
 					t = d;
@@ -145,6 +147,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 					intersec.emission = vec3(0);
 					intersec.color = vec3(1, 1, 0);
 					intersec.type = REFR;
+					finalIsRayExiting = isRayExiting;
 					break;
 				}
 			}
@@ -249,17 +252,19 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
         
 	float t;
         float nc, nt, ratioIoR, Re, Tr;
+	float thickness = 0.1;
 
 	bool bounceIsSpecular = true;
 	bool sampleLight = false;
 	bool firstTypeWasREFR = false;
 	bool reflectionTime = false;
+	bool isRayExiting = false;
 	
 	// need more bounces than usual, because there could be lots of yellow glass boxes in a row
 	for (int bounces = 0; bounces < 10; bounces++)
 	{
 		
-		t = SceneIntersect(r, intersec);
+		t = SceneIntersect(r, intersec, isRayExiting);
 		
 		/*
 		if (t == INFINITY)
@@ -369,7 +374,14 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			}
 
 			// transmit ray through surface
-			mask *= intersec.color;
+
+			// is ray leaving a solid object from the inside? 
+			// If so, attenuate ray color with object color by how far ray has travelled through the medium
+			if (n != nl || isRayExiting)
+			{
+				isRayExiting = false;
+				mask *= exp(log(intersec.color) * thickness * t);
+			}
 			
 			tdir = refract(r.direction, nl, ratioIoR);
 			r = Ray(x, normalize(tdir));
