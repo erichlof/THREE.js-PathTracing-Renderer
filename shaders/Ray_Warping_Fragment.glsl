@@ -101,12 +101,16 @@ mat4 makeRotateZ(float rot)
 float SceneIntersect( Ray r, inout Intersection intersec, inout uvec2 seed )
 //--------------------------------------------------------------------------
 {
-	float d;
-	float t = INFINITY;
+	Ray warpedRay;
 	vec3 n, n1, n2;
 	vec3 intersectionPoint;
 	vec3 offset;
-	Ray warpedRay;
+
+	float d;
+	float t = INFINITY;
+	
+	bool isRayExiting = false;
+	
 
 	/*
         for (int i = 0; i < N_SPHERES; i++)
@@ -178,9 +182,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, inout uvec2 seed )
 		}
 		else // Cloudy Sphere
 		{
-			float dense = 1.0 + rand(seed);
-			offset = (spheres[i].radius*0.5) * (vec3(rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0));
-			d = SphereIntersect( spheres[i].radius * dense, spheres[i].position + offset, r);
+			float width = 2.0 * rand(seed);
+			offset = (spheres[i].radius * 0.5) * (vec3(rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0));
+			d = SphereIntersect( spheres[i].radius + width, spheres[i].position + offset, r);
 		}
 		
 		if (d < t)
@@ -202,7 +206,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, inout uvec2 seed )
                 warpedRay.origin.y -= 200.0;
                 warpedRay.origin.z += 400.0;
                 
-                d = BoxIntersect( boxes[i].minCorner * vec3(1.5, 1.0, 1.5), boxes[i].maxCorner * vec3(1.5, 1.0, 1.5), warpedRay, n );
+                d = BoxIntersect( boxes[i].minCorner * vec3(1.5, 1.0, 1.5), boxes[i].maxCorner * vec3(1.5, 1.0, 1.5), warpedRay, n, isRayExiting );
                 if (d == INFINITY) continue;
             	
                 vec3 hitPos = warpedRay.origin + warpedRay.direction * d;
@@ -213,7 +217,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, inout uvec2 seed )
                 warpedRay.origin = vec3( m * vec4(warpedRay.origin, 1.0) );
 		warpedRay.direction = normalize(vec3( m * vec4(warpedRay.direction, 0.0) ));
                 
-		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, warpedRay, n );
+		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, warpedRay, n, isRayExiting );
 		if (d < t)
 		{
 			t = d;
@@ -261,6 +265,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	float nc, nt, ratioIoR, Re, Tr;
 	float weight;
 	float diffuseColorBleeding = 0.4; // range: 0.0 - 0.5, amount of color bleeding between surfaces
+	float thickness = 0.04;
 
 	int diffuseCount = 0;
 
@@ -503,7 +508,13 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			}
 
 			// transmit ray through surface
-			mask *= intersec.color;
+			
+			// is ray leaving a solid object from the inside? 
+			// If so, attenuate ray color with object color by how far ray has travelled through the medium
+			if (n != nl)
+			{
+				mask *= exp(log(intersec.color) * thickness * t);
+			}
 			
 			tdir = refract(r.direction, nl, ratioIoR);
 			r = Ray(x, normalize(tdir));
@@ -581,7 +592,7 @@ void SetupScene(void)
 	vec3 z  = vec3(0);// No color value, Black        
 	vec3 L1 = vec3(1.0, 1.0, 1.0) * 6.0;// Bright light
 	
-	spheres[0] = Sphere( 90.0, vec3(150.0,  91.0, -200.0),  z, vec3(0.4, 0.9, 1.0),  REFR);// Sphere Left
+	spheres[0] = Sphere( 90.0, vec3(150.0,  91.0, -200.0),  z, vec3(0.4, 1.0, 1.0),  REFR);// Sphere Left
 	spheres[1] = Sphere( 90.0, vec3(400.0,  91.0, -200.0),  z, vec3(1.0, 1.0, 1.0),  COAT);// Sphere Right
 	spheres[2] = Sphere( 60.0, vec3(450.0, 380.0, -300.0),  z, vec3(1.0, 0.0, 1.0),  DIFF);// Cloud Sphere Top Right
 	
