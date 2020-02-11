@@ -30,10 +30,12 @@ var vt2 = new THREE.Vector2();
 
 var gui;
 var ableToEngagePointerLock = true;
-var HDRI_ExposureController, material_TypeController, material_ColorController;
+var HDRI_ExposureController, material_TypeController, material_ColorController, material_RoughnessController;
 var changeHDRI_Exposure = false;
 var changeMaterialType = false;
 var changeMaterialColor = false;
+var changeMaterialRoughness = false;
+
 
 function init_GUI() {
 
@@ -46,6 +48,9 @@ function init_GUI() {
         material_ColorController = {
                 Material_Color: [255, 255, 255]
         };
+        material_RoughnessController = {
+                Material_Roughness: 0.0
+        };
         function HDRI_ExposureChanger() {
                 changeHDRI_Exposure = true;
 	}
@@ -55,15 +60,21 @@ function init_GUI() {
         function materialColorChanger() {
                 changeMaterialColor = true;
         }
+        function materialRoughnessChanger() {
+                changeMaterialRoughness = true;
+        }
+
         gui = new dat.GUI();
         
 	gui.add( HDRI_ExposureController, 'HDRI_Exposure', 0, 3, 0.05 ).onChange( HDRI_ExposureChanger );
 	gui.add( material_TypeController, 'Material_Type', 2, 4, 1 ).onChange( materialTypeChanger );
         gui.addColor( material_ColorController, 'Material_Color' ).onChange( materialColorChanger );
-        
+        gui.add( material_RoughnessController, 'Material_Roughness', 0.0, 1.0, 0.01 ).onChange( materialRoughnessChanger );
+
 	HDRI_ExposureChanger();
 	materialTypeChanger();
         materialColorChanger();
+        materialRoughnessChanger();
 
         gui.domElement.style.webkitUserSelect = "none";
         gui.domElement.style.MozUserSelect = "none";
@@ -497,6 +508,7 @@ function initPathTracingShaders() {
                 uApertureSize: { type: "f", value: 0.0 },
                 uFocusDistance: { type: "f", value: focusDistance },
                 uHDRI_Exposure: { type: "f", value: 1.0 },
+                uRoughness: { type: "f", value: 0.0 },
 
                 uResolution: { type: "v2", value: new THREE.Vector2() },
 
@@ -573,6 +585,12 @@ function updateVariablesAndUniforms() {
                                                                  material_ColorController.Material_Color[2] / 255 );
                 cameraIsMoving = true;
                 changeMaterialColor = false;
+        }
+
+        if (changeMaterialRoughness) {
+                pathTracingUniforms.uRoughness.value = material_RoughnessController.Material_Roughness;
+                cameraIsMoving = true;
+                changeMaterialRoughness = false;
         }
 
         if ( !cameraIsMoving ) {
