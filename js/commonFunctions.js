@@ -100,8 +100,10 @@ function onWindowResize(event) {
 
         windowIsBeingResized = true;
 
-        SCREEN_WIDTH = window.innerWidth;
-        SCREEN_HEIGHT = window.innerHeight;
+        // the following change to document.body.clientWidth and Height works better for mobile, especially iOS
+        // suggestion from Github user q750831855  - Thank you!
+        SCREEN_WIDTH = document.body.clientWidth; //window.innerWidth; 
+        SCREEN_HEIGHT = document.body.clientHeight; //window.innerHeight;
 
         renderer.setPixelRatio(pixelRatio);
         renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
