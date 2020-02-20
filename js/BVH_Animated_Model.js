@@ -55,23 +55,11 @@ function load_GLTF_Model() {
                 if (meshGroup.scene)
                         meshGroup = meshGroup.scene;
                         
-                let matrixStack = [];
-                let parent;
-                matrixStack.push(new THREE.Matrix4());
                 let totalTriangleCount = 0;
 
                 meshGroup.traverse( function ( child ) {
 
                         if ( child.isMesh ) {
-                                let hasUVs = child.geometry.attributes.uv !== undefined ? 3 : 0;
-                                let hasNormals = child.geometry.attributes.normal !== undefined ? 3 : 0;
-                                
-                                if ( parent !== undefined && parent.name !== child.parent.name ) {
-                                        matrixStack.pop();
-                                        parent = undefined;
-                                }
-                                
-                                //child.geometry.applyMatrix( child.matrix.multiply( matrixStack[matrixStack.length - 1] ) );
                                 let mat = new MaterialObject();
 
                                 // note: '4' means clearCoat material over diffuse material.  the clearCoat portion will have an IoR of around 1.4
@@ -87,25 +75,20 @@ function load_GLTF_Model() {
                                 triangleMaterialMarkers.push(totalTriangleCount);
                                 meshList.push(child);
                         }
-                        else if ( child.isObject3D ) {
-                                if ( parent !== undefined )
-                                        matrixStack.pop();
-                                
-                                let matrixPeek = new THREE.Matrix4().copy( matrixStack[matrixStack.length - 1] ).multiply( child.matrix );
-                                matrixStack.push( matrixPeek );
-                                parent = child;
-                        }
                 } );
 
                 modelMesh = meshList[0].clone();
-                
-                var geoList = [];
+
                 for (let i = 0; i < meshList.length; i++) {
                         geoList.push(meshList[i].geometry);
                 }
                 
+                modelMesh.geometry = THREE.BufferGeometryUtils.mergeBufferGeometries(geoList);
+                
                 if (modelMesh.geometry.index)
                         modelMesh.geometry = modelMesh.geometry.toNonIndexed();
+
+                modelMesh.geometry.center();
 
                 
                 // albedo map
