@@ -161,8 +161,11 @@ function load_GLTF_Model() {
 
         var gltfLoader = new THREE.GLTFLoader();
 
-        //gltfLoader.load("models/scene.gltf", function( meshGroup ) { // Triangles: 30,338
         gltfLoader.load("models/StanfordDragon.glb", function( meshGroup ) { // Triangles: 100,000
+        // if you choose to load in the different models below, scroll down and change the *GLTF model settings* for this particular model
+        //gltfLoader.load("models/TronTank.gltf", function( meshGroup ) { // Triangles: 17,533
+        //gltfLoader.load("models/StanfordBunny.glb", function( meshGroup ) { // Triangles: 30,338
+        
 
                 if (meshGroup.scene) 
                         meshGroup = meshGroup.scene;
@@ -194,9 +197,13 @@ function load_GLTF_Model() {
                 for (let i = 0; i < meshList.length; i++) {
                         geoList.push(meshList[i].geometry);
                 }
+
+                modelMesh.geometry = THREE.BufferGeometryUtils.mergeBufferGeometries(geoList);
                 
                 if (modelMesh.geometry.index)
                         modelMesh.geometry = modelMesh.geometry.toNonIndexed();
+
+                modelMesh.geometry.center();
                 
                         
                 for (let i = 0; i < meshList.length; i++) {
@@ -225,17 +232,19 @@ function load_GLTF_Model() {
 
                 // ********* different GLTF Model Settings **********
 
-                // settings for Duck model
-                //modelScale = 0.1;
-                //modelPositionOffset.set(0, 20, -30);
+                // settings for StanfordDragon model
+                modelScale = 2.0;
+                modelPositionOffset.set(0, 28, -40);
+                
+                // settings for TronTank model
+                //modelScale = 3.0;
+                //modelMesh.geometry.rotateX(-Math.PI * 0.5);
+                //modelPositionOffset.set(-60, 20, -30);
 
                 // settings for StanfordBunny model
 		//modelScale = 0.04;
                 //modelPositionOffset.set(0, 28, -40);
                 
-                // settings for StanfordDragon model
-		modelScale = 2.0;
-		modelPositionOffset.set(0, 18.2, -40);
                 
                 // now that the models have been loaded, we can init (with GUI for this demo)
                 init_GUI();
