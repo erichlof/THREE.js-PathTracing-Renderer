@@ -178,16 +178,20 @@ function load_GLTF_Model() {
 
                 modelMesh = meshList[0].clone();
 
-                for (let i = 1; i < triangleMaterialMarkers.length; i++) {
-                        triangleMaterialMarkers[i] += triangleMaterialMarkers[i-1];
-                }
-                
                 for (let i = 0; i < meshList.length; i++) {
                         geoList.push(meshList[i].geometry);
                 }
                 
+                modelMesh.geometry = THREE.BufferGeometryUtils.mergeBufferGeometries(geoList);
+                
                 if (modelMesh.geometry.index)
                         modelMesh.geometry = modelMesh.geometry.toNonIndexed();
+
+                modelMesh.geometry.center();
+
+                for (let i = 1; i < triangleMaterialMarkers.length; i++) {
+                        triangleMaterialMarkers[i] += triangleMaterialMarkers[i-1];
+                }
                 
                         
                 for (let i = 0; i < meshList.length; i++) {
@@ -226,7 +230,7 @@ function load_GLTF_Model() {
                 
                 // settings for StanfordDragon model
 		modelScale = 3.0;
-		modelPositionOffset.set(0, 18.2, -40);
+		modelPositionOffset.set(0, 33.2, -40);
                 
                 // now that the models have been loaded, we can init (with GUI for this demo)
                 init_GUI();
