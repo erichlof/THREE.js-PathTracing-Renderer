@@ -88,8 +88,12 @@ function load_GLTF_Models() {
                         geoList.push(meshList[i].geometry);
                 }
                 
+                modelMesh.geometry = THREE.BufferGeometryUtils.mergeBufferGeometries(geoList);
+                
                 //if (modelMesh.geometry.index)
-                  //      modelMesh.geometry = modelMesh.geometry.toNonIndexed();
+                //        modelMesh.geometry = modelMesh.geometry.toNonIndexed();
+
+                modelMesh.geometry.center();
                 
                 
                 // settings for UtahTeapot model
