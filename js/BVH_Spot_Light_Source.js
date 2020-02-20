@@ -69,16 +69,20 @@ function load_GLTF_Model() {
 
                 modelMesh = meshList[0].clone();
 
-                for (let i = 1; i < triangleMaterialMarkers.length; i++) {
-                        triangleMaterialMarkers[i] += triangleMaterialMarkers[i-1];
-                }
-                
                 for (let i = 0; i < meshList.length; i++) {
                         geoList.push(meshList[i].geometry);
                 }
+                
+                modelMesh.geometry = THREE.BufferGeometryUtils.mergeBufferGeometries(geoList);
+                
+                //if (modelMesh.geometry.index)
+                //        modelMesh.geometry = modelMesh.geometry.toNonIndexed();
 
-                if (modelMesh.geometry.index)
-                        modelMesh.geometry = modelMesh.geometry.toNonIndexed();
+                modelMesh.geometry.center();
+
+                for (let i = 1; i < triangleMaterialMarkers.length; i++) {
+                        triangleMaterialMarkers[i] += triangleMaterialMarkers[i-1];
+                }
                 
                         
                 for (let i = 0; i < meshList.length; i++) {
@@ -113,7 +117,7 @@ function load_GLTF_Model() {
 
                 // settings for StanfordBunny model
 		modelScale = 0.04;
-		modelPositionOffset.set(0, 27.5, -40);
+		modelPositionOffset.set(0, 27.6, -40);
                 
                 // now that the models have been loaded, we can init 
                 init();
