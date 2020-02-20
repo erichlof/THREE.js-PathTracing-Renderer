@@ -45,6 +45,7 @@ function load_GLTF_Model() {
         var gltfLoader = new THREE.GLTFLoader();
 
         gltfLoader.load("models/StanfordBunny.glb", function( meshGroup ) { // Triangles: 30,338
+        //gltfLoader.load("models/UtahTeapot.glb", function( meshGroup ) { // Triangles: 30,338
 
                 if (meshGroup.scene) 
                         meshGroup = meshGroup.scene;
@@ -69,19 +70,23 @@ function load_GLTF_Model() {
 
                 modelMesh = meshList[0].clone();
 
-                for (let i = 1; i < triangleMaterialMarkers.length; i++) {
-                        triangleMaterialMarkers[i] += triangleMaterialMarkers[i-1];
-                }
-                
                 for (let i = 0; i < meshList.length; i++) {
                         geoList.push(meshList[i].geometry);
                 }
                 
-                if (modelMesh.geometry.index)
-                        modelMesh.geometry = modelMesh.geometry.toNonIndexed();
+                modelMesh.geometry = THREE.BufferGeometryUtils.mergeBufferGeometries(geoList);
+                
+                //if (modelMesh.geometry.index)
+                //        modelMesh.geometry = modelMesh.geometry.toNonIndexed();
+
+                modelMesh.geometry.center();
+
+                for (let i = 1; i < triangleMaterialMarkers.length; i++) {
+                        triangleMaterialMarkers[i] += triangleMaterialMarkers[i-1];
+                }
                 
                         
-                for (let i = 0; i < meshList.length; i++) {
+                /* for (let i = 0; i < meshList.length; i++) {
                         if (meshList[i].material.map != undefined)
                                 uniqueMaterialTextures.push(meshList[i].material.map);		
                 }
@@ -103,7 +108,7 @@ function load_GLTF_Model() {
                                         }
                                 }
                         }				
-                }
+                } */
 
                 // ********* different GLTF Model Settings **********
 
@@ -113,7 +118,11 @@ function load_GLTF_Model() {
 
                 // settings for StanfordBunny model
 		modelScale = 0.04;
-		modelPositionOffset.set(0, 27.5, -40);
+                modelPositionOffset.set(0, 27.6, -40);
+                
+                // settings for UtahTeapot model
+		//modelScale = 1.0;
+		//modelPositionOffset.set(0, 25.6, -40);
                 
                 // now that the models have been loaded, we can init 
                 init();
@@ -140,7 +149,7 @@ function initSceneData() {
         //cameraControlsPitchObject.rotation.x = -0.2;
         
 
-        total_number_of_triangles = modelMesh.geometry.attributes.position.array.length / 9;
+        total_number_of_triangles = modelMesh.geometry.index.count / 3;
         console.log("Triangle count:" + total_number_of_triangles);
 
         totalWork = new Uint32Array(total_number_of_triangles);
