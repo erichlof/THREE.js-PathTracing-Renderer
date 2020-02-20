@@ -1553,7 +1553,7 @@ float calcFresnelReflectance(vec3 rayDirection, vec3 n, float etai, float etat, 
 	float Rs = ((etat * cosi) - (etai * cost)) / ((etat * cosi) + (etai * cost));
 	float Rp = ((etai * cosi) - (etat * cost)) / ((etai * cosi) + (etat * cost));
 
-	return ((Rs * Rs) + (Rp * Rp)) * 0.5;
+	return clamp( ((Rs * Rs) + (Rp * Rp)) * 0.5, 0.0, 1.0 );
 }
 
 `;
