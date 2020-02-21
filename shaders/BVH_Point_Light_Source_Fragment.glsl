@@ -539,7 +539,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 			
-			if (bounces == 0)
+			if (!firstTypeWasREFR && diffuseCount == 0)
 			{	
 				// save intersection data for future reflection trace
 				firstTypeWasREFR = true;
@@ -583,7 +583,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			Tr = 1.0 - Re;
 			
 			// clearCoat counts as refractive surface
-			if (bounces == 0)
+			if (!firstTypeWasREFR && diffuseCount == 0)
 			{	
 				// save intersection data for future reflection trace
 				firstTypeWasREFR = true;
