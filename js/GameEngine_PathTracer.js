@@ -3,6 +3,7 @@ var EPS_intersect;
 var sceneIsDynamic = true;
 var camFlightSpeed = 60;
 var torusObject;
+var torusRotationAngle = 0;
 
 // called automatically from within initTHREEjs() function
 function initSceneData() {
@@ -14,8 +15,7 @@ function initSceneData() {
         torusObject = new THREE.Object3D();
         pathTracingScene.add(torusObject);
         //torusObject.rotation.set(Math.PI * 0.5, 0, 0);
-        torusObject.rotation.set(-0.05, 0, -0.05);
-        torusObject.position.set(-60, 6, 50);
+        torusObject.position.set(-60, 18, 50);
 
         // set camera's field of view
         worldCamera.fov = 60;
@@ -136,6 +136,9 @@ function updateVariablesAndUniforms() {
         pathTracingUniforms.uRandomVector.value = randomVector.set(Math.random(), Math.random(), Math.random());
         
         // TORUS
+        torusRotationAngle += (1.5 * frameTime);
+        torusRotationAngle %= TWO_PI;
+        torusObject.rotation.set(0, torusRotationAngle, Math.PI * 0.5);
         torusObject.updateMatrixWorld(true); // 'true' forces immediate matrix update
         pathTracingUniforms.uTorusInvMatrix.value.getInverse(torusObject.matrixWorld);
         pathTracingUniforms.uTorusNormalMatrix.value.getNormalMatrix(torusObject.matrixWorld);
