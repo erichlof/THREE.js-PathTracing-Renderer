@@ -474,6 +474,7 @@ function initSceneData() {
         aabbDataTexture.generateMipmaps = false;
         aabbDataTexture.needsUpdate = true;
 
+
         hdrLoader = new THREE.RGBELoader();
 
 	hdrPath = 'textures/symmetrical_garden_2k.hdr';
@@ -483,9 +484,10 @@ function initSceneData() {
         //hdrPath = 'textures/noon_grass_2k.hdr';
 
         hdrTexture = hdrLoader.load( hdrPath, function ( texture, textureData ) {
-                texture.encoding = THREE.RGBEEncoding;
-                texture.minFilter = THREE.NearestFilter;
-                texture.magFilter = THREE.NearestFilter;
+                texture.encoding = THREE.LinearEncoding;
+                texture.minFilter = THREE.LinearFilter;
+                texture.magFilter = THREE.LinearFilter;
+                texture.generateMipmaps = false;
                 texture.flipY = true;
         } );
 
