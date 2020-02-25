@@ -379,6 +379,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 						
 						accumCol = mask * environmentCol;
 					}
+					
 					// mask has already been down-weighted in this case
 					if (sampleLight)
 					{
@@ -405,6 +406,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 						
 					accumCol += mask * environmentCol;
 				}
+
 				// mask has already been down-weighted in this case
 				if (sampleLight)
 				{
@@ -414,15 +416,15 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				break;
 			}
 
-			// if first type was SPEC...
 			if (bounceIsSpecular)
 			{
 				// try to get rid of fireflies on rougher surfaces
 				if (dot(r.direction, normalize(SUN_DIRECTION)) > 0.98)
 					environmentCol = mix( vec3(1), environmentCol, pow((1.0 - roughness), roughness * 100.0) );
-				
-				accumCol = mask * environmentCol; // looking at HDRI sky light through a reflection
+					
+				accumCol = mask * environmentCol;
 			}
+			
 			// mask has already been down-weighted in this case
 			if (sampleLight)
 			{
