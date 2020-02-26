@@ -73,11 +73,11 @@ function load_GLTF_Model() {
                 for (let i = 0; i < meshList.length; i++) {
                         geoList.push(meshList[i].geometry);
                 }
-                
+
                 modelMesh.geometry = THREE.BufferGeometryUtils.mergeBufferGeometries(geoList);
                 
-                //if (modelMesh.geometry.index)
-                //        modelMesh.geometry = modelMesh.geometry.toNonIndexed();
+                if (modelMesh.geometry.index)
+                        modelMesh.geometry = modelMesh.geometry.toNonIndexed();
 
                 modelMesh.geometry.center();
 
@@ -149,7 +149,7 @@ function initSceneData() {
         //cameraControlsPitchObject.rotation.x = -0.2;
         
 
-        total_number_of_triangles = modelMesh.geometry.index.count / 3;
+        total_number_of_triangles = modelMesh.geometry.attributes.position.array.length / 9;
         console.log("Triangle count:" + total_number_of_triangles);
 
         totalWork = new Uint32Array(total_number_of_triangles);
