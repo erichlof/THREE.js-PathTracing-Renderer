@@ -80,21 +80,16 @@ function load_GLTF_Models() {
 
                 modelMesh = meshList[0].clone();
 
-                for (let i = 1; i < triangleMaterialMarkers.length; i++) {
-                        triangleMaterialMarkers[i] += triangleMaterialMarkers[i-1];
-                }
-                
                 for (let i = 0; i < meshList.length; i++) {
                         geoList.push(meshList[i].geometry);
                 }
-                
+
                 modelMesh.geometry = THREE.BufferGeometryUtils.mergeBufferGeometries(geoList);
                 
-                //if (modelMesh.geometry.index)
-                //        modelMesh.geometry = modelMesh.geometry.toNonIndexed();
+                if (modelMesh.geometry.index)
+                        modelMesh.geometry = modelMesh.geometry.toNonIndexed();
 
                 modelMesh.geometry.center();
-                
                 
                 // settings for UtahTeapot model
                 modelScale = 2.3;
@@ -123,7 +118,7 @@ function initSceneData() {
         cameraControlsYawObject.rotation.y = -0.2;
                 
 
-        total_number_of_triangles = modelMesh.geometry.index.count / 3;
+        total_number_of_triangles = modelMesh.geometry.attributes.position.array.length / 9;
         console.log("Triangle count:" + total_number_of_triangles);
 
         totalWork = new Uint32Array(total_number_of_triangles);
