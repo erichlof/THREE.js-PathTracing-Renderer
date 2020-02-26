@@ -166,7 +166,7 @@ function load_GLTF_Model() {
         //gltfLoader.load("models/TronTank.gltf", function( meshGroup ) { // Triangles: 17,533
         //gltfLoader.load("models/StanfordBunny.glb", function( meshGroup ) { // Triangles: 30,338
         
-
+        
                 if (meshGroup.scene) 
                         meshGroup = meshGroup.scene;
 
@@ -190,10 +190,6 @@ function load_GLTF_Model() {
 
                 modelMesh = meshList[0].clone();
 
-                for (let i = 1; i < triangleMaterialMarkers.length; i++) {
-                        triangleMaterialMarkers[i] += triangleMaterialMarkers[i-1];
-                }
-                
                 for (let i = 0; i < meshList.length; i++) {
                         geoList.push(meshList[i].geometry);
                 }
@@ -205,6 +201,9 @@ function load_GLTF_Model() {
 
                 modelMesh.geometry.center();
                 
+                for (let i = 1; i < triangleMaterialMarkers.length; i++) {
+                        triangleMaterialMarkers[i] += triangleMaterialMarkers[i-1];
+                }
                         
                 for (let i = 0; i < meshList.length; i++) {
                         if (meshList[i].material.map != undefined)
