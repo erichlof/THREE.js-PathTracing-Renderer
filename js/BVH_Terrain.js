@@ -69,16 +69,20 @@ function load_GLTF_Model() {
 
                 modelMesh = meshList[0].clone();
 
-                for (let i = 1; i < triangleMaterialMarkers.length; i++) {
-                        triangleMaterialMarkers[i] += triangleMaterialMarkers[i-1];
-                }
-                
                 for (let i = 0; i < meshList.length; i++) {
                         geoList.push(meshList[i].geometry);
                 }
+
+                modelMesh.geometry = THREE.BufferGeometryUtils.mergeBufferGeometries(geoList);
                 
                 if (modelMesh.geometry.index)
                         modelMesh.geometry = modelMesh.geometry.toNonIndexed();
+
+                modelMesh.geometry.center();
+		
+		for (let i = 1; i < triangleMaterialMarkers.length; i++) {
+                        triangleMaterialMarkers[i] += triangleMaterialMarkers[i-1];
+                }
                 
                 /*       
                 // albedo map
