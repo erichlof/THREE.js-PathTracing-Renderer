@@ -152,7 +152,7 @@ function load_GLTF_Model() {
 
         var gltfLoader = new THREE.GLTFLoader();
 
-        //gltfLoader.load("models/scene.gltf", function( meshGroup ) { // Triangles: 30,338
+        //gltfLoader.load("models/StanfordBunny.glb", function( meshGroup ) { // Triangles: 30,338
         gltfLoader.load("models/StanfordDragon.glb", function( meshGroup ) { // Triangles: 100,000
 
                 if (meshGroup.scene) 
@@ -181,7 +181,7 @@ function load_GLTF_Model() {
                 for (let i = 0; i < meshList.length; i++) {
                         geoList.push(meshList[i].geometry);
                 }
-                
+
                 modelMesh.geometry = THREE.BufferGeometryUtils.mergeBufferGeometries(geoList);
                 
                 if (modelMesh.geometry.index)
@@ -192,8 +192,7 @@ function load_GLTF_Model() {
                 for (let i = 1; i < triangleMaterialMarkers.length; i++) {
                         triangleMaterialMarkers[i] += triangleMaterialMarkers[i-1];
                 }
-                
-                        
+                     
                 for (let i = 0; i < meshList.length; i++) {
                         if (meshList[i].material.map != undefined)
                                 uniqueMaterialTextures.push(meshList[i].material.map);		
