@@ -443,7 +443,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 					continue;
 				}
 
-				if (shadowTime && !reflectionTime)
+				if (!reflectionTime)
 				{
 					// add initial shadow ray result to secondary shadow ray result (if any) 
 					accumCol += mask * intersec.emission * 0.5;
