@@ -112,6 +112,19 @@ float SceneIntersect( Ray r, inout Intersection intersec, inout uvec2 seed )
 	bool isRayExiting = false;
 	
 
+	for (int i = 0; i < N_QUADS; i++)
+        {
+		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, r, false );
+		if (d < t)
+		{
+			t = d;
+			intersec.normal = normalize(quads[i].normal);
+			intersec.emission = quads[i].emission;
+			intersec.color = quads[i].color;
+			intersec.type = quads[i].type;
+		}
+        }
+
 	/*
         for (int i = 0; i < N_SPHERES; i++)
         {
@@ -199,49 +212,34 @@ float SceneIntersect( Ray r, inout Intersection intersec, inout uvec2 seed )
 		}
 	}
 	
-	for (int i = 0; i < N_BOXES; i++)
-        {
-		warpedRay = r;
-                warpedRay.origin.x -= 200.0;
-                warpedRay.origin.y -= 200.0;
-                warpedRay.origin.z += 400.0;
-                
-                d = BoxIntersect( boxes[i].minCorner * vec3(1.5, 1.0, 1.5), boxes[i].maxCorner * vec3(1.5, 1.0, 1.5), warpedRay, n, isRayExiting );
-                if (d == INFINITY) continue;
-            	
-                vec3 hitPos = warpedRay.origin + warpedRay.direction * d;
-                //float angle = 0.25 * PI;
-		float angle = mod(hitPos.y * 0.015, TWO_PI);
-		mat4 m = makeRotateY(angle);
-                m = inverse(m);
-                warpedRay.origin = vec3( m * vec4(warpedRay.origin, 1.0) );
-		warpedRay.direction = normalize(vec3( m * vec4(warpedRay.direction, 0.0) ));
-                
-		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, warpedRay, n, isRayExiting );
-		if (d < t)
-		{
-			t = d;
-			intersec.normal = normalize(n);
-                        intersec.normal = normalize(vec3( transpose(m) * vec4(intersec.normal, 0.0) ));
-			intersec.emission = boxes[i].emission;
-			intersec.color = boxes[i].color;
-			intersec.type = boxes[i].type;
-		}
-        }
 	
-	for (int i = 0; i < N_QUADS; i++)
-        {
-		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, r, false );
-		if (d < t)
-		{
-			t = d;
-			intersec.normal = normalize(quads[i].normal);
-			intersec.emission = quads[i].emission;
-			intersec.color = quads[i].color;
-			intersec.type = quads[i].type;
-		}
-        }
-
+	warpedRay = r;
+	warpedRay.origin.x -= 200.0;
+	warpedRay.origin.y -= 200.0;
+	warpedRay.origin.z += 400.0;
+	
+	d = BoxIntersect( boxes[0].minCorner * vec3(1.5, 1.0, 1.5), boxes[0].maxCorner * vec3(1.5, 1.0, 1.5), warpedRay, n, isRayExiting );
+	if (d == INFINITY) return t;
+	
+	vec3 hitPos = warpedRay.origin + warpedRay.direction * d;
+	//float angle = 0.25 * PI;
+	float angle = mod(hitPos.y * 0.015, TWO_PI);
+	mat4 m = makeRotateY(angle);
+	m = inverse(m);
+	warpedRay.origin = vec3( m * vec4(warpedRay.origin, 1.0) );
+	warpedRay.direction = normalize(vec3( m * vec4(warpedRay.direction, 0.0) ));
+	
+	d = BoxIntersect( boxes[0].minCorner, boxes[0].maxCorner, warpedRay, n, isRayExiting );
+	if (d < t)
+	{
+		t = d;
+		intersec.normal = normalize(n);
+		intersec.normal = normalize(vec3( transpose(m) * vec4(intersec.normal, 0.0) ));
+		intersec.emission = boxes[0].emission;
+		intersec.color = boxes[0].color;
+		intersec.type = boxes[0].type;
+	}
+        
 	return t;
 }
 
@@ -253,10 +251,12 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	Intersection intersec;
 	Quad light = quads[5];
 	Ray firstRay;
+	Ray secondaryRay;
 
 	vec3 accumCol = vec3(0);
         vec3 mask = vec3(1);
 	vec3 firstMask = vec3(1);
+	vec3 secondaryMask = vec3(1);
 	vec3 dirToLight;
 	vec3 tdir;
 	vec3 x, n, nl;
@@ -264,7 +264,6 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	float t;
 	float nc, nt, ratioIoR, Re, Tr;
 	float weight;
-	float diffuseColorBleeding = 0.4; // range: 0.0 - 0.5, amount of color bleeding between surfaces
 	float thickness = 0.04;
 
 	int diffuseCount = 0;
@@ -275,6 +274,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	bool reflectionTime = false;
 	bool firstTypeWasDIFF = false;
 	bool shadowTime = false;
+	bool firstTypeWasCOAT = false;
 
 	
 	for (int bounces = 0; bounces < 6; bounces++)
@@ -306,7 +306,34 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				r.direction = normalize(r.direction);
 				mask = firstMask;
 				// set/reset variables
-				diffuseCount = 0;
+				reflectionTime = true;
+				bounceIsSpecular = true;
+				sampleLight = false;
+				// continue with the reflection ray
+				continue;
+			}
+
+			if (firstTypeWasCOAT && !shadowTime) 
+			{
+				// start back at the diffuse surface, but this time follow shadow ray branch
+				r = secondaryRay;
+				r.direction = normalize(r.direction);
+				mask = secondaryMask;
+				// set/reset variables
+				shadowTime = true;
+				bounceIsSpecular = false;
+				sampleLight = true;
+				// continue with the shadow ray
+				continue;
+			}
+
+			if (firstTypeWasCOAT && !reflectionTime) 
+			{
+				// start back at the refractive surface, but this time follow reflective branch
+				r = firstRay;
+				r.direction = normalize(r.direction);
+				mask = firstMask;
+				// set/reset variables
 				reflectionTime = true;
 				bounceIsSpecular = true;
 				sampleLight = false;
@@ -331,10 +358,10 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			{
 				if (!shadowTime) 
 				{
-					if (bounceIsSpecular)
-						accumCol = mask * intersec.emission;
 					if (sampleLight)
 						accumCol = mask * intersec.emission * 0.5;
+					else if (bounceIsSpecular)
+						accumCol = mask * intersec.emission;
 					
 					// start back at the diffuse surface, but this time follow shadow ray branch
 					r = firstRay;
@@ -348,9 +375,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 					continue;
 				}
 				
-				if (sampleLight)
-					accumCol += mask * intersec.emission * 0.5; // add shadow ray result to the colorbleed result (if any)
-				
+				accumCol += mask * intersec.emission * 0.5; // add shadow ray result to the colorbleed result (if any)
+			
 				break;		
 			}
 
@@ -366,7 +392,6 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 					r.direction = normalize(r.direction);
 					mask = firstMask;
 					// set/reset variables
-					diffuseCount = 0;
 					reflectionTime = true;
 					bounceIsSpecular = true;
 					sampleLight = false;
@@ -380,9 +405,52 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				break;	
 			}
 
-			 // need this check for translucent materials
+			if (firstTypeWasCOAT)
+			{
+				if (!shadowTime) 
+				{
+					if (sampleLight)
+						accumCol = mask * intersec.emission * 0.5;
+
+					// start back at the diffuse surface, but this time follow shadow ray branch
+					r = secondaryRay;
+					r.direction = normalize(r.direction);
+					mask = secondaryMask;
+					// set/reset variables
+					shadowTime = true;
+					bounceIsSpecular = false;
+					sampleLight = true;
+					// continue with the shadow ray
+					continue;
+				}
+
+				if (!reflectionTime)
+				{
+					// add initial shadow ray result to secondary shadow ray result (if any) 
+					accumCol += mask * intersec.emission * 0.5;
+
+					// start back at the coat surface, but this time follow reflective branch
+					r = firstRay;
+					r.direction = normalize(r.direction);
+					mask = firstMask;
+					// set/reset variables
+					reflectionTime = true;
+					bounceIsSpecular = true;
+					sampleLight = false;
+					// continue with the reflection ray
+					continue;
+				}
+
+				// add reflective result to the diffuse result
+				if (sampleLight || bounceIsSpecular)
+					accumCol += mask * intersec.emission;
+				
+				break;	
+			}
+
 			if (sampleLight || bounceIsSpecular)
 				accumCol = mask * intersec.emission; // looking at light through a reflection
+			
 			// reached a light, so we can exit
 			break;
 
@@ -414,7 +482,34 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				r.direction = normalize(r.direction);
 				mask = firstMask;
 				// set/reset variables
-				diffuseCount = 0;
+				reflectionTime = true;
+				bounceIsSpecular = true;
+				sampleLight = false;
+				// continue with the reflection ray
+				continue;
+			}
+
+			if (firstTypeWasCOAT && !shadowTime) 
+			{
+				// start back at the diffuse surface, but this time follow shadow ray branch
+				r = secondaryRay;
+				r.direction = normalize(r.direction);
+				mask = secondaryMask;
+				// set/reset variables
+				shadowTime = true;
+				bounceIsSpecular = false;
+				sampleLight = true;
+				// continue with the shadow ray
+				continue;
+			}
+
+			if (firstTypeWasCOAT && !reflectionTime) 
+			{
+				// start back at the refractive surface, but this time follow reflective branch
+				r = firstRay;
+				r.direction = normalize(r.direction);
+				mask = firstMask;
+				// set/reset variables
 				reflectionTime = true;
 				bounceIsSpecular = true;
 				sampleLight = false;
@@ -455,7 +550,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
-			else if (firstTypeWasREFR && diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
+			else if (firstTypeWasREFR && rand(seed) < 0.5)
 			{
 				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
 				r.origin += nl * uEPS_intersect;
@@ -500,7 +595,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				firstRay.origin += nl * uEPS_intersect;
 				mask *= Tr;
 			}
-			else if (diffuseCount == 0 && rand(seed) < Re)
+			else if (firstTypeWasREFR && !reflectionTime && rand(seed) < Re)
 			{
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.origin += nl * uEPS_intersect;
@@ -534,17 +629,16 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 
-			// clearCoat counts as refractive surface
-			if (!firstTypeWasREFR && diffuseCount == 0)
+			if (!firstTypeWasREFR && !firstTypeWasCOAT && diffuseCount == 0)
 			{	
 				// save intersection data for future reflection trace
-				firstTypeWasREFR = true;
+				firstTypeWasCOAT = true;
 				firstMask = mask * Re;
 				firstRay = Ray( x, reflect(r.direction, nl) ); // create reflection ray from surface
 				firstRay.origin += nl * uEPS_intersect;
 				mask *= Tr;
 			}
-			else if (diffuseCount == 0 && rand(seed) < Re)
+			else if (firstTypeWasREFR && !reflectionTime && rand(seed) < Re)
 			{
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.origin += nl * uEPS_intersect;
@@ -557,13 +651,26 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 			bounceIsSpecular = false;
 			
-			if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
+			if (firstTypeWasCOAT && diffuseCount == 1)
                         {
-                                // choose random Diffuse sample vector
+                                // save intersection data for future shadowray trace
+				dirToLight = sampleQuadLight(x, nl, quads[5], dirToLight, weight, seed);
+				secondaryMask = mask * weight;
+                                secondaryRay = Ray( x, normalize(dirToLight) ); // create shadow ray pointed towards light
+				secondaryRay.origin += nl * uEPS_intersect;
+
+				// choose random Diffuse sample vector
 				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
 				r.origin += nl * uEPS_intersect;
 				continue;
                         }
+			else if (firstTypeWasREFR && rand(seed) < 0.5)
+			{
+				// choose random Diffuse sample vector
+				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
+				r.origin += nl * uEPS_intersect;
+				continue;
+			}
 
 			dirToLight = sampleQuadLight(x, nl, quads[5], dirToLight, weight, seed);
 			mask *= weight;
