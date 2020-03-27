@@ -534,7 +534,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				intersec.color *= lightWoodTextureColor;
 		
 			vec3 reflectVec = reflect(r.direction, nl);
-			vec3 glossyVec = randomDirectionInHemisphere(nl, seed);
+			vec3 glossyVec = randomCosWeightedDirectionInHemisphere(nl, seed);
 
 			if (!firstTypeWasCOAT && diffuseCount == 0)
 			{	
