@@ -962,6 +962,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				{
 					if (sampleLight)
 						accumCol = mask * intersec.emission * 0.5;
+					else if (bounceIsSpecular) // needed for inside specsub
+						accumCol = mask * intersec.emission;
 
 					// start back at the diffuse surface, but this time follow shadow ray branch
 					r = secondaryRay;
@@ -1272,7 +1274,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				firstRay.origin += nl * uEPS_intersect;
 				mask *= Tr;
 			}
-			else if (firstTypeWasREFR && !reflectionTime && rand(seed) < Re)
+			else if (firstTypeWasREFR && rand(seed) < Re)
 			{
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.origin += nl * uEPS_intersect;
