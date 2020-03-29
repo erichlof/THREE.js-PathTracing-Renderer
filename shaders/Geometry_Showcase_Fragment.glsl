@@ -504,7 +504,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				firstRay.origin += nl * uEPS_intersect;
 				mask *= Tr;
 			}
-			else if (firstTypeWasREFR && rand(seed) < Re)
+			else if (firstTypeWasREFR && n == nl && rand(seed) < Re)
 			{
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.origin += nl * uEPS_intersect;
