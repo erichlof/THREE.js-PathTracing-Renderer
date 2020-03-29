@@ -1300,7 +1300,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				firstRay.origin += nl * uEPS_intersect;
 				mask *= Tr;
 			}
-			else if (firstTypeWasREFR && !reflectionTime && rand(seed) < Re)
+			else if (firstTypeWasREFR && rand(seed) < Re)
 			{
 				mask *= maskFactor;
 				r = Ray( x, mix(reflectVec, glossyVec, roughness));
