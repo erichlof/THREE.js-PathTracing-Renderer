@@ -264,7 +264,7 @@ function updateVariablesAndUniforms() {
                         pathTracingUniforms.uLeftSphereColor.value.setRGB(1.0, 1.0, 1.0);   
                 }
                 else if (matType == 5) { // CARCOAT
-                        pathTracingUniforms.uLeftSphereColor.value.setRGB(0.7, 0.001, 0.001);   
+                        pathTracingUniforms.uLeftSphereColor.value.setRGB(0.8, 0.001, 0.001);   
                 }
                 else if (matType == 6) { // TRANSLUCENT
                         pathTracingUniforms.uLeftSphereColor.value.setRGB(0.5, 0.9, 1.0);
