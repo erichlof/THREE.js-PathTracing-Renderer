@@ -448,7 +448,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			r = Ray(x, normalize(tdir));
 			r.origin -= nl * uEPS_intersect;
 
-			//if (diffuseCount == 1)
+			if (diffuseCount == 1)
 				bounceIsSpecular = true; // turn on refracting caustics
 
 			continue;
@@ -696,7 +696,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			
 		} // end if (intersec.type == SPECSUB)
 		
-	} // end for (int bounces = 0; bounces < 6; bounces++)
+	} // end for (int bounces = 0; bounces < 7; bounces++)
 	
 	
 	return max(vec3(0), accumCol);
