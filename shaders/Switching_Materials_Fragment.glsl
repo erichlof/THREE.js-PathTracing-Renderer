@@ -108,7 +108,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	bool firstTypeWasCOAT = false;
 
 	
-	for (int bounces = 0; bounces < 6; bounces++)
+	for (int bounces = 0; bounces < 7; bounces++)
 	{
 
 		t = SceneIntersect(r, intersec);
@@ -382,7 +382,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
-			else if (firstTypeWasREFR && rand(seed) < 0.5)
+			else if ((firstTypeWasREFR || reflectionTime) && rand(seed) < 0.5)
 			{
 				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
 				r.origin += nl * uEPS_intersect;
@@ -427,7 +427,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				firstRay.origin += nl * uEPS_intersect;
 				mask *= Tr;
 			}
-			else if (firstTypeWasREFR && n == nl && rand(seed) < Re)
+			else if (bounceIsSpecular && n == nl && rand(seed) < Re)
 			{
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.origin += nl * uEPS_intersect;
@@ -448,7 +448,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			r = Ray(x, normalize(tdir));
 			r.origin -= nl * uEPS_intersect;
 
-			if (diffuseCount == 1)
+			//if (diffuseCount == 1)
 				bounceIsSpecular = true; // turn on refracting caustics
 
 			continue;
@@ -471,7 +471,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				firstRay.origin += nl * uEPS_intersect;
 				mask *= Tr;
 			}
-			else if ((firstTypeWasREFR || reflectionTime) && rand(seed) < Re)
+			else if (bounceIsSpecular && rand(seed) < Re)
 			{
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.origin += nl * uEPS_intersect;
@@ -533,7 +533,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				mask *= Tr;
 			}
 			// choose either specular reflection, metallic, or diffuse
-			else if ((firstTypeWasREFR || reflectionTime) && rand(seed) < Re)
+			else if (bounceIsSpecular && rand(seed) < Re)
 			{
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.origin += nl * uEPS_intersect;
@@ -635,7 +635,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				firstRay.origin += nl * uEPS_intersect;
 				mask *= Tr;
 			}
-			else if ((firstTypeWasREFR || reflectionTime) && rand(seed) < Re)
+			else if (bounceIsSpecular && rand(seed) < Re)
 			{
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.origin += nl * uEPS_intersect;
