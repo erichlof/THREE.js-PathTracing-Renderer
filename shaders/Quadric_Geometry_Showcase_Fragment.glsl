@@ -577,7 +577,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
-			else if (firstTypeWasREFR && rand(seed) < 0.5)
+			else if ((firstTypeWasREFR || reflectionTime) && rand(seed) < 0.5)
 			{
 				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
 				r.origin += nl * uEPS_intersect;
@@ -622,7 +622,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				firstRay.origin += nl * uEPS_intersect;
 				mask *= Tr;
 			}
-			else if (firstTypeWasREFR && n == nl && rand(seed) < Re)
+			else if (bounceIsSpecular && n == nl && rand(seed) < Re)
 			{
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.origin += nl * uEPS_intersect;
@@ -668,7 +668,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				firstRay.origin += nl * uEPS_intersect;
 				mask *= Tr;
 			}
-			else if (firstTypeWasREFR && rand(seed) < Re)
+			else if (bounceIsSpecular && rand(seed) < Re)
 			{
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.origin += nl * uEPS_intersect;
@@ -697,7 +697,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				r.origin += nl * uEPS_intersect;
 				continue;
                         }
-			else if (firstTypeWasREFR && rand(seed) < 0.5)
+			else if ((firstTypeWasREFR || reflectionTime) && rand(seed) < 0.5)
 			{
 				// choose random Diffuse sample vector
 				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
