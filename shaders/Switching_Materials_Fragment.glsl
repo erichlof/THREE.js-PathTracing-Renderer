@@ -497,7 +497,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				r.origin += nl * uEPS_intersect;
 				continue;
                         }
-			else if (firstTypeWasREFR && rand(seed) < 0.5)
+			else if ((firstTypeWasREFR || reflectionTime) && rand(seed) < 0.5)
 			{
 				// choose random Diffuse sample vector
 				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
