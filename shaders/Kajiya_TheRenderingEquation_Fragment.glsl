@@ -147,7 +147,6 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	vec3 skyColor;
 	vec3 x, n, nl;
         
-	float diffuseColorBleeding = 0.4; // range: 0.0 - 0.5, amount of color bleeding between surfaces
 	float t;
 	float weight;
 	float nc, nt, ratioIoR, Re, Tr;
@@ -367,7 +366,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
-			else if (firstTypeWasREFR && diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
+			else if ((firstTypeWasREFR || reflectionTime) && rand(seed) < 0.5)
 			{
 				// choose random Diffuse sample vector
 				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
@@ -401,7 +400,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				firstRay.origin += nl * uEPS_intersect;
 				mask *= Tr;
 			}
-			else if (firstTypeWasREFR && n == nl && rand(seed) < Re)
+			else if (bounceIsSpecular && n == nl && rand(seed) < Re)
 			{
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.origin += nl * uEPS_intersect;
@@ -422,7 +421,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			r.origin -= nl * uEPS_intersect;
 
 			// turn on refracting caustics
-			if (diffuseCount == 1 && bounces < 3)
+			if (bounces == 1)
 			{
 				if (t < 10.0)
 					bounceIsSpecular = true;
