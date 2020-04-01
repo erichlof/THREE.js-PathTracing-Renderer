@@ -438,7 +438,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			
 			// is ray leaving a solid object from the inside? 
 			// If so, attenuate ray color with object color by how far ray has travelled through the medium
-			if (n != nl)
+			if (distance(n, nl) > 0.1)
 			{
 				thickness = 0.01;
 				mask *= exp( log(clamp(intersec.color, 0.01, 0.99)) * thickness * t ); 
