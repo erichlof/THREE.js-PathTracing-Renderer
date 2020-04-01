@@ -377,7 +377,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 			// is ray leaving a solid object from the inside? 
 			// If so, attenuate ray color with object color by how far ray has travelled through the medium
-			if (n != nl || isRayExiting)
+			if (isRayExiting || (distance(n, nl) > 0.1))
 			{
 				isRayExiting = false;
 				mask *= exp(log(intersec.color) * thickness * t);
