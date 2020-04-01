@@ -62,6 +62,8 @@ float DisplacementBoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r )
 
 // WATER
 /* Credit: some of the following water code is borrowed from https://www.shadertoy.com/view/Ms2SD1 posted by user 'TDM' */
+
+#define WATER_COLOR vec3(0.96, 1.0, 0.98)
 #define WATER_SAMPLE_SCALE 0.05 
 #define WATER_WAVE_HEIGHT 2.0 // max height of water waves   
 #define WATER_FREQ        1.0 // wave density: lower = spread out, higher = close together
@@ -395,11 +397,13 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 	
 	float nc, nt, ratioIoR, Re, Tr;
 	float t = INFINITY;
+	float thickness = 0.01;
 
 	bool checkWater = true;
 	bool skyHit = false;
 	bool firstTypeWasREFR = false;
 	bool reflectionTime = false;
+	bool rayEnteredWater = false;
 	
 	
         for (int bounces = 0; bounces < 3; bounces++)
@@ -487,6 +491,12 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 				mask = intersec.color * sunColor;	
 			}
 
+			if (rayEnteredWater)
+			{
+				rayEnteredWater = false;
+				mask *= exp(log(WATER_COLOR) * thickness * t); 
+			}
+
 			if (firstTypeWasREFR)
 			{
 				if (!reflectionTime) 
@@ -525,15 +535,21 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 				firstRay = Ray( x, reflect(r.direction, nl) ); // create reflection ray from surface
 				firstRay.origin += nl * uEPS_intersect;
 				mask *= Tr;
+				rayEnteredWater = true;
 			}
 			
-			// transmit ray through surface
-			mask *= intersec.color;
+			// is ray leaving a solid object from the inside? 
+			// If so, attenuate ray color with object color by how far ray has travelled through the medium
+			if (distance(n, nl) > 0.1)
+			{
+				rayEnteredWater = false;
+				mask *= exp(log(WATER_COLOR) * thickness * t);
+			}
 			
 			tdir = refract(r.direction, nl, ratioIoR);
-			r = Ray(x, tdir);
+			r = Ray(x, normalize(tdir));
 			r.origin -= nl * uEPS_intersect;
-
+			
 			continue;
 			
 		} // end if (intersec.type == REFR)
