@@ -426,7 +426,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 			
-			if (diffuseCount == 0 && !firstTypeWasDIFF)
+			if (diffuseCount == 0 && !firstTypeWasREFR && !firstTypeWasDIFF)
 			{	
 				// save intersection data for future reflection trace
 				firstTypeWasREFR = true;
@@ -435,15 +435,14 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				firstRay = Ray( x, reflect(r.direction, nl) ); // create reflection ray from surface
 				firstRay.origin += nl * uEPS_intersect;
 				mask *= Tr;
+				rayEnteredWater = true;
 			}
 
 			// transmit ray through surface	
 
-			rayEnteredWater = true;
-
 			// is ray leaving a solid object from the inside? 
 			// If so, attenuate ray color with object color by how far ray has travelled through the medium
-			if (n != nl)
+			if (distance(n, nl) > 0.1)
 			{
 				rayEnteredWater = false;
 				mask *= exp(log(WATER_COLOR) * thickness * t);
