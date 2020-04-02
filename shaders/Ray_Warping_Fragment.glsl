@@ -29,33 +29,11 @@ Box boxes[N_BOXES];
 
 #include <pathtracing_sphere_intersect>
 
-#include <pathtracing_cappedcylinder_intersect>
-
 #include <pathtracing_quad_intersect>
 
 #include <pathtracing_box_intersect>
 
 #include <pathtracing_sample_quad_light>
-// vec3 sampleQuadLight(vec3 x, vec3 nl, Quad light, vec3 dirToLight, out float weight, inout uvec2 seed)
-// {
-// 	float steps = 20.0;
-// 	vec3 randPointOnLight;
-// 	randPointOnLight.x = mix(light.v0.x, light.v1.x, clamp(floor((1.0 + steps) * rand(seed)) / steps, 0.1, 0.9));
-// 	randPointOnLight.y = light.v0.y;
-// 	randPointOnLight.z = mix(light.v0.z, light.v3.z, clamp(floor((1.0 + steps) * rand(seed)) / steps, 0.1, 0.9));
-// 	dirToLight = randPointOnLight - x;
-// 	float r2 = distance(light.v0, light.v1) * distance(light.v0, light.v3);
-// 	float d2 = dot(dirToLight, dirToLight);
-// 	float cos_a_max = sqrt(1.0 - clamp( r2 / d2, 0.0, 1.0));
-
-// 	dirToLight = normalize(dirToLight);
-// 	float dotNlRayDir = max(0.0, dot(nl, dirToLight)); 
-// 	weight =  2.0 * (1.0 - cos_a_max) * max(0.0, -dot(dirToLight, light.normal)) * dotNlRayDir; 
-// 	weight = clamp(weight, 0.0, 1.0);
-
-// 	return dirToLight;
-// }
-
 
 mat4 makeRotateY(float rot)
 {
@@ -102,11 +80,18 @@ float SceneIntersect( Ray r, inout Intersection intersec, inout uvec2 seed )
 //--------------------------------------------------------------------------
 {
 	Ray warpedRay;
+	mat4 m;
+
+	vec3 o;
+	vec3 offset;
 	vec3 n, n1, n2;
 	vec3 intersectionPoint;
-	vec3 offset;
+	vec3 tempNormal;
+	vec3 hitPos;
 
-	float d;
+	float angle = 0.0;
+	float width = 0.0;
+	float d = INFINITY;
 	float t = INFINITY;
 	
 	bool isRayExiting = false;
@@ -125,94 +110,62 @@ float SceneIntersect( Ray r, inout Intersection intersec, inout uvec2 seed )
 		}
         }
 
-	/*
-        for (int i = 0; i < N_SPHERES; i++)
-        {
-		if (i == 0) // Sphere Light
-		{
-			d = SphereIntersect( spheres[i].radius, spheres[i].position, r );
-			offset = vec3(0);
-		}
-		else if (i == 1 || i == 2) // Twisted Spheres
-		{
-			warpedRay = r;
+	
+	// Twisted Glass Sphere Left
+	d = SphereIntersect( spheres[0].radius, spheres[0].position, r );
+	intersectionPoint = r.origin + r.direction * d;
+	angle = mod(intersectionPoint.y * 0.1, TWO_PI);
+	m = makeRotateY(angle);
+	o = ( m * vec4(intersectionPoint, 1.0) ).xyz;
+	offset = o * 0.1;
+	d = SphereIntersect( spheres[0].radius, spheres[0].position + offset, r);
+	if (d < t)
+	{
+		t = d;
+		intersectionPoint = r.origin + r.direction * t;
+		tempNormal = (intersectionPoint - (spheres[0].position + offset));
+		intersec.normal = normalize(tempNormal);
+		intersec.emission = spheres[0].emission;
+		intersec.color = spheres[0].color;
+		intersec.type = spheres[0].type;
+	}
 
-			float torusThickness = 10.0;
-			d = CappedCylinderIntersect( spheres[i].position - vec3(0, 0, torusThickness), spheres[i].position + vec3(0, 0, torusThickness), spheres[i].radius, warpedRay, n);
-			if (d == INFINITY) continue;
-
-			vec3 hitPos = warpedRay.origin + warpedRay.direction * d;
-			vec3 hitVec = (hitPos - spheres[i].position);
-			hitVec.z = 0.0;
-			hitVec = normalize(hitVec);
+	// Twisted Glass Sphere Right
+	d = SphereIntersect( spheres[1].radius, spheres[1].position, r );
+	intersectionPoint = r.origin + r.direction * d;
+	angle = mod(intersectionPoint.y * 0.1, TWO_PI);
+	m = makeRotateY(angle);
+	o = ( m * vec4(intersectionPoint, 1.0) ).xyz;
+	offset = o * 0.1;
+	d = SphereIntersect( spheres[1].radius, spheres[1].position + offset, r);
+	if (d < t)
+	{
+		t = d;
+		intersectionPoint = r.origin + r.direction * t;
+		tempNormal = (intersectionPoint - (spheres[1].position + offset));
+		intersec.normal = normalize(tempNormal);
+		intersec.emission = spheres[1].emission;
+		intersec.color = spheres[1].color;
+		intersec.type = spheres[1].type;
+	}	
 			
-			vec3 spherePos = spheres[i].position + (hitVec * (90.0 - torusThickness));
-
-			d = SphereIntersect( torusThickness, spherePos, warpedRay );
-			if (d < t)
-			{
-				t = d;
-				intersectionPoint = warpedRay.origin + warpedRay.direction * d;
-				intersec.normal = normalize(intersectionPoint - spherePos);
-				intersec.emission = spheres[i].emission;
-				intersec.color = spheres[i].color;
-				intersec.type = spheres[i].type;
-			}
-		}
-		else if (i == 3) // Cloudy Sphere
-		{
-			float dense = 1.0 + rand(seed);
-			offset = (spheres[i].radius*0.5) * (vec3(rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0));
-			d = SphereIntersect( spheres[i].radius * dense, spheres[i].position + offset, r);
-		}
-		
-		if (d < t)
-		{
-			t = d;
-			intersectionPoint = r.origin + r.direction * d;
-			vec3 tempNormal = (intersectionPoint - (spheres[i].position + offset));
-			intersec.normal = normalize(tempNormal);
-			intersec.emission = spheres[i].emission;
-			intersec.color = spheres[i].color;
-			intersec.type = spheres[i].type;
-		}
-        }
-	*/
-
-	for (int i = 0; i < N_SPHERES; i++)
-        {
-		
-		if (i < 2) // Twisted Spheres
-		{
-			d = SphereIntersect( spheres[i].radius, spheres[i].position, r );
-			if (d == INFINITY) continue;
-			intersectionPoint = r.origin + r.direction * d;
-			float angle = mod(intersectionPoint.y * 0.1, TWO_PI);
-			mat4 m = makeRotateY(angle);
-			vec3 o = ( m * vec4(intersectionPoint, 1.0) ).xyz;
-			offset = o * 0.1;
-			d = SphereIntersect( spheres[i].radius, spheres[i].position + offset, r);
-		}
-		else // Cloudy Sphere
-		{
-			float width = 2.0 * rand(seed);
-			offset = (spheres[i].radius * 0.5) * (vec3(rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0));
-			d = SphereIntersect( spheres[i].radius + width, spheres[i].position + offset, r);
-		}
-		
-		if (d < t)
-		{
-			t = d;
-			intersectionPoint = r.origin + r.direction * d;
-			vec3 tempNormal = (intersectionPoint - (spheres[i].position + offset));
-			intersec.normal = normalize(tempNormal);
-			intersec.emission = spheres[i].emission;
-			intersec.color = spheres[i].color;
-			intersec.type = spheres[i].type;
-		}
+	// Purple Cloud Sphere
+	width = 2.0 * rand(seed);
+	offset = (spheres[2].radius * 0.5) * (vec3(rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0));
+	d = SphereIntersect( spheres[2].radius + width, spheres[2].position + offset, r);
+	if (d < t)
+	{
+		t = d;
+		intersectionPoint = r.origin + r.direction * t;
+		tempNormal = (intersectionPoint - (spheres[2].position + offset));
+		intersec.normal = normalize(tempNormal);
+		intersec.emission = spheres[2].emission;
+		intersec.color = spheres[2].color;
+		intersec.type = spheres[2].type;
 	}
 	
-	
+
+	// Twisted Tall Mirror Box
 	warpedRay = r;
 	warpedRay.origin.x -= 200.0;
 	warpedRay.origin.y -= 200.0;
@@ -221,10 +174,10 @@ float SceneIntersect( Ray r, inout Intersection intersec, inout uvec2 seed )
 	d = BoxIntersect( boxes[0].minCorner * vec3(1.5, 1.0, 1.5), boxes[0].maxCorner * vec3(1.5, 1.0, 1.5), warpedRay, n, isRayExiting );
 	if (d == INFINITY) return t;
 	
-	vec3 hitPos = warpedRay.origin + warpedRay.direction * d;
+	hitPos = warpedRay.origin + warpedRay.direction * d;
 	//float angle = 0.25 * PI;
-	float angle = mod(hitPos.y * 0.015, TWO_PI);
-	mat4 m = makeRotateY(angle);
+	angle = mod(hitPos.y * 0.015, TWO_PI);
+	m = makeRotateY(angle);
 	m = inverse(m);
 	warpedRay.origin = vec3( m * vec4(warpedRay.origin, 1.0) );
 	warpedRay.direction = normalize(vec3( m * vec4(warpedRay.direction, 0.0) ));
@@ -239,7 +192,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, inout uvec2 seed )
 		intersec.color = boxes[0].color;
 		intersec.type = boxes[0].type;
 	}
-        
+
 	return t;
 }
 
@@ -249,7 +202,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 //-----------------------------------------------------------------------
 {
 	Intersection intersec;
-	Quad light = quads[5];
+
 	Ray firstRay;
 	Ray secondaryRay;
 
@@ -264,7 +217,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	float t;
 	float nc, nt, ratioIoR, Re, Tr;
 	float weight;
-	float thickness = 0.04;
+	float thickness = 0.05;
 
 	int diffuseCount = 0;
 
@@ -342,7 +295,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			}
 
 			// nothing left to calculate, so exit	
-			break;
+			else break;
 		}
 		
 		
@@ -376,7 +329,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				}
 				
 				accumCol += mask * intersec.emission * 0.5; // add shadow ray result to the colorbleed result (if any)
-			
+				
 				break;		
 			}
 
@@ -411,6 +364,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				{
 					if (sampleLight)
 						accumCol = mask * intersec.emission * 0.5;
+					else if (bounceIsSpecular) // needed for inside specsub
+						accumCol = mask * intersec.emission;
 
 					// start back at the diffuse surface, but this time follow shadow ray branch
 					r = secondaryRay;
@@ -450,18 +405,18 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 			if (sampleLight || bounceIsSpecular)
 				accumCol = mask * intersec.emission; // looking at light through a reflection
-			
 			// reached a light, so we can exit
 			break;
 
 		} // end if (intersec.type == LIGHT)
 
 
-		// if we get here and sampleLight is still true, shadow ray failed to find a light source
-		if (sampleLight) 
+		//if we get here and sampleLight is still true, shadow ray failed to find a light source
+		
+		/* if (sampleLight) 
 		{
 
-			if (firstTypeWasDIFF && !shadowTime) 
+			if (firstTypeWasDIFF) 
 			{
 				// start back at the diffuse surface, but this time follow shadow ray branch
 				r = firstRay;
@@ -518,13 +473,13 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			}
 
 			// nothing left to calculate, so exit	
-			break;
-		}
+			//break;
+		} */
 
 
 		// useful data 
 		n = normalize(intersec.normal);
-                nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
+                nl = dot(n, r.direction) < 0.0 ? n : normalize(-n);
 		x = r.origin + r.direction * t;
 
 		    
@@ -568,6 +523,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                         
 		} // end if (intersec.type == DIFF)
 		
+		
 		if (intersec.type == SPEC)  // Ideal SPECULAR reflection
 		{
 			mask *= intersec.color;
@@ -578,6 +534,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			//bounceIsSpecular = true; // turn on mirror caustics
 			continue;
 		}
+
 		
 		if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
@@ -595,7 +552,6 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				firstRay.origin += nl * uEPS_intersect;
 				mask *= Tr;
 			}
-			// firstTypeWasREFR is used in condition below instead of bounceIsSpecular because twisted mirror box made fireflies
 			else if (firstTypeWasREFR && n == nl && rand(seed) < Re)
 			{
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
@@ -609,7 +565,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			// If so, attenuate ray color with object color by how far ray has travelled through the medium
 			if (distance(n, nl) > 0.1)
 			{
-				mask *= exp(log(intersec.color) * thickness * t);
+				thickness = 0.01;
+				mask *= exp( log(clamp(intersec.color, 0.01, 0.99)) * thickness * t ); 
 			}
 			
 			tdir = refract(r.direction, nl, ratioIoR);
@@ -622,6 +579,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			continue;
 			
 		} // end if (intersec.type == REFR)
+
 		
 		if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top
 		{
@@ -684,6 +642,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			
 		} //end if (intersec.type == COAT)
 		
+
 	} // end for (int bounces = 0; bounces < 6; bounces++)
 	
 	
@@ -698,7 +657,7 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0);// No color value, Black        
-	vec3 L1 = vec3(1.0, 1.0, 1.0) * 6.0;// Bright light
+	vec3 L1 = vec3(1.0, 1.0, 1.0) * 10.0;// Bright light
 	
 	spheres[0] = Sphere( 90.0, vec3(150.0,  91.0, -200.0),  z, vec3(0.4, 1.0, 1.0),  REFR);// Sphere Left
 	spheres[1] = Sphere( 90.0, vec3(400.0,  91.0, -200.0),  z, vec3(1.0, 1.0, 1.0),  COAT);// Sphere Right
