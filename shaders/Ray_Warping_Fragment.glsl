@@ -295,7 +295,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			}
 
 			// nothing left to calculate, so exit	
-			else break;
+			break;
 		}
 		
 		
@@ -413,7 +413,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 		//if we get here and sampleLight is still true, shadow ray failed to find a light source
 		
-		/* if (sampleLight) 
+		if (sampleLight) 
 		{
 
 			if (firstTypeWasDIFF) 
@@ -473,8 +473,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			}
 
 			// nothing left to calculate, so exit	
-			//break;
-		} */
+			break;
+		}
 
 
 		// useful data 
