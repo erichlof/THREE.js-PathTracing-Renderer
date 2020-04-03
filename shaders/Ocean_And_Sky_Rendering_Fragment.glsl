@@ -276,16 +276,24 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkOcean )
 //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 {
         Ray rObj;
+
 	vec3 hitObjectSpace;
 	vec3 hitWorldSpace;
 	vec3 normal;
+	vec3 pos;
+	vec3 dir;
+
+	float h;
         float d, dw, dc;
+	float dx, dy, dz;
 	float t = INFINITY;
         float eps = 0.1;
 	float waterWaveHeight;
+
 	bool isRayExiting = false;
 	
-
+	
+	
 	// SEA FLOOR
 	d = PlaneIntersect(vec4(0, 1, 0, -1000.0), r);
 	if (d < t)
@@ -297,6 +305,47 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkOcean )
 		intersec.type = SEAFLOOR;
 	}
 	
+	d = OpenCylinderIntersect( openCylinders[0].pos1, openCylinders[0].pos2, openCylinders[0].radius, r, normal );
+	if (d < t)
+	{
+		t = d;
+		intersec.normal = normalize(normal);
+		intersec.emission = vec3(0);
+		intersec.color = openCylinders[0].color;
+		intersec.type = WOOD;
+	}
+
+	d = OpenCylinderIntersect( openCylinders[1].pos1, openCylinders[1].pos2, openCylinders[1].radius, r, normal );
+	if (d < t)
+	{
+		t = d;
+		intersec.normal = normalize(normal);
+		intersec.emission = vec3(0);
+		intersec.color = openCylinders[0].color;
+		intersec.type = WOOD;
+	}
+
+	d = OpenCylinderIntersect( openCylinders[2].pos1, openCylinders[2].pos2, openCylinders[2].radius, r, normal );
+	if (d < t)
+	{
+		t = d;
+		intersec.normal = normalize(normal);
+		intersec.emission = vec3(0);
+		intersec.color = openCylinders[0].color;
+		intersec.type = WOOD;
+	}
+
+	d = OpenCylinderIntersect( openCylinders[3].pos1, openCylinders[3].pos2, openCylinders[3].radius, r, normal );
+	if (d < t)
+	{
+		t = d;
+		intersec.normal = normalize(normal);
+		intersec.emission = vec3(0);
+		intersec.color = openCylinders[0].color;
+		intersec.type = WOOD;
+	}
+	
+
 	for (int i = 0; i < N_QUADS; i++)
         {
 		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, r, true );
@@ -309,19 +358,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkOcean )
 			intersec.type = quads[i].type;
 		}
         }
-	
-	for (int i = 0; i < N_OPENCYLINDERS; i++)
-        {
-		d = OpenCylinderIntersect( openCylinders[i].pos1, openCylinders[i].pos2, openCylinders[i].radius, r, normal );
-		if (d < t)
-		{
-			t = d;
-			intersec.normal = normalize(normal);
-			intersec.emission = openCylinders[i].emission;
-			intersec.color = openCylinders[i].color;
-			intersec.type = openCylinders[i].type;
-		}
-        }
+
 	
 	// TALL MIRROR BOX
 	// transform ray into Tall Box's object space
@@ -372,9 +409,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkOcean )
 		return t;
 	}
 
-	vec3 pos = r.origin;
-	vec3 dir = r.direction;
-	float h = 0.0;
+	pos = r.origin;
+	dir = r.direction;
+	h = 0.0;
 	d = 0.0; // reset d
 
 	for(int i = 0; i < 100; i++)
@@ -399,11 +436,11 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkOcean )
 	
 	if (d < t) 
 	{
-		float eps = 1.0;
+		eps = 1.0;
 		t = d;
-		float dx = getOceanWaterHeight_Detail(hitWorldSpace - vec3(eps,0,0)) - getOceanWaterHeight_Detail(hitWorldSpace + vec3(eps,0,0));
-		float dy = eps * 2.0; // (the water wave height is a function of x and z, not dependent on y)
-		float dz = getOceanWaterHeight_Detail(hitWorldSpace - vec3(0,0,eps)) - getOceanWaterHeight_Detail(hitWorldSpace + vec3(0,0,eps));
+		dx = getOceanWaterHeight_Detail(hitWorldSpace - vec3(eps,0,0)) - getOceanWaterHeight_Detail(hitWorldSpace + vec3(eps,0,0));
+		dy = eps * 2.0; // (the water wave height is a function of x and z, not dependent on y)
+		dz = getOceanWaterHeight_Detail(hitWorldSpace - vec3(0,0,eps)) - getOceanWaterHeight_Detail(hitWorldSpace + vec3(0,0,eps));
 		
 		intersec.normal = normalize(vec3(dx,dy,dz));
 		intersec.emission = vec3(0);
@@ -417,7 +454,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkOcean )
 
 
 //----------------------------------------------------------------------------------------------
-vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool rayHitIsDynamic )
+vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 //----------------------------------------------------------------------------------------------
 {
 	Intersection intersec;
@@ -447,7 +484,6 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 	float nc, nt, ratioIoR, Re, Tr;
 	float weight;
 	float t = INFINITY;
-	float diffuseColorBleeding = 0.5; // range: 0.0 - 0.5, amount of color bleeding between surfaces
 	
 	int diffuseCount = 0;
 
@@ -455,21 +491,17 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 	bool skyHit = false;
 	bool sampleLight = false;
 	bool bounceIsSpecular = true;
-	bool firstTypeWasSPEC = false;
 	bool firstTypeWasREFR = false;
 	bool reflectionTime = false;
 	bool firstTypeWasDIFF = false;
 	bool shadowTime = false;
 	
 	
-        for (int bounces = 0; bounces < 5; bounces++)
+        for (int bounces = 0; bounces < 6; bounces++)
 	{
 
 		t = SceneIntersect(r, intersec, checkOcean);
 		checkOcean = false;
-
-		if (bounces == 0 && intersec.type == DIFF)
-			rayHitIsDynamic = false;
 
 		if (t == INFINITY)
 		{
@@ -482,14 +514,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 				accumCol = initialSkyColor;
 				break; // exit early	
 			}
-			if (bounces == 1 && firstTypeWasSPEC) // ray bounces off mirror and hits sky	
-			{
-				skyHit = true;
-				firstX = skyPos;
-				initialSkyColor = mask * skyColor;
-				accumCol = initialSkyColor;
-				break; // exit early	
-			}
+			
 
 			if (firstTypeWasREFR)
 			{
@@ -505,7 +530,6 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 					r.direction = normalize(r.direction);
 					mask = firstMask;
 					// set/reset variables
-					diffuseCount = 0;
 					reflectionTime = true;
 					bounceIsSpecular = true;
 					sampleLight = false;
@@ -542,11 +566,17 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 				break;			
 			}
 
-			if (bounceIsSpecular || sampleLight)
-				accumCol = mask * skyColor; // looking at HDRI sky light through a reflection
+			if (bounceIsSpecular) // ray bounces off mirror and hits sky	
+			{
+				skyHit = true;
+				firstX = skyPos;
+				initialSkyColor = mask * skyColor;
+				accumCol = initialSkyColor;
+				break; // exit early	
+			}
 
 			// reached the sky light, so we can exit
-			break;
+			//break;
 		} // end if (t == INFINITY)
 
 		
@@ -574,7 +604,6 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 					r.direction = normalize(r.direction);
 					mask = firstMask;
 					// set/reset variables
-					diffuseCount = 0;
 					reflectionTime = true;
 					bounceIsSpecular = true;
 					sampleLight = false;
@@ -609,11 +638,12 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 			// nothing left to calculate, so exit	
 			break;
 		} // end if (intersec.type == SEAFLOOR)
-		
 
-		// if we get here and sampleLight is still true, shadow ray failed to find a light source
+		//if we get here and sampleLight is still true, shadow ray failed to find a light source
+		
 		if (sampleLight) 
 		{
+
 			if (firstTypeWasREFR && !reflectionTime) 
 			{
 				// start back at the refractive surface, but this time follow reflective branch
@@ -621,7 +651,6 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 				r.direction = normalize(r.direction);
 				mask = firstMask;
 				// set/reset variables
-				diffuseCount = 0;
 				reflectionTime = true;
 				bounceIsSpecular = true;
 				sampleLight = false;
@@ -659,6 +688,8 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 		
                 if (intersec.type == DIFF) // Ideal DIFFUSE reflection
                 {	
+			checkOcean = false;
+
 			diffuseCount++;
 
 			mask *= intersec.color;
@@ -681,7 +712,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
-			else if (firstTypeWasREFR && diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
+			else if (firstTypeWasREFR && rand(seed) < 0.5)
 			{
 				// choose random Diffuse sample vector
 				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
@@ -709,10 +740,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 			r.origin += nl * uEPS_intersect;
 
 			if (bounces == 0)
-			{
 				checkOcean = true;
-				firstTypeWasSPEC = true;
-			}
 
 			//bounceIsSpecular = true; // turn on mirror caustics
 			continue;
@@ -727,7 +755,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 			
-			if (diffuseCount == 0 && !firstTypeWasREFR)
+			if (!firstTypeWasREFR && diffuseCount == 0)
 			{	
 				// save intersection data for future reflection trace
 				firstTypeWasREFR = true;
@@ -736,7 +764,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 				firstRay.origin += nl * uEPS_intersect;
 				mask *= Tr;
 			}
-			else if (diffuseCount == 0 && rand(seed) < Re)
+			else if (firstTypeWasREFR && n == nl && rand(seed) < Re)
 			{
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.origin += nl * uEPS_intersect;
@@ -780,7 +808,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 				firstRay.origin += nl * uEPS_intersect;
 				mask *= Tr;
 			}
-			else if (diffuseCount == 0 && rand(seed) < Re)
+			else if (firstTypeWasREFR && rand(seed) < Re)
 			{
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.origin += nl * uEPS_intersect;
@@ -797,7 +825,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
+			if (diffuseCount == 1 && rand(seed) < 0.5)
                         {
                                 // choose random Diffuse sample vector
 				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
@@ -817,7 +845,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed, inout bool r
 			
 		} //end if (intersec.type == WOOD)
 		
-	} // end for (int bounces = 0; bounces < 5; bounces++)
+	} // end for (int bounces = 0; bounces < 6; bounces++)
 	
 
 	// atmospheric haze effect (aerial perspective)
@@ -926,9 +954,8 @@ void main( void )
 
 	SetupScene(); 
 
-	bool rayHitIsDynamic = true;
 	// perform path tracing and get resulting pixel color
-	vec3 pixelColor = CalculateRadiance( ray, uSunDirection, seed, rayHitIsDynamic );
+	vec3 pixelColor = CalculateRadiance( ray, uSunDirection, seed );
 	
 	vec4 previousImage = texelFetch(tPreviousTexture, ivec2(gl_FragCoord.xy), 0);
 	vec3 previousColor = previousImage.rgb;
@@ -938,16 +965,11 @@ void main( void )
                 previousColor *= 0.7; // motion-blur trail amount (old image)
                 pixelColor *= 0.3; // brightness of new image (noisy)
         }
-	else if (previousImage.a > 0.0)
+	else
 	{
                 previousColor *= 0.9; // motion-blur trail amount (old image)
                 pixelColor *= 0.1; // brightness of new image (noisy)
         }
-	else
-	{
-                previousColor *= 0.95; // motion-blur trail amount (old image)
-                pixelColor *= 0.05; // brightness of new image (noisy)
-        }
 	
-        out_FragColor = vec4( pixelColor + previousColor, rayHitIsDynamic? 1.0 : 0.0 );	
+        out_FragColor = vec4( pixelColor + previousColor, 1.0 );	
 }
