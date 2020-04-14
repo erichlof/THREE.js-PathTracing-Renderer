@@ -84,7 +84,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 
 
 //-----------------------------------------------------------------------
-vec3 CalculateRadiance( Ray r, inout uvec2 seed )
+vec3 CalculateRadiance( Ray r, inout uvec2 seed, out bool rayHitIsDynamic )
 //-----------------------------------------------------------------------
 {
 	Intersection intersec;
@@ -110,6 +110,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
         bool firstTypeWasREFR = false;
 	bool reflectionTime = false;
         bool sampleLight = false;
+
+        // initialize rayHitIsDynamic to false - it can be made true if the ray hits the moving yellow sphere
+        rayHitIsDynamic = false;
 	
 
         for (int bounces = 0; bounces < 8; bounces++)
@@ -286,6 +289,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
                 if (intersec.type == SPEC)  // special case SPEC/DIFF/COAT material for this classic scene
 		{
+                        if (bounces == 0)
+                                rayHitIsDynamic = true;
+
                         sphereUV.x = atan(nl.z, nl.x) * ONE_OVER_TWO_PI + 0.5;
 			sphereUV.y = asin(clamp(nl.y, -1.0, 1.0)) * ONE_OVER_PI + 0.5;
                         sphereUV *= 2.0;
@@ -418,23 +424,24 @@ void main( void )
 
         SetupScene(); 
 
+        bool rayHitIsDynamic;
         // perform path tracing and get resulting pixel color
-        vec3 pixelColor = CalculateRadiance( ray, seed );
+        vec3 pixelColor = CalculateRadiance( ray, seed, rayHitIsDynamic );
         
 	vec4 previousImage = texelFetch(tPreviousTexture, ivec2(gl_FragCoord.xy), 0);
 	vec3 previousColor = previousImage.rgb;
 
         
-	if (uCameraIsMoving)
+	if (uCameraIsMoving || previousImage.a > 0.0)
 	{
                 previousColor *= 0.5; // motion-blur trail amount (old image)
                 pixelColor *= 0.5; // brightness of new image (noisy)
         }
 	else
 	{
-                previousColor *= 0.8; // motion-blur trail amount (old image)
-                pixelColor *= 0.2; // brightness of new image (noisy)
+                previousColor *= 0.92; // motion-blur trail amount (old image)
+                pixelColor *= 0.08; // brightness of new image (noisy)
         }
         
-        out_FragColor = vec4( pixelColor + previousColor, 1.0 );		
+        out_FragColor = vec4( pixelColor + previousColor, rayHitIsDynamic? 1.0 : 0.0 );		
 }
