@@ -967,8 +967,8 @@ void main( void )
         }
 	else
 	{
-                previousColor *= 0.9; // motion-blur trail amount (old image)
-                pixelColor *= 0.1; // brightness of new image (noisy)
+                previousColor *= 0.93; // motion-blur trail amount (old image)
+                pixelColor *= 0.07; // brightness of new image (noisy)
         }
 	
         out_FragColor = vec4( pixelColor + previousColor, 1.0 );	
