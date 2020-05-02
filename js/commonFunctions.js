@@ -269,13 +269,15 @@ function initTHREEjs() {
         //suggestion: set to false for production
         renderer.debug.checkShaderErrors = true;
 
-        context = renderer.getContext();
-
         renderer.autoClear = false;
         // 1 is full resolution, 0.5 is half, 0.25 is quarter, etc. (must be > than 0.0)
         renderer.setPixelRatio(pixelRatio);
         renderer.setSize(window.innerWidth, window.innerHeight);
+
+        renderer.toneMapping = THREE.ReinhardToneMapping;
+
         //required by WebGL 2.0 for rendering to FLOAT textures
+        context = renderer.getContext();
         context.getExtension('EXT_color_buffer_float');
 
         container = document.getElementById('container');
