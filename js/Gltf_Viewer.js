@@ -273,6 +273,7 @@ function initThree() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     //required by WebGL 2.0 for rendering to FLOAT textures
     renderer.getContext().getExtension('EXT_color_buffer_float');
+	renderer.toneMapping = THREE.ReinhardToneMapping;
     renderer.toneMappingExposure = hdrExposure;
 
     container.appendChild(renderer.domElement);
