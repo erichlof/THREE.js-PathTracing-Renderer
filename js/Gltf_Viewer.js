@@ -190,7 +190,7 @@ function traverseModel(meshGroup, pathTracingMaterialList, triangleMaterialMarke
                 parent = undefined;
             }
 
-            child.geometry.applyMatrix(child.matrix.multiply(matrixStack[matrixStack.length - 1]));
+            child.geometry.applyMatrix4(child.matrix.multiply(matrixStack[matrixStack.length - 1]));
 
             if (child.material.length > 0) {
                 for (let i = 0; i < child.material.length; i++)
