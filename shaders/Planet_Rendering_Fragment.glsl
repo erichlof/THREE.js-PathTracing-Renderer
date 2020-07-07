@@ -78,8 +78,7 @@ bool PlanetSphereIntersect( Ray ray, float rad, vec3 pos, inout float t0, inout 
 	float b = 2.0 * dot( ray.direction, L );
 	float c = dot( L, L ) - (rad * rad);
 
-	if (!solveQuadratic( a, b, c, t0, t1))
-		return false;
+	solveQuadratic(a, b, c, t0, t1);
 	
 	float temp;
 	if (t0 > t1)
