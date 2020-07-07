@@ -78,99 +78,13 @@ Disk disks[N_DISKS];
 
 #include <pathtracing_paraboloid_intersect>
 
+#include <pathtracing_hyperboloid_intersect>
+
+#include <pathtracing_hyperbolic_paraboloid_intersect>
+
 #include <pathtracing_torus_intersect>
 
 #include <pathtracing_sample_sphere_light>
-
-
-//-------------------------------------------------------------------------------
-float HyperboloidIntersect( float rad, float height, vec3 pos, Ray r, out vec3 n )
-//-------------------------------------------------------------------------------
-{
-	vec3 rd = r.direction;
-	vec3 ro = r.origin - pos;
-	float k = height / (rad * rad);
-	
-	// quadratic equation coefficients
-	float a = k * ((rd.x * rd.x) - (rd.y * rd.y) + (rd.z * rd.z));
-	float b = k * 2.0 * ( (rd.x * ro.x) - (rd.y * ro.y) + (rd.z * ro.z) );
-	float c = k * ((ro.x * ro.x) - (ro.y * ro.y) + (ro.z * ro.z)) - (rad * rad);
-	
-	float t0, t1;
-	if (!solveQuadratic( a, b, c, t0, t1))
-		return INFINITY;
-	
-	vec3 ip;
-	
-	if (t0 > 0.0)
-	{
-		ip = ro + rd * t0;
-		n = vec3( 2.0 * ip.x, -2.0 * ip.y, 2.0 * ip.z );
-		// flip normal if it is facing away from us
-		n *= sign(-dot(rd, n)) * 2.0 - 1.0; // sign is 0 or 1, map it to -1 and +1
-		
-		if (abs(ip.y) < height)
-			return t0;		
-	}
-
-	if (t1 > 0.0)
-	{	
-		ip = ro + rd * t1;
-		n = vec3( 2.0 * ip.x, -2.0 * ip.y, 2.0 * ip.z );
-		// flip normal if it is facing away from us
-		n *= sign(-dot(rd, n)) * 2.0 - 1.0; // sign is 0 or 1, map it to -1 and +1
-		
-		if (abs(ip.y) < height)
-			return t1;	
-	}
-	
-	return INFINITY;	
-}
-
-
-//-----------------------------------------------------------------------------------------
-float HyperbolicParaboloidIntersect( float rad, float height, vec3 pos, Ray r, out vec3 n )
-//-----------------------------------------------------------------------------------------
-{
-	vec3 rd = r.direction;
-	vec3 ro = r.origin - pos;
-	float k = height / (rad * rad);
-	
-	// quadratic equation coefficients
-	float a = k * (rd.x * rd.x - rd.z * rd.z);
-	float b = k * 2.0 * (rd.x * ro.x - rd.z * ro.z) - rd.y;
-	float c = k * (ro.x * ro.x - ro.z * ro.z) - ro.y;
-	
-	float t0, t1;
-	if (!solveQuadratic( a, b, c, t0, t1))
-		return INFINITY;
-	
-	vec3 ip;
-
-	if (t0 > 0.0)
-	{
-		ip = ro + rd * t0;
-		n = vec3( 2.0 * ip.x, -1.0 / k, -2.0 * ip.z );
-		// flip normal if it is facing away from us
-		n *= sign(-dot(rd, n)) * 2.0 - 1.0; // sign is 0 or 1, map it to -1 and +1
-		
-		if (abs(ip.x) < height && abs(ip.y) < height && abs(ip.z) < height)
-			return t0;		
-	}
-
-	if (t1 > 0.0)
-	{	
-		ip = ro + rd * t1;
-		n = vec3( 2.0 * ip.x, -1.0 / k, -2.0 * ip.z );
-		// flip normal if it is facing away from us
-		n *= sign(-dot(rd, n)) * 2.0 - 1.0; // sign is 0 or 1, map it to -1 and +1
-		
-		if (abs(ip.x) < height && abs(ip.y) < height && abs(ip.z) < height)
-			return t1;		
-	}
-		
-	return INFINITY;	
-}
 
 
 
