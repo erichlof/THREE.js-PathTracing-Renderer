@@ -53,6 +53,7 @@ float CSG_SphereIntersect( float rad, vec3 pos, Ray r, out vec3 n1, out vec3 n2,
 	vec3 L = r.origin - pos;
 	float t0, t1; 
 	float result = INFINITY;
+	far = INFINITY;
 	// quadratic equation coefficients
 	float a = dot( r.direction, r.direction );
 	float b = 2.0 * dot( r.direction, L );
@@ -89,6 +90,7 @@ float CSG_EllipsoidIntersect( vec3 radii, vec3 pos, Ray r, out vec3 n1, out vec3
 	vec3 invRad2 = invRad*invRad;
 	float t0, t1;
 	float result = INFINITY;
+	far = INFINITY;
 	// quadratic equation coefficients
 	float a = dot(rd2, invRad2);
 	float b = 2.0*dot(ocrd, invRad2);
@@ -145,6 +147,7 @@ float CSG_OpenCylinderIntersect( vec3 p0, vec3 p1, float rad, Ray r, out vec3 n1
 	vec3 lp;
 	float ct;
 	float result = INFINITY;
+	far = INFINITY;
 	
 	if (t1 > 0.0)
 	{
@@ -192,6 +195,7 @@ float CSG_BoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r, out vec3 n1, out 
 	float t0 = max( max(tmin.x, tmin.y), tmin.z);
 	float t1 = min( min(tmax.x, tmax.y), tmax.z);
 	float result = INFINITY;
+	far = INFINITY;
 	
 	if (t0 > t1) return INFINITY;
 	
@@ -226,6 +230,7 @@ float CSG_PlaneIntersect( vec4 pla, Ray r, out vec3 n1, out vec3 n2, out float f
 	
         vec3 pOrO = (pla.w * n) - r.origin; 
         float result = dot(pOrO, n) / denom;
+	far = INFINITY;
 	if (result < 0.0) return INFINITY;
 	n1 = n2 = pla.xyz;
 	far = result;
