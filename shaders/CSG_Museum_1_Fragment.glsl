@@ -46,30 +46,27 @@ Box boxes[N_BOXES];
 float CSG_SphereIntersect( float rad, vec3 pos, Ray r, out vec3 n1, out vec3 n2, out float far )
 //----------------------------------------------------------------------------------------------
 {
-	vec3 op = pos - r.origin;
-	float b = dot(op, r.direction);
-	float det = b * b - dot(op,op) + rad * rad;
+	vec3 L = r.origin - pos;
+	float t0, t1; 
 	float result = INFINITY;
-	far = INFINITY;
-	
-	if (det < 0.0)
-		return INFINITY;
-        
-	det = sqrt(det);	
-	float t1 = b - det;
-	float t2 = b + det;
-	
-	if( t2 > 0.0 )
-	{
-		result = t2;
-		far = INFINITY;
-		n2 = (r.origin + r.direction * result) - pos;   
-	}
+	// quadratic equation coefficients
+	float a = dot( r.direction, r.direction );
+	float b = 2.0 * dot( r.direction, L );
+	float c = dot( L, L ) - (rad * rad);
+
+	solveQuadratic(a, b, c, t0, t1);
 	
 	if( t1 > 0.0 )
 	{
 		result = t1;
-		far = t2;
+		far = INFINITY;
+		n2 = (r.origin + r.direction * result) - pos;   
+	}
+	
+	if( t0 > 0.0 )
+	{
+		result = t0;
+		far = t1;
 		n1 = (r.origin + r.direction * result) - pos;
 	}
 		
@@ -86,32 +83,26 @@ float CSG_EllipsoidIntersect( vec3 radii, vec3 pos, Ray r, out vec3 n1, out vec3
 	vec3 rd2 = r.direction*r.direction;
 	vec3 invRad = 1.0/radii;
 	vec3 invRad2 = invRad*invRad;
+	float t0, t1;
 	float result = INFINITY;
-	far = INFINITY;
-	
 	// quadratic equation coefficients
 	float a = dot(rd2, invRad2);
 	float b = 2.0*dot(ocrd, invRad2);
 	float c = dot(oc2, invRad2) - 1.0;
-	float det = b*b - 4.0*a*c;
-	if (det < 0.0) 
-		return INFINITY;
-		
-	det = sqrt(det);
-	float t1 = (-b - det) / (2.0 * a);
-	float t2 = (-b + det) / (2.0 * a);
-	
-	if( t2 > 0.0 )
-	{
-		result = t2;
-		far = INFINITY;
-		n2 = ((r.origin + r.direction * result) - pos) * invRad2;
-	}
+
+	solveQuadratic(a, b, c, t0, t1);
 	
 	if( t1 > 0.0 )
 	{
 		result = t1;
-		far = t2;
+		far = INFINITY;
+		n2 = ((r.origin + r.direction * result) - pos) * invRad2;
+	}
+	
+	if( t0 > 0.0 )
+	{
+		result = t0;
+		far = t1;
 		n1 = ((r.origin + r.direction * result) - pos) * invRad2;
 	}
 	
@@ -124,32 +115,31 @@ float CSG_BoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r, out vec3 n1, out 
 //------------------------------------------------------------------------------------------------------
 {
 	vec3 invDir = 1.0 / r.direction;
-	vec3 tmin = (minCorner - r.origin) * invDir;
-	vec3 tmax = (maxCorner - r.origin) * invDir;
+	vec3 near = (minCorner - r.origin) * invDir;
+	vec3 further = (maxCorner - r.origin) * invDir;
 	
-	vec3 real_min = min(tmin, tmax);
-	vec3 real_max = max(tmin, tmax);
+	vec3 tmin = min(near, further);
+	vec3 tmax = max(near, further);
 	
-	float minmax = min( min(real_max.x, real_max.y), real_max.z);
-	float maxmin = max( max(real_min.x, real_min.y), real_min.z);
-	far = INFINITY;
+	float t0 = max( max(tmin.x, tmin.y), tmin.z);
+	float t1 = min( min(tmax.x, tmax.y), tmax.z);
 	float result = INFINITY;
 	
-	if (minmax < maxmin || minmax < 0.0)
-		return INFINITY;
+	if (t0 > t1) return INFINITY;
 	
-	if (minmax > 0.0) // if we are inside the box
+	if (t1 > 0.0) // if we are inside the box
 	{
-		n2 = -sign(r.direction) * step(real_max, real_max.yzx) * step(real_max, real_max.zxy);
+		n2 = -sign(r.direction) * step(tmax, tmax.yzx) * step(tmax, tmax.zxy);
 		far = INFINITY;
-		result = minmax;
+		result = t1;
 	}
-	if (maxmin > 0.0) // if we are outside the box
+
+	if (t0 > 0.0) // if we are outside the box
 	{
-		n1 = -sign(r.direction) * step(real_min.yzx, real_min) * step(real_min.zxy, real_min);
-		n2 = -sign(r.direction) * step(real_max, real_max.yzx) * step(real_max, real_max.zxy);
-		far = minmax;
-		result = maxmin;	
+		n1 = -sign(r.direction) * step(tmin.yzx, tmin) * step(tmin.zxy, tmin);
+		n2 = -sign(r.direction) * step(tmax, tmax.yzx) * step(tmax, tmax.zxy);
+		far = t1;
+		result = t0;	
 	}
 	
 	return result;
