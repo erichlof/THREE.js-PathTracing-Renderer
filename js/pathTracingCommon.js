@@ -9,8 +9,6 @@ var screenTextureShader = {
         ] ),
 
         vertexShader: [
-                '#version 300 es',
-                
                 'precision highp float;',
 		'precision highp int;',
 
@@ -22,18 +20,15 @@ var screenTextureShader = {
         ].join( '\n' ),
 
         fragmentShader: [
-                '#version 300 es',
-                
                 'precision highp float;',
 		'precision highp int;',
 		'precision highp sampler2D;',
 
                 'uniform sampler2D tPathTracedImageTexture;',
-                'out vec4 out_FragColor;',
 		
 		'void main()',
 		'{',	
-			'out_FragColor = texelFetch(tPathTracedImageTexture, ivec2(gl_FragCoord.xy), 0);',	
+			'pc_fragColor = texelFetch(tPathTracedImageTexture, ivec2(gl_FragCoord.xy), 0);',	
 		'}'
 		
         ].join( '\n' )
@@ -52,8 +47,6 @@ var screenOutputShader = {
         ] ),
 
         vertexShader: [
-                '#version 300 es',
-                
                 'precision highp float;',
 		'precision highp int;',
 
@@ -65,15 +58,12 @@ var screenOutputShader = {
         ].join( '\n' ),
 
         fragmentShader: [
-                '#version 300 es',
-                
                 'precision highp float;',
 		'precision highp int;',
 		'precision highp sampler2D;',
 
                 'uniform float uOneOverSampleCounter;',
 		'uniform sampler2D tPathTracedImageTexture;',
-                'out vec4 out_FragColor;',
 		
 		'void main()',
 		'{',
@@ -82,7 +72,7 @@ var screenOutputShader = {
 			'//pixelColor = Uncharted2ToneMapping(pixelColor);',
 			'//pixelColor = OptimizedCineonToneMapping(pixelColor);',
 			'//pixelColor = ACESFilmicToneMapping(pixelColor);',
-			'out_FragColor = clamp(vec4( pow(pixelColor, vec3(0.4545)), 1.0 ), 0.0, 1.0);',	
+			'pc_fragColor = clamp(vec4( pow(pixelColor, vec3(0.4545)), 1.0 ), 0.0, 1.0);',	
 		'}'
 		
         ].join( '\n' )
@@ -113,7 +103,7 @@ uniform mat4 uCameraMatrix;
 uniform sampler2D tPreviousTexture;
 
 in vec2 vUv;
-out vec4 out_FragColor;
+
 
 #define PI               3.14159265358979323
 #define TWO_PI           6.28318530717958648
@@ -1731,7 +1721,7 @@ void main( void )
 		pixelColor *= 0.5; // brightness of new image (noisy)
 	}
 		
-	out_FragColor = vec4( pixelColor + previousColor, 1.0 );
+	pc_fragColor = vec4( pixelColor + previousColor, 1.0 );
 }
 
 `;
