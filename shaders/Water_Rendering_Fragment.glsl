@@ -1,5 +1,3 @@
-#version 300 es
-
 precision highp float;
 precision highp int;
 precision highp sampler2D;
@@ -553,5 +551,5 @@ void main( void )
 	}
 	
 	
-	out_FragColor = vec4( pixelColor + previousColor, 1.0 );	
+	pc_fragColor = vec4( pixelColor + previousColor, 1.0 );	
 }
