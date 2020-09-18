@@ -548,6 +548,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 	vec2 sampleUV;
 	
 	float nc, nt, ratioIoR, Re, Tr;
+	float P, RP, TP;
 	float t = INFINITY;
 	float lightHitDistance = INFINITY;
 	float weight;
@@ -570,7 +571,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 	randPointOnLight.z = quads[0].v0.z;
 	vec3 lightHitPos = randPointOnLight;
 	vec3 lightNormal = normalize(quads[0].normal);
-	vec3 randLightDir = normalize(randomCosWeightedDirectionInHemisphere(lightNormal, seed));
+	vec3 randLightDir = randomCosWeightedDirectionInHemisphere(lightNormal, seed);
 	
 	Ray r = Ray( randPointOnLight, randLightDir );
 	r.origin += lightNormal * uEPS_intersect; // move light ray out to prevent self-intersection with light
@@ -587,7 +588,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 
 	// regular path tracing from camera
 	r = originalRay;
-	r.direction = normalize(r.direction);
+	//r.direction = normalize(r.direction);
 	checkModels = true;
 
 	
@@ -599,18 +600,14 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 		t = SceneIntersect(r, intersec, checkModels);
 		
 		if (t == INFINITY)
-		{
 			break;
-		}
 		
 		
 		if (intersec.type == LIGHT)
 		{
 			if (bounceIsSpecular || sampleLight)
-			{
 				accumCol = mask * intersec.emission;
-			}
-
+			
 			break;
 		}
 
@@ -620,7 +617,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 			
 			if (ableToJoinPaths)
 			{
-				weight = max(0.0, dot(intersec.normal, -r.direction));
+				weight = max(0.0, dot(normalize(intersec.normal), -r.direction));
 				accumCol = mask * lightHitEmission * weight;
 			}
 
@@ -643,9 +640,6 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 		{
 
 			diffuseCount++;
-
-			if (diffuseCount > 2)
-				break;
 			
 			if (intersec.type == LIGHTWOOD)
 			{
@@ -678,7 +672,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 			if (diffuseCount == 1 && rand(seed) < 0.5)
 			{
 				// choose random Diffuse sample vector
-				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
+				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
@@ -688,7 +682,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 			weight = max(0.0, dot(nl, dirToLight));
 			mask *= weight;
 			
-			r = Ray( x, normalize(dirToLight) );
+			r = Ray( x, dirToLight );
 			r.origin += nl * uEPS_intersect;
 			sampleLight = true;
 			continue;
@@ -701,10 +695,8 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 			if (intersec.isModel)
 				nl = perturbNormal(nl, vec2(-0.2, 0.2), intersec.uv * 2.0);
 
-			vec3 reflectVec = reflect(r.direction, nl);
-			vec3 glossyVec = normalize(randomDirectionInHemisphere(nl, seed));
-			r = Ray( x, mix(reflectVec, glossyVec, intersec.roughness) );
-			r.direction = normalize(r.direction);
+			r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
+			r.direction = randomDirectionInSpecularLobe(r.direction, intersec.roughness, seed );
 			r.origin += nl * uEPS_intersect;
 
 			previousIntersecType = SPEC;
@@ -718,29 +710,34 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 			nt = 1.5; // IOR of common Glass
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
+			P  = 0.25 + (0.5 * Re);
+                	RP = Re / P;
+                	TP = Tr / (1.0 - P);
 
-			if (rand(seed) < Re) // reflect ray from surface
+			if (rand(seed) < P) // reflect ray from surface
 			{
+				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) );
 				r.origin += nl * uEPS_intersect;
 				
 				previousIntersecType = REFR;
 				continue;	
 			}
-			else // transmit ray through surface
-			{
-				if (previousIntersecType == DIFF) 
-					mask *= 4.0;
+			// transmit ray through surface
 			
-				previousIntersecType = REFR;
-			
-				mask *= intersec.color;
-				tdir = refract(r.direction, nl, ratioIoR);
-				r = Ray(x, normalize(tdir));
-				r.origin -= nl * uEPS_intersect;
+			if (previousIntersecType == DIFF) 
+				mask *= 4.0;
+		
+			previousIntersecType = REFR;
+		
+			mask *= TP;
+			mask *= intersec.color;
+			tdir = refract(r.direction, nl, ratioIoR);
+			r = Ray(x, tdir);
+			r.origin -= nl * uEPS_intersect;
 
-				continue;
-			}	
+			continue;
+				
 		} // end if (intersec.type == REFR)
 		
 		if (intersec.type == COAT || intersec.type == CHECK)  // Diffuse object underneath with ClearCoat on top
@@ -749,17 +746,19 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 			nt = 1.4; // IOR of ClearCoat
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
+			P  = 0.25 + (0.5 * Re);
+                	RP = Re / P;
+                	TP = Tr / (1.0 - P);
+
 			previousIntersecType = COAT;
 			
 			// choose either specular reflection or diffuse
-			if( rand(seed) < Re )
+			if( rand(seed) < P )
 			{	
-				vec3 reflectVec = reflect(r.direction, nl);
-				vec3 glossyVec = normalize(randomDirectionInHemisphere(nl, seed));
-				r = Ray( x, mix(reflectVec, glossyVec, intersec.roughness) );
-				r.direction = normalize(r.direction);
+				mask *= RP;
+				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
+				r.direction = randomDirectionInSpecularLobe(r.direction, intersec.roughness, seed );
 				r.origin += nl * uEPS_intersect;
-				
 				continue;	
 			}
 			
@@ -785,12 +784,13 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 
 			bounceIsSpecular = false;
 
+			mask *= TP;
 			mask *= intersec.color;
 			
 			if (diffuseCount == 1 && rand(seed) < 0.5)
 			{
 				// choose random Diffuse sample vector
-				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
+				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
@@ -800,7 +800,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 			weight = max(0.0, dot(nl, dirToLight));
 			mask *= weight;
 			
-			r = Ray( x, normalize(dirToLight) );
+			r = Ray( x, dirToLight );
 			r.origin += nl * uEPS_intersect;
 			sampleLight = true;
 			continue;	
