@@ -190,24 +190,25 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 
 	if (triangleLookupNeeded)
 	{
-		uv0 = ivec2( mod(triangleID + 0.0, 4096.0), (triangleID + 0.0) * INV_TEXTURE_WIDTH );
-		uv1 = ivec2( mod(triangleID + 1.0, 4096.0), (triangleID + 1.0) * INV_TEXTURE_WIDTH );
+		//uv0 = ivec2( mod(triangleID + 0.0, 4096.0), (triangleID + 0.0) * INV_TEXTURE_WIDTH );
+		//uv1 = ivec2( mod(triangleID + 1.0, 4096.0), (triangleID + 1.0) * INV_TEXTURE_WIDTH );
 		uv2 = ivec2( mod(triangleID + 2.0, 4096.0), (triangleID + 2.0) * INV_TEXTURE_WIDTH );
 		uv3 = ivec2( mod(triangleID + 3.0, 4096.0), (triangleID + 3.0) * INV_TEXTURE_WIDTH );
 		uv4 = ivec2( mod(triangleID + 4.0, 4096.0), (triangleID + 4.0) * INV_TEXTURE_WIDTH );
 		uv5 = ivec2( mod(triangleID + 5.0, 4096.0), (triangleID + 5.0) * INV_TEXTURE_WIDTH );
-		uv6 = ivec2( mod(triangleID + 6.0, 4096.0), (triangleID + 6.0) * INV_TEXTURE_WIDTH );
-		uv7 = ivec2( mod(triangleID + 7.0, 4096.0), (triangleID + 7.0) * INV_TEXTURE_WIDTH );
+		//uv6 = ivec2( mod(triangleID + 6.0, 4096.0), (triangleID + 6.0) * INV_TEXTURE_WIDTH );
+		//uv7 = ivec2( mod(triangleID + 7.0, 4096.0), (triangleID + 7.0) * INV_TEXTURE_WIDTH );
 		
-		vd0 = texelFetch(tTriangleTexture, uv0, 0);
-		vd1 = texelFetch(tTriangleTexture, uv1, 0);
+		//vd0 = texelFetch(tTriangleTexture, uv0, 0);
+		//vd1 = texelFetch(tTriangleTexture, uv1, 0);
 		vd2 = texelFetch(tTriangleTexture, uv2, 0);
 		vd3 = texelFetch(tTriangleTexture, uv3, 0);
 		vd4 = texelFetch(tTriangleTexture, uv4, 0);
 		vd5 = texelFetch(tTriangleTexture, uv5, 0);
-		vd6 = texelFetch(tTriangleTexture, uv6, 0);
-		vd7 = texelFetch(tTriangleTexture, uv7, 0);
+		//vd6 = texelFetch(tTriangleTexture, uv6, 0);
+		//vd7 = texelFetch(tTriangleTexture, uv7, 0);
 
+	
 		// face normal for flat-shaded polygon look
 		//intersec.normal = normalize( cross(vec3(vd0.w, vd1.xy) - vec3(vd0.xyz), vec3(vd1.zw, vd2.x) - vec3(vd0.xyz)) );
 		
@@ -218,7 +219,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		intersec.color = vd6.yzw;
 		intersec.uv = triangleW * vec2(vd4.zw) + triangleU * vec2(vd5.xy) + triangleV * vec2(vd5.zw);
 		//intersec.type = int(vd6.x);
-		intersec.albedoTextureID = int(vd7.x);
+		//intersec.albedoTextureID = int(vd7.x);
 		intersec.type = CHECK;//DIFF;
 	}
 
@@ -246,8 +247,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	float t;
 	float epsIntersect = 0.01;
 	float nc, nt, ratioIoR, Re, Tr;
+	float P, RP, TP;
 	float weight;
-	float diffuseColorBleeding = 0.3; // range: 0.0 - 0.5, amount of color bleeding between surfaces
 	
 	int diffuseCount = 0;
 
@@ -261,9 +262,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		t = SceneIntersect(r, intersec);
 		
 		if (t == INFINITY)
-		{
-                        break;
-		}
+			break;
 		
 		// if we reached something bright, don't spawn any more rays
 		if (intersec.type == LIGHT)
@@ -291,6 +290,8 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			}
 			
 			mask *= intersec.color;
+
+			bounceIsSpecular = false;
 			
 			// int id = intersec.albedoTextureID;
 			// if (id > -1)
@@ -298,44 +299,11 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			// 	texColor = texture(tAlbedoMap, intersec.uv);
 			// 	intersec.color = GammaToLinear(texColor, 2.2).rgb;
 			// }
-			
-			/*
-			// Russian Roulette - if needed, this speeds up the framerate, at the cost of some dark noise
-			float p = max(mask.r, max(mask.g, mask.b));
-			if (bounces > 0)
-			{
-				if (rand(seed) < p)
-                                	mask *= 1.0 / p;
-                        	else
-                                	break;
-			}
-			*/
 
-                        bounceIsSpecular = false;
-
-			r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
+			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 			r.origin += nl * epsIntersect;
 			continue;
-
-                        /* if (diffuseCount == 1 && rand(seed) < diffuseColorBleeding)
-                        {
-                                // choose random Diffuse sample vector
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
-				r.origin += nl * epsIntersect;
-				continue;
-                        }
-                        else
-                        {
-				weight = sampleSphereLight(x, nl, dirToLight, light, seed);
-				mask *= clamp(weight, 0.0, 1.0);
-
-                                r = Ray( x, dirToLight );
-				r.origin += nl * epsIntersect;
-
-				sampleLight = true;
-				continue;
-                        } */
-				
+	
                 }
 		
 
@@ -345,39 +313,38 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			nt = 1.5; // IOR of common Glass
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
+			P  = 0.25 + (0.5 * Re);
+                	RP = Re / P;
+                	TP = Tr / (1.0 - P);
+			
 
-			if (bounces > 0)
-				bounceIsSpecular = false;
-
-			if (rand(seed) < Re) // reflect ray from surface
+			if (rand(seed) < P) // reflect ray from surface
 			{
+				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) );
 				r.origin += nl * epsIntersect;
-
-				//bounceIsSpecular = true; // turn on reflecting caustics, useful for water
 			    	continue;	
 			}
-			else // transmit ray through surface
-			{
-				mask *= intersec.color;
-
-				tdir = refract(r.direction, nl, ratioIoR);
-				r = Ray(x, normalize(tdir));
-				r.origin -= nl * epsIntersect;
-
-				bounceIsSpecular = true; // turn on refracting caustics
-				
-				continue;
-			}
+			// transmit ray through surface
 			
+			mask *= intersec.color;
+			mask *= TP;
+
+			tdir = refract(r.direction, nl, ratioIoR);
+			r = Ray(x, tdir);
+			r.origin -= nl * epsIntersect;
+
+			bounceIsSpecular = true; // turn on refracting caustics
+			
+			continue;
+
 		} // end if (intersec.type == REFR)
 		
 		
 	} // end for (int bounces = 0; bounces < 2; bounces++)
 	
 	
-	return max(vec3(0), accumCol); // prevents black spot artifacts appearing in the water 
-	     
+	return max(vec3(0), accumCol); // prevents black spot artifacts appearing in the water   
 }
 
 
@@ -392,6 +359,7 @@ void SetupScene(void)
 	spheres[0] = Sphere( skySphereRadius, vec3(0, 0, 0), L1, z, LIGHT);//large spherical sky light
 	spheres[1] = Sphere( groundSphereRadius, vec3(0, -groundSphereRadius, 0), z, vec3(0.4, 0.4, 0.4), CHECK);//Checkered Floor
 }
+
 
 
 #include <pathtracing_main>
