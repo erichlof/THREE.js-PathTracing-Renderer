@@ -114,11 +114,9 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 {
 
 	Intersection intersec;
-	Ray firstRay;
 	
 	vec3 accumCol = vec3(0);
         vec3 mask = vec3(1);
-	vec3 firstMask = vec3(1);
 	vec3 n, nl, x;
 	vec3 dirToLight;
 	vec3 tdir;
@@ -129,7 +127,6 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 	vec3 lightHitEmission = quads[5].emission;
         
 	float lightHitDistance = INFINITY;
-	float firstLightHitDistance = INFINITY;
 	float t = INFINITY;
 	float t2 = INFINITY;
 	float weight = 0.0;
@@ -138,40 +135,38 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 
 	bool bounceIsSpecular = true;
 	bool sampleLight = false;
-	bool firstTypeWasDIFF = false;
-	bool shadowTime = false;
 	bool ableToJoinPaths = false;
+	bool diffuseFound = false;
 
 	// first light trace
-	Ray r = Ray(randPointOnLight, normalize(randomCosWeightedDirectionInHemisphere(quads[5].normal, seed)));
-	r.origin += quads[5].normal * uEPS_intersect;
-	r.direction = normalize(r.direction);
+	//Ray r = Ray(randPointOnLight, randomCosWeightedDirectionInHemisphere(normalize(quads[5].normal), seed));
+	Ray r = Ray(randPointOnLight, normalize(quads[5].normal));
+	r.origin += normalize(quads[5].normal) * uEPS_intersect;
 	t = SceneIntersect(r, intersec);
 
 	if (t < INFINITY && intersec.type == DIFF)
 	{
+		diffuseFound = true;
 		lightHitPos = r.origin + r.direction * t;
 		weight = max(0.0, dot(-r.direction, normalize(intersec.normal)));
-		lightHitEmission *= intersec.color * weight;
+		lightHitEmission *= intersec.color  * weight;
 
 		// second light trace
 		intersec.normal = normalize(intersec.normal);
-		r = Ray(lightHitPos, normalize(randomCosWeightedDirectionInHemisphere(intersec.normal, seed)));
+		r = Ray(lightHitPos, randomCosWeightedDirectionInHemisphere(intersec.normal, seed));
 		r.origin += intersec.normal * uEPS_intersect;
-		r.direction = normalize(r.direction);
 		
 		t2 = SceneIntersect(r, intersec);
 		if (t2 < INFINITY && intersec.type == DIFF && rand(seed) < 0.5)
 		{
-			intersec.normal = normalize(intersec.normal);
 			lightHitPos = r.origin + r.direction * t2;
-			weight = max(0.0, dot(-r.direction, intersec.normal));
+			weight = max(0.0, dot(-r.direction, normalize(intersec.normal)));
 			lightHitEmission *= intersec.color * weight;
 		}
 	}
 
-	// this allows the original light to be the lightsource
-	if (rand(seed) < 0.5)
+	// this allows the original light to be the lightsource once in a while
+	if ( !diffuseFound || rand(seed) < 0.5 )
 	{
 		lightHitPos = randPointOnLight;
 		lightHitEmission = quads[5].emission;
@@ -180,7 +175,6 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 
 	// regular path tracing from camera
 	r = originalRay;
-	r.direction = normalize(r.direction);
 
 	for (int bounces = 0; bounces < 5; bounces++)
 	{
@@ -188,136 +182,37 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 		t = SceneIntersect(r, intersec);
 		
 		if (t == INFINITY)
-		{
-			if (bounces == 0)
-				break;
-
-			if (firstTypeWasDIFF && !shadowTime) 
-			{
-				// start back at the diffuse surface, but this time follow shadow ray branch
-				r = firstRay;
-				r.direction = normalize(r.direction);
-				mask = firstMask;
-				lightHitDistance = firstLightHitDistance;
-				// set/reset variables
-				shadowTime = true;
-				bounceIsSpecular = false;
-				sampleLight = true;
-				// continue with the shadow ray
-				continue;
-			}
-
-			// nothing left to calculate, so exit	
 			break;
-		}
 		
 		
 		if (intersec.type == LIGHT)
 		{	
-			if (bounceIsSpecular)
-			{
-				accumCol = mask * intersec.emission;
-				break;
-			}
-				
-			if (firstTypeWasDIFF)
-			{
-				if (!shadowTime) 
-				{
-					//if (sampleLight)
-					{
-						accumCol += mask * lightHitEmission * 0.5;
-						weight = max(0.0, dot(quads[5].normal, -r.direction));
-						accumCol *= weight;
-					}
-					
-					
-					// start back at the diffuse surface, but this time follow shadow ray branch
-					r = firstRay;
-					r.direction = normalize(r.direction);
-					mask = firstMask;
-					lightHitDistance = firstLightHitDistance;
-					// set/reset variables
-					shadowTime = true;
-					sampleLight = true;
-					bounceIsSpecular = false;
-					// continue with the shadow ray
-					continue;
-				}
-				
-				//if (sampleLight)
-				{
-					// add shadow ray result to the colorbleed result (if any)
-					accumCol += mask * lightHitEmission * 0.5;
-					weight = max(0.0, dot(quads[5].normal, -r.direction));
-					accumCol *= weight;
-				}
+			accumCol = mask * intersec.emission;
 
-				break;		
-			}
-			
+			if (sampleLight)
+				accumCol = mask * intersec.emission * max(0.0, dot(-r.direction, normalize(intersec.normal)));
 			// reached a light, so we can exit
 			break;
-		} // end if (intersec.type == LIGHT)
+		}
 
 
 		if (intersec.type == DIFF && sampleLight)
 		{
 			ableToJoinPaths = abs(lightHitDistance - t) < 0.5;
 
-			if (!shadowTime) 
-			{	
-				if (ableToJoinPaths)
-				{
-					weight = max(0.0, dot(intersec.normal, -r.direction));
-					accumCol += mask * lightHitEmission * weight * 0.5;
-				}
-
-				// start back at the diffuse surface, but this time follow shadow ray branch
-				r = firstRay;
-				r.direction = normalize(r.direction);
-				mask = firstMask;
-				lightHitDistance = firstLightHitDistance;
-				// set/reset variables
-				shadowTime = true;
-				sampleLight = true;
-				bounceIsSpecular = false;
-				// continue with the shadow ray
-				continue;
-			}
-			
-			// add shadow ray result to the colorbleed result (if any)
 			if (ableToJoinPaths)
 			{
-				weight = max(0.0, dot(intersec.normal, -r.direction));
-				accumCol += mask * lightHitEmission * weight * 0.5;
+				weight = max(0.0, dot(normalize(intersec.normal), -r.direction));
+				accumCol = mask * lightHitEmission * weight;
 			}
 			
 			break;
 		}
 
-		// if we reached this point and sampleLight is still true, then we can either
-		//  continue with the reflection/shadow ray or exit because the light was not found
+		// if we reached this point and sampleLight is still true, then we can 
+		//  exit because the light was not found
 		if (sampleLight)
-		{
-			if (firstTypeWasDIFF && !shadowTime) 
-			{
-				// start back at the diffuse surface, but this time follow shadow ray branch
-				r = firstRay;
-				r.direction = normalize(r.direction);
-				mask = firstMask;
-				lightHitDistance = firstLightHitDistance;
-				// set/reset variables
-				shadowTime = true;
-				bounceIsSpecular = false;
-				sampleLight = true;
-				// continue with the shadow ray
-				continue;
-			}
-
-			// nothing left to calculate, so exit	
 			break;
-		}
 
 		// useful data 
 		n = normalize(intersec.normal);
@@ -333,21 +228,10 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1)
+			if (diffuseCount < 3 && rand(seed) < 0.5)
 			{	
-				// save intersection data for future shadow ray trace
-				firstTypeWasDIFF = true;
-				firstLightHitDistance = distance(lightHitPos, x);
-				lightHitDistance = firstLightHitDistance;
-				dirToLight = normalize(lightHitPos - x);
-				weight = max(0.0, dot(nl, dirToLight));
-				firstMask = mask * weight;
-
-				firstRay = Ray( x, normalize(dirToLight) ); // create shadow ray pointed towards light
-				firstRay.origin += nl * uEPS_intersect;
-
 				// choose random Diffuse sample vector
-				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
+				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
@@ -357,7 +241,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 			weight = max(0.0, dot(nl, dirToLight));
 			mask *= weight;
 			
-			r = Ray( x, normalize(dirToLight) );
+			r = Ray( x, dirToLight );
 			r.origin += nl * uEPS_intersect;
 
 			sampleLight = true;
@@ -391,7 +275,7 @@ void SetupScene(void)
 {
 	vec3 z  = vec3(0);// No color value, Black
 	vec3 L1 = vec3(1.0, 0.75, 0.4) * 30.0;// Bright Yellowish light
-	
+	//L1 = vec3(30);
 	quads[0] = Quad( vec3( 0.0, 0.0, 1.0), vec3(  0.0,   0.0,-559.2), vec3(549.6,   0.0,-559.2), vec3(549.6, 548.8,-559.2), vec3(  0.0, 548.8,-559.2),  z, vec3(1),  DIFF);// Back Wall
 	quads[1] = Quad( vec3( 1.0, 0.0, 0.0), vec3(  0.0,   0.0,   0.0), vec3(  0.0,   0.0,-559.2), vec3(  0.0, 548.8,-559.2), vec3(  0.0, 548.8,   0.0),  z, vec3(0.7, 0.12,0.05), DIFF);// Left Wall Red
 	quads[2] = Quad( vec3(-1.0, 0.0, 0.0), vec3(549.6,   0.0,-559.2), vec3(549.6,   0.0,   0.0), vec3(549.6, 548.8,   0.0), vec3(549.6, 548.8,-559.2),  z, vec3(0.2, 0.4, 0.36), DIFF);// Right Wall Green
