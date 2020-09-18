@@ -238,11 +238,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 //-----------------------------------------------------------------------
 {
         Intersection intersec;
-	Ray firstRay;
 
 	vec3 accumCol = vec3(0);
         vec3 mask = vec3(1);
-	vec3 firstMask = vec3(1);
 	vec3 checkCol0 = vec3(1);
 	vec3 checkCol1 = vec3(0.5);
         vec3 tdir;
@@ -250,12 +248,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
         
 	float t;
         float nc, nt, ratioIoR, Re, Tr;
+	float P, RP, TP;
 	float thickness = 0.1;
 
-	bool bounceIsSpecular = true;
-	bool sampleLight = false;
-	bool firstTypeWasREFR = false;
-	bool reflectionTime = false;
 	bool isRayExiting = false;
 	
 	// need more bounces than usual, because there could be lots of yellow glass boxes in a row
@@ -273,38 +268,9 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		
 		if (intersec.type == LIGHT)
 		{	
-
-			if (bounces == 0)
-			{
-				accumCol = mask * intersec.emission;
-				break;
-			}
-
-			if (firstTypeWasREFR)
-			{
-				if (!reflectionTime) 
-				{
-					accumCol = mask * intersec.emission;
-					
-					// start back at the refractive surface, but this time follow reflective branch
-					r = firstRay;
-					r.direction = normalize(r.direction);
-					mask = firstMask;
-					// set/reset variables
-					reflectionTime = true;
-					
-					// continue with the reflection ray
-					continue;
-				}
-
-				accumCol += mask * intersec.emission; // add reflective result to the refractive result (if any)
-				break;
-			}
-			
-			accumCol = mask * intersec.emission; // looking at light through a reflection
-			// reached a light, so we can exit
+			accumCol = mask * intersec.emission;
 			break;
-		} // end if (intersec.type == LIGHT)
+		}
 		
 		
 		// useful data 
@@ -334,7 +300,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			} */
                         
 			// choose random Diffuse sample vector
-			r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
+			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 			r.origin += nl * uEPS_intersect;
 			continue;	
                 }
@@ -354,18 +320,13 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			nt = 1.5; // IOR of common Glass
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
+			P  = 0.25 + (0.5 * Re);
+                	RP = Re / P;
+                	TP = Tr / (1.0 - P);
 			
-			if (bounces == 0)
-			{	
-				// save intersection data for future reflection trace
-				firstTypeWasREFR = true;
-				firstMask = mask * Re;
-				firstRay = Ray( x, reflect(r.direction, nl) ); // create reflection ray from surface
-				firstRay.origin += nl * uEPS_intersect;
-				mask *= Tr;
-			}
-			else if (rand(seed) < Re)
+			if (rand(seed) < P)
 			{
+				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.origin += nl * uEPS_intersect;
 				continue;
@@ -380,9 +341,11 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 				isRayExiting = false;
 				mask *= exp(log(intersec.color) * thickness * t);
 			}
+
+			mask *= TP;
 			
 			tdir = refract(r.direction, nl, ratioIoR);
-			r = Ray(x, normalize(tdir));
+			r = Ray(x, tdir);
 			r.origin -= nl * uEPS_intersect;
 
 			continue;
@@ -395,27 +358,22 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			nt = 1.6; // IOR of Clear Coat (a little thicker for this demo)
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
+			P  = 0.25 + (0.5 * Re);
+                	RP = Re / P;
+                	TP = Tr / (1.0 - P);
 
-			// clearCoat counts as refractive surface
-			if (bounces == 0)
-			{	
-				// save intersection data for future reflection trace
-				firstTypeWasREFR = true;
-				firstMask = mask * Re;
-				firstRay = Ray( x, reflect(r.direction, nl) ); // create reflection ray from surface
-				firstRay.origin += nl * uEPS_intersect;
-				mask *= Tr;
-			}
-			else if (rand(seed) < Re)
+			if (rand(seed) < P)
 			{
+				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
 			
 			mask *= intersec.color;
-
-			r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
+			mask *= TP;
+			
+			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
 			r.origin += nl * uEPS_intersect;
 			continue;
 			
