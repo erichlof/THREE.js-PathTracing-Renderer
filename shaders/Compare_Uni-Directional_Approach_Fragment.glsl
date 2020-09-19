@@ -121,29 +121,26 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 	bool bounceIsSpecular = true;
 
-	while (true)
+	// hope with 10 bounces that we get lucky enough to find the blocked light source
+	for (int bounces = 0; bounces < 10; bounces++)
 	{
                 
 		t = SceneIntersect(r, intersec);
 		
 		if (t == INFINITY)
-		{
                         break;
-		}
+		
 		
 		// if we reached something bright, don't spawn any more rays
 		if (intersec.type == LIGHT )
 		{
 			accumCol = mask * intersec.emission;
-			
 			break;
 		}
 		
 		// useful data
 		n = normalize(intersec.normal);
                 nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
-		//nl = n;
-		//normalize(faceforward(nl, n, r.direction));
 		x = r.origin + r.direction * t;
 		
 		    
@@ -165,14 +162,11 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			if (rand(seed) < q) break;
 			mask /= (1.0 - q);
 			
-
 			// choose random Diffuse sample vector
-			r = Ray( x, normalize(randomDirectionInHemisphere(nl, seed)) );
-			//r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
+			r = Ray( x, randomDirectionInHemisphere(nl, seed) );
 			r.origin += nl * uEPS_intersect;
 
 			mask *= max(0.0, dot(nl, r.direction));
-			
                 	continue;
                 }
 		
@@ -182,11 +176,10 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 			r = Ray( x, reflect(r.direction, nl) );
 			r.origin += nl * uEPS_intersect;
-			
                         continue;
                 }
 		
-	} // end while(true)
+	} // for (int bounces = 0; bounces < 10; bounces++)
 	
 	return accumCol;      
 }
