@@ -227,7 +227,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExi
 
 
 //-----------------------------------------------------------------------
-vec3 CalculateRadiance( Ray r, inout uvec2 seed )
+vec3 CalculateRadiance(Ray r)
 //-----------------------------------------------------------------------
 {
 	Intersection intersec;
@@ -254,7 +254,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	bool sampleLight = false;
 	bool isRayExiting;
 
-	randChoose = rand(seed) * N_LIGHTS; // 3 lights to choose from
+	randChoose = rand() * N_LIGHTS; // 3 lights to choose from
 	lightChoice = spheres[int(randChoose)];
 
 	
@@ -290,7 +290,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                 nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
 		x = r.origin + r.direction * t;
 
-		// randChoose = rand(seed) * 3.0; // 3 lights to choose from
+		// randChoose = rand() * 3.0; // 3 lights to choose from
 		// lightChoice = spheres[int(randChoose)];
 
 		    
@@ -308,14 +308,14 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && rand(seed) < 0.5)
+			if (diffuseCount == 1 && rand() < 0.5)
 			{
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
 
-			dirToLight = sampleSphereLight(x, nl, lightChoice, dirToLight, weight, seed);
+			dirToLight = sampleSphereLight(x, nl, lightChoice, dirToLight, weight);
 			mask *= weight * N_LIGHTS;
 
 			r = Ray( x, dirToLight );
@@ -348,7 +348,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 
-			if (rand(seed) < P)
+			if (rand() < P)
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
@@ -391,7 +391,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 			
-			if (rand(seed) < P)
+			if (rand() < P)
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
@@ -406,18 +406,18 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && rand(seed) < 0.5)
+			if (diffuseCount == 1 && rand() < 0.5)
 			{
 				// choose random Diffuse sample vector
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
 			
 			if (intersec.color.r == 1.0) // this makes capsule more white
-				dirToLight = sampleSphereLight(x, nl, spheres[0], dirToLight, weight, seed);
+				dirToLight = sampleSphereLight(x, nl, spheres[0], dirToLight, weight);
 			else
-				dirToLight = sampleSphereLight(x, nl, lightChoice, dirToLight, weight, seed);
+				dirToLight = sampleSphereLight(x, nl, lightChoice, dirToLight, weight);
 			
 			mask *= weight * N_LIGHTS;
 			
@@ -435,7 +435,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	
 	return max(vec3(0), accumCol);
 
-} // end vec3 CalculateRadiance( Ray r, inout uvec2 seed )
+} // end vec3 CalculateRadiance(Ray r)
 
 
 
