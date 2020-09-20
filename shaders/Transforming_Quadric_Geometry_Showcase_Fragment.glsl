@@ -434,7 +434,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 
 
 //-----------------------------------------------------------------------
-vec3 CalculateRadiance( Ray r, inout uvec2 seed )
+vec3 CalculateRadiance(Ray r)
 //-----------------------------------------------------------------------
 {
 	Intersection intersec;
@@ -461,7 +461,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	bool sampleLight = false;
 	bool isRayExiting;
 
-	randChoose = rand(seed) * N_LIGHTS; // 3 lights to choose from
+	randChoose = rand() * N_LIGHTS; // 3 lights to choose from
 	lightChoice = spheres[int(randChoose)];
 
 	
@@ -510,14 +510,14 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			mask *= intersec.color;
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && rand(seed) < 0.5)
+			if (diffuseCount == 1 && rand() < 0.5)
 			{
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
 
-			dirToLight = sampleSphereLight(x, nl, lightChoice, dirToLight, weight, seed);
+			dirToLight = sampleSphereLight(x, nl, lightChoice, dirToLight, weight);
 			mask *= weight * N_LIGHTS;
 
 			r = Ray( x, dirToLight );
@@ -550,7 +550,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 
-			if (rand(seed) < P)
+			if (rand() < P)
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
@@ -598,7 +598,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 			
-			if (rand(seed) < P)
+			if (rand() < P)
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
@@ -613,15 +613,15 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && rand(seed) < 0.5)
+			if (diffuseCount == 1 && rand() < 0.5)
 			{
 				// choose random Diffuse sample vector
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
 			
-			dirToLight = sampleSphereLight(x, nl, lightChoice, dirToLight, weight, seed);
+			dirToLight = sampleSphereLight(x, nl, lightChoice, dirToLight, weight);
 			mask *= weight * N_LIGHTS;
 			
 			r = Ray( x, dirToLight );
@@ -638,7 +638,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	
 	return max(vec3(0), accumCol);
 
-} // end vec3 CalculateRadiance( Ray r, inout uvec2 seed )
+} // end vec3 CalculateRadiance(Ray r)
 
 
 
@@ -677,14 +677,14 @@ void main( void )
 	vec3 camUp      = vec3( uCameraMatrix[1][0],  uCameraMatrix[1][1],  uCameraMatrix[1][2]);
 	vec3 camForward = vec3(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]);
 	
-	// seed for rand(seed) function
-	uvec2 seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord);
+	// calculate unique seed for rand() function
+	seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord);
 
 	vec2 pixelPos = vec2(0);
 	vec2 pixelOffset = vec2(0);
 	
-	float x = rand(seed);
-	float y = rand(seed);
+	float x = rand();
+	float y = rand();
 
 	//if (!uCameraIsMoving)
 	{
@@ -703,8 +703,8 @@ void main( void )
 	
 	// depth of field
 	vec3 focalPoint = uFocusDistance * rayDir;
-	float randomAngle = rand(seed) * TWO_PI; // pick random point on aperture
-	float randomRadius = rand(seed) * uApertureSize;
+	float randomAngle = rand() * TWO_PI; // pick random point on aperture
+	float randomRadius = rand() * uApertureSize;
 	vec3  randomAperturePos = ( cos(randomAngle) * camRight + sin(randomAngle) * camUp ) * sqrt(randomRadius);
 	// point on aperture to focal point
 	vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
@@ -714,7 +714,7 @@ void main( void )
 	SetupScene(); 
 	
 	// perform path tracing and get resulting pixel color
-	vec3 pixelColor = CalculateRadiance( ray, seed );
+	vec3 pixelColor = CalculateRadiance(ray);
 	
 	vec4 previousImage = texelFetch(tPreviousTexture, ivec2(gl_FragCoord.xy), 0);
 	vec3 previousColor = previousImage.rgb;
