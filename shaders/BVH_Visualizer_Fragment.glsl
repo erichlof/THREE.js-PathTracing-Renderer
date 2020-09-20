@@ -234,7 +234,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExi
 
 
 //-----------------------------------------------------------------------
-vec3 CalculateRadiance( Ray r, inout uvec2 seed )
+vec3 CalculateRadiance(Ray r)
 //-----------------------------------------------------------------------
 {
         Intersection intersec;
@@ -293,14 +293,14 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			float p = max(mask.r, max(mask.g, mask.b));
 			if (bounces > 0)
 			{
-				if (rand(seed) < p)
+				if (rand() < p)
                                 	mask *= 1.0 / p;
                         	else
                                 	break;
 			} */
                         
 			// choose random Diffuse sample vector
-			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
 			r.origin += nl * uEPS_intersect;
 			continue;	
                 }
@@ -324,7 +324,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 			
-			if (rand(seed) < P)
+			if (rand() < P)
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
@@ -362,7 +362,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 
-			if (rand(seed) < P)
+			if (rand() < P)
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
@@ -373,7 +373,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			mask *= intersec.color;
 			mask *= TP;
 			
-			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
 			r.origin += nl * uEPS_intersect;
 			continue;
 			
@@ -385,7 +385,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	
 	return max(vec3(0), accumCol);
 	      
-} // end vec3 CalculateRadiance( Ray r, inout uvec2 seed )
+} // end vec3 CalculateRadiance(Ray r)
 
 
 //-----------------------------------------------------------------------
