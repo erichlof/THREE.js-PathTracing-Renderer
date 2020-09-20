@@ -229,7 +229,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 
 
 //-----------------------------------------------------------------------
-vec3 CalculateRadiance( Ray r, inout uvec2 seed )
+vec3 CalculateRadiance(Ray r)
 //-----------------------------------------------------------------------
 {
 	Intersection intersec;
@@ -300,7 +300,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			// 	intersec.color = GammaToLinear(texColor, 2.2).rgb;
 			// }
 
-			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
 			r.origin += nl * epsIntersect;
 			continue;
 	
@@ -318,7 +318,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                 	TP = Tr / (1.0 - P);
 			
 
-			if (rand(seed) < P) // reflect ray from surface
+			if (rand() < P) // reflect ray from surface
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) );
