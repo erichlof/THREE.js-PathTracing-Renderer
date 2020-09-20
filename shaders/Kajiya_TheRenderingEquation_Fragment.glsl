@@ -106,14 +106,14 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 } // end float SceneIntersect( Ray r, inout Intersection intersec )
 
 
-vec3 sampleRectangleLight(vec3 x, vec3 nl, Rectangle light, vec3 dirToLight, out float weight, inout uvec2 seed)
+vec3 sampleRectangleLight(vec3 x, vec3 nl, Rectangle light, vec3 dirToLight, out float weight)
 {
 	vec3 u = normalize(cross( abs(light.normal.y) < 0.9 ? vec3(0, 1, 0) : vec3(0, 0, 1), light.normal));
 	vec3 v = cross(light.normal, u);
 	vec3 randPointOnLight = light.position;
 
-	randPointOnLight += mix(u * -light.radiusU * 0.9, u * light.radiusU * 0.9, rand(seed));
-	randPointOnLight += mix(v * -light.radiusV * 0.9, v * light.radiusV * 0.9, rand(seed));
+	randPointOnLight += mix(u * -light.radiusU * 0.9, u * light.radiusU * 0.9, rand());
+	randPointOnLight += mix(v * -light.radiusV * 0.9, v * light.radiusV * 0.9, rand());
 	
 	dirToLight = randPointOnLight - x;
 	float r2 = (light.radiusU * 2.0) * (light.radiusV * 2.0);
@@ -130,7 +130,7 @@ vec3 sampleRectangleLight(vec3 x, vec3 nl, Rectangle light, vec3 dirToLight, out
 
 
 //-----------------------------------------------------------------------
-vec3 CalculateRadiance( Ray r, inout uvec2 seed )
+vec3 CalculateRadiance(Ray r)
 //-----------------------------------------------------------------------
 {
 	Intersection intersec;
@@ -155,7 +155,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	bool bounceIsSpecular = true;
 	bool sampleLight = false;
 
-	randChoose = rand(seed) * N_LIGHTS; // 3 lights to choose from
+	randChoose = rand() * N_LIGHTS; // 3 lights to choose from
 	lightChoice = rectangles[int(randChoose)];
 
 	
@@ -194,7 +194,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                 nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
 		x = r.origin + r.direction * t;
 		
-		// randChoose = rand(seed) * N_LIGHTS; // 3 lights to choose from
+		// randChoose = rand() * N_LIGHTS; // 3 lights to choose from
 		// lightChoice = rectangles[int(randChoose)];
 
 		    
@@ -207,15 +207,15 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			bounceIsSpecular = false;
 
 			
-			if (diffuseCount == 1 && rand(seed) < 0.5)
+			if (diffuseCount == 1 && rand() < 0.5)
 			{
 				// choose random Diffuse sample vector
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
                         
-			dirToLight = sampleRectangleLight(x, nl, lightChoice, dirToLight, weight, seed);
+			dirToLight = sampleRectangleLight(x, nl, lightChoice, dirToLight, weight);
 			mask *= weight * N_LIGHTS;
 
 			r = Ray( x, dirToLight );
@@ -235,7 +235,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 			
-			if (rand(seed) < P)
+			if (rand() < P)
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
@@ -274,7 +274,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	
 	return max(vec3(0), accumCol);
 	     
-}
+} // end vec3 CalculateRadiance(Ray r)
 
 
 //-----------------------------------------------------------------------
