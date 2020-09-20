@@ -119,7 +119,8 @@ bool rayQuadIntersect( in Ray ray, vec3 v0, vec3 v1, vec3 v2, vec3 v3, out float
 float getDisplacement(vec2 uv) 
 {
 	//return 0.9 * sin(uTime - length(vec2(0.5) - uv) * 20.0) * 0.5 + 0.5;
-	return (sin(uTime) * 0.5 + 0.5) * texture(t_PerlinNoise, uv).x;
+	//return (sin(uTime) * 0.5 + 0.5) * texture(t_PerlinNoise, uv).x;
+	return texture(t_PerlinNoise, uv).x;
 }
 
 
@@ -127,10 +128,10 @@ void getPixelDisplacements(vec2 uv, out float d1, out float d2, out float d3, ou
 {
 	float inverseSegments = 1.0 / DISP_MAP_SEGMENTS;
 
-	d1 = getDisplacement(vec2(uv.x,                    uv.y));
+	d1 = getDisplacement(vec2(uv.x,                   uv.y));
 	d2 = getDisplacement(vec2(uv.x + inverseSegments, uv.y));
 	d3 = getDisplacement(vec2(uv.x + inverseSegments, uv.y + inverseSegments));
-	d4 = getDisplacement(vec2(uv.x,                    uv.y + inverseSegments));
+	d4 = getDisplacement(vec2(uv.x,                   uv.y + inverseSegments));
 }
 
 
@@ -267,7 +268,7 @@ bool rayIntersectsDisplacement( in Ray ray, out float t, out vec3 normal)
 }
 
 
-vec3 getColor(Ray ray, inout uvec2 seed) 
+vec3 getColor(Ray ray) 
 {
 	float t;
 	vec3 n;
@@ -308,14 +309,14 @@ void main(void)
 	vec3 camUp = vec3(uCameraMatrix[1][0], uCameraMatrix[1][1], uCameraMatrix[1][2]);
 	vec3 camForward = vec3(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]);
 
-	// seed for rand(seed) function
-	uvec2 seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord);
+	// calculate unique seed for rand() function
+	seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord);
 
 	vec2 pixelPos = vec2(0);
 	vec2 pixelOffset = vec2(0);
 
-	float x = rand(seed);
-	float y = rand(seed);
+	float x = rand();
+	float y = rand();
 
 	if (!uCameraIsMoving) 
 		pixelOffset = vec2(tentFilter(x), tentFilter(y));
@@ -332,8 +333,8 @@ void main(void)
 
 	// depth of field
 	vec3 focalPoint = uFocusDistance * rayDir;
-	float randomAngle = rand(seed) * TWO_PI; // pick random point on aperture
-	float randomRadius = rand(seed) * uApertureSize;
+	float randomAngle = rand() * TWO_PI; // pick random point on aperture
+	float randomRadius = rand() * uApertureSize;
 	vec3 randomAperturePos = (cos(randomAngle) * camRight + sin(randomAngle) * camUp) * sqrt(randomRadius);
 	// point on aperture to focal point
 	vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
@@ -341,7 +342,7 @@ void main(void)
 	Ray ray = Ray(cameraPosition + randomAperturePos, finalRayDir);
 
 	// perform path tracing and get resulting pixel color
-	vec3 pixelColor = getColor(ray, seed);
+	vec3 pixelColor = getColor(ray);
 
 	vec3 previousColor = texelFetch(tPreviousTexture, ivec2(gl_FragCoord.xy), 0).rgb;
 
