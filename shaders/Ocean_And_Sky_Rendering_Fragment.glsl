@@ -452,23 +452,23 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkOcean )
 
 
 //----------------------------------------------------------------------------------------------
-vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
+vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 //----------------------------------------------------------------------------------------------
 {
 	Intersection intersec;
 	Ray firstRay;
 
-	vec3 randVec = vec3(rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0);
+	vec3 randVec = vec3(rand() * 2.0 - 1.0, rand() * 2.0 - 1.0, rand() * 2.0 - 1.0);
 	Ray cameraRay = r;
 	vec3 initialSkyColor = Get_Sky_Color(r, sunDirection);
 	
 	Ray skyRay = Ray( r.origin * vec3(0.02), normalize(vec3(r.direction.x, abs(r.direction.y), r.direction.z)) );
-	float dc = SphereIntersect( 20000.0, vec3(skyRay.origin.x, -19900.0, skyRay.origin.z) + vec3(rand(seed) * 2.0), skyRay );
+	float dc = SphereIntersect( 20000.0, vec3(skyRay.origin.x, -19900.0, skyRay.origin.z) + vec3(rand() * 2.0), skyRay );
 	vec3 skyPos = skyRay.origin + skyRay.direction * dc;
 	vec4 cld = render_clouds(skyRay, skyPos, sunDirection);
 	
 	Ray cloudShadowRay = Ray(r.origin * vec3(0.02), normalize(sunDirection + (randVec * 0.05)));
-	float dcs = SphereIntersect( 20000.0, vec3(skyRay.origin.x, -19900.0, skyRay.origin.z) + vec3(rand(seed) * 2.0), cloudShadowRay );
+	float dcs = SphereIntersect( 20000.0, vec3(skyRay.origin.x, -19900.0, skyRay.origin.z) + vec3(rand() * 2.0), cloudShadowRay );
 	vec3 cloudShadowPos = cloudShadowRay.origin + cloudShadowRay.direction * dcs;
 	float cloudShadowFactor = checkCloudCover(cloudShadowRay.direction, cloudShadowPos);
 	
@@ -699,27 +699,27 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 				// save intersection data for future shadowray trace
 				firstTypeWasDIFF = true;
 				firstRay = Ray( x, normalize(sunDirection) );// create shadow ray pointed towards light
-				firstRay.direction = normalize(randomDirectionInSpecularLobe(firstRay.direction, 0.02, seed ));
+				firstRay.direction = normalize(randomDirectionInSpecularLobe(firstRay.direction, 0.02));
 				firstRay.origin += nl * uEPS_intersect;
 				
 				weight = max(0.0, dot(firstRay.direction, nl)) * 0.005; // down-weight directSunLight contribution
 				firstMask = mask * weight * cloudShadowFactor;
 
 				// choose random Diffuse sample vector
-				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
+				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl)) );
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
-			else if (firstTypeWasREFR && rand(seed) < 0.5)
+			else if (firstTypeWasREFR && rand() < 0.5)
 			{
 				// choose random Diffuse sample vector
-				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
+				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl)) );
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
                         
 			r = Ray( x, normalize(sunDirection) );// create shadow ray pointed towards light
-			r.direction = normalize(randomDirectionInSpecularLobe(r.direction, 0.02, seed ));
+			r.direction = normalize(randomDirectionInSpecularLobe(r.direction, 0.02));
 			r.origin += nl * uEPS_intersect;
 			
 			weight = max(0.0, dot(r.direction, nl)) * 0.005; // down-weight directSunLight contribution
@@ -762,7 +762,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 				firstRay.origin += nl * uEPS_intersect;
 				mask *= Tr;
 			}
-			else if (firstTypeWasREFR && n == nl && rand(seed) < Re)
+			else if (firstTypeWasREFR && n == nl && rand() < Re)
 			{
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.origin += nl * uEPS_intersect;
@@ -806,7 +806,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 				firstRay.origin += nl * uEPS_intersect;
 				mask *= Tr;
 			}
-			else if (firstTypeWasREFR && rand(seed) < Re)
+			else if (firstTypeWasREFR && rand() < Re)
 			{
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.origin += nl * uEPS_intersect;
@@ -823,16 +823,16 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && rand(seed) < 0.5)
+			if (diffuseCount == 1 && rand() < 0.5)
                         {
                                 // choose random Diffuse sample vector
-				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl, seed)) );
+				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl)) );
 				r.origin += nl * uEPS_intersect;
 				continue;
                         }
 			
 			r = Ray( x, normalize(sunDirection) );// create shadow ray pointed towards light
-			r.direction = normalize(randomDirectionInSpecularLobe(r.direction, 0.02, seed ));
+			r.direction = normalize(randomDirectionInSpecularLobe(r.direction, 0.02));
 			r.origin += nl * uEPS_intersect;
 
 			weight = max(0.0, dot(r.direction, nl)) * 0.005; // down-weight directSunLight contribution
@@ -916,14 +916,14 @@ void main( void )
     	vec3 camUp      = vec3( uCameraMatrix[1][0],  uCameraMatrix[1][1],  uCameraMatrix[1][2]);
 	vec3 camForward = vec3(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]);
 	
-	// seed for rand(seed) function
-	uvec2 seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord);
+	// calculate unique seed for rand() function
+	seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord);
 
 	vec2 pixelPos = vec2(0);
 	vec2 pixelOffset = vec2(0);
 	
-	float x = rand(seed);
-	float y = rand(seed);
+	float x = rand();
+	float y = rand();
 
 	//if (!uCameraIsMoving)
 	{
@@ -942,8 +942,8 @@ void main( void )
 	
 	// depth of field
 	vec3 focalPoint = uFocusDistance * rayDir;
-	float randomAngle = rand(seed) * TWO_PI; // pick random point on aperture
-	float randomRadius = rand(seed) * uApertureSize;
+	float randomAngle = rand() * TWO_PI; // pick random point on aperture
+	float randomRadius = rand() * uApertureSize;
 	vec3  randomAperturePos = ( cos(randomAngle) * camRight + sin(randomAngle) * camUp ) * sqrt(randomRadius);
 	// point on aperture to focal point
 	vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
@@ -953,7 +953,7 @@ void main( void )
 	SetupScene(); 
 
 	// perform path tracing and get resulting pixel color
-	vec3 pixelColor = CalculateRadiance( ray, uSunDirection, seed );
+	vec3 pixelColor = CalculateRadiance(ray, uSunDirection);
 	
 	vec4 previousImage = texelFetch(tPreviousTexture, ivec2(gl_FragCoord.xy), 0);
 	vec3 previousColor = previousImage.rgb;
