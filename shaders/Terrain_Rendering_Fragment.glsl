@@ -62,33 +62,21 @@ float DisplacementBoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r )
 /* Credit: some of the following water code is borrowed from https://www.shadertoy.com/view/Ms2SD1 posted by user 'TDM' */
 
 #define WATER_COLOR vec3(0.96, 1.0, 0.98)
-#define WATER_SAMPLE_SCALE 0.05 
-#define WATER_WAVE_HEIGHT 2.0 // max height of water waves   
-#define WATER_FREQ        1.0 // wave density: lower = spread out, higher = close together
-#define WATER_CHOPPY      1.0 // smaller beachfront-type waves, they travel in parallel
-#define WATER_SPEED       0.5 // how quickly time passes
+#define WATER_SAMPLE_SCALE 0.01 
+#define WATER_WAVE_HEIGHT 4.0 // max height of water waves   
+#define WATER_FREQ        0.1 // wave density: lower = spread out, higher = close together
+#define WATER_CHOPPY      2.0 // smaller beachfront-type waves, they travel in parallel
+#define WATER_SPEED       0.1 // how quickly time passes
 #define OCTAVE_M  mat2(1.6, 1.2, -1.2, 1.6);
 
-float hash( vec2 p )
-{
-	float h = dot(p,vec2(127.1,311.7));	
-    	return fract(sin(h)*43758.5453123);
-}
-
-float noise( in vec2 p )
-{
-	vec2 i = floor( p );
-	vec2 f = fract( p );	
-	vec2 u = f*f*(3.0-2.0*f);
-	return -1.0+2.0*mix( mix( hash( i + vec2(0.0,0.0) ), 
-		     hash( i + vec2(1.0,0.0) ), u.x),
-		mix( hash( i + vec2(0.0,1.0) ), 
-		     hash( i + vec2(1.0,1.0) ), u.x), u.y);
-}
+// float noise( in vec2 p )
+// {
+// 	return texture(t_PerlinNoise, p).x;
+// }
 
 float sea_octave( vec2 uv, float choppy )
 {
-	uv += noise(uv);        
+	uv += texture(t_PerlinNoise, uv).x * 2.0 - 1.0;        
 	vec2 wv = 1.0 - abs(sin(uv));
 	vec2 swv = abs(cos(uv));    
 	wv = mix(wv, swv, wv);
@@ -140,11 +128,6 @@ float getOceanWaterHeight_Detail( vec3 p )
 #define N_MARCH_STEPS  12
 #define N_LIGHT_STEPS  3
 
-float noise3D( in vec3 p )
-{
-	return texture(t_PerlinNoise, p.xz).x;
-}
-
 const mat3 m = 1.21 * mat3( 0.00,  0.80,  0.60,
                     -0.80,  0.36, -0.48,
 		    -0.60, -0.48,  0.64 );
@@ -153,9 +136,9 @@ float fbm( vec3 p )
 {
 	float t;
 	float mult = 2.0;
-	t  = 1.0 * noise3D(p);   p = m * p * mult;
-	t += 0.5 * noise3D(p);   p = m * p * mult;
-	t += 0.25 * noise3D(p);
+	t  = 1.0 * texture(t_PerlinNoise, p.xz).x;   p = m * p * mult;
+	t += 0.5 * texture(t_PerlinNoise, p.xz).x;   p = m * p * mult;
+	t += 0.25 * texture(t_PerlinNoise, p.xz).x;
 	
 	return t;
 }
@@ -369,18 +352,18 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkWater )
 
 
 //-----------------------------------------------------------------------
-vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
+vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 //-----------------------------------------------------------------------
 {
 	Intersection intersec;
 	Ray firstRay;
 	Ray cameraRay = r;
 
-	vec3 randVec = vec3(rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0);
+	vec3 randVec = vec3(rand() * 2.0 - 1.0, rand() * 2.0 - 1.0, rand() * 2.0 - 1.0);
 	vec3 initialSkyColor = Get_Sky_Color(r, normalize(sunDirection));
 	
 	Ray skyRay = Ray( r.origin * vec3(0.02), normalize(vec3(r.direction.x, abs(r.direction.y), r.direction.z)) );
-	float dc = SphereIntersect( 20000.0, vec3(skyRay.origin.x, -19900.0, skyRay.origin.z) + vec3(rand(seed) * 2.0), skyRay );
+	float dc = SphereIntersect( 20000.0, vec3(skyRay.origin.x, -19900.0, skyRay.origin.z) + vec3(rand() * 2.0), skyRay );
 	vec3 skyPos = skyRay.origin + skyRay.direction * dc;
 	vec4 cld = render_clouds(skyRay, skyPos, normalize(sunDirection));
 	
@@ -613,14 +596,14 @@ void main( void )
     	vec3 camUp      = vec3( uCameraMatrix[1][0],  uCameraMatrix[1][1],  uCameraMatrix[1][2]);
 	vec3 camForward = vec3(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]);
 	
-	// seed for rand(seed) function
-	uvec2 seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord);
+	// seed for rand() function
+	seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord);
 
 	vec2 pixelPos = vec2(0);
 	vec2 pixelOffset = vec2(0);
 	
-	float x = rand(seed);
-	float y = rand(seed);
+	float x = rand();
+	float y = rand();
 
 	//if (!uCameraIsMoving)
 	{
@@ -639,8 +622,8 @@ void main( void )
 	
 	// depth of field
 	vec3 focalPoint = uFocusDistance * rayDir;
-	float randomAngle = rand(seed) * TWO_PI; // pick random point on aperture
-	float randomRadius = rand(seed) * uApertureSize;
+	float randomAngle = rand() * TWO_PI; // pick random point on aperture
+	float randomRadius = rand() * uApertureSize;
 	vec3  randomAperturePos = ( cos(randomAngle) * camRight + sin(randomAngle) * camUp ) * sqrt(randomRadius);
 	// point on aperture to focal point
 	vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
@@ -650,7 +633,7 @@ void main( void )
 	//SetupScene(); 
 
 	// perform path tracing and get resulting pixel color
-	vec3 pixelColor = CalculateRadiance( ray, uSunDirection, seed );
+	vec3 pixelColor = CalculateRadiance(ray, uSunDirection);
 	
 	vec3 previousColor = texelFetch(tPreviousTexture, ivec2(gl_FragCoord.xy), 0).rgb;
 	
