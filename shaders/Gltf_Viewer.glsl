@@ -246,7 +246,7 @@ vec3 Get_HDR_Color(Ray r)
 }
 
 //-----------------------------------------------------------------------
-vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
+vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 //-----------------------------------------------------------------------
 {
 	vec3 randVec = vec3(rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0);
@@ -321,8 +321,8 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 		}
 
 		// useful data
-		vec3 n = intersec.normal;
-        	vec3 nl = dot(n,r.direction) <= 0.0 ? normalize(n) : normalize(n * -1.0);
+		vec3 n = normalize(intersec.normal);
+        	vec3 nl = dot(n,r.direction) <= 0.0 ? normalize(n) : normalize(-n);
 		vec3 x = r.origin + r.direction * t;
 
         	if (intersec.type == DIFF) // Ideal DIFFUSE reflection
@@ -337,17 +337,17 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 			float p = max(mask.r, max(mask.g, mask.b));
 			if (bounces > 0)
 			{
-				if (rand(seed) < p)
+				if (rand() < p)
                     			mask *= 1.0 / p;
                 		else
                     			break;
 			}
 
-			if (diffuseCount == 1 && rand(seed) < 0.5)
+			if (diffuseCount == 1 && rand() < 0.5)
 			{
 				// this branch gathers color bleeding / caustics from other surfaces hit in the future
 				// choose random Diffuse sample vector
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
 				r.origin += r.direction * epsIntersect;
 
 				continue;
@@ -389,7 +389,7 @@ vec3 CalculateRadiance( Ray r, vec3 sunDirection, inout uvec2 seed )
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 
-			if (rand(seed) < Re) // reflect ray from surface
+			if (rand() < Re) // reflect ray from surface
 			{
 				r = Ray( x, reflect(r.direction, nl) );
 				r.origin += r.direction * epsIntersect;
@@ -431,14 +431,14 @@ void main( void )
     	vec3 camUp      = vec3( uCameraMatrix[1][0],  uCameraMatrix[1][1],  uCameraMatrix[1][2]);
 	vec3 camForward = vec3(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]);
 	
-	// seed for rand(seed) function
-	uvec2 seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord);
+	// calculate unique seed value for rand() function
+	seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord);
 
 	vec2 pixelPos = vec2(0);
 	vec2 pixelOffset = vec2(0);
 	
-	float x = rand(seed);
-	float y = rand(seed);
+	float x = rand();
+	float y = rand();
 
 	if (!uCameraIsMoving)
 	{
@@ -457,8 +457,8 @@ void main( void )
 	
 	// depth of field
 	vec3 focalPoint = uFocusDistance * rayDir;
-	float randomAngle = rand(seed) * TWO_PI; // pick random point on aperture
-	float randomRadius = rand(seed) * uApertureSize;
+	float randomAngle = rand() * TWO_PI; // pick random point on aperture
+	float randomRadius = rand() * uApertureSize;
 	vec3  randomAperturePos = ( cos(randomAngle) * camRight + sin(randomAngle) * camUp ) * randomRadius;
 	// point on aperture to focal point
 	vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
@@ -469,7 +469,7 @@ void main( void )
 	plane = Plane( vec4(0, 1, 0, 0.0), vec3(0), vec3(0.45), DIFF);
 
 	// perform path tracing and get resulting pixel color
-	vec3 pixelColor = CalculateRadiance( ray, uSunDirection, seed );
+	vec3 pixelColor = CalculateRadiance(ray, uSunDirection);
 
 	vec3 previousColor = texelFetch(tPreviousTexture, ivec2(gl_FragCoord.xy), 0).rgb;
 	
