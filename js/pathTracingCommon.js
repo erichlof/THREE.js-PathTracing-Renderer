@@ -1290,8 +1290,12 @@ vec3 Get_Sky_Color(Ray r, vec3 sunDirection)
 `;
 
 THREE.ShaderChunk[ 'pathtracing_random_functions' ] = `
+
+// global seed used in rand() function
+uvec2 seed;
+
 // from iq https://www.shadertoy.com/view/4tXyWN
-float rand( inout uvec2 seed )
+float rand()
 {
 	seed += uvec2(1);
     	uvec2 q = 1103515245U * ( (seed >> 1U) ^ (seed.yx) );
@@ -1299,18 +1303,18 @@ float rand( inout uvec2 seed )
 	return float(n) * (1.0 / float(0xffffffffU));
 }
 
-vec3 randomSphereDirection( inout uvec2 seed )
+vec3 randomSphereDirection()
 {
-    	float up = rand(seed) * 2.0 - 1.0; // range: -1 to +1
+    	float up = rand() * 2.0 - 1.0; // range: -1 to +1
 	float over = sqrt( max(0.0, 1.0 - up * up) );
-	float around = rand(seed) * TWO_PI;
+	float around = rand() * TWO_PI;
 	return normalize(vec3(cos(around) * over, up, sin(around) * over));	
 }
 
-vec3 randomDirectionInHemisphere( vec3 nl, inout uvec2 seed )
+vec3 randomDirectionInHemisphere(vec3 nl)
 {
-	float r = rand(seed); // uniform distribution in hemisphere
-	float phi = rand(seed) * TWO_PI;
+	float r = rand(); // uniform distribution in hemisphere
+	float phi = rand() * TWO_PI;
 	float x = r * cos(phi);
 	float y = r * sin(phi);
 	float z = sqrt(1.0 - x*x - y*y);
@@ -1328,10 +1332,10 @@ vec3 randomDirectionInHemisphere( vec3 nl, inout uvec2 seed )
 	return normalize(x * T + y * B + z * nl);
 }
 
-vec3 randomCosWeightedDirectionInHemisphere( vec3 nl, inout uvec2 seed )
+vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 {
-	float r = sqrt(rand(seed)); // cos-weighted distribution in hemisphere
-	float phi = rand(seed) * TWO_PI;
+	float r = sqrt(rand()); // cos-weighted distribution in hemisphere
+	float phi = rand() * TWO_PI;
 	float x = r * cos(phi);
 	float y = r * sin(phi);
 	float z = sqrt(1.0 - x*x - y*y);
@@ -1350,9 +1354,9 @@ vec3 randomCosWeightedDirectionInHemisphere( vec3 nl, inout uvec2 seed )
 }
 
 // #define N_POINTS 32.0
-// vec3 randomCosWeightedDirectionInHemisphere( vec3 nl, inout uvec2 seed )
+// vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 // {
-// 	float i = floor(N_POINTS * rand(seed)) + (rand(seed) * 0.5);
+// 	float i = floor(N_POINTS * rand()) + (rand() * 0.5);
 // 			// the Golden angle in radians
 // 	float theta = i * 2.39996322972865332 + mod(uSampleCounter, TWO_PI);
 // 	theta = mod(theta, TWO_PI);
@@ -1370,12 +1374,12 @@ vec3 randomCosWeightedDirectionInHemisphere( vec3 nl, inout uvec2 seed )
 // 	return normalize(x * T + y * B + z * nl);
 // }
 
-vec3 randomDirectionInSpecularLobe( vec3 reflectionDir, float roughness, inout uvec2 seed )
+vec3 randomDirectionInSpecularLobe(vec3 reflectionDir, float roughness)
 {
 	roughness = mix( 13.0, 0.0, sqrt(clamp(roughness, 0.0, 1.0)) );
-	float cosTheta = pow(rand(seed), 1.0 / (exp(roughness) + 1.0));
+	float cosTheta = pow(rand(), 1.0 / (exp(roughness) + 1.0));
 	float sinTheta = sqrt(max(0.0, 1.0 - cosTheta * cosTheta));
-	float phi = rand(seed) * TWO_PI;
+	float phi = rand() * TWO_PI;
 
 	// from "Building an Orthonormal Basis, Revisited" http://jcgt.org/published/0006/01/01/
 	float signf = reflectionDir.z >= 0.0 ? 1.0 : -1.0;
@@ -1388,21 +1392,21 @@ vec3 randomDirectionInSpecularLobe( vec3 reflectionDir, float roughness, inout u
 }
 
 // //the following alternative skips the creation of tangent and bi-tangent vectors u and v 
-// vec3 randomCosWeightedDirectionInHemisphere( vec3 nl, inout uvec2 seed )
+// vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 // {
-// 	float phi = rand(seed) * TWO_PI;
-// 	float theta = 2.0 * rand(seed) - 1.0;
+// 	float phi = rand() * TWO_PI;
+// 	float theta = 2.0 * rand() - 1.0;
 // 	return nl + vec3(sqrt(1.0 - theta * theta) * vec2(cos(phi), sin(phi)), theta);
 // }
 
-// vec3 randomDirectionInPhongSpecular( vec3 reflectionDir, float roughness, inout uvec2 seed )
+// vec3 randomDirectionInPhongSpecular(vec3 reflectionDir, float roughness)
 // {
-// 	float phi = rand(seed) * TWO_PI;
+// 	float phi = rand() * TWO_PI;
 // 	roughness = clamp(roughness, 0.0, 1.0);
 // 	roughness = mix(13.0, 0.0, sqrt(roughness));
 // 	float exponent = exp(roughness) + 1.0;
 // 	//weight = (exponent + 2.0) / (exponent + 1.0);
-// 	float cosTheta = pow(rand(seed), 1.0 / (exponent + 1.0));
+// 	float cosTheta = pow(rand(), 1.0 / (exponent + 1.0));
 // 	float radius = sqrt(max(0.0, 1.0 - cosTheta * cosTheta));
 // 	vec3 u = normalize( cross( abs(reflectionDir.x) > 0.1 ? vec3(0, 1, 0) : vec3(1, 0, 0), reflectionDir ) );
 // 	vec3 v = cross(reflectionDir, u);
@@ -1412,15 +1416,15 @@ vec3 randomDirectionInSpecularLobe( vec3 reflectionDir, float roughness, inout u
 
 
 THREE.ShaderChunk[ 'pathtracing_sample_sphere_light' ] = `
-vec3 sampleSphereLight(vec3 x, vec3 nl, Sphere light, vec3 dirToLight, out float weight, inout uvec2 seed)
+vec3 sampleSphereLight(vec3 x, vec3 nl, Sphere light, vec3 dirToLight, out float weight)
 {
 	dirToLight = (light.position - x); // no normalize (for distance calc below)
 	float cos_alpha_max = sqrt(1.0 - clamp((light.radius * light.radius) / dot(dirToLight, dirToLight), 0.0, 1.0));
 	
-	float cos_alpha = mix( cos_alpha_max, 1.0, rand(seed) ); // 1.0 + (rand(seed) * (cos_alpha_max - 1.0));
+	float cos_alpha = mix( cos_alpha_max, 1.0, rand() ); // 1.0 + (rand() * (cos_alpha_max - 1.0));
 	// * 0.75 below ensures shadow rays don't miss the light, due to shader float precision
 	float sin_alpha = sqrt(max(0.0, 1.0 - cos_alpha * cos_alpha)) * 0.75; 
-	float phi = rand(seed) * TWO_PI;
+	float phi = rand() * TWO_PI;
 	dirToLight = normalize(dirToLight);
 	
 	// from "Building an Orthonormal Basis, Revisited" http://jcgt.org/published/0006/01/01/
@@ -1438,12 +1442,12 @@ vec3 sampleSphereLight(vec3 x, vec3 nl, Sphere light, vec3 dirToLight, out float
 `;
 
 THREE.ShaderChunk[ 'pathtracing_sample_quad_light' ] = `
-vec3 sampleQuadLight(vec3 x, vec3 nl, Quad light, vec3 dirToLight, out float weight, inout uvec2 seed)
+vec3 sampleQuadLight(vec3 x, vec3 nl, Quad light, vec3 dirToLight, out float weight)
 {
 	vec3 randPointOnLight;
-	randPointOnLight.x = mix(light.v0.x, light.v1.x, clamp(rand(seed), 0.1, 0.9));
+	randPointOnLight.x = mix(light.v0.x, light.v1.x, clamp(rand(), 0.1, 0.9));
 	randPointOnLight.y = light.v0.y;
-	randPointOnLight.z = mix(light.v0.z, light.v3.z, clamp(rand(seed), 0.1, 0.9));
+	randPointOnLight.z = mix(light.v0.z, light.v3.z, clamp(rand(), 0.1, 0.9));
 	dirToLight = randPointOnLight - x;
 	float r2 = distance(light.v0, light.v1) * distance(light.v0, light.v3);
 	float d2 = dot(dirToLight, dirToLight);
@@ -1517,13 +1521,13 @@ void main( void )
 	vec3 camUp      = vec3( uCameraMatrix[1][0],  uCameraMatrix[1][1],  uCameraMatrix[1][2]);
 	vec3 camForward = vec3(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]);
 	
-	// seed for rand(seed) function
-	uvec2 seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord);
+	// calculate unique seed for rand() function
+	seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord);
 	vec2 pixelPos = vec2(0);
 	vec2 pixelOffset = vec2(0);
 	
-	float x = rand(seed);
-	float y = rand(seed);
+	float x = rand();
+	float y = rand();
 	if (!uCameraIsMoving)
 	{
 		pixelOffset.x = tentFilter(x);
@@ -1541,8 +1545,8 @@ void main( void )
 	
 	// depth of field
 	vec3 focalPoint = uFocusDistance * rayDir;
-	float randomAngle = rand(seed) * TWO_PI; // pick random point on aperture
-	float randomRadius = rand(seed) * uApertureSize;
+	float randomAngle = rand() * TWO_PI; // pick random point on aperture
+	float randomRadius = rand() * uApertureSize;
 	vec3  randomAperturePos = ( cos(randomAngle) * camRight + sin(randomAngle) * camUp ) * sqrt(randomRadius);
 	// point on aperture to focal point
 	vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
@@ -1551,7 +1555,7 @@ void main( void )
 	SetupScene();
 				
 	// perform path tracing and get resulting pixel color
-	vec3 pixelColor = CalculateRadiance( ray, seed );
+	vec3 pixelColor = CalculateRadiance(ray);
 	
 	vec3 previousColor = texelFetch(tPreviousTexture, ivec2(gl_FragCoord.xy), 0).rgb;
 	if (uFrameCounter == 1.0) // camera just moved after being still
