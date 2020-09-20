@@ -249,7 +249,7 @@ vec3 Get_HDR_Color(Ray r)
 vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 //-----------------------------------------------------------------------
 {
-	vec3 randVec = vec3(rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0);
+	vec3 randVec = vec3(rand() * 2.0 - 1.0, rand() * 2.0 - 1.0, rand() * 2.0 - 1.0);
 
 	Intersection intersec;
 	vec3 accumCol = vec3(0.0);
