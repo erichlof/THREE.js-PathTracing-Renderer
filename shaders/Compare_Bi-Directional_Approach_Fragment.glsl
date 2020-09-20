@@ -109,7 +109,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 
 
 //-----------------------------------------------------------------------
-vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
+vec3 CalculateRadiance(Ray originalRay)
 //-----------------------------------------------------------------------
 {
 
@@ -120,9 +120,9 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 	vec3 n, nl, x;
 	vec3 dirToLight;
 	vec3 tdir;
-	vec3 randPointOnLight = vec3( mix(quads[5].v0.x, quads[5].v1.x, rand(seed)),
+	vec3 randPointOnLight = vec3( mix(quads[5].v0.x, quads[5].v1.x, rand()),
 				      quads[5].v0.y,
-				      mix(quads[5].v0.z, quads[5].v3.z, rand(seed)) );
+				      mix(quads[5].v0.z, quads[5].v3.z, rand()) );
 	vec3 lightHitPos = randPointOnLight;
 	vec3 lightHitEmission = quads[5].emission;
         
@@ -139,7 +139,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 	bool diffuseFound = false;
 
 	// first light trace
-	//Ray r = Ray(randPointOnLight, randomCosWeightedDirectionInHemisphere(normalize(quads[5].normal), seed));
+	//Ray r = Ray(randPointOnLight, randomCosWeightedDirectionInHemisphere(normalize(quads[5].normal)));
 	Ray r = Ray(randPointOnLight, normalize(quads[5].normal));
 	r.origin += normalize(quads[5].normal) * uEPS_intersect;
 	t = SceneIntersect(r, intersec);
@@ -153,11 +153,11 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 
 		// second light trace
 		intersec.normal = normalize(intersec.normal);
-		r = Ray(lightHitPos, randomCosWeightedDirectionInHemisphere(intersec.normal, seed));
+		r = Ray(lightHitPos, randomCosWeightedDirectionInHemisphere(intersec.normal));
 		r.origin += intersec.normal * uEPS_intersect;
 		
 		t2 = SceneIntersect(r, intersec);
-		if (t2 < INFINITY && intersec.type == DIFF && rand(seed) < 0.5)
+		if (t2 < INFINITY && intersec.type == DIFF && rand() < 0.5)
 		{
 			lightHitPos = r.origin + r.direction * t2;
 			weight = max(0.0, dot(-r.direction, normalize(intersec.normal)));
@@ -166,7 +166,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 	}
 
 	// this allows the original light to be the lightsource once in a while
-	if ( !diffuseFound || rand(seed) < 0.5 )
+	if ( !diffuseFound || rand() < 0.5 )
 	{
 		lightHitPos = randPointOnLight;
 		lightHitEmission = quads[5].emission;
@@ -228,10 +228,10 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 
 			bounceIsSpecular = false;
 
-			if (diffuseCount < 3 && rand(seed) < 0.5)
+			if (diffuseCount < 3 && rand() < 0.5)
 			{	
 				// choose random Diffuse sample vector
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
