@@ -74,7 +74,7 @@ mat4 makeRotateZ(float rot)
 
 
 //--------------------------------------------------------------------------
-float SceneIntersect( Ray r, inout Intersection intersec, inout uvec2 seed )
+float SceneIntersect(Ray r, inout Intersection intersec)
 //--------------------------------------------------------------------------
 {
 	Ray warpedRay;
@@ -148,8 +148,8 @@ float SceneIntersect( Ray r, inout Intersection intersec, inout uvec2 seed )
 	}	
 			
 	// Purple Cloud Sphere
-	width = 2.0 * rand(seed);
-	offset = (spheres[2].radius * 0.5) * (vec3(rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0));
+	width = 2.0 * rand();
+	offset = (spheres[2].radius * 0.5) * (vec3(rand() * 2.0 - 1.0, rand() * 2.0 - 1.0, rand() * 2.0 - 1.0));
 	d = SphereIntersect( spheres[2].radius + width, spheres[2].position + offset, r);
 	if (d < t)
 	{
@@ -196,7 +196,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, inout uvec2 seed )
 
 
 //-----------------------------------------------------------------------
-vec3 CalculateRadiance( Ray r, inout uvec2 seed )
+vec3 CalculateRadiance(Ray r)
 //-----------------------------------------------------------------------
 {
 	Intersection intersec;
@@ -222,7 +222,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	for (int bounces = 0; bounces < 5; bounces++)
 	{
 
-		t = SceneIntersect(r, intersec, seed);
+		t = SceneIntersect(r, intersec);
 		
 
 		if (t == INFINITY)	
@@ -258,14 +258,14 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && rand(seed) < 0.5)
+			if (diffuseCount == 1 && rand() < 0.5)
 			{
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
                         
-			dirToLight = sampleQuadLight(x, nl, quads[5], dirToLight, weight, seed);
+			dirToLight = sampleQuadLight(x, nl, quads[5], dirToLight, weight);
 			mask *= weight;
 
 			r = Ray( x, dirToLight );
@@ -296,7 +296,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 			
-			if (rand(seed) < P)
+			if (rand() < P)
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
@@ -338,7 +338,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 
-			if (rand(seed) < P)
+			if (rand() < P)
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
@@ -352,15 +352,15 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 			bounceIsSpecular = false;
 			
-			if (diffuseCount == 1 && rand(seed) < 0.5)
+			if (diffuseCount == 1 && rand() < 0.5)
 			{
 				// choose random Diffuse sample vector
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
 
-			dirToLight = sampleQuadLight(x, nl, quads[5], dirToLight, weight, seed);
+			dirToLight = sampleQuadLight(x, nl, quads[5], dirToLight, weight);
 			mask *= weight;
 			
 			r = Ray( x, dirToLight );
@@ -378,7 +378,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	
 	return max(vec3(0), accumCol);
 
-} // end vec3 CalculateRadiance( Ray r, inout uvec2 seed )
+} // end vec3 CalculateRadiance(Ray r)
 
 
 
