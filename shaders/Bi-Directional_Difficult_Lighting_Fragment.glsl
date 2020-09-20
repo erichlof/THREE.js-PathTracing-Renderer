@@ -530,13 +530,13 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkModels )
 
 
 //-----------------------------------------------------------------------
-vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
+vec3 CalculateRadiance(Ray originalRay)
 //-----------------------------------------------------------------------
 {
 	Intersection intersec;
 	vec4 texColor;
 
-	//vec3 randVec = vec3(rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0, rand(seed) * 2.0 - 1.0);
+	//vec3 randVec = vec3(rand() * 2.0 - 1.0, rand() * 2.0 - 1.0, rand() * 2.0 - 1.0);
 	vec3 accumCol = vec3(0);
 	vec3 mask = vec3(1);
 	vec3 checkCol0 = vec3(0.01);
@@ -566,12 +566,12 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 
 	vec3 lightHitEmission = quads[0].emission;
 	vec3 randPointOnLight;
-	randPointOnLight.x = mix(quads[0].v0.x, quads[0].v1.x, rand(seed));
-	randPointOnLight.y = mix(quads[0].v0.y, quads[0].v3.y, rand(seed));
+	randPointOnLight.x = mix(quads[0].v0.x, quads[0].v1.x, rand());
+	randPointOnLight.y = mix(quads[0].v0.y, quads[0].v3.y, rand());
 	randPointOnLight.z = quads[0].v0.z;
 	vec3 lightHitPos = randPointOnLight;
 	vec3 lightNormal = normalize(quads[0].normal);
-	vec3 randLightDir = randomCosWeightedDirectionInHemisphere(lightNormal, seed);
+	vec3 randLightDir = randomCosWeightedDirectionInHemisphere(lightNormal);
 	
 	Ray r = Ray( randPointOnLight, randLightDir );
 	r.origin += lightNormal * uEPS_intersect; // move light ray out to prevent self-intersection with light
@@ -669,10 +669,10 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 			previousIntersecType = DIFF;
 			
 			
-			if (diffuseCount == 1 && rand(seed) < 0.5)
+			if (diffuseCount == 1 && rand() < 0.5)
 			{
 				// choose random Diffuse sample vector
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
@@ -696,7 +696,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 				nl = perturbNormal(nl, vec2(-0.2, 0.2), intersec.uv * 2.0);
 
 			r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
-			r.direction = randomDirectionInSpecularLobe(r.direction, intersec.roughness, seed );
+			r.direction = randomDirectionInSpecularLobe(r.direction, intersec.roughness);
 			r.origin += nl * uEPS_intersect;
 
 			previousIntersecType = SPEC;
@@ -714,7 +714,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 
-			if (rand(seed) < P) // reflect ray from surface
+			if (rand() < P) // reflect ray from surface
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) );
@@ -753,11 +753,11 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 			previousIntersecType = COAT;
 			
 			// choose either specular reflection or diffuse
-			if( rand(seed) < P )
+			if( rand() < P )
 			{	
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
-				r.direction = randomDirectionInSpecularLobe(r.direction, intersec.roughness, seed );
+				r.direction = randomDirectionInSpecularLobe(r.direction, intersec.roughness);
 				r.origin += nl * uEPS_intersect;
 				continue;	
 			}
@@ -787,10 +787,10 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 			mask *= TP;
 			mask *= intersec.color;
 			
-			if (diffuseCount == 1 && rand(seed) < 0.5)
+			if (diffuseCount == 1 && rand() < 0.5)
 			{
 				// choose random Diffuse sample vector
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
