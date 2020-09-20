@@ -108,7 +108,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 
 
 //-----------------------------------------------------------------------
-vec3 CalculateRadiance( Ray r, inout uvec2 seed )
+vec3 CalculateRadiance(Ray r)
 //-----------------------------------------------------------------------
 {
 	Intersection intersec;
@@ -152,18 +152,18 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 			/* // Russian Roulette
 			float p = max(mask.r, max(mask.g, mask.b));
-			if (rand(seed) > p) 
+			if (rand() > p) 
 				break;
 			mask /= p; */
 			
 			// Russian Roulette (from pbrt book)
 			float q = max(mask.r, max(mask.g, mask.b));
 			q = max(0.05, 1.0 - q);
-			if (rand(seed) < q) break;
+			if (rand() < q) break;
 			mask /= (1.0 - q);
 			
 			// choose random Diffuse sample vector
-			r = Ray( x, randomDirectionInHemisphere(nl, seed) );
+			r = Ray( x, randomDirectionInHemisphere(nl) );
 			r.origin += nl * uEPS_intersect;
 
 			mask *= max(0.0, dot(nl, r.direction));
