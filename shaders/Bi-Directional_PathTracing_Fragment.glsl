@@ -187,11 +187,11 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 
 
 //-----------------------------------------------------------------------
-vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
+vec3 CalculateRadiance(Ray originalRay)
 //-----------------------------------------------------------------------
 {
 	Intersection intersec;
-	int randChoose = int(rand(seed) * 2.0); // 2 lights to choose from
+	int randChoose = int(rand() * 2.0); // 2 lights to choose from
 	Sphere lightChoice = spheres[randChoose]; 
 	//lightChoice = spheres[1]; // override lightChoice
 	
@@ -202,13 +202,13 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 	vec3 spotlightPos1 = vec3(380.0, 290.0, -470.0);
 	vec3 spotlightPos2 = vec3(430.0, 315.0, -485.0);
 	vec3 spotlightDir = normalize(spotlightPos1 - spotlightPos2);
-	//vec3 lightHitPos = lightChoice.position + normalize(randomSphereDirection(seed)) * (lightChoice.radius * 0.5);
+	//vec3 lightHitPos = lightChoice.position + normalize(randomSphereDirection()) * (lightChoice.radius * 0.5);
 	
 	vec3 lightNormal = vec3(0,1,0);
 	if (randChoose > 0)
 		lightNormal = spotlightDir;
 	lightNormal = normalize(lightNormal);
-	vec3 lightDir = randomCosWeightedDirectionInHemisphere(lightNormal, seed);
+	vec3 lightDir = randomCosWeightedDirectionInHemisphere(lightNormal);
 	vec3 lightHitPos = lightChoice.position + lightDir;
 	vec3 lightHitEmission = lightChoice.emission;
 	vec3 x, n, nl;
@@ -300,10 +300,10 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 			if (bounces == 0)
 				firstTypeWasDIFF = true;
 
-			if (diffuseCount == 1 && rand(seed) < 0.5)
+			if (diffuseCount == 1 && rand() < 0.5)
 			{	
 				// choose random Diffuse sample vector
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
 				//r = Ray(x, nl); // interesting effect for tracing heightfields/holographic projections?
 				r.origin += nl * uEPS_intersect;
 				continue;
@@ -342,7 +342,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 			
-			if (rand(seed) < P)
+			if (rand() < P)
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
@@ -371,7 +371,7 @@ vec3 CalculateRadiance( Ray originalRay, inout uvec2 seed )
 
 	return max(vec3(0), accumCol);
 
-} // end vec3 CalculateRadiance( Ray r, inout uvec2 seed )
+} // end vec3 CalculateRadiance(Ray r)
 
 
 
