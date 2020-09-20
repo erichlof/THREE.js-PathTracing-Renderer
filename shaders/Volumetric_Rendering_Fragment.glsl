@@ -94,7 +94,7 @@ void sampleEquiAngular( float u, float maxDistance, Ray r, vec3 lightPos, out fl
 #define LIGHT_POWER 30.0 // brightness of light source
 
 //-----------------------------------------------------------------------
-vec3 CalculateRadiance( Ray r, inout uvec2 seed )
+vec3 CalculateRadiance(Ray r)
 //-----------------------------------------------------------------------
 {
 	Intersection intersec;
@@ -129,7 +129,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
         for (int bounces = 0; bounces < 4; bounces++)
 	{
 		
-		float u = rand(seed);
+		float u = rand();
 		
 		t = SceneIntersect(r, intersec);
 		
@@ -173,7 +173,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 		}
 		
 		// useful data 
-		vec3 n = intersec.normal;
+		vec3 n = normalize(intersec.normal);
                 vec3 nl = dot(n,r.direction) < 0.0 ? normalize(n) : normalize(-n);
 		vec3 x = r.origin + r.direction * t;
 		
@@ -186,15 +186,15 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && rand(seed) < 0.5)
+			if (diffuseCount == 1 && rand() < 0.5)
 			{
 				// choose random Diffuse sample vector
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
 				r.origin += nl;
 				continue;
 			}
 			
-			dirToLight = sampleSphereLight(x, nl, spheres[0], dirToLight, weight, seed);
+			dirToLight = sampleSphereLight(x, nl, spheres[0], dirToLight, weight);
 			mask *= weight;
 
 			r = Ray( x, dirToLight );
@@ -227,7 +227,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 
-			if (rand(seed) < P) // reflect ray from surface
+			if (rand() < P) // reflect ray from surface
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) );
@@ -261,7 +261,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                 	TP = Tr / (1.0 - P);
 			
 			// choose either specular reflection or diffuse
-			if( rand(seed) < P )
+			if( rand() < P )
 			{	
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) );
@@ -276,15 +276,15 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			mask *= TP;
 			mask *= intersec.color;
 
-			if (diffuseCount == 1 && rand(seed) < 0.5)
+			if (diffuseCount == 1 && rand() < 0.5)
                         {
                                 // choose random Diffuse sample vector
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl, seed) );
+				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
 				r.origin += nl;
 				continue;
                         }
                         
-			dirToLight = sampleSphereLight(x, nl, spheres[0], dirToLight, weight, seed);
+			dirToLight = sampleSphereLight(x, nl, spheres[0], dirToLight, weight);
 			mask *= weight;
 
 			r = Ray( x, dirToLight );
@@ -301,7 +301,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 	// as a starting point, the ray origin. Next, Randomize the ray direction based on glass sphere's radius.
 	// Then trace towards the light source, eventually rays will refract at just the right angles to find the light!
 	r.origin = vray.origin;
-	vec3 lp = spheres[0].position + (normalize(randomSphereDirection(seed)) * spheres[1].radius * 0.9);
+	vec3 lp = spheres[0].position + (randomSphereDirection() * spheres[1].radius * 0.9);
 	r.direction = normalize(lp - r.origin);
 	mask = vec3(1.0); // reset color mask for this particle
 
@@ -316,7 +316,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
 			break;
 		
 		// useful data 
-		vec3 n = intersec.normal;
+		vec3 n = normalize(intersec.normal);
 		vec3 nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
 		vec3 x = r.origin + r.direction * t;
 
@@ -330,7 +330,7 @@ vec3 CalculateRadiance( Ray r, inout uvec2 seed )
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 			
-			if (rand(seed) < P) // reflect ray from surface
+			if (rand() < P) // reflect ray from surface
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) );
