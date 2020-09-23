@@ -12,8 +12,8 @@ let buildnodes = [];
 let leftWorkLists = [];
 let rightWorkLists = [];
 let parentList = [];
-let bestSplit = 0;
-let bestAxis = 0;
+let bestSplit, goodSplit, okaySplit;
+let bestAxis, goodAxis, okayAxis;
 let leftWorkCounter = 0;
 let rightWorkCounter = 0;
 let currentMinCorner = new THREE.Vector3();
@@ -24,14 +24,7 @@ let testCentroid = new THREE.Vector3();
 let currentCentroid = new THREE.Vector3();
 let centroidAverage = new THREE.Vector3();
 let spatialAverage = new THREE.Vector3();
-let LBottomCorner = new THREE.Vector3();
-let LTopCorner = new THREE.Vector3();
-let RBottomCorner = new THREE.Vector3();
-let RTopCorner = new THREE.Vector3();
-let k, value, side1, side2, side3, minCost, testSplit;
-let axis, countLeft, countRight;
-let lside1, lside2, lside3, rside1, rside2, rside3;
-let surfaceLeft, surfaceRight, totalCost;
+let k, value, side0, side1, side2;
 let currentList;
 
 function BVH_FlatNode() {
@@ -142,6 +135,7 @@ function BVH_Create_Node(workList, aabb_array, idParent, isLeftBranch) {
                         currentCentroid.set(aabb_array[9 * k + 6], aabb_array[9 * k + 7], aabb_array[9 * k + 8]);
                         currentMinCorner.min(testMinCorner);
                         currentMaxCorner.max(testMaxCorner);
+                        centroidAverage.add(currentCentroid); // will be used later for averaging
                 }
 
 		// calculate the middle point of the current box (aka 'spatial median')
@@ -149,7 +143,15 @@ function BVH_Create_Node(workList, aabb_array, idParent, isLeftBranch) {
                 spatialAverage.add(currentMaxCorner);
                 spatialAverage.multiplyScalar(0.5);
 
-                // this simply uses the middle of the longest box extent to determine the split plane
+		// calculate the average point between all the triangles' aabb centroids in this list (aka 'object median')
+		//centroidAverage.multiplyScalar(1.0 / workList.length);
+
+		// it has been shown statistically that the best location for a split plane is about halfway
+		// between the spatial median and the object median.  Calculate this point between the two:
+                ///centroidAverage.add(spatialAverage);
+                ///centroidAverage.multiplyScalar(0.5);
+
+                // this uses the average of the longest box extent to determine the split plane
                 centroidAverage.copy(spatialAverage);
 
 
@@ -169,26 +171,67 @@ function BVH_Create_Node(workList, aabb_array, idParent, isLeftBranch) {
                         buildnodes[idParent].idRightChild = flatnode.idSelf;
                 
 
-                side1 = currentMaxCorner.x - currentMinCorner.x; // length bbox along X-axis
-                side2 = currentMaxCorner.y - currentMinCorner.y; // length bbox along Y-axis
-                side3 = currentMaxCorner.z - currentMinCorner.z; // length bbox along Z-axis
+                side0 = currentMaxCorner.x - currentMinCorner.x; // length bbox along X-axis
+                side1 = currentMaxCorner.y - currentMinCorner.y; // length bbox along Y-axis
+                side2 = currentMaxCorner.z - currentMinCorner.z; // length bbox along Z-axis
 
-                bestAxis = 0;
-                bestSplit = centroidAverage.x;
+                // initialize variables
+                bestAxis = 0; goodAxis = 1; okayAxis = 2;
+                bestSplit = centroidAverage.x; goodSplit = centroidAverage.y; okaySplit = centroidAverage.z;
 
                 // determine the longest extent of the box, and start with that as splitting dimension
-                if (side1 > side2 && side1 > side3) {
+                if (side0 >= side1 && side0 >= side2) {
                         bestAxis = 0;
                         bestSplit = centroidAverage.x;
+                        if (side1 >= side2) {
+                                goodAxis = 1;
+                                goodSplit = centroidAverage.y;
+                                okayAxis = 2;
+                                okaySplit = centroidAverage.z;
+                        }
+                        else {
+                                goodAxis = 2;
+                                goodSplit = centroidAverage.z;
+                                okayAxis = 1;
+                                okaySplit = centroidAverage.y;
+                        }
                 }      
-                else if (side2 > side1 && side2 > side3) {
+                else if (side1 > side0 && side1 >= side2) {
                         bestAxis = 1;
                         bestSplit = centroidAverage.y;
+                        if (side0 >= side2)
+                        {
+                                goodAxis = 0;
+                                goodSplit = centroidAverage.x;
+                                okayAxis = 2;
+                                okaySplit = centroidAverage.z;
+                        }
+                        else
+                        {
+                                goodAxis = 2;
+                                goodSplit = centroidAverage.z;
+                                okayAxis = 0;
+                                okaySplit = centroidAverage.x;
+                        }
                 }       
-                else if (side3 > side1 && side3 > side2) {
+                else if (side2 > side0 && side2 > side1) {
                         bestAxis = 2;
                         bestSplit = centroidAverage.z;
-                }
+                        if (side0 >= side1)
+                        {
+                                goodAxis = 0;
+                                goodSplit = centroidAverage.x;
+                                okayAxis = 1;
+                                okaySplit = centroidAverage.y;
+                        }
+                        else
+                        {
+                                goodAxis = 1;
+                                goodSplit = centroidAverage.y;
+                                okayAxis = 0;
+                                okaySplit = centroidAverage.x;
+                        }
+		}
                         
                 // try best axis first, then try the other two if necessary
                 for (let j = 0; j < 3; j++) {
@@ -221,27 +264,23 @@ function BVH_Create_Node(workList, aabb_array, idParent, isLeftBranch) {
                                 break; // success, move on to the next part
                         }
                         else if (leftWorkCounter == 0 || rightWorkCounter == 0) {
-				// try another axis
-                                if (bestAxis == 0) {
-                                        bestAxis = 1;
-                                        bestSplit = centroidAverage.y;
+                                // try another axis
+                                if (j == 0) {
+                                        bestAxis = goodAxis;
+                                        bestSplit = goodSplit;
                                 }
-                                else if (bestAxis == 1)
+                                else if (j == 1)
                                 {
-                                        bestAxis = 2;
-                                        bestSplit = centroidAverage.z;
+                                        bestAxis = okayAxis;
+                                        bestSplit = okaySplit;
                                 }
-                                else if (bestAxis == 2)
-                                {
-                                        bestAxis = 0;
-                                        bestSplit = centroidAverage.x;
-                                }
-
+                                
                                 continue;
                         }
 
                 } // end for (let j = 0; j < 3; j++)
-		      
+                
+                
 		// if the below if statement is true, then we have successfully sorted the triangle aabb's
                 if (leftWorkCounter > 0 && rightWorkCounter > 0) {
                         // now that the size of each branch is known, we can initialize the left and right arrays
