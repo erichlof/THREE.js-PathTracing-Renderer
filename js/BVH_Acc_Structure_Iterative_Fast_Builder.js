@@ -151,7 +151,7 @@ function BVH_Create_Node(workList, aabb_array, idParent, isLeftBranch) {
                 spatialAverage.multiplyScalar(0.5);
 
 		// calculate the average point between all the triangles' aabb centroids in this list (aka 'object median')
-		///centroidAverage.multiplyScalar(1.0 / workList.length);
+		centroidAverage.multiplyScalar(1.0 / workList.length);
 
 		// it has been shown statistically that the best location for a split plane is about halfway
 		// between the spatial median and the object median.  Calculate this point between the two:
@@ -159,7 +159,7 @@ function BVH_Create_Node(workList, aabb_array, idParent, isLeftBranch) {
                 ///centroidAverage.multiplyScalar(0.5);
 
                 // this uses the average of the longest box extent to determine the split plane
-                centroidAverage.copy(spatialAverage);
+                //centroidAverage.copy(spatialAverage);
 
 
                 // create inner node
