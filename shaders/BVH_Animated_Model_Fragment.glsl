@@ -208,10 +208,10 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool isRayExiting 
         {
 		if (currentStackData.y < t) 
                 {
-                        if (currentBoxNode.data0.x < 0.0) //  < 0.0 signifies a leaf node
+                        if (currentBoxNode.data0.x >= 0.0) //  >= 0.0 signifies a leaf node
                         {
 				// each triangle's data is encoded in 8 rgba(or xyzw) texture slots
-				id = 8.0 * (-currentBoxNode.data0.x - 1.0);
+				id = 8.0 * currentBoxNode.data0.x;
 
 				uv0 = ivec2( mod(id + 0.0, 2048.0), (id + 0.0) * INV_TEXTURE_WIDTH );
 				uv1 = ivec2( mod(id + 1.0, 2048.0), (id + 1.0) * INV_TEXTURE_WIDTH );
@@ -234,9 +234,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool isRayExiting 
                         }
                         else // else this is a branch
                         {
-                                nodeA = GetBoxNode(currentBoxNode.data0.x);
+                                nodeA = GetBoxNode(currentStackData.x + 1.0);
                                 nodeB = GetBoxNode(currentBoxNode.data1.x);
-                                stackDataA = vec2(currentBoxNode.data0.x, BoundingBoxIntersect(nodeA.data0.yzw, nodeA.data1.yzw, r.origin, inverseDir));
+                                stackDataA = vec2(currentStackData.x + 1.0, BoundingBoxIntersect(nodeA.data0.yzw, nodeA.data1.yzw, r.origin, inverseDir));
                                 stackDataB = vec2(currentBoxNode.data1.x, BoundingBoxIntersect(nodeB.data0.yzw, nodeB.data1.yzw, r.origin, inverseDir));
 				
 				// first sort the branch node data so that 'a' is the smallest
