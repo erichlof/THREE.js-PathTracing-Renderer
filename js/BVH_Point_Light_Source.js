@@ -117,7 +117,7 @@ function load_GLTF_Model() {
                 //modelPositionOffset.set(0, 20, -30);
 
                 // settings for StanfordBunny model
-		modelScale = 0.04;
+		modelScale = 0.04;//0.04
                 modelPositionOffset.set(0, 27.6, -40);
                 
                 // settings for UtahTeapot model
@@ -298,24 +298,7 @@ function initSceneData() {
         // triangles of the entire mesh, then subdivides each box into 2 smaller boxes.  It continues until it reaches 1 triangle,
         // which it then designates as a 'leaf'
         BVH_Build_Iterative(totalWork, aabb_array);
-        //console.log(buildnodes);
-
-        // Copy the buildnodes array into the aabb_array
-        for (let n = 0; n < buildnodes.length; n++) {
-
-                // slot 0
-                aabb_array[8 * n + 0] = buildnodes[n].idLeftChild;  // r or x component
-                aabb_array[8 * n + 1] = buildnodes[n].minCorner.x;  // g or y component
-                aabb_array[8 * n + 2] = buildnodes[n].minCorner.y;  // b or z component
-                aabb_array[8 * n + 3] = buildnodes[n].minCorner.z;  // a or w component
-
-                // slot 1
-                aabb_array[8 * n + 4] = buildnodes[n].idRightChild; // r or x component
-                aabb_array[8 * n + 5] = buildnodes[n].maxCorner.x;  // g or y component
-                aabb_array[8 * n + 6] = buildnodes[n].maxCorner.y;  // b or z component
-                aabb_array[8 * n + 7] = buildnodes[n].maxCorner.z;  // a or w component
-
-        }
+        
 
         triangleDataTexture = new THREE.DataTexture(triangle_array,
                 2048,
