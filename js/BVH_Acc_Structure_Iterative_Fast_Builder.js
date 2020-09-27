@@ -1,4 +1,4 @@
-/* BVH (Bounding Volume Hierarchy) Iterative Builder */
+/* BVH (Bounding Volume Hierarchy) Iterative Fast Builder */
 /*
 Inspired by: Thanassis Tsiodras (ttsiodras on GitHub)
 https://github.com/ttsiodras/renderer-cuda/blob/master/src/BVH.cpp
@@ -12,6 +12,8 @@ let buildnodes = [];
 let leftWorkLists = [];
 let rightWorkLists = [];
 let parentList = [];
+let currentList;
+let k, value, side0, side1, side2;
 let bestSplit, goodSplit, okaySplit;
 let bestAxis, goodAxis, okayAxis;
 let leftWorkCounter = 0;
@@ -24,13 +26,12 @@ let testCentroid = new THREE.Vector3();
 let currentCentroid = new THREE.Vector3();
 let centroidAverage = new THREE.Vector3();
 let spatialAverage = new THREE.Vector3();
-let k, value, side0, side1, side2;
-let currentList;
+
 
 function BVH_FlatNode() {
 
         this.idSelf = 0;
-        this.idLeftChild = 0;
+        this.idTriangle = -1; // negative id means that this is another inner node
         this.idRightChild = 0;
         this.idParent = 0;
         this.minCorner = new THREE.Vector3();
@@ -53,7 +54,7 @@ function BVH_Create_Node(workList, aabb_array, idParent, isLeftBranch) {
                 // create leaf node
                 let flatLeafNode = new BVH_FlatNode();
                 flatLeafNode.idSelf = buildnodes.length;
-                flatLeafNode.idLeftChild = -k - 1; // a negative value signifies leaf node - used as triangle id
+                flatLeafNode.idTriangle = k;
                 flatLeafNode.idRightChild = -1;
                 flatLeafNode.idParent = idParent;
                 flatLeafNode.minCorner.set(aabb_array[9 * k + 0], aabb_array[9 * k + 1], aabb_array[9 * k + 2]);
@@ -68,61 +69,7 @@ function BVH_Create_Node(workList, aabb_array, idParent, isLeftBranch) {
                 return;
         } // end else if (workList.length == 1)
 
-        else if (workList.length == 2) {
-                // if we're down to 2 primitives, go ahead and quickly create a parent and 2 child leaf nodes and return. 
-                // this takes the burden off of the later section which has to figure out how to sort arbitrary numbers of aabb's.
-                
-                // construct bounding box around the current workList's triangle AABBs
-                for (let i = 0; i < workList.length; i++) {
-                        k = workList[i];
-                        testMinCorner.set(aabb_array[9 * k + 0], aabb_array[9 * k + 1], aabb_array[9 * k + 2]);
-                        testMaxCorner.set(aabb_array[9 * k + 3], aabb_array[9 * k + 4], aabb_array[9 * k + 5]);
-                        currentMinCorner.min(testMinCorner);
-                        currentMaxCorner.max(testMaxCorner);
-                }
-
-                // create inner parent node
-                let flatnode0 = new BVH_FlatNode();
-                flatnode0.idSelf = buildnodes.length;
-                flatnode0.idLeftChild = buildnodes.length + 1;
-                flatnode0.idRightChild = buildnodes.length + 2;
-                flatnode0.idParent = idParent;
-                flatnode0.minCorner.copy(currentMinCorner);
-                flatnode0.maxCorner.copy(currentMaxCorner);
-                buildnodes.push(flatnode0);
-
-                // if this is a right branch, fill in parent's missing link to this right child, 
-                // now that we have assigned this right child an ID
-                if (!isLeftBranch) 
-                        buildnodes[idParent].idRightChild = flatnode0.idSelf;
-                
-                
-                k = workList[0];
-                // create 'left' child leaf node
-                let flatnode1 = new BVH_FlatNode();
-                flatnode1.idSelf = buildnodes.length;
-                flatnode1.idLeftChild = -k - 1;
-                flatnode1.idRightChild = -1;
-                flatnode1.idParent = flatnode0.idSelf;
-                flatnode1.minCorner.set(aabb_array[9 * k + 0], aabb_array[9 * k + 1], aabb_array[9 * k + 2]);
-                flatnode1.maxCorner.set(aabb_array[9 * k + 3], aabb_array[9 * k + 4], aabb_array[9 * k + 5]);
-                buildnodes.push(flatnode1);
-                
-                k = workList[1];
-                // create 'right' child leaf node
-                let flatnode2 = new BVH_FlatNode();
-                flatnode2.idSelf = buildnodes.length;
-                flatnode2.idLeftChild = -k - 1;
-                flatnode2.idRightChild = -1;
-                flatnode2.idParent = flatnode0.idSelf;
-                flatnode2.minCorner.set(aabb_array[9 * k + 0], aabb_array[9 * k + 1], aabb_array[9 * k + 2]);
-                flatnode2.maxCorner.set(aabb_array[9 * k + 3], aabb_array[9 * k + 4], aabb_array[9 * k + 5]);
-                buildnodes.push(flatnode2);
-                
-                return;
-        } // end else if (workList.length == 2)
-
-        else if (workList.length > 2) {
+        else if (workList.length > 1) { 
                 // this is where the real work happens: we must sort an arbitrary number of primitive aabb's.
                 // to get a balanced tree, we hope for about half to be placed in left child, half to be placed in right child.
                 centroidAverage.set(0,0,0);
@@ -135,7 +82,6 @@ function BVH_Create_Node(workList, aabb_array, idParent, isLeftBranch) {
                         currentCentroid.set(aabb_array[9 * k + 6], aabb_array[9 * k + 7], aabb_array[9 * k + 8]);
                         currentMinCorner.min(testMinCorner);
                         currentMaxCorner.max(testMaxCorner);
-                        centroidAverage.add(currentCentroid); // will be used later for averaging
                 }
 
 		// calculate the middle point of the current box (aka 'spatial median')
@@ -143,22 +89,15 @@ function BVH_Create_Node(workList, aabb_array, idParent, isLeftBranch) {
                 spatialAverage.add(currentMaxCorner);
                 spatialAverage.multiplyScalar(0.5);
 
-		// calculate the average point between all the triangles' aabb centroids in this list (aka 'object median')
-		//centroidAverage.multiplyScalar(1.0 / workList.length);
-
-		// it has been shown statistically that the best location for a split plane is about halfway
-		// between the spatial median and the object median.  Calculate this point between the two:
-                ///centroidAverage.add(spatialAverage);
-                ///centroidAverage.multiplyScalar(0.5);
-
-                // this uses the average of the longest box extent to determine the split plane
+                // this simply uses the spatial average of the longest box extent to determine the split plane, 
+		// which is very fast and results in a fair-to-good quality, balanced binary tree structure
                 centroidAverage.copy(spatialAverage);
 
 
                 // create inner node
                 let flatnode = new BVH_FlatNode();
                 flatnode.idSelf = buildnodes.length;
-                flatnode.idLeftChild = buildnodes.length + 1; // traverse down the left branches first
+		flatnode.idTriangle = -1; // negative id means that this is another inner node
                 flatnode.idRightChild = 0; // missing link will be filled in soon, don't know how deep the left branches will go
                 flatnode.idParent = idParent;
                 flatnode.minCorner.copy(currentMinCorner);
@@ -358,7 +297,7 @@ function BVH_Create_Node(workList, aabb_array, idParent, isLeftBranch) {
                         }
                 }
                 
-        } // end else if (workList.length > 2)
+        } // end else if (workList.length > 1)
 
 } // end function BVH_Create_Node(workList, aabb_array, idParent, isLeftBranch)
 
@@ -414,7 +353,27 @@ function BVH_Build_Iterative(workList, aabb_array) {
                         }
                 }
                 
-        } // end while (stackptr > -1)
+	} // end while (stackptr > -1)
+	
+	//console.log(buildnodes);
+
+	// Copy the buildnodes array into the aabb_array
+	for (let n = 0; n < buildnodes.length; n++)
+	{
+
+		// slot 0
+		aabb_array[8 * n + 0] = buildnodes[n].idTriangle;   // r or x component
+		aabb_array[8 * n + 1] = buildnodes[n].minCorner.x;  // g or y component
+		aabb_array[8 * n + 2] = buildnodes[n].minCorner.y;  // b or z component
+		aabb_array[8 * n + 3] = buildnodes[n].minCorner.z;  // a or w component
+
+		// slot 1
+		aabb_array[8 * n + 4] = buildnodes[n].idRightChild; // r or x component
+		aabb_array[8 * n + 5] = buildnodes[n].maxCorner.x;  // g or y component
+		aabb_array[8 * n + 6] = buildnodes[n].maxCorner.y;  // b or z component
+		aabb_array[8 * n + 7] = buildnodes[n].maxCorner.z;  // a or w component
+
+	}
 
         
 } // end function BVH_Build_Iterative(workList, aabb_array)
