@@ -57,7 +57,7 @@ vec2 stackLevels[24];
 
 struct BoxNode
 {
-	vec4 data0; // corresponds to .x: idLeftChild, .y: aabbMin.x, .z: aabbMin.y, .w: aabbMin.z
+	vec4 data0; // corresponds to .x: idTriangle, .y: aabbMin.x, .z: aabbMin.y, .w: aabbMin.z
 	vec4 data1; // corresponds to .x: idRightChild .y: aabbMax.x, .z: aabbMax.y, .w: aabbMax.z
 };
 
@@ -65,15 +65,13 @@ BoxNode GetBoxNode(const in float i)
 {
 	// each bounding box's data is encoded in 2 rgba(or xyzw) texture slots 
 	float iX2 = (i * 2.0);
-	// (iX2 + 0.0) corresponds to .x: idLeftChild, .y: aabbMin.x, .z: aabbMin.y, .w: aabbMin.z 
+	// (iX2 + 0.0) corresponds to .x: idTriangle, .y: aabbMin.x, .z: aabbMin.y, .w: aabbMin.z 
 	// (iX2 + 1.0) corresponds to .x: idRightChild .y: aabbMax.x, .z: aabbMax.y, .w: aabbMax.z 
 
 	ivec2 uv0 = ivec2( mod(iX2 + 0.0, 2048.0), (iX2 + 0.0) * INV_TEXTURE_WIDTH ); // data0
 	ivec2 uv1 = ivec2( mod(iX2 + 1.0, 2048.0), (iX2 + 1.0) * INV_TEXTURE_WIDTH ); // data1
 	
-	BoxNode BN = BoxNode( texelFetch(tAABBTexture, uv0, 0), texelFetch(tAABBTexture, uv1, 0) );
-
-        return BN;
+	return BoxNode( texelFetch(tAABBTexture, uv0, 0), texelFetch(tAABBTexture, uv1, 0) );
 }
 
 
@@ -101,7 +99,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool isRayExiting 
 	float triangleU = 0.0;
 	float triangleV = 0.0;
 	float triangleW = 0.0;
-	
+
 	bool skip = false;
 	bool triangleLookupNeeded = false;
 
@@ -187,10 +185,10 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool isRayExiting 
         {
 		if (currentStackData.y < t) 
                 {
-                        if (currentBoxNode.data0.x < 0.0) //  < 0.0 signifies a leaf node
+                        if (currentBoxNode.data0.x >= 0.0) //  >= 0.0 signifies a leaf node
                         {
 				// each triangle's data is encoded in 8 rgba(or xyzw) texture slots
-				id = 8.0 * (-currentBoxNode.data0.x - 1.0);
+				id = 8.0 * currentBoxNode.data0.x;
 
 				uv0 = ivec2( mod(id + 0.0, 2048.0), (id + 0.0) * INV_TEXTURE_WIDTH );
 				uv1 = ivec2( mod(id + 1.0, 2048.0), (id + 1.0) * INV_TEXTURE_WIDTH );
@@ -213,9 +211,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool isRayExiting 
                         }
                         else // else this is a branch
                         {
-                                nodeA = GetBoxNode(currentBoxNode.data0.x);
+                                nodeA = GetBoxNode(currentStackData.x + 1.0);
                                 nodeB = GetBoxNode(currentBoxNode.data1.x);
-                                stackDataA = vec2(currentBoxNode.data0.x, BoundingBoxIntersect(nodeA.data0.yzw, nodeA.data1.yzw, r.origin, inverseDir));
+                                stackDataA = vec2(currentStackData.x + 1.0, BoundingBoxIntersect(nodeA.data0.yzw, nodeA.data1.yzw, r.origin, inverseDir));
                                 stackDataB = vec2(currentBoxNode.data1.x, BoundingBoxIntersect(nodeB.data0.yzw, nodeB.data1.yzw, r.origin, inverseDir));
 				
 				// first sort the branch node data so that 'a' is the smallest
