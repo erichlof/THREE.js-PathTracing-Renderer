@@ -3,7 +3,7 @@ var sceneIsDynamic = false;
 var camFlightSpeed = 60;
 var modelMesh;
 var modelScale = 1.0;
-var heightScale = 3.0;
+var heightScale = 3.0; // 3.0 for Terrain height enhancement, 1.0 for all other models
 var modelPositionOffset = new THREE.Vector3();
 var albedoMap, emissiveMap, metallicRoughnessMap, normalMap;
 var total_number_of_triangles = 0;
@@ -28,8 +28,9 @@ var vt1 = new THREE.Vector2();
 var vt2 = new THREE.Vector2();
 
 
-function MaterialObject() {
-// a list of material types and their corresponding numbers are found in the 'pathTracingCommon.js' file
+function MaterialObject()
+{
+        // a list of material types and their corresponding numbers are found in the 'pathTracingCommon.js' file
         this.type = 1; // default is '1': diffuse type 		
         this.albedoTextureID = -1; // which diffuse map to use for model's color / '-1' = no textures are used
         this.color = new THREE.Color(1.0, 1.0, 1.0); // takes on different meanings, depending on 'type' above
@@ -40,23 +41,27 @@ function MaterialObject() {
 }
 
 
-function load_GLTF_Model() {
+function load_GLTF_Model()
+{
 
         var gltfLoader = new THREE.GLTFLoader();
 
-        gltfLoader.load("models/Landscape.glb", function( meshGroup ) { // Triangles: 734,464
+        gltfLoader.load("models/Landscape.glb", function (meshGroup) // Triangles: 734,464
+        { 
 
-                if (meshGroup.scene) 
+                if (meshGroup.scene)
                         meshGroup = meshGroup.scene;
 
-                meshGroup.traverse( function ( child ) {
+                meshGroup.traverse(function (child)
+                {
 
-                        if ( child.isMesh ) {
-                                
+                        if (child.isMesh)
+                        {
+
                                 let mat = new MaterialObject();
                                 mat.type = 1;
                                 mat.albedoTextureID = 0; // allow albedo texturing
-                                mat.color.setRGB(1,1,1);
+                                mat.color.setRGB(1, 1, 1);
                                 mat.roughness = child.material.roughness || 0.0;
                                 mat.metalness = child.material.metalness || 0.0;
                                 mat.opacity = child.material.opacity || 1.0;
@@ -65,34 +70,34 @@ function load_GLTF_Model() {
                                 triangleMaterialMarkers.push(child.geometry.attributes.position.array.length / 9);
                                 meshList.push(child);
                         }
-                } );
+                });
 
                 modelMesh = meshList[0].clone();
 
-                for (let i = 0; i < meshList.length; i++) {
+                for (let i = 0; i < meshList.length; i++)
+                {
                         geoList.push(meshList[i].geometry);
                 }
 
                 modelMesh.geometry = THREE.BufferGeometryUtils.mergeBufferGeometries(geoList);
-                
+
                 if (modelMesh.geometry.index)
                         modelMesh.geometry = modelMesh.geometry.toNonIndexed();
 
                 modelMesh.geometry.center();
-		
-		for (let i = 1; i < triangleMaterialMarkers.length; i++) {
-                        triangleMaterialMarkers[i] += triangleMaterialMarkers[i-1];
+
+                for (let i = 1; i < triangleMaterialMarkers.length; i++)
+                {
+                        triangleMaterialMarkers[i] += triangleMaterialMarkers[i - 1];
                 }
-                
+
                 /*       
                 // albedo map
                 if (meshList[0].material.map != undefined)
                         albedoMap = meshList[0].material.map;
-
                 // emissive map
                 if (meshList[0].material.emissiveMap != undefined)
                         emissiveMap = meshList[0].material.emissiveMap;
-
                 // metallicRoughness map
                 if (meshList[0].material.roughnessMap != undefined)
                         metallicRoughnessMap = meshList[0].material.roughnessMap;
@@ -101,31 +106,16 @@ function load_GLTF_Model() {
                 if (meshList[0].material.normalMap != undefined)
                         normalMap = meshList[0].material.normalMap;
                 */
-                
-                for (let i = 0; i < meshList.length; i++) {
-                        if (meshList[i].material.map != undefined) {
-                                pathTracingMaterialList[i].albedoTextureID = 0;	
-                        }				
+
+                for (let i = 0; i < meshList.length; i++)
+                {
+                        if (meshList[i].material.map != undefined)
+                        {
+                                pathTracingMaterialList[i].albedoTextureID = 0;
+                        }
                 }
 
-                // ********* different GLTF Model Settings **********
 
-                // settings for Duck model
-                //modelScale = 0.1;
-                //modelPositionOffset.set(0, 20, -30);
-
-                // settings for UtahTeapot model
-                //modelScale = 0.5;
-                //modelPositionOffset.set(0, 20, -30);
-
-                // settings for StanfordBunny model
-		//modelScale = 0.04;
-                //modelPositionOffset.set(0, 27.5, -40);
-                
-                // // settings for Terrain1 model
-		// modelScale = 1;
-		// modelPositionOffset.set(-200, -100, -300);
-                
                 // now that the models have been loaded, we can init 
                 init();
 
@@ -136,8 +126,9 @@ function load_GLTF_Model() {
 
 
 // called automatically from within initTHREEjs() function
-function initSceneData() {
-        
+function initSceneData()
+{
+
         // scene/demo-specific three.js objects setup goes here
 
         // set camera's field of view
@@ -155,60 +146,66 @@ function initSceneData() {
 
         triangle_array = new Float32Array(4096 * 4096 * 4);
         // 4096 = width of texture, 4096 = height of texture, 4 = r,g,b, and a components
-        
+
         aabb_array = new Float32Array(4096 * 4096 * 4);
         // 4096 = width of texture, 4096 = height of texture, 4 = r,g,b, and a components
-        
-        
+
+
         var triangle_b_box_min = new THREE.Vector3();
         var triangle_b_box_max = new THREE.Vector3();
         var triangle_b_box_centroid = new THREE.Vector3();
-        
+
 
         var vpa = new Float32Array(modelMesh.geometry.attributes.position.array);
         var vna = new Float32Array(modelMesh.geometry.attributes.normal.array);
         var vta = null;
         var modelHasUVs = false;
-        if (modelMesh.geometry.attributes.uv !== undefined) {
+        if (modelMesh.geometry.attributes.uv !== undefined)
+        {
                 vta = new Float32Array(modelMesh.geometry.attributes.uv.array);
                 modelHasUVs = true;
         }
-                
+
         var materialNumber = 0;
 
-        for (let i = 0; i < total_number_of_triangles; i++) {
-        
+        for (let i = 0; i < total_number_of_triangles; i++)
+        {
+
                 triangle_b_box_min.set(Infinity, Infinity, Infinity);
                 triangle_b_box_max.set(-Infinity, -Infinity, -Infinity);
 
-                for (let j = 0; j < pathTracingMaterialList.length; j++) {
-                        if (i < triangleMaterialMarkers[j]) {
+                for (let j = 0; j < pathTracingMaterialList.length; j++)
+                {
+                        if (i < triangleMaterialMarkers[j])
+                        {
                                 materialNumber = j;
                                 break;
                         }
                 }
 
                 // record vertex texture coordinates (UVs)
-                if (modelHasUVs) {
-                        vt0.set( vta[6 * i + 0], vta[6 * i + 1] );
-                        vt1.set( vta[6 * i + 2], vta[6 * i + 3] );
-                        vt2.set( vta[6 * i + 4], vta[6 * i + 5] );
+                if (modelHasUVs)
+                {
+                        vt0.set(vta[6 * i + 0], vta[6 * i + 1]);
+                        vt1.set(vta[6 * i + 2], vta[6 * i + 3]);
+                        vt2.set(vta[6 * i + 4], vta[6 * i + 5]);
                 }
-                else {
-                        vt0.set( -1, -1 );
-                        vt1.set( -1, -1 );
-                        vt2.set( -1, -1 );
+                else
+                {
+                        vt0.set(-1, -1);
+                        vt1.set(-1, -1);
+                        vt2.set(-1, -1);
                 }
-                
+
                 // record vertex normals
-                vn0.set( vna[9 * i + 0], vna[9 * i + 1], vna[9 * i + 2] ).normalize();
-                vn1.set( vna[9 * i + 3], vna[9 * i + 4], vna[9 * i + 5] ).normalize();
-                vn2.set( vna[9 * i + 6], vna[9 * i + 7], vna[9 * i + 8] ).normalize();
-                
+                vn0.set(vna[9 * i + 0], vna[9 * i + 1], vna[9 * i + 2]).normalize();
+                vn1.set(vna[9 * i + 3], vna[9 * i + 4], vna[9 * i + 5]).normalize();
+                vn2.set(vna[9 * i + 6], vna[9 * i + 7], vna[9 * i + 8]).normalize();
+
                 // record vertex positions
-                vp0.set( vpa[9 * i + 0], vpa[9 * i + 1], vpa[9 * i + 2] );
-                vp1.set( vpa[9 * i + 3], vpa[9 * i + 4], vpa[9 * i + 5] );
-                vp2.set( vpa[9 * i + 6], vpa[9 * i + 7], vpa[9 * i + 8] );
+                vp0.set(vpa[9 * i + 0], vpa[9 * i + 1], vpa[9 * i + 2]);
+                vp1.set(vpa[9 * i + 3], vpa[9 * i + 4], vpa[9 * i + 5]);
+                vp2.set(vpa[9 * i + 6], vpa[9 * i + 7], vpa[9 * i + 8]);
 
                 vp0.multiplyScalar(modelScale);
                 vp1.multiplyScalar(modelScale);
@@ -222,20 +219,20 @@ function initSceneData() {
                 vp2.add(modelPositionOffset);
 
                 //slot 0
-                triangle_array[32 * i +  0] = vp0.x; // r or x
-                triangle_array[32 * i +  1] = vp0.y; // g or y 
-                triangle_array[32 * i +  2] = vp0.z; // b or z
-                triangle_array[32 * i +  3] = vp1.x; // a or w
+                triangle_array[32 * i + 0] = vp0.x; // r or x
+                triangle_array[32 * i + 1] = vp0.y; // g or y 
+                triangle_array[32 * i + 2] = vp0.z; // b or z
+                triangle_array[32 * i + 3] = vp1.x; // a or w
 
                 //slot 1
-                triangle_array[32 * i +  4] = vp1.y; // r or x
-                triangle_array[32 * i +  5] = vp1.z; // g or y
-                triangle_array[32 * i +  6] = vp2.x; // b or z
-                triangle_array[32 * i +  7] = vp2.y; // a or w
+                triangle_array[32 * i + 4] = vp1.y; // r or x
+                triangle_array[32 * i + 5] = vp1.z; // g or y
+                triangle_array[32 * i + 6] = vp2.x; // b or z
+                triangle_array[32 * i + 7] = vp2.y; // a or w
 
                 //slot 2
-                triangle_array[32 * i +  8] = vp2.z; // r or x
-                triangle_array[32 * i +  9] = vn0.x; // g or y
+                triangle_array[32 * i + 8] = vp2.z; // r or x
+                triangle_array[32 * i + 9] = vn0.x; // g or y
                 triangle_array[32 * i + 10] = vn0.y; // b or z
                 triangle_array[32 * i + 11] = vn0.z; // a or w
 
@@ -279,8 +276,8 @@ function initSceneData() {
                 triangle_b_box_max.copy(triangle_b_box_max.max(vp2));
 
                 triangle_b_box_centroid.set((triangle_b_box_min.x + triangle_b_box_max.x) * 0.5,
-                                            (triangle_b_box_min.y + triangle_b_box_max.y) * 0.5,
-                                            (triangle_b_box_min.z + triangle_b_box_max.z) * 0.5);
+                        (triangle_b_box_min.y + triangle_b_box_max.y) * 0.5,
+                        (triangle_b_box_min.z + triangle_b_box_max.z) * 0.5);
 
                 aabb_array[9 * i + 0] = triangle_b_box_min.x;
                 aabb_array[9 * i + 1] = triangle_b_box_min.y;
@@ -300,24 +297,7 @@ function initSceneData() {
         // triangles of the entire mesh, then subdivides each box into 2 smaller boxes.  It continues until it reaches 1 triangle,
         // which it then designates as a 'leaf'
         BVH_Build_Iterative(totalWork, aabb_array);
-        //console.log(buildnodes);
-
-        // Copy the buildnodes array into the aabb_array
-        for (let n = 0; n < buildnodes.length; n++) {
-
-                // slot 0
-                aabb_array[8 * n + 0] = buildnodes[n].idLeftChild;  // r or x component
-                aabb_array[8 * n + 1] = buildnodes[n].minCorner.x;  // g or y component
-                aabb_array[8 * n + 2] = buildnodes[n].minCorner.y;  // b or z component
-                aabb_array[8 * n + 3] = buildnodes[n].minCorner.z;  // a or w component
-
-                // slot 1
-                aabb_array[8 * n + 4] = buildnodes[n].idRightChild; // r or x component
-                aabb_array[8 * n + 5] = buildnodes[n].maxCorner.x;  // g or y component
-                aabb_array[8 * n + 6] = buildnodes[n].maxCorner.y;  // b or z component
-                aabb_array[8 * n + 7] = buildnodes[n].maxCorner.z;  // a or w component
-
-        }
+        
 
         triangleDataTexture = new THREE.DataTexture(triangle_array,
                 4096,
@@ -358,8 +338,9 @@ function initSceneData() {
 
 
 // called automatically from within initTHREEjs() function
-function initPathTracingShaders() {
- 
+function initPathTracingShaders()
+{
+
         // scene/demo-specific uniforms go here
         pathTracingUniforms = {
 
@@ -382,16 +363,17 @@ function initPathTracingShaders() {
 
                 uRandomVector: { type: "v3", value: new THREE.Vector3() },
 
-                uCameraMatrix: {type: "m4", value: new THREE.Matrix4() }
-        
+                uCameraMatrix: { type: "m4", value: new THREE.Matrix4() }
+
         };
 
         pathTracingDefines = {
-        	//NUMBER_OF_TRIANGLES: total_number_of_triangles
+                //NUMBER_OF_TRIANGLES: total_number_of_triangles
         };
 
         // load vertex and fragment shader files that are used in the pathTracing material, mesh and scene
-        fileLoader.load('shaders/common_PathTracing_Vertex.glsl', function (shaderText) {
+        fileLoader.load('shaders/common_PathTracing_Vertex.glsl', function (shaderText)
+        {
                 pathTracingVertexShader = shaderText;
 
                 createPathTracingMaterial();
@@ -401,10 +383,12 @@ function initPathTracingShaders() {
 
 
 // called automatically from within initPathTracingShaders() function above
-function createPathTracingMaterial() {
+function createPathTracingMaterial()
+{
 
-        fileLoader.load('shaders/BVH_Terrain_Fragment.glsl', function (shaderText) {
-                
+        fileLoader.load('shaders/BVH_Terrain_Fragment.glsl', function (shaderText)
+        {
+
                 pathTracingFragmentShader = shaderText;
 
                 pathTracingMaterial = new THREE.ShaderMaterial({
@@ -423,7 +407,7 @@ function createPathTracingMaterial() {
                 //   of the camera at all times. This is necessary because without it, the scene 
                 //   quad will fall out of view and get clipped when the camera rotates past 180 degrees.
                 worldCamera.add(pathTracingMesh);
-                
+
         });
 
 } // end function createPathTracingMaterial()
@@ -431,35 +415,39 @@ function createPathTracingMaterial() {
 
 
 // called automatically from within the animate() function
-function updateVariablesAndUniforms() {
-        
-        if ( !cameraIsMoving ) {
-                
+function updateVariablesAndUniforms()
+{
+
+        if (!cameraIsMoving)
+        {
+
                 if (sceneIsDynamic)
                         sampleCounter = 1.0; // reset for continuous updating of image
                 else sampleCounter += 1.0; // for progressive refinement of image
-                
+
                 frameCounter += 1.0;
 
-                cameraRecentlyMoving = false;  
+                cameraRecentlyMoving = false;
         }
 
-        if (cameraIsMoving) {
+        if (cameraIsMoving)
+        {
                 sampleCounter = 1.0;
                 frameCounter += 1.0;
 
-                if (!cameraRecentlyMoving) {
+                if (!cameraRecentlyMoving)
+                {
                         frameCounter = 1.0;
                         cameraRecentlyMoving = true;
                 }
         }
 
-        
+
         pathTracingUniforms.uCameraIsMoving.value = cameraIsMoving;
         pathTracingUniforms.uSampleCounter.value = sampleCounter;
         pathTracingUniforms.uFrameCounter.value = frameCounter;
         pathTracingUniforms.uRandomVector.value = randomVector.set(Math.random(), Math.random(), Math.random());
-        
+
         // CAMERA
         cameraControlsObject.updateMatrixWorld(true);
         pathTracingUniforms.uCameraMatrix.value.copy(worldCamera.matrixWorld);
