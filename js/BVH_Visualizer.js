@@ -42,7 +42,7 @@ function init_GUI() {
         }
         gui = new dat.GUI();
         
-        gui.add( BVH_LevelController, 'BVH_NodeDepth', 0, 24, 1 ).onChange( BVH_LevelChanger );
+        gui.add( BVH_LevelController, 'BVH_NodeDepth', 0, 27, 1 ).onChange( BVH_LevelChanger );
         
         BVH_LevelChanger();
 
