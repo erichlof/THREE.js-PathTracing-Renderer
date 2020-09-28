@@ -53,7 +53,7 @@ Box boxes[N_BOXES];
 #include <pathtracing_sample_sphere_light>
 
 
-vec2 stackLevels[24];
+vec2 stackLevels[28];
 
 struct BoxNode
 {
@@ -180,83 +180,90 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool isRayExiting 
 	currentBoxNode = GetBoxNode(stackptr);
 	currentStackData = vec2(stackptr, BoundingBoxIntersect(currentBoxNode.data0.yzw, currentBoxNode.data1.yzw, r.origin, inverseDir));
 	stackLevels[0] = currentStackData;
-	
+	skip = (currentStackData.y < t);
+
 	while (true)
         {
-		if (currentStackData.y < t) 
-                {
-                        if (currentBoxNode.data0.x >= 0.0) //  >= 0.0 signifies a leaf node
-                        {
-				// each triangle's data is encoded in 8 rgba(or xyzw) texture slots
-				id = 8.0 * currentBoxNode.data0.x;
-
-				uv0 = ivec2( mod(id + 0.0, 2048.0), (id + 0.0) * INV_TEXTURE_WIDTH );
-				uv1 = ivec2( mod(id + 1.0, 2048.0), (id + 1.0) * INV_TEXTURE_WIDTH );
-				uv2 = ivec2( mod(id + 2.0, 2048.0), (id + 2.0) * INV_TEXTURE_WIDTH );
-				
-				vd0 = texelFetch(tTriangleTexture, uv0, 0);
-				vd1 = texelFetch(tTriangleTexture, uv1, 0);
-				vd2 = texelFetch(tTriangleTexture, uv2, 0);
-
-				d = BVH_TriangleIntersect( vec3(vd0.xyz), vec3(vd0.w, vd1.xy), vec3(vd1.zw, vd2.x), r, tu, tv );
-
-				if (d < t)
-				{
-					t = d;
-					triangleID = id;
-					triangleU = tu;
-					triangleV = tv;
-					triangleLookupNeeded = true;
-				}
-                        }
-                        else // else this is a branch
-                        {
-                                nodeA = GetBoxNode(currentStackData.x + 1.0);
-                                nodeB = GetBoxNode(currentBoxNode.data1.x);
-                                stackDataA = vec2(currentStackData.x + 1.0, BoundingBoxIntersect(nodeA.data0.yzw, nodeA.data1.yzw, r.origin, inverseDir));
-                                stackDataB = vec2(currentBoxNode.data1.x, BoundingBoxIntersect(nodeB.data0.yzw, nodeB.data1.yzw, r.origin, inverseDir));
-				
-				// first sort the branch node data so that 'a' is the smallest
-				if (stackDataB.y < stackDataA.y)
-				{
-					tmpStackData = stackDataB;
-					stackDataB = stackDataA;
-					stackDataA = tmpStackData;
-
-					tmpNode = nodeB;
-					nodeB = nodeA;
-					nodeA = tmpNode;
-				} // branch 'b' now has the larger rayT value of 'a' and 'b'
-
-				if (stackDataB.y < t) // see if branch 'b' (the larger rayT) needs to be processed
-				{
-					currentStackData = stackDataB;
-					currentBoxNode = nodeB;
-					skip = true; // this will prevent the stackptr from decreasing by 1
-				}
-				if (stackDataA.y < t) // see if branch 'a' (the smaller rayT) needs to be processed 
-				{
-					if (skip) // if larger branch 'b' needed to be processed also,
-						stackLevels[int(stackptr++)] = stackDataB; // cue larger branch 'b' for future round
-								// also, increase pointer by 1
-					
-					currentStackData = stackDataA;
-					currentBoxNode = nodeA;
-					skip = true; // this will prevent the stackptr from decreasing by 1
-				}
-                        }
-		} // end if (currentStackData.y < t)
-
 		if (!skip) 
                 {
-                        // decrease pointer by 1 (0.0 is root level, 24.0 is maximum depth)
+                        // decrease pointer by 1 (0.0 is root level, 27.0 is maximum depth)
                         if (--stackptr < 0.0) // went past the root level, terminate loop
                                 break;
+
                         currentStackData = stackLevels[int(stackptr)];
-                        currentBoxNode = GetBoxNode(currentStackData.x);
+			
+			if (currentStackData.y >= t)
+				continue;
+			
+			currentBoxNode = GetBoxNode(currentStackData.x);
                 }
 		skip = false; // reset skip
+		
 
+		if (currentBoxNode.data0.x < 0.0) // < 0.0 signifies an inner node
+		{
+			nodeA = GetBoxNode(currentStackData.x + 1.0);
+			nodeB = GetBoxNode(currentBoxNode.data1.x);
+			stackDataA = vec2(currentStackData.x + 1.0, BoundingBoxIntersect(nodeA.data0.yzw, nodeA.data1.yzw, r.origin, inverseDir));
+			stackDataB = vec2(currentBoxNode.data1.x, BoundingBoxIntersect(nodeB.data0.yzw, nodeB.data1.yzw, r.origin, inverseDir));
+			
+			// first sort the branch node data so that 'a' is the smallest
+			if (stackDataB.y < stackDataA.y)
+			{
+				tmpStackData = stackDataB;
+				stackDataB = stackDataA;
+				stackDataA = tmpStackData;
+
+				tmpNode = nodeB;
+				nodeB = nodeA;
+				nodeA = tmpNode;
+			} // branch 'b' now has the larger rayT value of 'a' and 'b'
+
+			if (stackDataB.y < t) // see if branch 'b' (the larger rayT) needs to be processed
+			{
+				currentStackData = stackDataB;
+				currentBoxNode = nodeB;
+				skip = true; // this will prevent the stackptr from decreasing by 1
+			}
+			if (stackDataA.y < t) // see if branch 'a' (the smaller rayT) needs to be processed 
+			{
+				if (skip) // if larger branch 'b' needed to be processed also,
+					stackLevels[int(stackptr++)] = stackDataB; // cue larger branch 'b' for future round
+							// also, increase pointer by 1
+				
+				currentStackData = stackDataA;
+				currentBoxNode = nodeA;
+				skip = true; // this will prevent the stackptr from decreasing by 1
+			}
+
+			continue;
+		} // end if (currentBoxNode.data0.x < 0.0) // inner node
+
+
+		// else this is a leaf
+
+		// each triangle's data is encoded in 8 rgba(or xyzw) texture slots
+		id = 8.0 * currentBoxNode.data0.x;
+
+		uv0 = ivec2( mod(id + 0.0, 2048.0), (id + 0.0) * INV_TEXTURE_WIDTH );
+		uv1 = ivec2( mod(id + 1.0, 2048.0), (id + 1.0) * INV_TEXTURE_WIDTH );
+		uv2 = ivec2( mod(id + 2.0, 2048.0), (id + 2.0) * INV_TEXTURE_WIDTH );
+		
+		vd0 = texelFetch(tTriangleTexture, uv0, 0);
+		vd1 = texelFetch(tTriangleTexture, uv1, 0);
+		vd2 = texelFetch(tTriangleTexture, uv2, 0);
+
+		d = BVH_TriangleIntersect( vec3(vd0.xyz), vec3(vd0.w, vd1.xy), vec3(vd1.zw, vd2.x), r, tu, tv );
+
+		if (d < t)
+		{
+			t = d;
+			triangleID = id;
+			triangleU = tu;
+			triangleV = tv;
+			triangleLookupNeeded = true;
+		}
+	      
         } // end while (true)
 
 
