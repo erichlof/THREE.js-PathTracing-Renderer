@@ -428,8 +428,8 @@ vec3 CalculateRadiance(Ray r)
 			} */
 
 			mat3 tsn = mat3( S, T, N );
-			vec3 mapN = texture(tNormalMap, intersec.uv).xyz * 2.0 - 1.0;
-			vec2 normalScale = vec2(1.0, 1.0);
+			vec3 mapN = normalize(texture(tNormalMap, intersec.uv).xyz * 2.0 - 1.0);
+			vec2 normalScale = vec2(-1.0, 1.0);
 			mapN.xy *= normalScale;
 			nl = normalize( tsn * mapN );
 
