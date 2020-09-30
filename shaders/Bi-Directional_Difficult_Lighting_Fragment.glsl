@@ -62,7 +62,7 @@ vec3 perturbNormal(vec3 nl, vec2 normalScale, vec2 uv)
         vec3 N = normalize( nl );
         mat3 tsn = mat3( S, T, N );
 
-        vec3 mapN = texture(tHammeredMetalNormalMapTexture, uv).xyz * 2.0 - 1.0;
+        vec3 mapN = normalize(texture(tHammeredMetalNormalMapTexture, uv).xyz * 2.0 - 1.0);
         mapN.xy *= normalScale;
         
         return normalize( tsn * mapN );
