@@ -37,7 +37,7 @@ vec3 perturbNormal(vec3 nl, vec2 normalScale, vec2 uv)
         vec3 N = normalize( nl );
         mat3 tsn = mat3( S, T, N );
 
-        vec3 mapN = texture(tTileNormalMapTexture, uv).xyz * 2.0 - 1.0;
+        vec3 mapN = normalize(texture(tTileNormalMapTexture, uv).xyz * 2.0 - 1.0);
         mapN.xy *= normalScale;
         
         return normalize( tsn * mapN );
@@ -294,7 +294,7 @@ vec3 CalculateRadiance( Ray r, out bool rayHitIsDynamic )
 			sphereUV.y = asin(clamp(nl.y, -1.0, 1.0)) * ONE_OVER_PI + 0.5;
                         sphereUV *= 2.0;
 
-			nl = perturbNormal(nl, vec2(-0.4, 0.4), sphereUV);
+			nl = perturbNormal(nl, vec2(-0.5, 0.5), sphereUV);
 
                         // temporarily treat as diffuse, apply typical NdotL lighting 
                         mask = intersec.color * max(0.15, dot(nl, dirToLight));
