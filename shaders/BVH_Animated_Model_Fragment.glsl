@@ -57,8 +57,33 @@ Box boxes[N_BOXES];
 #include <pathtracing_boundingbox_intersect>
 
 #include <pathtracing_bvhTriangle_intersect>
+//#include <pathtracing_bvhDoubleSidedTriangle_intersect>
 
 #include <pathtracing_sample_sphere_light>
+
+
+vec3 perturbNormal(vec3 nl, vec2 normalScale, vec2 uv)
+{
+	
+        vec3 S = normalize( cross( abs(nl.y) < 0.9 ? vec3(0, 1, 0) : vec3(0, 0, 1), nl ) );
+        vec3 T = cross(nl, S);
+        vec3 N = normalize( nl );
+	// invert S, T when the UV direction is backwards (from mirrored faces),
+	// otherwise it will do the normal mapping backwards.
+	vec3 NfromST = cross( S, T );
+	if( dot( NfromST, N ) < 0.0 )
+	{
+		S *= -1.0;
+		T *= -1.0;
+	}
+        mat3 tsn = mat3( S, T, N );
+
+	vec3 mapN = texture(tNormalMap, uv).xyz * 2.0 - 1.0;
+	mapN = normalize(mapN);
+        mapN.xy *= normalScale;
+        
+        return normalize( tsn * mapN );
+}
 
 
 vec2 stackLevels[28];
@@ -316,8 +341,10 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool isRayExiting 
 		intersec.uv = triangleW * vec2(vd4.zw) + triangleU * vec2(vd5.xy) + triangleV * vec2(vd5.zw);
 		intersec.normal = normalize(triangleW * vec3(vd2.yzw) + triangleU * vec3(vd3.xyz) + triangleV * vec3(vd3.w, vd4.xy));
 		
+		intersec.normal = perturbNormal(intersec.normal, vec2(1.0, 1.0), intersec.uv);
+
 		// transform normal back into world space
-		intersec.normal = normalize(vec3(uGLTF_Model_NormalMatrix * intersec.normal));
+		intersec.normal = normalize((uGLTF_Model_NormalMatrix * intersec.normal));
 		intersec.emission = vec3(1, 0, 1); // use this if intersec.type will be LIGHT
 		intersec.color = vd6.yzw;
 		
@@ -415,24 +442,6 @@ vec3 CalculateRadiance(Ray r)
 
 		if (intersec.type == PBR_MATERIAL)
 		{
-			vec3 S = normalize( cross( abs(nl.y) < 0.9 ? vec3(0, 1, 0) : vec3(0, 0, 1), nl ) );
-			vec3 T = cross(nl, S);
-			vec3 N = normalize( nl );
-			// invert S, T when the UV direction is backwards (from mirrored faces),
-			// otherwise it will do the normal mapping backwards.
-			/* vec3 NfromST = cross( S, T );
-			if( dot( NfromST, N ) < 0.0 )
-			{
-				S *= -1.0;
-				T *= -1.0;
-			} */
-
-			mat3 tsn = mat3( S, T, N );
-			vec3 mapN = normalize(texture(tNormalMap, intersec.uv).xyz * 2.0 - 1.0);
-			vec2 normalScale = vec2(-1.0, 1.0);
-			mapN.xy *= normalScale;
-			nl = normalize( tsn * mapN );
-
 			intersec.color = texture(tAlbedoMap, intersec.uv).rgb;
 			intersec.color = pow(intersec.color,vec3(2.2));
 			
@@ -446,11 +455,15 @@ vec3 CalculateRadiance(Ray r)
 				break;
 			}
 
-			intersec.type = COAT;
+			intersec.type = DIFF;
 
-			metallicRoughness = texture(tMetallicRoughnessMap, intersec.uv).rgb;
-			if (metallicRoughness.b > 0.0)
+			metallicRoughness = pow(texture(tMetallicRoughnessMap, intersec.uv).rgb, vec3(2.2));
+			
+			if (metallicRoughness.g > 0.01) // roughness
+				intersec.type = COAT;
+			if (metallicRoughness.b > 0.01) // metalness
 				intersec.type = SPEC;
+			
 		}
 		
 		    
@@ -489,8 +502,7 @@ vec3 CalculateRadiance(Ray r)
                 if (intersec.type == SPEC)  // Ideal SPECULAR reflection
                 {
 			mask *= intersec.color;
-			r.direction = reflect(r.direction, nl);
-			r = Ray( x, randomDirectionInSpecularLobe(r.direction, metallicRoughness.g) );
+			r = Ray( x, randomDirectionInSpecularLobe(reflect(r.direction, nl), metallicRoughness.g) );
 			r.origin += nl * uEPS_intersect;
 			
 			//bounceIsSpecular = true;
