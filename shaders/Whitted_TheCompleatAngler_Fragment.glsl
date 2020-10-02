@@ -32,12 +32,22 @@ Rectangle rectangles[N_RECTANGLES];
 
 vec3 perturbNormal(vec3 nl, vec2 normalScale, vec2 uv)
 {
+	
         vec3 S = normalize( cross( abs(nl.y) < 0.9 ? vec3(0, 1, 0) : vec3(0, 0, 1), nl ) );
         vec3 T = cross(nl, S);
         vec3 N = normalize( nl );
+	// invert S, T when the UV direction is backwards (from mirrored faces),
+	// otherwise it will do the normal mapping backwards.
+	vec3 NfromST = cross( S, T );
+	if( dot( NfromST, N ) < 0.0 )
+	{
+		S *= -1.0;
+		T *= -1.0;
+	}
         mat3 tsn = mat3( S, T, N );
 
-        vec3 mapN = normalize(texture(tTileNormalMapTexture, uv).xyz * 2.0 - 1.0);
+	vec3 mapN = texture(tTileNormalMapTexture, uv).xyz * 2.0 - 1.0;
+	mapN = normalize(mapN);
         mapN.xy *= normalScale;
         
         return normalize( tsn * mapN );
@@ -294,7 +304,7 @@ vec3 CalculateRadiance( Ray r, out bool rayHitIsDynamic )
 			sphereUV.y = asin(clamp(nl.y, -1.0, 1.0)) * ONE_OVER_PI + 0.5;
                         sphereUV *= 2.0;
 
-			nl = perturbNormal(nl, vec2(-0.5, 0.5), sphereUV);
+			nl = perturbNormal(nl, vec2(-1.0, 1.0), sphereUV);
 
                         // temporarily treat as diffuse, apply typical NdotL lighting 
                         mask = intersec.color * max(0.15, dot(nl, dirToLight));
@@ -362,9 +372,7 @@ void SetupScene(void)
 
 	//spheres[1] = Sphere( 27.0, yellowSpherePos, z, vec3(1.0, 0.8, 0.0), SPEC);//yellow reflective sphere
 	
-	
 	rectangles[0] = Rectangle( vec3(100, 0, -100), vec3(0, 1, 0), 200.0, 400.0, z, vec3(1), CHECK);// Checkerboard Ground plane 
-	
 }
 
 //#include <pathtracing_main>
