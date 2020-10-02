@@ -57,12 +57,22 @@ Box boxes[N_BOXES];
 
 vec3 perturbNormal(vec3 nl, vec2 normalScale, vec2 uv)
 {
+	
         vec3 S = normalize( cross( abs(nl.y) < 0.9 ? vec3(0, 1, 0) : vec3(0, 0, 1), nl ) );
         vec3 T = cross(nl, S);
         vec3 N = normalize( nl );
+	// invert S, T when the UV direction is backwards (from mirrored faces),
+	// otherwise it will do the normal mapping backwards.
+	vec3 NfromST = cross( S, T );
+	if( dot( NfromST, N ) < 0.0 )
+	{
+		S *= -1.0;
+		T *= -1.0;
+	}
         mat3 tsn = mat3( S, T, N );
 
-        vec3 mapN = normalize(texture(tHammeredMetalNormalMapTexture, uv).xyz * 2.0 - 1.0);
+	vec3 mapN = texture(tHammeredMetalNormalMapTexture, uv).xyz * 2.0 - 1.0;
+	mapN = normalize(mapN);
         mapN.xy *= normalScale;
         
         return normalize( tsn * mapN );
@@ -529,7 +539,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkModels )
 		intersec.type = SPEC;
 		if (modelID == 1)
 		{
-			intersec.color = vec3(1);
+			intersec.color = vec3(1.2); // makes white teapot a little more white
 			intersec.type = COAT;
 		}
 		
@@ -555,7 +565,6 @@ vec3 CalculateRadiance(Ray originalRay)
 	Intersection intersec;
 	vec4 texColor;
 
-	//vec3 randVec = vec3(rand() * 2.0 - 1.0, rand() * 2.0 - 1.0, rand() * 2.0 - 1.0);
 	vec3 accumCol = vec3(0);
 	vec3 mask = vec3(1);
 	vec3 checkCol0 = vec3(0.01);
@@ -712,7 +721,7 @@ vec3 CalculateRadiance(Ray originalRay)
 			mask *= intersec.color;
 			
 			if (intersec.isModel)
-				nl = perturbNormal(nl, vec2(-0.2, 0.2), intersec.uv * 2.0);
+				nl = perturbNormal(nl, vec2(0.15, 0.15), intersec.uv * 2.0);
 
 			r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 			r.direction = randomDirectionInSpecularLobe(r.direction, intersec.roughness);
@@ -793,10 +802,7 @@ vec3 CalculateRadiance(Ray originalRay)
 				//sampleUV.x = atan(-nl.z, nl.x) * ONE_OVER_TWO_PI + 0.5;
 				//sampleUV.y = asin(clamp(nl.y, -1.0, 1.0)) * ONE_OVER_PI + 0.5;
 				texColor = texture(tMarbleTexture, intersec.uv * vec2(-1.0, 1.0));
-				//texColor = pow(texColor, vec4(2));
-				texColor = clamp(texColor + vec4(0.1), 0.0, 1.0);
-				intersec.color = GammaToLinear(texColor, 2.2).rgb;
-				
+				intersec.color *= GammaToLinear(texColor, 2.2).rgb;		
 			}
 			
 			diffuseCount++;
