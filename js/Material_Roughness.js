@@ -11,6 +11,7 @@ var changeMaterialType = false;
 var changeMaterialColor = false;
 var matType = 0;
 
+
 function init_GUI() {
 
 	material_TypeObject = {
@@ -50,8 +51,8 @@ function init_GUI() {
 
                 mobileJoystickControls = new MobileJoystickControls ({
                         //showJoystick: true,
-                        guiDomElement: gui.domElement,
-                        enableMultiTouch: true
+                        //stationaryBase: true,
+                        guiDomElement: gui.domElement
                 });	
         }
 
@@ -133,7 +134,7 @@ function initPathTracingShaders() {
         pathTracingUniforms = {
 
                 tPreviousTexture: { type: "t", value: screenTextureRenderTarget.texture },
-                
+
                 uCameraIsMoving: { type: "b1", value: false },
         
                 uMaterialType: { type: "i", value: 4 },
