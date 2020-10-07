@@ -64,8 +64,8 @@ function init_GUI() {
 
                 mobileJoystickControls = new MobileJoystickControls ({
                         //showJoystick: true,
-                        guiDomElement: gui.domElement,
-                        enableMultiTouch: true
+                        //stationaryBase: true,
+                        guiDomElement: gui.domElement
                 });	
         }
 
