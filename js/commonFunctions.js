@@ -65,12 +65,12 @@ var PI_2 = Math.PI / 2; //used by controls below
 
 var infoElement = document.getElementById('info');
 infoElement.style.cursor = "default";
-infoElement.style.webkitUserSelect = "none";
+infoElement.style.userSelect = "none";
 infoElement.style.MozUserSelect = "none";
 
 var cameraInfoElement = document.getElementById('cameraInfo');
 cameraInfoElement.style.cursor = "default";
-cameraInfoElement.style.webkitUserSelect = "none";
+cameraInfoElement.style.userSelect = "none";
 cameraInfoElement.style.MozUserSelect = "none";
 
 var mouseControl = true;
@@ -187,7 +187,7 @@ function init() {
 
                 mobileJoystickControls = new MobileJoystickControls({
                         //showJoystick: true,
-                        enableMultiTouch: true
+                        //stationaryBase: true
                 });
         }
 
@@ -239,7 +239,6 @@ function init() {
         document.addEventListener("click", function() {
         	
         	if ( !document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement ) {
-
         		if (document.documentElement.requestFullscreen) {
         			document.documentElement.requestFullscreen();
         			
@@ -250,7 +249,6 @@ function init() {
         			document.documentElement.webkitRequestFullscreen();
         		
         		}
-
         	}
         });
         */
@@ -512,7 +510,9 @@ function animate() {
         controls.getDirection(cameraDirectionVector);
         cameraDirectionVector.normalize();
         controls.getUpVector(cameraUpVector);
+        cameraUpVector.normalize();
         controls.getRightVector(cameraRightVector);
+        cameraRightVector.normalize();
 
         // the following gives us a rotation quaternion (4D vector), which will be useful for 
         // rotating scene objects to match the camera's rotation
