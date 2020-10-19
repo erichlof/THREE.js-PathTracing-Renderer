@@ -63,9 +63,7 @@ function init_GUI() {
                 ableToEngagePointerLock = true;
 
                 mobileJoystickControls = new MobileJoystickControls ({
-                        //showJoystick: true,
-                        //stationaryBase: true,
-                        guiDomElement: gui.domElement
+                        //showJoystick: true
                 });	
         }
 
