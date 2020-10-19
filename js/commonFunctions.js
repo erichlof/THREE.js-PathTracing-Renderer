@@ -1,80 +1,79 @@
-var SCREEN_WIDTH;
-var SCREEN_HEIGHT;
-var canvas, context;
-var container, stats;
-var controls;
-var pathTracingScene, screenTextureScene, screenOutputScene;
-var pathTracingUniforms, screenTextureUniforms, screenOutputUniforms;
-var pathTracingDefines;
-var pathTracingVertexShader, pathTracingFragmentShader;
-var pathTracingGeometry, pathTracingMaterial, pathTracingMesh;
-var screenTextureGeometry, screenTextureMaterial, screenTextureMesh;
-var screenOutputGeometry, screenOutputMaterial, screenOutputMesh;
-var pathTracingRenderTarget, screenOutputRenderTarget;
-var quadCamera, worldCamera;
-var renderer, clock;
-var frameTime, elapsedTime;
-var fovScale;
-var increaseFOV = false;
-var decreaseFOV = false;
-var dollyCameraIn = false;
-var dollyCameraOut = false;
-var apertureSize = 0.0;
-var increaseAperture = false;
-var decreaseAperture = false;
-var focusDistance = 132.0;
-var increaseFocusDist = false;
-var decreaseFocusDist = false;
-var pixelRatio = 0.5;
-var windowIsBeingResized = false;
-var TWO_PI = Math.PI * 2;
-var randomVector = new THREE.Vector3();
-var sampleCounter = 1.0;
-var frameCounter = 1.0;
-var keyboard = new THREEx.KeyboardState();
-var cameraIsMoving = false;
-var cameraRecentlyMoving = false;
-var isPaused = true;
-var oldYawRotation, oldPitchRotation;
-var mobileJoystickControls = null;
-var oldDeltaX = 0,
+let SCREEN_WIDTH;
+let SCREEN_HEIGHT;
+let canvas, context;
+let container, stats;
+let controls;
+let pathTracingScene, screenTextureScene, screenOutputScene;
+let pathTracingUniforms, screenTextureUniforms, screenOutputUniforms;
+let pathTracingDefines;
+let pathTracingVertexShader, pathTracingFragmentShader;
+let pathTracingGeometry, pathTracingMaterial, pathTracingMesh;
+let screenTextureGeometry, screenTextureMaterial, screenTextureMesh;
+let screenOutputGeometry, screenOutputMaterial, screenOutputMesh;
+let pathTracingRenderTarget, screenOutputRenderTarget;
+let quadCamera, worldCamera;
+let renderer, clock;
+let frameTime, elapsedTime;
+let fovScale;
+let increaseFOV = false;
+let decreaseFOV = false;
+let dollyCameraIn = false;
+let dollyCameraOut = false;
+let apertureSize = 0.0;
+let increaseAperture = false;
+let decreaseAperture = false;
+let focusDistance = 132.0;
+let increaseFocusDist = false;
+let decreaseFocusDist = false;
+let pixelRatio = 0.5;
+let windowIsBeingResized = false;
+let TWO_PI = Math.PI * 2;
+let randomVector = new THREE.Vector3();
+let sampleCounter = 1.0;
+let frameCounter = 1.0;
+let keyboard = new THREEx.KeyboardState();
+let cameraIsMoving = false;
+let cameraRecentlyMoving = false;
+let isPaused = true;
+let oldYawRotation, oldPitchRotation;
+let mobileJoystickControls = null;
+let oldDeltaX = 0,
         oldDeltaY = 0;
-var newDeltaX = 0,
+let newDeltaX = 0,
         newDeltaY = 0;
-var mobileControlsMoveX = 0;
-var mobileControlsMoveY = 0;
-var stillFlagX = true,
-        stillFlagY = true;
-var oldPinchWidthX = 0;
-var oldPinchWidthY = 0;
-var pinchDeltaX = 0;
-var pinchDeltaY = 0;
-var fontAspect;
-var useGenericInput = true;
+let mobileControlsMoveX = 0;
+let mobileControlsMoveY = 0;
+let oldPinchWidthX = 0;
+let oldPinchWidthY = 0;
+let pinchDeltaX = 0;
+let pinchDeltaY = 0;
+let fontAspect;
+let useGenericInput = true;
 
 // the following variables will be used to calculate rotations and directions from the camera
-var cameraDirectionVector = new THREE.Vector3(); //for moving where the camera is looking
-var cameraRightVector = new THREE.Vector3(); //for strafing the camera right and left
-var cameraUpVector = new THREE.Vector3(); //for moving camera up and down
-var cameraWorldQuaternion = new THREE.Quaternion(); //for rotating scene objects to match camera's current rotation
-var cameraControlsObject; //for positioning and moving the camera itself
-var cameraControlsYawObject; //allows access to control camera's left/right movements through mobile input
-var cameraControlsPitchObject; //allows access to control camera's up/down movements through mobile input
+let cameraDirectionVector = new THREE.Vector3(); //for moving where the camera is looking
+let cameraRightVector = new THREE.Vector3(); //for strafing the camera right and left
+let cameraUpVector = new THREE.Vector3(); //for moving camera up and down
+let cameraWorldQuaternion = new THREE.Quaternion(); //for rotating scene objects to match camera's current rotation
+let cameraControlsObject; //for positioning and moving the camera itself
+let cameraControlsYawObject; //allows access to control camera's left/right movements through mobile input
+let cameraControlsPitchObject; //allows access to control camera's up/down movements through mobile input
 
-var PI_2 = Math.PI / 2; //used by controls below
+let PI_2 = Math.PI / 2; //used by controls below
 
-var infoElement = document.getElementById('info');
+let infoElement = document.getElementById('info');
 infoElement.style.cursor = "default";
 infoElement.style.userSelect = "none";
 infoElement.style.MozUserSelect = "none";
 
-var cameraInfoElement = document.getElementById('cameraInfo');
+let cameraInfoElement = document.getElementById('cameraInfo');
 cameraInfoElement.style.cursor = "default";
 cameraInfoElement.style.userSelect = "none";
 cameraInfoElement.style.MozUserSelect = "none";
 
-var mouseControl = true;
-var fileLoader = new THREE.FileLoader();
+let mouseControl = true;
+let pointerlockChange;
+let fileLoader = new THREE.FileLoader();
 
 
 
@@ -119,7 +118,7 @@ function onWindowResize(event) {
         pathTracingRenderTarget.setSize(context.drawingBufferWidth, context.drawingBufferHeight);
         screenTextureRenderTarget.setSize(context.drawingBufferWidth, context.drawingBufferHeight);
 
-        worldCamera.aspect = renderer.domElement.clientWidth / renderer.domElement.clientHeight;
+        worldCamera.aspect = SCREEN_WIDTH / SCREEN_HEIGHT;
         worldCamera.updateProjectionMatrix();
 
         // the following scales all scene objects by the worldCamera's field of view,
@@ -186,8 +185,7 @@ function init() {
                 mouseControl = false;
 
                 mobileJoystickControls = new MobileJoystickControls({
-                        //showJoystick: true,
-                        //stationaryBase: true
+                        //showJoystick: true
                 });
         }
 
@@ -212,7 +210,7 @@ function init() {
                 }, false);
 
 
-                var pointerlockChange = function (event) {
+                pointerlockChange = function (event) {
 
                         if (document.pointerLockElement === document.body ||
                                 document.mozPointerLockElement === document.body || document.webkitPointerLockElement === document.body) {
@@ -262,15 +260,12 @@ function init() {
 function initTHREEjs() {
 
         canvas = document.createElement('canvas');
-
+        
         renderer = new THREE.WebGLRenderer({ canvas: canvas, context: canvas.getContext('webgl2') });
         //suggestion: set to false for production
         renderer.debug.checkShaderErrors = true;
 
         renderer.autoClear = false;
-        // 1 is full resolution, 0.5 is half, 0.25 is quarter, etc. (must be > than 0.0)
-        renderer.setPixelRatio(pixelRatio);
-        renderer.setSize(window.innerWidth, window.innerHeight);
 
         renderer.toneMapping = THREE.ReinhardToneMapping;
 
@@ -306,7 +301,7 @@ function initTHREEjs() {
         // worldCamera is the dynamic camera 3d object that will be positioned, oriented and 
         // constantly updated inside the 3d scene.  Its view will ultimately get passed back to the 
         // stationary quadCamera, which renders the scene to a fullscreen quad (made up of 2 large triangles).
-        worldCamera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
+        worldCamera = new THREE.PerspectiveCamera(60, document.body.clientWidth / document.body.clientHeight, 1, 1000);
         pathTracingScene.add(worldCamera);
 
         controls = new FirstPersonCameraControls(worldCamera);
@@ -319,7 +314,7 @@ function initTHREEjs() {
 
         
         // setup render targets...
-        pathTracingRenderTarget = new THREE.WebGLRenderTarget((window.innerWidth * pixelRatio), (window.innerHeight * pixelRatio), {
+        pathTracingRenderTarget = new THREE.WebGLRenderTarget(context.drawingBufferWidth, context.drawingBufferHeight, {
                 minFilter: THREE.NearestFilter,
                 magFilter: THREE.NearestFilter,
                 format: THREE.RGBAFormat,
@@ -329,7 +324,7 @@ function initTHREEjs() {
         });
         pathTracingRenderTarget.texture.generateMipmaps = false;
 
-        screenTextureRenderTarget = new THREE.WebGLRenderTarget((window.innerWidth * pixelRatio), (window.innerHeight * pixelRatio), {
+        screenTextureRenderTarget = new THREE.WebGLRenderTarget(context.drawingBufferWidth, context.drawingBufferHeight, {
                 minFilter: THREE.NearestFilter,
                 magFilter: THREE.NearestFilter,
                 format: THREE.RGBAFormat,
@@ -432,13 +427,8 @@ function animate() {
                 newDeltaX = joystickDeltaX;
 
                 if (newDeltaX) {
-
+                        cameraIsMoving = true;
                         mobileControlsMoveX = oldDeltaX - newDeltaX;
-                        // smooth out jerkiness if camera was sitting still 
-                        if (stillFlagX) {
-                                mobileControlsMoveX *= 0.1;
-                                stillFlagX = false;
-                        }
                         // mobileJoystick X movement (left and right) affects camera rotation around the Y axis	
                         cameraControlsYawObject.rotation.y += (mobileControlsMoveX) * 0.01;
                 }
@@ -446,13 +436,8 @@ function animate() {
                 newDeltaY = joystickDeltaY;
 
                 if (newDeltaY) {
-
+                        cameraIsMoving = true;
                         mobileControlsMoveY = oldDeltaY - newDeltaY;
-                        // smooth out jerkiness if camera was sitting still
-                        if (stillFlagY) {
-                                mobileControlsMoveY *= 0.1;
-                                stillFlagY = false;
-                        }
                         // mobileJoystick Y movement (up and down) affects camera rotation around the X axis	
                         cameraControlsPitchObject.rotation.x += (mobileControlsMoveY) * 0.01;
                 }
@@ -464,15 +449,6 @@ function animate() {
                 // save state for next frame
                 oldDeltaX = newDeltaX;
                 oldDeltaY = newDeltaY;
-
-                // movement detected
-                if (newDeltaX || newDeltaY) {
-
-                        cameraIsMoving = true;
-                } else {
-                        stillFlagX = true;
-                        stillFlagY = true;
-                }
 
                 newPinchWidthX = pinchWidthX;
                 newPinchWidthY = pinchWidthY;
