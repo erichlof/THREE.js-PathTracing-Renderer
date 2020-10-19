@@ -3,7 +3,6 @@ let joystickDeltaX = 0;
 let joystickDeltaY = 0;
 let pinchWidthX = 0;
 let pinchWidthY = 0;
-let joystickPressed = false;
 let button1Pressed = false;
 let button2Pressed = false;
 let button3Pressed = false;
@@ -22,7 +21,7 @@ let button6Element = null;
 
 // the following variables marked with an underscore ( _ ) are for internal use
 let _touches = [];
-let _testTouch = null;
+let _eventTarget;
 let _stickDistance;
 let _stickNormalizedX;
 let _stickNormalizedY;
@@ -34,7 +33,6 @@ let _smallButtonCanvasReducedWidth = 28;
 let _smallButtonCanvasHalfWidth = _smallButtonCanvasWidth * 0.5;
 let _showJoystick;
 let _showButtons;
-let _stationaryBase;
 let _limitStickTravel;
 let _stickRadius;
 let _baseX;
@@ -42,17 +40,14 @@ let _baseY;
 let _stickX;
 let _stickY;
 let _container;
-let _guiDomElement;
+let _pinchWasActive = false;
 
 
 
 let MobileJoystickControls = function (opts)
 {
 	opts = opts || {};
-	_guiDomElement = opts.guiDomElement || null;
 	_container = document.body;
-
-	joystickPressed = false;
 
 	//create joystick Base
 	baseElement = document.createElement('canvas');
@@ -297,31 +292,20 @@ let MobileJoystickControls = function (opts)
 	// options
 	_showJoystick = opts.showJoystick || false;
 	_showButtons = opts.showButtons || true;
-	if ('ontouchstart' in window)
-		_showButtons = true;
 
-	_stationaryBase = opts.stationaryBase || false;
 	_baseX = _stickX = opts.baseX || 100;
 	_baseY = _stickY = opts.baseY || 200;
 
 	_limitStickTravel = opts.limitStickTravel || false;
-	if (_limitStickTravel || _stationaryBase) _showJoystick = true;
-	if (_stationaryBase) _limitStickTravel = true;
+	if (_limitStickTravel) _showJoystick = true;
 	_stickRadius = opts.stickRadius || 50;
 	if (_stickRadius > 100) _stickRadius = 100;
 
-	if (_stationaryBase)
-	{
-		baseElement.style.display = "";
-		baseElement.style.left = (_baseX - baseElement.width / 2) + "px";
-		baseElement.style.top = (_baseY - baseElement.height / 2) + "px";
-		stickElement.style.display = "";
-		stickElement.style.left = (_baseX - stickElement.width / 2) + "px";
-		stickElement.style.top = (_baseY - stickElement.height / 2) + "px";
-	}
-
-	_container.addEventListener('touchstart', _onTouchStart, false);
-	_container.addEventListener('touchend', _onTouchEnd, false);
+	// the following listeners are for 1-finger touch detection to emulate mouse-click and mouse-drag operations
+	_container.addEventListener('pointerdown', _onPointerDown, false);
+	_container.addEventListener('pointermove', _onPointerMove, false);
+	_container.addEventListener('pointerup', _onPointerUp, false);
+	// the following listener is for 2-finger pinch gesture detection
 	_container.addEventListener('touchmove', _onTouchMove, false);
 
 }; // end let MobileJoystickControls = function (opts)
@@ -668,68 +652,56 @@ function _onButton6Up()
 }
 
 
-function _onTouchStart(event)
+function _onPointerDown(event)
 {
-
-	if (_guiDomElement == undefined)
-	{
-		event.preventDefault();
-	}
-
-	_testTouch = event.changedTouches[0];
-
-	if (_testTouch.target == button1Element)
-	{
-		_onButton1Down(); 
-		return;
-	}
-	else if (_testTouch.target == button2Element)
-	{
-		_onButton2Down();
-		return;
-	}
-	else if (_testTouch.target == button3Element)
-	{
-		_onButton3Down();
-		return;
-	}
-	else if (_testTouch.target == button4Element)
-	{
-		_onButton4Down();
-		return;
-	}
-	else if (_testTouch.target == button5Element)
-	{
-		_onButton5Down();
-		return;
-	}
-	else if (_testTouch.target == button6Element)
-	{
-		_onButton6Down();
-		return;
-	}
-
-	joystickPressed = true;
-
-	_stickX = _testTouch.pageX;
-	_stickY = _testTouch.pageY;
-
-	if (!_stationaryBase)
-	{
-		_baseX = _stickX;
-		_baseY = _stickY;
-	}
 	
-	// must reset joystick movement to 0
-	joystickDeltaX = joystickDeltaY = 0;
+	_eventTarget = event.target;
 
+	if (_eventTarget == button1Element)
+		return _onButton1Down();
+	else if (_eventTarget == button2Element)
+		return _onButton2Down();
+	else if (_eventTarget == button3Element)
+		return _onButton3Down();
+	else if (_eventTarget == button4Element)
+		return _onButton4Down();
+	else if (_eventTarget == button5Element)
+		return _onButton5Down();
+	else if (_eventTarget == button6Element)
+		return _onButton6Down();
+	else if (_eventTarget != renderer.domElement) // target was the GUI menu
+		return;
+
+	// else target is the joystick area
+	_stickX = event.clientX;
+	_stickY = event.clientY;
+	
+	_baseX = _stickX;
+	_baseY = _stickY;
+	
+	joystickDeltaX = joystickDeltaY = 0;
+	
+} // end function _onPointerDown(event)
+
+
+function _onPointerMove(event)
+{
+	
+	_eventTarget = event.target;
+
+	if (_eventTarget != renderer.domElement) // target was the GUI menu or Buttons
+		return;
+
+	_stickX = event.clientX;
+	_stickY = event.clientY;
+
+	joystickDeltaX = _stickX - _baseX;
+	joystickDeltaY = _stickY - _baseY;
+	
 	if (_limitStickTravel)
 	{
-		joystickDeltaX = _stickX - _baseX;
-		joystickDeltaY = _stickY - _baseY;
-
 		_stickDistance = Math.sqrt((joystickDeltaX * joystickDeltaX) + (joystickDeltaY * joystickDeltaY));
-		
+
 		if (_stickDistance > _stickRadius)
 		{
 			_stickNormalizedX = joystickDeltaX / _stickDistance;
@@ -737,7 +709,21 @@ function _onTouchStart(event)
 
 			_stickX = _stickNormalizedX * _stickRadius + _baseX;
 			_stickY = _stickNormalizedY * _stickRadius + _baseY;
+
+			joystickDeltaX = _stickX - _baseX;
+			joystickDeltaY = _stickY - _baseY;
 		}
+	}
+
+	if (_pinchWasActive)
+	{
+		_pinchWasActive = false;
+
+		_baseX = event.clientX;
+		_baseY = event.clientY;
+		
+		_stickX = _baseX;
+		_stickY = _baseY;
 
 		joystickDeltaX = joystickDeltaY = 0;
 	}
@@ -745,160 +731,70 @@ function _onTouchStart(event)
 	if (_showJoystick)
 	{
 		stickElement.style.display = "";
-		_move(stickElement.style, (_stickX - stickElement.width / 2), (_stickY - stickElement.height / 2));
+		_move(baseElement.style, (_baseX - baseElement.width / 2), (_baseY - baseElement.height / 2));
 		
 		baseElement.style.display = "";
-		_move(baseElement.style, (_baseX - baseElement.width / 2), (_baseY - baseElement.height / 2));
-	}
-
-} // end function _onTouchStart(event)
-
-
-function _onTouchEnd(event)
-{
-
-	if (_guiDomElement == undefined)
-	{
-		event.preventDefault();
-	}
-
-	_testTouch = event.changedTouches[0];
-
-	if (_testTouch.target == button1Element)
-	{
-		_onButton1Up();
-		return;
-	}	
-	else if (_testTouch.target == button2Element)
-	{
-		_onButton2Up();
-		return;
-	}
-	else if (_testTouch.target == button3Element)
-	{
-		_onButton3Up();
-		return;
-	}
-	else if (_testTouch.target == button4Element)
-	{
-		_onButton4Up();
-		return;
-	}
-	else if (_testTouch.target == button5Element)
-	{
-		_onButton5Up();
-		return;
-	}
-	else if (_testTouch.target == button6Element)
-	{
-		_onButton6Up();
-		return;
-	}
-
-	joystickPressed = false;
-
-	// if base position is fixed, snap the stick back to the base
-	if (_stationaryBase)
-	{
-		_stickX = _baseX;
-		_stickY = _baseY;
-	}
-	
-	if (!_stationaryBase && event.touches[0] != undefined)
-	{
-		_stickX = event.touches[0].pageX;
-		_stickY = event.touches[0].pageY;
-		_baseX = _stickX;
-		_baseY = _stickY;
-
-		if ( _showJoystick)
-		{
-			baseElement.style.display = "";
-			_move(baseElement.style, (_baseX - baseElement.width / 2), (_baseY - baseElement.height / 2));
-		}
-	}
-	
-	joystickDeltaX = joystickDeltaY = 0;
-
-	if (event.touches.length == 0 && !_stationaryBase)
-	{
-		baseElement.style.display = "none";
-		stickElement.style.display = "none";
-	}
-
-	if (_showJoystick)
-	{
 		_move(stickElement.style, (_stickX - stickElement.width / 2), (_stickY - stickElement.height / 2));
 	}
 
-} // end function _onTouchEnd(event)
+} // end function _onPointerMove(event)
+
+
+function _onPointerUp(event)
+{
+
+	_eventTarget = event.target;
+
+	if (_eventTarget == button1Element)
+		return _onButton1Up();
+	else if (_eventTarget == button2Element)
+		return _onButton2Up();	
+	else if (_eventTarget == button3Element)
+		return _onButton3Up();
+	else if (_eventTarget == button4Element)
+		return _onButton4Up();
+	else if (_eventTarget == button5Element)
+		return _onButton5Up();
+	else if (_eventTarget == button6Element)
+		return _onButton6Up();
+	else if (_eventTarget != renderer.domElement) // target was the GUI menu
+		return;
+
+	joystickDeltaX = joystickDeltaY = 0;
+
+	baseElement.style.display = "none";
+	stickElement.style.display = "none";
+	
+} // end function _onPointerUp(event)
 
 
 function _onTouchMove(event)
 {
-
-	event.preventDefault();
-
-	_testTouch = event.changedTouches[0];
-
-	// can't move buttons around
-	if (_testTouch.target == button1Element || _testTouch.target == button2Element ||
-		_testTouch.target == button3Element || _testTouch.target == button4Element ||
-		_testTouch.target == button5Element || _testTouch.target == button6Element)
-	{
+	// we only want to deal with a 2-finger pinch
+	if (event.touches.length != 2)
 		return;
-	}
 
 	_touches = event.touches;
-
-	if (_touches.length > 1)
+	
+	if (_touches[0].target != button1Element && _touches[0].target != button2Element &&
+		_touches[0].target != button3Element && _touches[0].target != button4Element &&
+		_touches[0].target != button5Element && _touches[0].target != button6Element &&
+		_touches[1].target != button1Element && _touches[1].target != button2Element &&
+		_touches[1].target != button3Element && _touches[1].target != button4Element &&
+		_touches[1].target != button5Element && _touches[1].target != button6Element)
 	{
-		if ( _touches[0].target != button1Element && _touches[0].target != button2Element &&
-		     _touches[0].target != button3Element && _touches[0].target != button4Element &&
-		     _touches[0].target != button5Element && _touches[0].target != button6Element &&
-		     _touches[1].target != button1Element && _touches[1].target != button2Element &&
-		     _touches[1].target != button3Element && _touches[1].target != button4Element &&
-		     _touches[1].target != button5Element && _touches[1].target != button6Element)
-		{
-			pinchWidthX = Math.abs(_touches[1].pageX - _touches[0].pageX);
-			pinchWidthY = Math.abs(_touches[1].pageY - _touches[0].pageY);
+		pinchWidthX = Math.abs(_touches[1].pageX - _touches[0].pageX);
+		pinchWidthY = Math.abs(_touches[1].pageY - _touches[0].pageY);
 
-			joystickDeltaX = joystickDeltaY = 0;
-			_stickX = _baseX;
-			_stickY = _baseY;
+		_stickX = _baseX;
+		_stickY = _baseY;
 
-			return;
-		}
-	}
+		joystickDeltaX = joystickDeltaY = 0;
 
-	_stickX = _testTouch.pageX;
-	_stickY = _testTouch.pageY;
+		_pinchWasActive = true;
 
-	joystickDeltaX = _stickX - _baseX;
-	joystickDeltaY = _stickY - _baseY;
-
-
-	if (_limitStickTravel)
-	{
-		_stickDistance = Math.sqrt((joystickDeltaX * joystickDeltaX) + (joystickDeltaY * joystickDeltaY));
-
-		if (_stickDistance > _stickRadius)
-		{
-			_stickNormalizedX = joystickDeltaX / _stickDistance;
-			_stickNormalizedY = joystickDeltaY / _stickDistance;
-
-			_stickX = _stickNormalizedX * _stickRadius + _baseX;
-			_stickY = _stickNormalizedY * _stickRadius + _baseY;
-		}
-
-		// must recalculate joystick movement 
-		joystickDeltaX = _stickX - _baseX;
-		joystickDeltaY = _stickY - _baseY;
-	}
-
-	if (_showJoystick)
-	{
-		_move(stickElement.style, (_stickX - stickElement.width / 2), (_stickY - stickElement.height / 2));
+		baseElement.style.display = "none";
+		stickElement.style.display = "none";
 	}
 
 } // end function _onTouchMove(event)
