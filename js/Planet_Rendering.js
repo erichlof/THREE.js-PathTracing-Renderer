@@ -89,7 +89,7 @@ function initPathTracingShaders() {
         // scene/demo-specific uniforms go here
         pathTracingUniforms = {
 					
-                tPreviousTexture: { type: "t", value: screenTextureRenderTarget.texture },		
+                tPreviousTexture: { type: "t", value: screenCopyRenderTarget.texture },		
                 t_PerlinNoise: { type: "t", value: PerlinNoiseTexture },
                 
                 uCameraIsMoving: { type: "b1", value: false },
@@ -108,7 +108,6 @@ function initPathTracingShaders() {
                 
                 uResolution: { type: "v2", value: new THREE.Vector2() },
                 
-                uRandomVector: { type: "v3", value: new THREE.Vector3() },
                 uSunDirection: { type: "v3", value: new THREE.Vector3() },
                 uCameraFrameRight: { type: "v3", value: new THREE.Vector3() },
                 uCameraFrameForward: { type: "v3", value: new THREE.Vector3() },
@@ -246,52 +245,24 @@ function updateVariablesAndUniforms() {
                 amountToMoveCamera = (earthRadius + 0.001) - cameraDistFromCenterOfEarth;
                 cameraControlsObject.position.add(centerOfEarthToCameraVec.multiplyScalar(amountToMoveCamera));
         }
-        
-        if ( !cameraIsMoving ) {
-                
-                if (sceneIsDynamic)
-                        sampleCounter = 1.0; // reset for continuous updating of image
-                else sampleCounter += 1.0; // for progressive refinement of image
-                
-                frameCounter += 1.0;
-
-                cameraRecentlyMoving = false;  
-        }
-
-        if (cameraIsMoving) {
-                sampleCounter = 1.0;
-                frameCounter += 1.0;
-
-                if (!cameraRecentlyMoving) {
-                        frameCounter = 1.0;
-                        cameraRecentlyMoving = true;
-                }
-        }
 
         if (altitude < 1.0) // in Km
                 cameraUnderWater = 1.0;
         else cameraUnderWater = 0.0;
         
         if (!timePauseToggle)
-                sunAngle += (0.05 * frameTime) % TWO_PI;
+                sunAngle += (0.05 * frameTime) % TWO_PI; // 0.05
+        //sunAngle = 0;
         sunDirection.set(Math.cos(sunAngle), 0, Math.sin(sunAngle));
         sunDirection.normalize();
 
         pathTracingUniforms.uCameraUnderWater.value = cameraUnderWater;
         pathTracingUniforms.uSunAngle.value = sunAngle;
         pathTracingUniforms.uSunDirection.value.copy(sunDirection);
-        pathTracingUniforms.uTime.value = elapsedTime;
-        pathTracingUniforms.uCameraIsMoving.value = cameraIsMoving;
         pathTracingUniforms.uCameraWithinAtmosphere.value = cameraWithinAtmosphere;
-        pathTracingUniforms.uSampleCounter.value = sampleCounter;
-        pathTracingUniforms.uFrameCounter.value = frameCounter;
-        pathTracingUniforms.uRandomVector.value.copy(randomVector.set( Math.random(), Math.random(), Math.random() ));
-
-        // CAMERA
-        cameraControlsObject.updateMatrixWorld(true);			
-        pathTracingUniforms.uCameraMatrix.value.copy( worldCamera.matrixWorld );
-        screenOutputMaterial.uniforms.uOneOverSampleCounter.value = 1.0 / sampleCounter;
-                        // 1.0 Km
+        
+        //INFO
+                     // 1.0 Km
         if (altitude >= 1.0) { 
                 cameraInfoElement.innerHTML = "Altitude: " + altitude.toFixed(1) + " Kilometers | " + (altitude * 0.621371).toFixed(1) + " Miles" +
                 " (Water Level = 1 Km)" + "<br>" +
