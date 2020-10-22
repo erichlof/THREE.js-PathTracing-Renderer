@@ -415,8 +415,6 @@ function initTHREEjs() {
 
 function animate() {
 
-        
-
         frameTime = clock.getDelta();
 
         elapsedTime = clock.getElapsedTime() % 1000;
