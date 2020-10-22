@@ -699,14 +699,14 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 				// save intersection data for future shadowray trace
 				firstTypeWasDIFF = true;
 				firstRay = Ray( x, normalize(sunDirection) );// create shadow ray pointed towards light
-				firstRay.direction = normalize(randomDirectionInSpecularLobe(firstRay.direction, 0.02));
+				firstRay.direction = randomDirectionInSpecularLobe(firstRay.direction, 0.001);
 				firstRay.origin += nl * uEPS_intersect;
 				
-				weight = max(0.0, dot(firstRay.direction, nl)) * 0.005; // down-weight directSunLight contribution
+				weight = max(0.0, dot(firstRay.direction, nl)) * 0.05; // down-weight directSunLight contribution
 				firstMask = mask * weight * cloudShadowFactor;
 
 				// choose random Diffuse sample vector
-				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl)) );
+				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
@@ -719,10 +719,10 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 			}
                         
 			r = Ray( x, normalize(sunDirection) );// create shadow ray pointed towards light
-			r.direction = normalize(randomDirectionInSpecularLobe(r.direction, 0.02));
+			r.direction = randomDirectionInSpecularLobe(r.direction, 0.001);
 			r.origin += nl * uEPS_intersect;
 			
-			weight = max(0.0, dot(r.direction, nl)) * 0.005; // down-weight directSunLight contribution
+			weight = max(0.0, dot(r.direction, nl)) * 0.05; // down-weight directSunLight contribution
 			mask *= weight * cloudShadowFactor;
 			
 			sampleLight = true;
@@ -826,16 +826,16 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 			if (diffuseCount == 1 && rand() < 0.5)
                         {
                                 // choose random Diffuse sample vector
-				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl)) );
+				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
 				r.origin += nl * uEPS_intersect;
 				continue;
                         }
 			
-			r = Ray( x, normalize(sunDirection) );// create shadow ray pointed towards light
-			r.direction = normalize(randomDirectionInSpecularLobe(r.direction, 0.02));
+			r = Ray( x, sunDirection);// create shadow ray pointed towards light
+			r.direction = randomDirectionInSpecularLobe(r.direction, 0.001);
 			r.origin += nl * uEPS_intersect;
 
-			weight = max(0.0, dot(r.direction, nl)) * 0.005; // down-weight directSunLight contribution
+			weight = max(0.0, dot(r.direction, nl)) * 0.05; // down-weight directSunLight contribution
 			mask *= weight;
 			
 			sampleLight = true;
@@ -852,14 +852,14 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 	if ( skyHit ) // sky and clouds
 	{
 		vec3 cloudColor = cld.rgb / (cld.a + 0.00001);
-		vec3 sunColor = clamp(Get_Sky_Color( Ray(skyPos, normalize((randVec * 0.03) + sunDirection)), sunDirection ), 0.0, 1.0);
+		vec3 sunColor = clamp(Get_Sky_Color( Ray(skyPos, randomDirectionInSpecularLobe(sunDirection, 0.1)), sunDirection ), 0.0, 5.0);
 		
-		cloudColor *= mix(sunColor, vec3(1), max(0.0, dot(vec3(0,1,0), sunDirection)) );
+		cloudColor *= sunColor;
 		cloudColor = mix(initialSkyColor, cloudColor, clamp(cld.a, 0.0, 1.0));
 		
 		hitDistance = distance(skyRay.origin, skyPos);
 		accumCol = mask * mix( accumCol, cloudColor, clamp( exp2( -hitDistance * 0.004 ), 0.0, 1.0 ) );
-	}	
+	}
 	else // terrain and other objects
 	{
 		hitDistance = distance(cameraRay.origin, firstX);
