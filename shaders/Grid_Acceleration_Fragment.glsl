@@ -118,9 +118,14 @@ bool rayQuadIntersect( in Ray ray, vec3 v0, vec3 v1, vec3 v2, vec3 v3, out float
 
 float getDisplacement(vec2 uv) 
 {
+	// procedural 3D graph pattern
 	//return 0.9 * sin(uTime - length(vec2(0.5) - uv) * 20.0) * 0.5 + 0.5;
-	return (sin(uTime) * 0.5 + 0.5) * texture(t_PerlinNoise, uv).x; // dynamic landscape
-	//return texture(t_PerlinNoise, uv).x;  // static landscape
+
+	// landscape with animated lowering and raising
+	return (sin(uTime * 0.5) * 0.5 + 0.5) * texture(t_PerlinNoise, uv).x;
+
+	// stationary landscape
+	//return texture(t_PerlinNoise, uv).x;
 }
 
 
