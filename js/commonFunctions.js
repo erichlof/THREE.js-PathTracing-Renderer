@@ -3,14 +3,16 @@ let SCREEN_HEIGHT;
 let canvas, context;
 let container, stats;
 let controls;
-let pathTracingScene, screenTextureScene, screenOutputScene;
-let pathTracingUniforms, screenTextureUniforms, screenOutputUniforms;
+let pathTracingScene, screenCopyScene, screenOutputScene;
+let pathTracingUniforms, screenCopyUniforms, screenOutputUniforms;
 let pathTracingDefines;
 let pathTracingVertexShader, pathTracingFragmentShader;
+let screenCopyVertexShader, screenCopyFragmentShader;
+let screenOutputVertexShader, screenOutputFragmentShader;
 let pathTracingGeometry, pathTracingMaterial, pathTracingMesh;
-let screenTextureGeometry, screenTextureMaterial, screenTextureMesh;
+let screenCopyGeometry, screenCopyMaterial, screenCopyMesh;
 let screenOutputGeometry, screenOutputMaterial, screenOutputMesh;
-let pathTracingRenderTarget, screenOutputRenderTarget;
+let pathTracingRenderTarget, screenCopyRenderTarget;
 let quadCamera, worldCamera;
 let renderer, clock;
 let frameTime, elapsedTime;
@@ -116,7 +118,7 @@ function onWindowResize(event) {
         pathTracingUniforms.uResolution.value.y = context.drawingBufferHeight;
 
         pathTracingRenderTarget.setSize(context.drawingBufferWidth, context.drawingBufferHeight);
-        screenTextureRenderTarget.setSize(context.drawingBufferWidth, context.drawingBufferHeight);
+        screenCopyRenderTarget.setSize(context.drawingBufferWidth, context.drawingBufferHeight);
 
         worldCamera.aspect = SCREEN_WIDTH / SCREEN_HEIGHT;
         worldCamera.updateProjectionMatrix();
@@ -288,14 +290,14 @@ function initTHREEjs() {
         clock = new THREE.Clock();
 
         pathTracingScene = new THREE.Scene();
-        screenTextureScene = new THREE.Scene();
+        screenCopyScene = new THREE.Scene();
         screenOutputScene = new THREE.Scene();
 
         // quadCamera is simply the camera to help render the full screen quad (2 triangles),
         // hence the name.  It is an Orthographic camera that sits facing the view plane, which serves as
         // the window into our 3d world. This camera will not move or rotate for the duration of the app.
         quadCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-        screenTextureScene.add(quadCamera);
+        screenCopyScene.add(quadCamera);
         screenOutputScene.add(quadCamera);
 
         // worldCamera is the dynamic camera 3d object that will be positioned, oriented and 
@@ -324,7 +326,7 @@ function initTHREEjs() {
         });
         pathTracingRenderTarget.texture.generateMipmaps = false;
 
-        screenTextureRenderTarget = new THREE.WebGLRenderTarget(context.drawingBufferWidth, context.drawingBufferHeight, {
+        screenCopyRenderTarget = new THREE.WebGLRenderTarget(context.drawingBufferWidth, context.drawingBufferHeight, {
                 minFilter: THREE.NearestFilter,
                 magFilter: THREE.NearestFilter,
                 format: THREE.RGBAFormat,
@@ -332,7 +334,7 @@ function initTHREEjs() {
                 depthBuffer: false,
                 stencilBuffer: false
         });
-        screenTextureRenderTarget.texture.generateMipmaps = false;
+        screenCopyRenderTarget.texture.generateMipmaps = false;
 
 
         // setup scene/demo-specific objects, variables, and data
@@ -345,39 +347,60 @@ function initTHREEjs() {
         pathTracingGeometry = new THREE.PlaneBufferGeometry(2, 2);
         initPathTracingShaders();
 
+        
         // this full-screen quad mesh copies the image output of the pathtracing shader and feeds it back in to that shader as a 'previousTexture'
-        screenTextureGeometry = new THREE.PlaneBufferGeometry(2, 2);
+        screenCopyGeometry = new THREE.PlaneBufferGeometry(2, 2);
 
-        screenTextureMaterial = new THREE.ShaderMaterial({
-                uniforms: screenTextureShader.uniforms,
-                vertexShader: screenTextureShader.vertexShader,
-                fragmentShader: screenTextureShader.fragmentShader,
-                depthWrite: false,
-                depthTest: false
+        screenCopyUniforms = {
+                tPathTracedImageTexture: { type: "t", value: null }
+        };
+
+        fileLoader.load('shaders/ScreenCopy_Fragment.glsl', function (shaderText)
+        {
+                screenCopyFragmentShader = shaderText;
+
+                screenCopyMaterial = new THREE.ShaderMaterial({
+                        uniforms: screenCopyUniforms,
+                        vertexShader: pathTracingVertexShader,
+                        fragmentShader: screenCopyFragmentShader,
+                        depthWrite: false,
+                        depthTest: false
+                });
+
+                screenCopyMaterial.uniforms.tPathTracedImageTexture.value = pathTracingRenderTarget.texture;
+
+                screenCopyMesh = new THREE.Mesh(screenCopyGeometry, screenCopyMaterial);
+                screenCopyScene.add(screenCopyMesh);
         });
 
-        screenTextureMaterial.uniforms.tPathTracedImageTexture.value = pathTracingRenderTarget.texture;
-
-        screenTextureMesh = new THREE.Mesh(screenTextureGeometry, screenTextureMaterial);
-        screenTextureScene.add(screenTextureMesh);
-
-
+        
         // this full-screen quad mesh takes the image output of the path tracing shader (which is a continuous blend of the previous frame and current frame),
         // and applies gamma correction (which brightens the entire image), and then displays the final accumulated rendering to the screen
         screenOutputGeometry = new THREE.PlaneBufferGeometry(2, 2);
 
-        screenOutputMaterial = new THREE.ShaderMaterial({
-                uniforms: screenOutputShader.uniforms,
-                vertexShader: screenOutputShader.vertexShader,
-                fragmentShader: screenOutputShader.fragmentShader,
-                depthWrite: false,
-                depthTest: false
+        screenOutputUniforms = {
+                uOneOverSampleCounter: { type: "f", value: 0.0 },
+                tPathTracedImageTexture: { type: "t", value: null }
+        };
+
+        fileLoader.load('shaders/ScreenOutput_Fragment.glsl', function (shaderText)
+        {
+                screenOutputFragmentShader = shaderText;
+
+                screenOutputMaterial = new THREE.ShaderMaterial({
+                        uniforms: screenOutputUniforms,
+                        vertexShader: pathTracingVertexShader,
+                        fragmentShader: screenOutputFragmentShader,
+                        depthWrite: false,
+                        depthTest: false
+                });
+
+                screenOutputMaterial.uniforms.tPathTracedImageTexture.value = pathTracingRenderTarget.texture;
+
+                screenOutputMesh = new THREE.Mesh(screenOutputGeometry, screenOutputMaterial);
+                screenOutputScene.add(screenOutputMesh);
         });
 
-        screenOutputMaterial.uniforms.tPathTracedImageTexture.value = pathTracingRenderTarget.texture;
-
-        screenOutputMesh = new THREE.Mesh(screenOutputGeometry, screenOutputMaterial);
-        screenOutputScene.add(screenOutputMesh);
 
         // this 'jumpstarts' the initial dimensions and parameters for the window and renderer
         onWindowResize();
@@ -392,7 +415,7 @@ function initTHREEjs() {
 
 function animate() {
 
-        requestAnimationFrame(animate);
+        
 
         frameTime = clock.getDelta();
 
@@ -605,27 +628,66 @@ function animate() {
         // update scene/demo-specific input(if custom), variables and uniforms every animation frame
         updateVariablesAndUniforms();
 
+        // now update uniforms that are common to all scenes
+        if (!cameraIsMoving)
+        {
+                if (sceneIsDynamic)
+                        sampleCounter = 1.0; // reset for continuous updating of image
+                else sampleCounter += 1.0; // for progressive refinement of image
+
+                frameCounter += 1.0;
+
+                cameraRecentlyMoving = false;
+        }
+
+        if (cameraIsMoving)
+        {
+                sampleCounter = 1.0;
+                frameCounter += 1.0;
+
+                if (!cameraRecentlyMoving)
+                {
+                        frameCounter = 1.0;
+                        cameraRecentlyMoving = true;
+                }
+        }
+
+        pathTracingUniforms.uTime.value = elapsedTime;
+        pathTracingUniforms.uCameraIsMoving.value = cameraIsMoving;
+        pathTracingUniforms.uSampleCounter.value = sampleCounter;
+        pathTracingUniforms.uFrameCounter.value = frameCounter;
+
+        // CAMERA
+        cameraControlsObject.updateMatrixWorld(true);
+        worldCamera.updateMatrixWorld(true);
+        pathTracingUniforms.uCameraMatrix.value.copy(worldCamera.matrixWorld);
+
+        // PROGRESSIVE SAMPLE WEIGHT (reduces intensity of each successive animation frame's image)
+        screenOutputUniforms.uOneOverSampleCounter.value = 1.0 / sampleCounter;
+
 
         // RENDERING in 3 steps
 
         // STEP 1
         // Perform PathTracing and Render(save) into pathTracingRenderTarget, a full-screen texture.
-        // Read previous screenTextureRenderTarget(via texelFetch inside fragment shader) to use as a new starting point to blend with
+        // Read previous screenCopyRenderTarget(via texelFetch inside fragment shader) to use as a new starting point to blend with
         renderer.setRenderTarget(pathTracingRenderTarget);
         renderer.render(pathTracingScene, worldCamera);
 
         // STEP 2
-        // Render(copy) the pathTracingScene output(pathTracingRenderTarget above) into screenTextureRenderTarget.
+        // Render(copy) the pathTracingScene output(pathTracingRenderTarget above) into screenCopyRenderTarget.
         // This will be used as a new starting point for Step 1 above (essentially creating ping-pong buffers)
-        renderer.setRenderTarget(screenTextureRenderTarget);
-        renderer.render(screenTextureScene, quadCamera);
+        renderer.setRenderTarget(screenCopyRenderTarget);
+        renderer.render(screenCopyScene, quadCamera);
 
         // STEP 3
         // Render full screen quad with generated pathTracingRenderTarget in STEP 1 above.
-        // After the image is gamma-corrected, it will be shown on the screen as the final accumulated output
+        // After applying tonemapping and gamma-correction to the image, it will be shown on the screen as the final accumulated output
         renderer.setRenderTarget(null);
         renderer.render(screenOutputScene, quadCamera);
 
         stats.update();
+
+        requestAnimationFrame(animate);
 
 } // end function animate()
