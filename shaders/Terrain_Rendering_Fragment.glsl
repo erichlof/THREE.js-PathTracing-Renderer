@@ -171,7 +171,7 @@ vec4 render_clouds( Ray eye, vec3 p, vec3 sunDirection )
 	float march_step = THICKNESS / float(N_MARCH_STEPS);
 	vec3 pos = p + vec3(uTime * -3.0, uTime * -0.5, uTime * -2.0);
 	vec3 dir_step = eye.direction / clamp(eye.direction.y, 0.3, 1.0) * march_step;
-	vec3 light_step = normalize(sunDirection) * 5.0;
+	vec3 light_step = sunDirection * 5.0;
 	
 	float covAmount = (sin(mod(uTime * 0.1 + 3.5, TWO_PI))) * 0.5 + 0.5;
 	float coverage = mix(1.1, 1.5, clamp(covAmount, 0.0, 1.0));
@@ -201,7 +201,7 @@ vec4 render_clouds( Ray eye, vec3 p, vec3 sunDirection )
 #define TERRAIN_HEIGHT 2000.0
 #define TERRAIN_SAMPLE_SCALE 0.00004 
 #define TERRAIN_LIFT -1300.0 // how much to lift or drop the entire terrain
-#define TERRAIN_FAR 100000.0
+#define TERRAIN_FAR 80000.0
 
 float lookup_Heightmap( in vec3 pos )
 {
@@ -244,6 +244,7 @@ vec3 terrain_calcNormal( vec3 pos, float t )
 
 bool isLightSourceVisible( vec3 pos, vec3 n, vec3 dirToLight)
 {
+	pos += n;
 	dirToLight = normalize(dirToLight);
 	float h = 1.0;
 	float t = 0.0;
@@ -252,10 +253,10 @@ bool isLightSourceVisible( vec3 pos, vec3 n, vec3 dirToLight)
 	for(int i = 0; i < 300; i++)
 	{
 		h = pos.y - lookup_Heightmap(pos);
-		if ( pos.y > terrainHeight || h < 0.0) break;
+		if ( pos.y > terrainHeight || h < 0.1) break;
 		pos += dirToLight * h;
 	}
-	return h >= 0.0;
+	return h > 0.1;
 }
 
 
@@ -359,13 +360,12 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 	Ray firstRay;
 	Ray cameraRay = r;
 
-	vec3 randVec = vec3(rand() * 2.0 - 1.0, rand() * 2.0 - 1.0, rand() * 2.0 - 1.0);
-	vec3 initialSkyColor = Get_Sky_Color(r, normalize(sunDirection));
+	vec3 initialSkyColor = Get_Sky_Color(r, sunDirection);
 	
 	Ray skyRay = Ray( r.origin * vec3(0.02), normalize(vec3(r.direction.x, abs(r.direction.y), r.direction.z)) );
 	float dc = SphereIntersect( 20000.0, vec3(skyRay.origin.x, -19900.0, skyRay.origin.z) + vec3(rand() * 2.0), skyRay );
 	vec3 skyPos = skyRay.origin + skyRay.direction * dc;
-	vec4 cld = render_clouds(skyRay, skyPos, normalize(sunDirection));
+	vec4 cld = render_clouds(skyRay, skyPos, sunDirection);
 	
 	
 	vec3 accumCol = vec3(0);
@@ -407,7 +407,7 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 			{
 				if (!reflectionTime) 
 				{
-					accumCol = mask * Get_Sky_Color(r, normalize(sunDirection));
+					accumCol = mask * Get_Sky_Color(r, sunDirection);
 					
 					// start back at the refractive surface, but this time follow reflective branch
 					r = firstRay;
@@ -418,10 +418,10 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 					continue;
 				}
 
-				accumCol += mask * Get_Sky_Color(r, normalize(sunDirection)); // add reflective result to the refractive result (if any)
+				accumCol += mask * Get_Sky_Color(r, sunDirection); // add reflective result to the refractive result (if any)
 			}
 			else 
-				accumCol = mask * Get_Sky_Color(r, normalize(sunDirection));
+				accumCol = mask * Get_Sky_Color(r, sunDirection);
 			/*
 			else if (dot(r.direction, sunDirection) < 0.98)
 				accumCol = mask * 2.0 * Get_Sky_Color(r, sunDirection);
@@ -448,28 +448,25 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 			float rockNoise = texture(t_PerlinNoise, (0.0003 * x.xz)).x;
 			vec3 rockColor0 = max(vec3(0.01), vec3(0.04, 0.01, 0.01) * rockNoise);
 			vec3 rockColor1 = max(vec3(0.01), vec3(0.08, 0.07, 0.07) * rockNoise);
-			vec3 snowColor = vec3(0.9);
-			vec3 up = normalize(vec3(0, 1, 0));
-			vec3 randomSkyVec = normalize(vec3(randVec.x, abs(randVec.y), randVec.z));
-			vec3 skyColor = clamp(Get_Sky_Color( Ray(x, normalize(up + (n * 0.1))), normalize(sunDirection) ), 0.0, 1.0);
-			vec3 sunColor = clamp(Get_Sky_Color( Ray(x, normalize(normalize(vec3(sunDirection.x, sunDirection.y + 0.05, sunDirection.z)) + (randomSkyVec * 0.1))), normalize(sunDirection) ), 0.0, 1.0);
+			vec3 snowColor = vec3(0.7);
+			vec3 up = vec3(0, 1, 0);
+			vec3 randomSkyVec = randomCosWeightedDirectionInHemisphere(mix(n, up, 0.9));
+			vec3 skyColor = Get_Sky_Color( Ray(x, randomSkyVec), sunDirection );
+			if (dot(randomSkyVec, sunDirection) > 0.98) skyColor *= 0.01;
+			vec3 sunColor = clamp(Get_Sky_Color( Ray(x, randomDirectionInSpecularLobe(sunDirection, 0.0)), sunDirection ), 0.0, 4.0);
 			float terrainLayer = clamp( (x.y + (rockNoise * 500.0) * n.y) / (TERRAIN_HEIGHT * 1.5 + TERRAIN_LIFT), 0.0, 1.0 );
 			
 			if (terrainLayer > 0.8 && terrainLayer > 1.0 - n.y)
-			{
-				intersec.color = mix(vec3(0.7), snowColor, terrainLayer * n.y);
-				mask = mix(intersec.color * skyColor, intersec.color * sunColor, dot(normalize(sunDirection), up));// ambient color from sky light
-			}	
+				intersec.color = snowColor;	
 			else
-			{
 				intersec.color = mix(rockColor0, rockColor1, clamp(n.y, 0.0, 1.0) );
-				mask = intersec.color * skyColor; // ambient color from sky light
-			}		
-			
-			vec3 shadowRayDirection = normalize(normalize(sunDirection) + (randomSkyVec * 0.05));						
-			if (bounces == 0 && isLightSourceVisible(x, n, shadowRayDirection) ) // in direct sunlight
+				
+			mask = intersec.color * skyColor; // ambient color from sky light
+
+			vec3 shadowRayDirection = randomDirectionInSpecularLobe(sunDirection, 0.01);						
+			if (bounces == 0 && dot(n, shadowRayDirection) > 0.1 && isLightSourceVisible(x, n, shadowRayDirection) ) // in direct sunlight
 			{
-				mask = intersec.color * sunColor;	
+				mask = intersec.color * mix(skyColor, sunColor, clamp(dot(n,shadowRayDirection),0.0,1.0));	
 			}
 
 			if (rayEnteredWater)
@@ -544,9 +541,9 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 	if ( skyHit ) // sky and clouds
 	{
 		vec3 cloudColor = cld.rgb / (cld.a + 0.00001);
-		vec3 sunColor = clamp(Get_Sky_Color( Ray(skyPos, normalize((randVec * 0.03) + sunDirection)), sunDirection ), 0.0, 1.0);
+		vec3 sunColor = clamp(Get_Sky_Color( Ray(skyPos, randomDirectionInSpecularLobe(sunDirection, 0.0)), sunDirection ), 0.0, 5.0);
 		
-		cloudColor *= mix(sunColor, vec3(1), max(0.0, dot(vec3(0,1,0), sunDirection)) );
+		cloudColor *= sunColor;
 		cloudColor = mix(initialSkyColor, cloudColor, clamp(cld.a, 0.0, 1.0));
 		
 		hitDistance = distance(skyRay.origin, skyPos);
@@ -555,7 +552,7 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 	else // terrain and other objects
 	{
 		hitDistance = distance(cameraRay.origin, firstX);
-		accumCol = mix( initialSkyColor, accumCol, clamp( exp2( -log(hitDistance * 0.00008) ), 0.0, 1.0 ) );
+		accumCol = mix( initialSkyColor, accumCol, clamp( exp2( -log(hitDistance * 0.00006) ), 0.0, 1.0 ) );
 		// underwater fog effect
 		hitDistance = distance(cameraRay.origin, firstX);
 		hitDistance *= uCameraUnderWater;
