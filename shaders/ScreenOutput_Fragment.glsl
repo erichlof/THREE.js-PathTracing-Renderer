@@ -13,4 +13,4 @@ void main()
         //pixelColor = OptimizedCineonToneMapping(pixelColor);
         //pixelColor = ACESFilmicToneMapping(pixelColor);
         pc_fragColor = clamp(vec4( pow(pixelColor, vec3(0.4545)), 1.0 ), 0.0, 1.0);
-}
+} 
