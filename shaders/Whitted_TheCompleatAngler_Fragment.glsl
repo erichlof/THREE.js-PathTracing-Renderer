@@ -304,7 +304,7 @@ vec3 CalculateRadiance( Ray r, out bool rayHitIsDynamic )
 			sphereUV.y = asin(clamp(nl.y, -1.0, 1.0)) * ONE_OVER_PI + 0.5;
                         sphereUV *= 2.0;
 
-			nl = perturbNormal(nl, vec2(-1.0, 1.0), sphereUV);
+			nl = perturbNormal(nl, vec2(-0.5, 0.5), sphereUV);
 
                         // temporarily treat as diffuse, apply typical NdotL lighting 
                         mask = intersec.color * max(0.15, dot(nl, dirToLight));
