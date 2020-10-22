@@ -670,7 +670,7 @@ async function prepareGeometryForPT(meshList, pathTracingMaterialList, triangleM
     };
 
 	// load vertex and fragment shader files that are used in the pathTracing material, mesh and scene
-    let vertexShader = await filePromiseLoader('shaders/vertex.glsl');
+    let vertexShader = await filePromiseLoader('shaders/common_PathTracing_Vertex.glsl');
     let fragmentShader = await filePromiseLoader('shaders/Gltf_Viewer.glsl');
 
     let pathTracingMaterial = new THREE.ShaderMaterial({
