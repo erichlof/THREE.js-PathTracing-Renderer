@@ -63,7 +63,7 @@ function initPathTracingShaders() {
         // scene/demo-specific uniforms go here
         pathTracingUniforms = {
 
-                tPreviousTexture: { type: "t", value: screenTextureRenderTarget.texture },
+                tPreviousTexture: { type: "t", value: screenCopyRenderTarget.texture },
 		
                 uCameraIsMoving: { type: "b1", value: false },
 
@@ -135,43 +135,13 @@ function createPathTracingMaterial() {
 // called automatically from within the animate() function
 function updateVariablesAndUniforms() {
         
-        if ( !cameraIsMoving ) {
-                
-                if (sceneIsDynamic)
-                        sampleCounter = 1.0; // reset for continuous updating of image
-                else sampleCounter += 1.0; // for progressive refinement of image
-                
-                frameCounter += 1.0;
-
-                cameraRecentlyMoving = false;  
-        }
-
-        if (cameraIsMoving) {
-                sampleCounter = 1.0;
-                frameCounter += 1.0;
-
-                if (!cameraRecentlyMoving) {
-                        frameCounter = 1.0;
-                        cameraRecentlyMoving = true;
-                }
-        }
-
-        
-        pathTracingUniforms.uCameraIsMoving.value = cameraIsMoving;
-        pathTracingUniforms.uSampleCounter.value = sampleCounter;
-        pathTracingUniforms.uFrameCounter.value = frameCounter;
-        
         // BOXES
         pathTracingUniforms.uTallBoxInvMatrix.value.getInverse( tallBoxMesh.matrixWorld );
         pathTracingUniforms.uTallBoxNormalMatrix.value.getNormalMatrix( tallBoxMesh.matrixWorld );
         pathTracingUniforms.uShortBoxInvMatrix.value.getInverse( shortBoxMesh.matrixWorld );
         pathTracingUniforms.uShortBoxNormalMatrix.value.getNormalMatrix( shortBoxMesh.matrixWorld );
         
-        // CAMERA
-        cameraControlsObject.updateMatrixWorld(true);
-        pathTracingUniforms.uCameraMatrix.value.copy(worldCamera.matrixWorld);
-        screenOutputMaterial.uniforms.uOneOverSampleCounter.value = 1.0 / sampleCounter;
-
+        // INFO
         cameraInfoElement.innerHTML = "FOV: " + worldCamera.fov + " / Aperture: " + apertureSize.toFixed(2) + " / FocusDistance: " + focusDistance + "<br>" + "Samples: " + sampleCounter;
 
 } // end function updateVariablesAndUniforms()
