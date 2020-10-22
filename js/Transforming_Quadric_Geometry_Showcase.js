@@ -20,8 +20,9 @@ var posXOffset = 25;
 
 
 // called automatically from within initTHREEjs() function
-function initSceneData() {
-        
+function initSceneData()
+{
+
         // scene/demo-specific three.js objects setup goes here
         EPS_intersect = mouseControl ? 0.01 : 1.0; // less precision on mobile
 
@@ -30,7 +31,7 @@ function initSceneData() {
         focusDistance = 325.0;
 
         // position and orient camera
-        cameraControlsObject.position.set(0,20,120);
+        cameraControlsObject.position.set(0, 20, 120);
         ///cameraControlsYawObject.rotation.y = 0.0;
         // look slightly downward
         ///cameraControlsPitchObject.rotation.x = -0.4;
@@ -147,12 +148,12 @@ function initSceneData() {
         pathTracingScene.add(coneClip);
         coneClip.position.set(spacing * 0 + posXOffset, baseYPos, -baseZPos);
         coneClip.scale.set(20, 20, 20);
-        
+
         paraboloidClip = new THREE.Object3D();
         pathTracingScene.add(paraboloidClip);
         paraboloidClip.position.set(spacing * -1 + posXOffset, baseYPos - 3, -baseZPos);
         paraboloidClip.scale.set(20, 20, 20);
-        
+
         hyperboloidClip = new THREE.Object3D();
         pathTracingScene.add(hyperboloidClip);
         hyperboloidClip.position.set(spacing * -2 + posXOffset, baseYPos, -baseZPos);
@@ -166,24 +167,25 @@ function initSceneData() {
 
         // init all angles to 0
         ellipsoidTranslateAngle = cylinderTranslateAngle = coneTranslateAngle = paraboloidTranslateAngle = hyperboloidTranslateAngle = hyperbolicParaboloidTranslateAngle =
-          ellipsoidRotateAngle = cylinderRotateAngle = coneRotateAngle = paraboloidRotateAngle = hyperboloidRotateAngle = hyperbolicParaboloidRotateAngle =
-          ellipsoidScaleAngle = cylinderScaleAngle = coneScaleAngle = paraboloidScaleAngle = hyperboloidScaleAngle = hyperbolicParaboloidScaleAngle =
-          ellipsoidClipAngle = cylinderClipAngle = coneClipAngle = paraboloidClipAngle = hyperboloidClipAngle = hyperbolicParaboloidClipAngle = 0;
+                ellipsoidRotateAngle = cylinderRotateAngle = coneRotateAngle = paraboloidRotateAngle = hyperboloidRotateAngle = hyperbolicParaboloidRotateAngle =
+                ellipsoidScaleAngle = cylinderScaleAngle = coneScaleAngle = paraboloidScaleAngle = hyperboloidScaleAngle = hyperbolicParaboloidScaleAngle =
+                ellipsoidClipAngle = cylinderClipAngle = coneClipAngle = paraboloidClipAngle = hyperboloidClipAngle = hyperbolicParaboloidClipAngle = 0;
 
 } // end function initSceneData()
 
 
 
 // called automatically from within initTHREEjs() function
-function initPathTracingShaders() {
- 
+function initPathTracingShaders()
+{
+
         // scene/demo-specific uniforms go here
         pathTracingUniforms = {
 
-                tPreviousTexture: { type: "t", value: screenTextureRenderTarget.texture },
-                
+                tPreviousTexture: { type: "t", value: screenCopyRenderTarget.texture },
+
                 uCameraIsMoving: { type: "b1", value: false },
-        
+
                 uEPS_intersect: { type: "f", value: EPS_intersect },
                 uTime: { type: "f", value: 0.0 },
                 uSampleCounter: { type: "f", value: 0.0 },
@@ -192,11 +194,9 @@ function initPathTracingShaders() {
                 uVLen: { type: "f", value: 1.0 },
                 uApertureSize: { type: "f", value: 0.0 },
                 uFocusDistance: { type: "f", value: focusDistance },
-        
+
                 uResolution: { type: "v2", value: new THREE.Vector2() },
-        
-                uRandomVector: { type: "v3", value: new THREE.Vector3() },
-        
+
                 uCameraMatrix: { type: "m4", value: new THREE.Matrix4() },
 
                 uEllipsoidTranslateInvMatrix: { type: "m4", value: new THREE.Matrix4() },
@@ -223,15 +223,16 @@ function initPathTracingShaders() {
                 uHyperbolicParaboloidRotateInvMatrix: { type: "m4", value: new THREE.Matrix4() },
                 uHyperbolicParaboloidScaleInvMatrix: { type: "m4", value: new THREE.Matrix4() },
                 uHyperbolicParaboloidClipInvMatrix: { type: "m4", value: new THREE.Matrix4() }
-        
+
         };
 
         pathTracingDefines = {
-        	//NUMBER_OF_TRIANGLES: total_number_of_triangles
+                //NUMBER_OF_TRIANGLES: total_number_of_triangles
         };
 
         // load vertex and fragment shader files that are used in the pathTracing material, mesh and scene
-        fileLoader.load('shaders/common_PathTracing_Vertex.glsl', function (shaderText) {
+        fileLoader.load('shaders/common_PathTracing_Vertex.glsl', function (shaderText)
+        {
                 pathTracingVertexShader = shaderText;
 
                 createPathTracingMaterial();
@@ -241,10 +242,12 @@ function initPathTracingShaders() {
 
 
 // called automatically from within initPathTracingShaders() function above
-function createPathTracingMaterial() {
+function createPathTracingMaterial()
+{
 
-        fileLoader.load('shaders/Transforming_Quadric_Geometry_Showcase_Fragment.glsl', function (shaderText) {
-                
+        fileLoader.load('shaders/Transforming_Quadric_Geometry_Showcase_Fragment.glsl', function (shaderText)
+        {
+
                 pathTracingFragmentShader = shaderText;
 
                 pathTracingMaterial = new THREE.ShaderMaterial({
@@ -263,7 +266,7 @@ function createPathTracingMaterial() {
                 //   of the camera at all times. This is necessary because without it, the scene 
                 //   quad will fall out of view and get clipped when the camera rotates past 180 degrees.
                 worldCamera.add(pathTracingMesh);
-                
+
         });
 
 } // end function createPathTracingMaterial()
@@ -271,60 +274,34 @@ function createPathTracingMaterial() {
 
 
 // called automatically from within the animate() function
-function updateVariablesAndUniforms() {
-        
-        if ( !cameraIsMoving ) {
-                
-                if (sceneIsDynamic)
-                        sampleCounter = 1.0; // reset for continuous updating of image
-                else sampleCounter += 1.0; // for progressive refinement of image
-                
-                frameCounter += 1.0;
+function updateVariablesAndUniforms()
+{
 
-                cameraRecentlyMoving = false;  
-        }
-
-        if (cameraIsMoving) {
-                sampleCounter = 1.0;
-                frameCounter += 1.0;
-
-                if (!cameraRecentlyMoving) {
-                        frameCounter = 1.0;
-                        cameraRecentlyMoving = true;
-                }
-        }
-
-        pathTracingUniforms.uTime.value = elapsedTime;
-        pathTracingUniforms.uCameraIsMoving.value = cameraIsMoving;
-        pathTracingUniforms.uSampleCounter.value = sampleCounter;
-        pathTracingUniforms.uFrameCounter.value = frameCounter;
-        pathTracingUniforms.uRandomVector.value = randomVector.set(Math.random(), Math.random(), Math.random());
-        
         // ELLIPSOID TRANSLATE
         ellipsoidTranslateAngle += (0.1 * frameTime);
         ellipsoidTranslateAngle = ellipsoidTranslateAngle % TWO_PI;
         ellipsoidTranslate.position.x = (spacing * -3 + posXOffset) + (Math.cos(ellipsoidTranslateAngle) * 10);
         ellipsoidTranslate.position.z = baseZPos + (Math.sin(ellipsoidTranslateAngle) * 10);
         ellipsoidTranslate.updateMatrixWorld(true);
-        pathTracingUniforms.uEllipsoidTranslateInvMatrix.value.getInverse( ellipsoidTranslate.matrixWorld );
+        pathTracingUniforms.uEllipsoidTranslateInvMatrix.value.getInverse(ellipsoidTranslate.matrixWorld);
 
         // ELLIPSOID ROTATE
         ellipsoidRotateAngle += (1.0 * frameTime);
         ellipsoidRotateAngle = ellipsoidRotateAngle % TWO_PI;
         ellipsoidRotate.rotation.y = ellipsoidRotateAngle;
         ellipsoidRotate.updateMatrixWorld(true);
-        pathTracingUniforms.uEllipsoidRotateInvMatrix.value.getInverse( ellipsoidRotate.matrixWorld );
+        pathTracingUniforms.uEllipsoidRotateInvMatrix.value.getInverse(ellipsoidRotate.matrixWorld);
 
         // ELLIPSOID SCALE
         ellipsoidScaleAngle += (1.0 * frameTime);
         ellipsoidScaleAngle = ellipsoidScaleAngle % TWO_PI;
         ellipsoidScale.scale.set(Math.abs(Math.sin(ellipsoidScaleAngle)) * 20 + 0.1, Math.abs(Math.sin(ellipsoidScaleAngle)) * 20 + 0.01, Math.abs(Math.sin(ellipsoidScaleAngle)) * 20 + 0.01);
         ellipsoidScale.updateMatrixWorld(true);
-        pathTracingUniforms.uEllipsoidScaleInvMatrix.value.getInverse( ellipsoidScale.matrixWorld );
+        pathTracingUniforms.uEllipsoidScaleInvMatrix.value.getInverse(ellipsoidScale.matrixWorld);
 
         // ELLIPSOID CLIP
         ellipsoidClip.updateMatrixWorld(true);
-        pathTracingUniforms.uEllipsoidClipInvMatrix.value.getInverse( ellipsoidClip.matrixWorld );
+        pathTracingUniforms.uEllipsoidClipInvMatrix.value.getInverse(ellipsoidClip.matrixWorld);
 
 
         // CYLINDER TRANSLATE
@@ -332,28 +309,28 @@ function updateVariablesAndUniforms() {
         cylinderTranslateAngle = cylinderTranslateAngle % TWO_PI;
         cylinderTranslate.position.y = baseYPos + (Math.sin(cylinderTranslateAngle) * 10);
         cylinderTranslate.updateMatrixWorld(true);
-        pathTracingUniforms.uCylinderTranslateInvMatrix.value.getInverse( cylinderTranslate.matrixWorld );
+        pathTracingUniforms.uCylinderTranslateInvMatrix.value.getInverse(cylinderTranslate.matrixWorld);
 
         // CYLINDER ROTATE
         cylinderRotateAngle += (1.0 * frameTime);
         cylinderRotateAngle = cylinderRotateAngle % TWO_PI;
         cylinderRotate.rotation.x = cylinderRotateAngle;
         cylinderRotate.updateMatrixWorld(true);
-        pathTracingUniforms.uCylinderRotateInvMatrix.value.getInverse( cylinderRotate.matrixWorld );
+        pathTracingUniforms.uCylinderRotateInvMatrix.value.getInverse(cylinderRotate.matrixWorld);
 
         // CYLINDER SCALE
         cylinderScaleAngle += (0.2 * frameTime);
         cylinderScaleAngle = cylinderScaleAngle % TWO_PI;
         if (cylinderScaleAngle == 0) cylinderScaleAngle += 0.01;
-        cylinderScale.scale.set((1.0 - Math.abs(Math.sin(cylinderScaleAngle))) * 15 + 5, 
-                                Math.abs(Math.sin(cylinderScaleAngle)) * 200 + 20, 
-                                (1.0 - Math.abs(Math.sin(cylinderScaleAngle))) * 15 + 5);
+        cylinderScale.scale.set((1.0 - Math.abs(Math.sin(cylinderScaleAngle))) * 15 + 5,
+                Math.abs(Math.sin(cylinderScaleAngle)) * 200 + 20,
+                (1.0 - Math.abs(Math.sin(cylinderScaleAngle))) * 15 + 5);
         cylinderScale.updateMatrixWorld(true);
-        pathTracingUniforms.uCylinderScaleInvMatrix.value.getInverse( cylinderScale.matrixWorld );
+        pathTracingUniforms.uCylinderScaleInvMatrix.value.getInverse(cylinderScale.matrixWorld);
 
         // CYLINDER CLIP
         cylinderClip.updateMatrixWorld(true);
-        pathTracingUniforms.uCylinderClipInvMatrix.value.getInverse( cylinderClip.matrixWorld );
+        pathTracingUniforms.uCylinderClipInvMatrix.value.getInverse(cylinderClip.matrixWorld);
 
 
         // CONE TRANSLATE
@@ -362,14 +339,14 @@ function updateVariablesAndUniforms() {
         coneTranslate.position.x = (spacing * -1 + posXOffset) + (Math.cos(coneTranslateAngle) * 10);
         coneTranslate.position.y = baseYPos + (Math.sin(coneTranslateAngle) * 10);
         coneTranslate.updateMatrixWorld(true);
-        pathTracingUniforms.uConeTranslateInvMatrix.value.getInverse( coneTranslate.matrixWorld );
+        pathTracingUniforms.uConeTranslateInvMatrix.value.getInverse(coneTranslate.matrixWorld);
 
         // CONE ROTATE
         coneRotateAngle += (1.0 * frameTime);
         coneRotateAngle = coneRotateAngle % TWO_PI;
         coneRotate.rotation.z = coneRotateAngle;
         coneRotate.updateMatrixWorld(true);
-        pathTracingUniforms.uConeRotateInvMatrix.value.getInverse( coneRotate.matrixWorld );
+        pathTracingUniforms.uConeRotateInvMatrix.value.getInverse(coneRotate.matrixWorld);
 
         // CONE SCALE
         coneScaleAngle += (1.0 * frameTime);
@@ -377,80 +354,80 @@ function updateVariablesAndUniforms() {
         if (coneScaleAngle == 0) coneScaleAngle += 0.01;
         coneScale.scale.set(20, 20, Math.abs(Math.sin(coneScaleAngle)) * 20 + 0.1);
         coneScale.updateMatrixWorld(true);
-        pathTracingUniforms.uConeScaleInvMatrix.value.getInverse( coneScale.matrixWorld );
+        pathTracingUniforms.uConeScaleInvMatrix.value.getInverse(coneScale.matrixWorld);
 
         // CONE CLIP
         coneClip.updateMatrixWorld(true);
-        pathTracingUniforms.uConeClipInvMatrix.value.getInverse( coneClip.matrixWorld );
+        pathTracingUniforms.uConeClipInvMatrix.value.getInverse(coneClip.matrixWorld);
 
         // PARABOLOID TRANSLATE
         paraboloidTranslateAngle += (1.0 * frameTime);
         paraboloidTranslateAngle = paraboloidTranslateAngle % TWO_PI;
         paraboloidTranslate.position.x = (spacing * 0 + posXOffset) + (Math.sin(paraboloidTranslateAngle) * 10);
         paraboloidTranslate.updateMatrixWorld(true);
-        pathTracingUniforms.uParaboloidTranslateInvMatrix.value.getInverse( paraboloidTranslate.matrixWorld );
-        
+        pathTracingUniforms.uParaboloidTranslateInvMatrix.value.getInverse(paraboloidTranslate.matrixWorld);
+
         // PARABOLOID ROTATE
         paraboloidRotateAngle += (1.0 * frameTime);
         paraboloidRotateAngle = paraboloidRotateAngle % TWO_PI;
         paraboloidRotate.rotation.x = paraboloidRotateAngle;
         paraboloidRotate.rotation.z = paraboloidRotateAngle;
         paraboloidRotate.updateMatrixWorld(true);
-        pathTracingUniforms.uParaboloidRotateInvMatrix.value.getInverse( paraboloidRotate.matrixWorld );
-        
+        pathTracingUniforms.uParaboloidRotateInvMatrix.value.getInverse(paraboloidRotate.matrixWorld);
+
         // PARABOLOID SCALE
         paraboloidScaleAngle += (1.0 * frameTime);
         paraboloidScaleAngle = paraboloidScaleAngle % TWO_PI;
         if (paraboloidScaleAngle == 0) paraboloidScaleAngle += 0.01;
         paraboloidScale.scale.set(20, Math.sin(paraboloidScaleAngle) * 20 + 0.1, 20);
         paraboloidScale.updateMatrixWorld(true);
-        pathTracingUniforms.uParaboloidScaleInvMatrix.value.getInverse( paraboloidScale.matrixWorld );
-        
+        pathTracingUniforms.uParaboloidScaleInvMatrix.value.getInverse(paraboloidScale.matrixWorld);
+
         // PARABOLOID CLIP
         paraboloidClip.updateMatrixWorld(true);
-        pathTracingUniforms.uParaboloidClipInvMatrix.value.getInverse( paraboloidClip.matrixWorld );
-        
+        pathTracingUniforms.uParaboloidClipInvMatrix.value.getInverse(paraboloidClip.matrixWorld);
+
 
         // HYPERBOLOID TRANSLATE
         hyperboloidTranslateAngle += (1.0 * frameTime);
         hyperboloidTranslateAngle = hyperboloidTranslateAngle % TWO_PI;
         hyperboloidTranslate.position.z = baseZPos + (Math.sin(hyperboloidTranslateAngle) * 10);
         hyperboloidTranslate.updateMatrixWorld(true);
-        pathTracingUniforms.uHyperboloidTranslateInvMatrix.value.getInverse( hyperboloidTranslate.matrixWorld );
-        
+        pathTracingUniforms.uHyperboloidTranslateInvMatrix.value.getInverse(hyperboloidTranslate.matrixWorld);
+
         // HYPERBOLOID ROTATE
         hyperboloidRotateAngle += (1.0 * frameTime);
         hyperboloidRotateAngle = hyperboloidRotateAngle % TWO_PI;
         hyperboloidRotate.rotation.z = -hyperboloidRotateAngle;
         hyperboloidRotate.updateMatrixWorld(true);
-        pathTracingUniforms.uHyperboloidRotateInvMatrix.value.getInverse( hyperboloidRotate.matrixWorld );
-        
+        pathTracingUniforms.uHyperboloidRotateInvMatrix.value.getInverse(hyperboloidRotate.matrixWorld);
+
         // HYPERBOLOID SCALE
         hyperboloidScaleAngle += (1.0 * frameTime);
         hyperboloidScaleAngle = hyperboloidScaleAngle % TWO_PI;
         if (hyperboloidScaleAngle == 0) hyperboloidScaleAngle += 0.01;
         hyperboloidScale.scale.set(Math.abs(Math.sin(hyperboloidScaleAngle)) * 20 + 10, 20, 20);
         hyperboloidScale.updateMatrixWorld(true);
-        pathTracingUniforms.uHyperboloidScaleInvMatrix.value.getInverse( hyperboloidScale.matrixWorld );
-        
+        pathTracingUniforms.uHyperboloidScaleInvMatrix.value.getInverse(hyperboloidScale.matrixWorld);
+
         // HYPERBOLOID CLIP
         hyperboloidClip.updateMatrixWorld(true);
-        pathTracingUniforms.uHyperboloidClipInvMatrix.value.getInverse( hyperboloidClip.matrixWorld );
-        
+        pathTracingUniforms.uHyperboloidClipInvMatrix.value.getInverse(hyperboloidClip.matrixWorld);
+
         // HYPERBOLIC PARABOLOID TRANSLATE
         hyperbolicParaboloidTranslateAngle += (1.0 * frameTime);
         hyperbolicParaboloidTranslateAngle = hyperbolicParaboloidTranslateAngle % TWO_PI;
         hyperbolicParaboloidTranslate.position.x = (spacing * 2 + posXOffset) + (Math.cos(hyperbolicParaboloidTranslateAngle) * 10);
         hyperbolicParaboloidTranslate.position.z = baseZPos + (Math.sin(hyperbolicParaboloidTranslateAngle) * 10);
         hyperbolicParaboloidTranslate.updateMatrixWorld(true);
-        pathTracingUniforms.uHyperbolicParaboloidTranslateInvMatrix.value.getInverse( hyperbolicParaboloidTranslate.matrixWorld );
-        
+        pathTracingUniforms.uHyperbolicParaboloidTranslateInvMatrix.value.getInverse(hyperbolicParaboloidTranslate.matrixWorld);
+
         // HYPERBOLIC PARABOLOID ROTATE
         hyperbolicParaboloidRotateAngle += (1.0 * frameTime);
         hyperbolicParaboloidRotateAngle = hyperbolicParaboloidRotateAngle % TWO_PI;
         hyperbolicParaboloidRotate.rotation.y = -hyperbolicParaboloidRotateAngle;
         hyperbolicParaboloidRotate.updateMatrixWorld(true);
-        pathTracingUniforms.uHyperbolicParaboloidRotateInvMatrix.value.getInverse( hyperbolicParaboloidRotate.matrixWorld );
+        pathTracingUniforms.uHyperbolicParaboloidRotateInvMatrix.value.getInverse(hyperbolicParaboloidRotate.matrixWorld);
 
         // HYPERBOLIC PARABOLOID SCALE
         hyperbolicParaboloidScaleAngle += (1.0 * frameTime);
@@ -458,18 +435,14 @@ function updateVariablesAndUniforms() {
         if (hyperbolicParaboloidScaleAngle == 0) hyperbolicParaboloidScaleAngle += 0.01;
         hyperbolicParaboloidScale.scale.set(20, Math.sin(hyperbolicParaboloidScaleAngle) * 20, 20);
         hyperbolicParaboloidScale.updateMatrixWorld(true);
-        pathTracingUniforms.uHyperbolicParaboloidScaleInvMatrix.value.getInverse( hyperbolicParaboloidScale.matrixWorld );
+        pathTracingUniforms.uHyperbolicParaboloidScaleInvMatrix.value.getInverse(hyperbolicParaboloidScale.matrixWorld);
 
         // HYPERBOLIC PARABOLOID CLIP
         hyperbolicParaboloidClip.updateMatrixWorld(true);
-        pathTracingUniforms.uHyperbolicParaboloidClipInvMatrix.value.getInverse( hyperbolicParaboloidClip.matrixWorld );
-        
+        pathTracingUniforms.uHyperbolicParaboloidClipInvMatrix.value.getInverse(hyperbolicParaboloidClip.matrixWorld);
 
-        // CAMERA
-        cameraControlsObject.updateMatrixWorld(true);
-        pathTracingUniforms.uCameraMatrix.value.copy(worldCamera.matrixWorld);
-        screenOutputMaterial.uniforms.uOneOverSampleCounter.value = 1.0 / sampleCounter;
 
+        // INFO
         cameraInfoElement.innerHTML = "FOV: " + worldCamera.fov + " / Aperture: " + apertureSize.toFixed(2) + " / FocusDistance: " + focusDistance + "<br>" + "Samples: " + sampleCounter;
 
 } // end function updateUniforms()
