@@ -122,7 +122,7 @@ To my knowledge, this is just about as fast as I can push the path tracing engin
 *Update: May 24th, 2019*
 - As promised I wanted to post an exciting update to the game engine path tracer.  What better way to give proof of concept and put it through its paces than an actual game!  I am pleased to announce the first ever pathtraced game for desktop and mobile: AntiGravity Pool!  Since it uses a physics engine and various custom components, I decided to create a dedicated repository for just this new game. Be sure to check it out! <br>
 
-* [AntiGravity Pool game](https://erichlof.github.io/AntiGravity-Pool/AntiGravityPool.html)
+* [AntiGravity Pool game](https://erichlof.github.io/AntiGravity-Pool/AntiGravityPool.html) *on Desktop, press SPACEBAR to shoot! :)*
 * [AntiGravity Pool project](https://github.com/erichlof/AntiGravity-Pool)
 
 <br>
