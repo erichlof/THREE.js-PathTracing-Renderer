@@ -2,7 +2,7 @@
 let container, canvas, stats, controls, renderer, clock;
 // PathTracing scene variables
 let pathTracingScene, screenTextureScene, screenOutputScene;
-let pathTracingUniforms, pathTracingDefines, screenOutputMaterial, pathTracingRenderTarget;
+let pathTracingUniforms, screenTextureUniforms, screenOutputUniforms, pathTracingDefines, screenOutputMaterial, pathTracingRenderTarget;
 // Camera variables
 let quadCamera, worldCamera;
 // HDR image variables
@@ -669,33 +669,64 @@ async function prepareGeometryForPT(meshList, pathTracingMaterialList, triangleM
         //N_ALBEDO_MAPS: uniqueMaterialTextures.length
     };
 
+	// load vertex and fragment shader files that are used in the pathTracing material, mesh and scene
+    let vertexShader = await filePromiseLoader('shaders/vertex.glsl');
+    let fragmentShader = await filePromiseLoader('shaders/Gltf_Viewer.glsl');
+
+    let pathTracingMaterial = new THREE.ShaderMaterial({
+        uniforms: pathTracingUniforms,
+        defines: pathTracingDefines,
+        vertexShader: vertexShader,
+        fragmentShader: fragmentShader,
+        depthTest: false,
+        depthWrite: false
+    });
+
+    let pathTracingGeometry = new THREE.PlaneBufferGeometry(2, 2);
+    let pathTracingMesh = new THREE.Mesh(pathTracingGeometry, pathTracingMaterial);
+    pathTracingScene.add(pathTracingMesh);
+
+    // the following keeps the large scene ShaderMaterial quad right in front
+    //   of the camera at all times. This is necessary because without it, the scene
+    //   quad will fall out of view and get clipped when the camera rotates past 180 degrees.
+    worldCamera.add(pathTracingMesh);
+	
+	screenTextureUniforms = {
+    	tPathTracedImageTexture: { type: "t", value: null }
+    };
+    let screenTextureFragmentShader = await filePromiseLoader('shaders/ScreenCopy_Fragment.glsl');
+	
     let screenTextureGeometry = new THREE.PlaneBufferGeometry(2, 2);
 
     let screenTextureMaterial = new THREE.ShaderMaterial({
-        uniforms: screenTextureShader.uniforms,
-        vertexShader: screenTextureShader.vertexShader,
-        fragmentShader: screenTextureShader.fragmentShader,
+        uniforms: screenTextureUniforms,
+        vertexShader: vertexShader,
+        fragmentShader: screenTextureFragmentShader,
         depthWrite: false,
         depthTest: false
     });
-
-    screenTextureMaterial.uniforms.tPathTracedImageTexture.value = pathTracingRenderTarget.texture;
+    screenTextureUniforms.tPathTracedImageTexture.value = pathTracingRenderTarget.texture;
 
     let screenTextureMesh = new THREE.Mesh(screenTextureGeometry, screenTextureMaterial);
     screenTextureScene.add(screenTextureMesh);
 
 
-    let screenOutputGeometry = new THREE.PlaneBufferGeometry(2, 2);
-
+	screenOutputUniforms = {
+    	uOneOverSampleCounter: { type: "f", value: 0.0 },
+    	tPathTracedImageTexture: { type: "t", value: null }
+    };
+    let screenOutputFragmentShader = await filePromiseLoader('shaders/ScreenOutput_Fragment.glsl');
+	
+	let screenOutputGeometry = new THREE.PlaneBufferGeometry(2, 2);
+	
     screenOutputMaterial = new THREE.ShaderMaterial({
-        uniforms: screenOutputShader.uniforms,
-        vertexShader: screenOutputShader.vertexShader,
-        fragmentShader: screenOutputShader.fragmentShader,
+        uniforms: screenOutputUniforms,
+        vertexShader: vertexShader,
+        fragmentShader: screenOutputFragmentShader,
         depthWrite: false,
         depthTest: false
     });
-
-    screenOutputMaterial.uniforms.tPathTracedImageTexture.value = pathTracingRenderTarget.texture;
+    screenOutputUniforms.tPathTracedImageTexture.value = pathTracingRenderTarget.texture;
 
     let screenOutputMesh = new THREE.Mesh(screenOutputGeometry, screenOutputMaterial);
     screenOutputScene.add(screenOutputMesh);
@@ -720,28 +751,6 @@ async function prepareGeometryForPT(meshList, pathTracingMaterialList, triangleM
         }
     });
     */
-
-    // load vertex and fragment shader files that are used in the pathTracing material, mesh and scene
-    let vertexShader = await filePromiseLoader('shaders/vertex.glsl');
-    let fragmentShader = await filePromiseLoader('shaders/Gltf_Viewer.glsl');
-
-    let pathTracingMaterial = new THREE.ShaderMaterial({
-        uniforms: pathTracingUniforms,
-        defines: pathTracingDefines,
-        vertexShader: vertexShader,
-        fragmentShader: fragmentShader,
-        depthTest: false,
-        depthWrite: false
-    });
-
-    let pathTracingGeometry = new THREE.PlaneBufferGeometry(2, 2);
-    let pathTracingMesh = new THREE.Mesh(pathTracingGeometry, pathTracingMaterial);
-    pathTracingScene.add(pathTracingMesh);
-
-    // the following keeps the large scene ShaderMaterial quad right in front
-    //   of the camera at all times. This is necessary because without it, the scene
-    //   quad will fall out of view and get clipped when the camera rotates past 180 degrees.
-    worldCamera.add(pathTracingMesh);
 
     console.timeEnd("BvhGeneration");
 
@@ -889,8 +898,6 @@ function onWindowResize() {
 } // end function onWindowResize( event )
 
 function animate() {
-
-    requestAnimationFrame(animate);
 
     let frameTime = clock.getDelta();
 
@@ -1125,7 +1132,7 @@ function animate() {
     // CAMERA
     cameraControlsObject.updateMatrixWorld(true);
     pathTracingUniforms.uCameraMatrix.value.copy(worldCamera.matrixWorld);
-    screenOutputMaterial.uniforms.uOneOverSampleCounter.value = 1.0 / sampleCounter;
+    screenOutputUniforms.uOneOverSampleCounter.value = 1.0 / sampleCounter;
 
     samplesSpanEl.innerHTML = `Samples: ${sampleCounter}`;
 
@@ -1150,5 +1157,7 @@ function animate() {
     renderer.render(screenOutputScene, quadCamera);
 
     stats.update();
+	
+	requestAnimationFrame(animate);
 
 } // end function animate()
