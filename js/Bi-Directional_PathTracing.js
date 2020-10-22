@@ -4,8 +4,9 @@ var sceneIsDynamic = false;
 var camFlightSpeed = 300;
 
 // called automatically from within initTHREEjs() function
-function initSceneData() {
-        
+function initSceneData()
+{
+
         // scene/demo-specific three.js objects setup goes here
         EPS_intersect = mouseControl ? 0.01 : 0.5; // less precision on mobile
 
@@ -25,15 +26,16 @@ function initSceneData() {
 
 
 // called automatically from within initTHREEjs() function
-function initPathTracingShaders() {
- 
+function initPathTracingShaders()
+{
+
         // scene/demo-specific uniforms go here
         pathTracingUniforms = {
 
-                tPreviousTexture: { type: "t", value: screenTextureRenderTarget.texture },
-                
+                tPreviousTexture: { type: "t", value: screenCopyRenderTarget.texture },
+
                 uCameraIsMoving: { type: "b1", value: false },
-        
+
                 uEPS_intersect: { type: "f", value: EPS_intersect },
                 uTime: { type: "f", value: 0.0 },
                 uSampleCounter: { type: "f", value: 0.0 },
@@ -42,19 +44,20 @@ function initPathTracingShaders() {
                 uVLen: { type: "f", value: 1.0 },
                 uApertureSize: { type: "f", value: 0.0 },
                 uFocusDistance: { type: "f", value: focusDistance },
-        
+
                 uResolution: { type: "v2", value: new THREE.Vector2() },
-        
+
                 uCameraMatrix: { type: "m4", value: new THREE.Matrix4() }
-        
+
         };
 
         pathTracingDefines = {
-        	//NUMBER_OF_TRIANGLES: total_number_of_triangles
+                //NUMBER_OF_TRIANGLES: total_number_of_triangles
         };
 
         // load vertex and fragment shader files that are used in the pathTracing material, mesh and scene
-        fileLoader.load('shaders/common_PathTracing_Vertex.glsl', function (shaderText) {
+        fileLoader.load('shaders/common_PathTracing_Vertex.glsl', function (shaderText)
+        {
                 pathTracingVertexShader = shaderText;
 
                 createPathTracingMaterial();
@@ -64,10 +67,12 @@ function initPathTracingShaders() {
 
 
 // called automatically from within initPathTracingShaders() function above
-function createPathTracingMaterial() {
+function createPathTracingMaterial()
+{
 
-        fileLoader.load('shaders/Bi-Directional_PathTracing_Fragment.glsl', function (shaderText) {
-                
+        fileLoader.load('shaders/Bi-Directional_PathTracing_Fragment.glsl', function (shaderText)
+        {
+
                 pathTracingFragmentShader = shaderText;
 
                 pathTracingMaterial = new THREE.ShaderMaterial({
@@ -86,7 +91,7 @@ function createPathTracingMaterial() {
                 //   of the camera at all times. This is necessary because without it, the scene 
                 //   quad will fall out of view and get clipped when the camera rotates past 180 degrees.
                 worldCamera.add(pathTracingMesh);
-                
+
         });
 
 } // end function createPathTracingMaterial()
@@ -94,39 +99,10 @@ function createPathTracingMaterial() {
 
 
 // called automatically from within the animate() function
-function updateVariablesAndUniforms() {
+function updateVariablesAndUniforms()
+{
         
-        if ( !cameraIsMoving ) {
-                
-                if (sceneIsDynamic)
-                        sampleCounter = 1.0; // reset for continuous updating of image
-                else sampleCounter += 1.0; // for progressive refinement of image
-                
-                frameCounter += 1.0;
-
-                cameraRecentlyMoving = false;  
-        }
-
-        if (cameraIsMoving) {
-                sampleCounter = 1.0;
-                frameCounter += 1.0;
-
-                if (!cameraRecentlyMoving) {
-                        frameCounter = 1.0;
-                        cameraRecentlyMoving = true;
-                }
-        }
-
-        
-        pathTracingUniforms.uCameraIsMoving.value = cameraIsMoving;
-        pathTracingUniforms.uSampleCounter.value = sampleCounter;
-        pathTracingUniforms.uFrameCounter.value = frameCounter;
-        
-        // CAMERA
-        cameraControlsObject.updateMatrixWorld(true);
-        pathTracingUniforms.uCameraMatrix.value.copy(worldCamera.matrixWorld);
-        screenOutputMaterial.uniforms.uOneOverSampleCounter.value = 1.0 / sampleCounter;
-
+        // INFO
         cameraInfoElement.innerHTML = "FOV: " + worldCamera.fov + " / Aperture: " + apertureSize.toFixed(2) + " / FocusDistance: " + focusDistance + "<br>" + "Samples: " + sampleCounter;
 
 } // end function updateUniforms()
