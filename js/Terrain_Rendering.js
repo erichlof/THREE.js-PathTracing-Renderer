@@ -6,6 +6,7 @@ var sunAngle = 0;
 var sunDirection = new THREE.Vector3();
 var waterLevel = 400;
 var cameraUnderWater = 0.0;
+var PerlinNoiseTexture;
 
 // called automatically from within initTHREEjs() function
 function initSceneData() {
@@ -19,7 +20,7 @@ function initSceneData() {
 
         // position and orient camera
         cameraControlsObject.position.set(-837, 1350, 2156);
-	cameraControlsYawObject.rotation.y = 3.0;
+	cameraControlsYawObject.rotation.y = 0.0;
 	cameraControlsPitchObject.rotation.x = 0.0;
         
         PerlinNoiseTexture = new THREE.TextureLoader().load( 'textures/perlin256.png' );
@@ -40,7 +41,7 @@ function initPathTracingShaders() {
         // scene/demo-specific uniforms go here
         pathTracingUniforms = {
 					
-                tPreviousTexture: { type: "t", value: screenTextureRenderTarget.texture },	
+                tPreviousTexture: { type: "t", value: screenCopyRenderTarget.texture },	
                 t_PerlinNoise: { type: "t", value: PerlinNoiseTexture },
                 
                 uCameraIsMoving: { type: "b1", value: false },
@@ -58,7 +59,6 @@ function initPathTracingShaders() {
                 
                 uResolution: { type: "v2", value: new THREE.Vector2() },
                 
-                uRandomVector: { type: "v3", value: new THREE.Vector3() },
                 uSunDirection: { type: "v3", value: new THREE.Vector3() },
         
                 uCameraMatrix: { type: "m4", value: new THREE.Matrix4() }
@@ -113,58 +113,20 @@ function createPathTracingMaterial() {
 function updateVariablesAndUniforms() {
         
         // scene/demo-specific variables
-        if (cameraControlsObject.position.y < 0.0)
-                cameraUnderWater = true;
-        else cameraUnderWater = false;
-        
-        sunAngle = (elapsedTime * 0.03) % (Math.PI * 1.1);
-        sunDirection.set(Math.cos(sunAngle) * 1.2, Math.sin(sunAngle), -Math.cos(sunAngle) * 3.0);
+        sunAngle = (elapsedTime * 0.035) % (Math.PI + 0.3) - 0.3;
+        sunDirection.set(Math.cos(sunAngle), Math.sin(sunAngle), -Math.cos(sunAngle) * 2.0);
         sunDirection.normalize();
-        
-        if ( !cameraIsMoving ) {
-                
-                if (sceneIsDynamic)
-                        sampleCounter = 1.0; // reset for continuous updating of image
-                else sampleCounter += 1.0; // for progressive refinement of image
-                
-                frameCounter += 1.0;
-
-                cameraRecentlyMoving = false;  
-        }
-
-        if (cameraIsMoving) {
-                sampleCounter = 1.0;
-                frameCounter += 1.0;
-
-                if (!cameraRecentlyMoving) {
-                        frameCounter = 1.0;
-                        cameraRecentlyMoving = true;
-                }
-        }
         
         // scene/demo-specific uniforms
         if (cameraControlsObject.position.y < waterLevel)
                 cameraUnderWater = 1.0;
         else cameraUnderWater = 0.0;
-        
-        sunAngle = (elapsedTime * 0.03) % Math.PI;
-        sunDirection.set(Math.cos(sunAngle) * 1.2, Math.sin(sunAngle), -Math.cos(sunAngle) * 3.0);
-        sunDirection.normalize();
 
         pathTracingUniforms.uCameraUnderWater.value = cameraUnderWater;
         pathTracingUniforms.uWaterLevel.value = waterLevel;
         pathTracingUniforms.uSunDirection.value.copy(sunDirection);
-        pathTracingUniforms.uTime.value = elapsedTime;
-        pathTracingUniforms.uCameraIsMoving.value = cameraIsMoving;
-        pathTracingUniforms.uSampleCounter.value = sampleCounter;
-        pathTracingUniforms.uFrameCounter.value = frameCounter;
-        pathTracingUniforms.uRandomVector.value.copy(randomVector.set( Math.random(), Math.random(), Math.random() ));
         
-        // CAMERA
-        cameraControlsObject.updateMatrixWorld(true);			
-        pathTracingUniforms.uCameraMatrix.value.copy( worldCamera.matrixWorld );
-        screenOutputMaterial.uniforms.uOneOverSampleCounter.value = 1.0 / sampleCounter;
-        
+        // INFO
         cameraInfoElement.innerHTML = "FOV: " + worldCamera.fov + " / Aperture: " + apertureSize.toFixed(2) + " / FocusDistance: " + focusDistance + "<br>" + "Samples: " + sampleCounter;
 				
 } // end function updateUniforms()
