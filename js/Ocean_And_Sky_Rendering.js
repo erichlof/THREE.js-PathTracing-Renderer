@@ -150,7 +150,7 @@ function createPathTracingMaterial() {
 function updateVariablesAndUniforms() {
         
         // scene/demo-specific variables
-        sunAngle = (elapsedTime * 0.03) % (Math.PI + 0.4) - 0.2;
+        sunAngle = (elapsedTime * 0.035) % (Math.PI + 0.2) - 0.11;
         sunDirection.set(Math.cos(sunAngle), Math.sin(sunAngle), -Math.cos(sunAngle) * 2.0);
         sunDirection.normalize();
         
