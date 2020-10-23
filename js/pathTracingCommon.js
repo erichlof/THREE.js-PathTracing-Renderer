@@ -51,9 +51,9 @@ in vec2 vUv;
 
 THREE.ShaderChunk[ 'pathtracing_skymodel_defines' ] = `
 
-#define TURBIDITY 1.5
-#define RAYLEIGH_COEFFICIENT 2.0
-#define MIE_COEFFICIENT 0.02
+#define TURBIDITY 1.0
+#define RAYLEIGH_COEFFICIENT 3.0
+#define MIE_COEFFICIENT 0.03
 #define MIE_DIRECTIONAL_G 0.76
 // constants for atmospheric scattering
 #define THREE_OVER_SIXTEENPI 0.05968310365946075
@@ -73,8 +73,8 @@ THREE.ShaderChunk[ 'pathtracing_skymodel_defines' ] = `
 #define SUN_POWER 1000.0
 // 66 arc seconds -> degrees, and the cosine of that
 #define SUN_ANGULAR_DIAMETER_COS 0.99985 //0.9999566769
-#define CUTOFF_ANGLE 1.7//1.6110731556870734
-#define STEEPNESS 1.0//1.5
+#define CUTOFF_ANGLE 1.6110731556870734
+#define STEEPNESS 1.5
 `;
 
 
