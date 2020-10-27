@@ -119,11 +119,11 @@ bool isLightSourceVisible( vec3 pos, vec3 n, vec3 dirToLight)
 /* Credit: some of the following water code is borrowed from https://www.shadertoy.com/view/Ms2SD1 posted by user 'TDM' */
 
 #define WATER_COLOR vec3(0.96, 1.0, 0.98)
-#define WATER_SAMPLE_SCALE 0.01 
-#define WATER_WAVE_HEIGHT 10.0 // max height of water waves   
-#define WATER_FREQ        0.5 // wave density: lower = spread out, higher = close together
-#define WATER_CHOPPY      4.0 // smaller beachfront-type waves, they travel in parallel
-#define WATER_SPEED       1.0 // how quickly time passes
+#define WATER_SAMPLE_SCALE 0.009 
+#define WATER_WAVE_HEIGHT 20.0 // max height of water waves   
+#define WATER_FREQ        0.2 // wave density: lower = spread out, higher = close together
+#define WATER_CHOPPY      1.9 // smaller beachfront-type waves, they travel in parallel
+#define WATER_SPEED       1.7 // how quickly time passes
 #define M1  mat2(1.6, 1.2, -1.2, 1.6);
 
 float hash( vec2 p )
@@ -359,9 +359,10 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 			vec3 rockColor1 = vec3(0.2, 0.2, 0.2) * rockNoise;
 			vec3 snowColor = vec3(0.9);
 			vec3 up = normalize(vec3(0, 1, 0));
-			vec3 randomSkyVec = normalize(vec3(randVec.x, abs(randVec.y), randVec.z));
-			vec3 skyColor = clamp(Get_Sky_Color( Ray(x, normalize(up + (n * 0.1))), normalize(sunDirection) ), 0.0, 1.0);
-			vec3 sunColor = clamp(Get_Sky_Color( Ray(x, normalize(normalize(vec3(sunDirection.x, sunDirection.y + 0.05, sunDirection.z)) + (randomSkyVec * 0.02))), normalize(sunDirection) ), 0.0, 1.0);
+			vec3 randomSkyVec = randomCosWeightedDirectionInHemisphere(mix(n, up, 0.9));
+			vec3 skyColor = Get_Sky_Color( Ray(x, randomSkyVec), uSunDirection );
+			if (dot(randomSkyVec, uSunDirection) > 0.98) skyColor *= 0.01;
+			vec3 sunColor = clamp(Get_Sky_Color( Ray(x, randomDirectionInSpecularLobe(uSunDirection, 0.0)), uSunDirection ), 0.0, 2.0);
 			float terrainLayer = clamp( ((x.y + -TERRAIN_LIFT) + (rockNoise * 1000.0) * n.y) / (TERRAIN_HEIGHT * 1.2), 0.0, 1.0 );
 			
 			if (x.y > uWaterLevel && terrainLayer > 0.95 && terrainLayer > 0.9 - n.y)
@@ -372,7 +373,7 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 			else
 			{
 				intersec.color = mix(rockColor0, rockColor1, clamp(terrainLayer * n.y, 0.0, 1.0) );
-				mask = intersec.color * 0.4 * dot(up, normalize(sunDirection));
+				mask = intersec.color * skyColor;
 				if (x.y > uWaterLevel && cameraUnderWaterValue == 0.0 && bounces == 0)
 				{
 					nc = 1.0; // IOR of air
