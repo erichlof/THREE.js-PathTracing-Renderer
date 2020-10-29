@@ -8,7 +8,8 @@ var tileNormalMapTexture;
 function initSceneData() {
         
         // scene/demo-specific three.js objects setup goes here
-        
+        pixelRatio = 1.0; // any computer (even mobile!) can run this at 60 fps full resolution
+
         // desktop needs 0.1 precision instead of 0.01 to avoid artifacts on yellow sphere
         EPS_intersect = mouseControl ? 0.1 : 1.0; // less precision on mobile
 
