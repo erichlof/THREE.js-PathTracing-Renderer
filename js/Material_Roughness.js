@@ -46,7 +46,7 @@ function init_GUI() {
                 mouseControl = false;
                 // if on mobile device, unpause the app because there is no ESC key and no mouse capture to do
                 isPaused = false;
-                pixelRatio = 0.5;
+		
                 ableToEngagePointerLock = true;
 
                 mobileJoystickControls = new MobileJoystickControls ({
