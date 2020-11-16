@@ -346,37 +346,16 @@ function initSceneData() {
 function initPathTracingShaders() {
  
         // scene/demo-specific uniforms go here
-        pathTracingUniforms = {
-
-                tPreviousTexture: { type: "t", value: screenCopyRenderTarget.texture },
-                tTriangleTexture: { type: "t", value: triangleDataTexture },
-                tAABBTexture: { type: "t", value: aabbDataTexture },
-                tAlbedoMap: { type: "t", value: albedoMap },
-                tEmissiveMap: { type: "t", value: emissiveMap },
-                tMetallicRoughnessMap: { type: "t", value: metallicRoughnessMap },
-                tNormalMap: { type: "t", value: normalMap },
-
-                uCameraIsMoving: { type: "b1", value: false },
-
-                uEPS_intersect: { type: "f", value: EPS_intersect },
-                uTime: { type: "f", value: 0.0 },
-                uSampleCounter: { type: "f", value: 1.0 },
-                uFrameCounter: { type: "f", value: 1.0 },
-                uULen: { type: "f", value: 1.0 },
-                uVLen: { type: "f", value: 1.0 },
-                uApertureSize: { type: "f", value: 0.0 },
-                uFocusDistance: { type: "f", value: focusDistance },
-
-                uResolution: { type: "v2", value: new THREE.Vector2() },
-
-                uGLTF_Model_Position: { type: "v3", value: new THREE.Vector3() },
-
-                uCameraMatrix: {type: "m4", value: new THREE.Matrix4() },
-
-                uGLTF_Model_InvMatrix: { type: "m4", value: new THREE.Matrix4() },
-                uGLTF_Model_NormalMatrix: { type: "m3", value: new THREE.Matrix3() }
-        
-        };
+        pathTracingUniforms.tPreviousTexture = { type: "t", value: screenCopyRenderTarget.texture };
+	pathTracingUniforms.tTriangleTexture = { type: "t", value: triangleDataTexture };
+	pathTracingUniforms.tAABBTexture = { type: "t", value: aabbDataTexture };
+	pathTracingUniforms.tAlbedoMap = { type: "t", value: albedoMap };
+	pathTracingUniforms.tEmissiveMap = { type: "t", value: emissiveMap };
+	pathTracingUniforms.tMetallicRoughnessMap = { type: "t", value: metallicRoughnessMap };
+	pathTracingUniforms.tNormalMap = { type: "t", value: normalMap };
+	pathTracingUniforms.uGLTF_Model_Position = { type: "v3", value: new THREE.Vector3() };
+	pathTracingUniforms.uGLTF_Model_InvMatrix = { type: "m4", value: new THREE.Matrix4() };
+	pathTracingUniforms.uGLTF_Model_NormalMatrix = { type: "m3", value: new THREE.Matrix3() };
 
         pathTracingDefines = {
         	//NUMBER_OF_TRIANGLES: total_number_of_triangles
