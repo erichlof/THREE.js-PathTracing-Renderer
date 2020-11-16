@@ -51,6 +51,7 @@ let pinchDeltaX = 0;
 let pinchDeltaY = 0;
 let fontAspect;
 let useGenericInput = true;
+let EPS_intersect;
 let blueNoiseTexture;
 
 // the following variables will be used to calculate rotations and directions from the camera
