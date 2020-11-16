@@ -1,5 +1,4 @@
 // scene/demo-specific variables go here
-var EPS_intersect;
 var clothTexture, darkWoodTexture, lightWoodTexture;
 var increaseDoorAngle = false;
 var decreaseDoorAngle = false;
