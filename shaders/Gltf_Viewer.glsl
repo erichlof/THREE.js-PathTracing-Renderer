@@ -248,7 +248,7 @@ vec3 Get_HDR_Color(Ray r)
 vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 //-----------------------------------------------------------------------
 {
-	vec3 randVec = vec3(rng() * 2.0 - 1.0, rng() * 2.0 - 1.0, rng() * 2.0 - 1.0);
+	vec3 randVec = vec3(rand() * 2.0 - 1.0, rand() * 2.0 - 1.0, rand() * 2.0 - 1.0);
 
 	Intersection intersec;
 	vec3 accumCol = vec3(0.0);
@@ -332,19 +332,19 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 			mask *= intersec.color;
             		bounceIsSpecular = false;
 
-			
+			/*
 			// Russian Roulette
 			float p = max(mask.r, max(mask.g, mask.b));
 			if (bounces > 0)
 			{
-				if (rng() < p)
+				if (rand() < p)
                     			mask *= 1.0 / p;
                 		else
                     			break;
 			}
-			
+			*/
 
-			if (diffuseCount == 1 && rng() < 0.5)
+			if (diffuseCount == 1 && rand() < 0.5)
 			{
 				// this branch gathers color bleeding / caustics from other surfaces hit in the future
 				// choose random Diffuse sample vector
@@ -390,7 +390,7 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 
-			if (rng() < Re) // reflect ray from surface
+			if (rand() < Re) // reflect ray from surface
 			{
 				r = Ray( x, reflect(r.direction, nl) );
 				r.origin += r.direction * epsIntersect;
@@ -430,14 +430,16 @@ void main( void )
     	vec3 camUp      = vec3( uCameraMatrix[1][0],  uCameraMatrix[1][1],  uCameraMatrix[1][2]);
 	vec3 camForward = vec3(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]);
 	
-	// calculate unique seed value for rng() function
-	seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord);
+	// calculate unique seed for rng() function
+	//seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord); // old way of generating random numbers
+
+	randVec4 = texture(tBlueNoiseTexture, (gl_FragCoord.xy + (uRandomVec2 * 256.0)) / 256.0 ); // new way of rand()
 
 	vec2 pixelPos = vec2(0);
 	vec2 pixelOffset = vec2(0);
 	
-	float x = rng();
-	float y = rng();
+	float x = rand();
+	float y = rand();
 
 	pixelOffset = vec2(tentFilter(x), tentFilter(y));
 
@@ -448,8 +450,8 @@ void main( void )
 	
 	// depth of field
 	vec3 focalPoint = uFocusDistance * rayDir;
-	float randomAngle = rng() * TWO_PI; // pick random point on aperture
-	float randomRadius = rng() * uApertureSize;
+	float randomAngle = rand() * TWO_PI; // pick random point on aperture
+	float randomRadius = rand() * uApertureSize;
 	vec3  randomAperturePos = ( cos(randomAngle) * camRight + sin(randomAngle) * camUp ) * randomRadius;
 	// point on aperture to focal point
 	vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
