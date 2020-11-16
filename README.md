@@ -1,3 +1,5 @@
+# 11/16/2020 11:16 a.m.CentralTime - Refactoring going on, sorry the demos are currently unavailable - please check back in 30 minutes and everything will work again! :-)
+
 # THREE.js-PathTracing-Renderer
 Real-time PathTracing with global illumination and progressive rendering, all on top of the Three.js WebGL framework.
 
