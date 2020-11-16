@@ -248,7 +248,7 @@ vec3 Get_HDR_Color(Ray r)
 vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 //-----------------------------------------------------------------------
 {
-	vec3 randVec = vec3(rand() * 2.0 - 1.0, rand() * 2.0 - 1.0, rand() * 2.0 - 1.0);
+	vec3 randVec = vec3(rng() * 2.0 - 1.0, rng() * 2.0 - 1.0, rng() * 2.0 - 1.0);
 
 	Intersection intersec;
 	vec3 accumCol = vec3(0.0);
@@ -332,17 +332,19 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 			mask *= intersec.color;
             		bounceIsSpecular = false;
 
+			/*
 			// Russian Roulette
 			float p = max(mask.r, max(mask.g, mask.b));
 			if (bounces > 0)
 			{
-				if (rand() < p)
+				if (rng() < p)
                     			mask *= 1.0 / p;
                 		else
                     			break;
 			}
+			*/
 
-			if (diffuseCount == 1 && rand() < 0.5)
+			if (diffuseCount == 1 && rng() < 0.5)
 			{
 				// this branch gathers color bleeding / caustics from other surfaces hit in the future
 				// choose random Diffuse sample vector
@@ -388,7 +390,7 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 
-			if (rand() < Re) // reflect ray from surface
+			if (rng() < Re) // reflect ray from surface
 			{
 				r = Ray( x, reflect(r.direction, nl) );
 				r.origin += r.direction * epsIntersect;
@@ -416,11 +418,9 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 // tentFilter from Peter Shirley's 'Realistic Ray Tracing (2nd Edition)' book, pg. 60
 float tentFilter(float x)
 {
-	if (x < 0.5)
-		return sqrt(2.0 * x) - 1.0;
-
-	return 1.0 - sqrt(2.0 - (2.0 * x));
+	return (x < 0.5) ? sqrt(2.0 * x) - 1.0 : 1.0 - sqrt(2.0 - (2.0 * x));
 }
+
 
 void main( void )
 {
@@ -430,34 +430,26 @@ void main( void )
     	vec3 camUp      = vec3( uCameraMatrix[1][0],  uCameraMatrix[1][1],  uCameraMatrix[1][2]);
 	vec3 camForward = vec3(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]);
 	
-	// calculate unique seed value for rand() function
+	// calculate unique seed value for rng() function
 	seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord);
 
 	vec2 pixelPos = vec2(0);
 	vec2 pixelOffset = vec2(0);
 	
-	float x = rand();
-	float y = rand();
+	float x = rng();
+	float y = rng();
 
-	if (!uCameraIsMoving)
-	{
-		pixelOffset.x = tentFilter(x);
-		pixelOffset.y = tentFilter(y);
-	}
-	
-	// pixelOffset ranges from -1.0 to +1.0, so only need to divide by half resolution
-	pixelOffset /= (uResolution * 0.5);
+	pixelOffset = vec2(tentFilter(x), tentFilter(y));
 
 	// we must map pixelPos into the range -1.0 to +1.0
-	pixelPos = (gl_FragCoord.xy / uResolution) * 2.0 - 1.0;
-	pixelPos += pixelOffset;
+	pixelPos = ((gl_FragCoord.xy + pixelOffset) / uResolution) * 2.0 - 1.0;
 
 	vec3 rayDir = normalize( pixelPos.x * camRight * uULen + pixelPos.y * camUp * uVLen + camForward );
 	
 	// depth of field
 	vec3 focalPoint = uFocusDistance * rayDir;
-	float randomAngle = rand() * TWO_PI; // pick random point on aperture
-	float randomRadius = rand() * uApertureSize;
+	float randomAngle = rng() * TWO_PI; // pick random point on aperture
+	float randomRadius = rng() * uApertureSize;
 	vec3  randomAperturePos = ( cos(randomAngle) * camRight + sin(randomAngle) * camUp ) * randomRadius;
 	// point on aperture to focal point
 	vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
