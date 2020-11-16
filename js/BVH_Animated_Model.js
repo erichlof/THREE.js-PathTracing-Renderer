@@ -1,5 +1,4 @@
 // scene/demo-specific variables go here
-var EPS_intersect;
 var sceneIsDynamic = true;
 var camFlightSpeed = 60;
 var GLTF_Model_Geometry, GLTF_Model_Material, GLTF_Model_Mesh;
