@@ -619,13 +619,6 @@ async function prepareGeometryForPT(meshList, pathTracingMaterialList, triangleM
     aabbDataTexture.generateMipmaps = false;
     aabbDataTexture.needsUpdate = true;
 
-    let PerlinNoiseTexture = new THREE.TextureLoader().load('textures/perlin256.png');
-    PerlinNoiseTexture.wrapS = THREE.RepeatWrapping;
-    PerlinNoiseTexture.wrapT = THREE.RepeatWrapping;
-    PerlinNoiseTexture.flipY = false;
-    PerlinNoiseTexture.minFilter = THREE.LinearFilter;
-    PerlinNoiseTexture.magFilter = THREE.LinearFilter;
-    PerlinNoiseTexture.generateMipmaps = false;
 
     hdrLoader = new THREE.RGBELoader();
     hdrPath = 'textures/daytime.hdr';
@@ -643,7 +636,6 @@ async function prepareGeometryForPT(meshList, pathTracingMaterialList, triangleM
         tTriangleTexture: {type: "t", value: triangleDataTexture},
         tAABBTexture: {type: "t", value: aabbDataTexture},
         tAlbedoTextures: {type: "t", value: uniqueMaterialTextures},
-        t_PerlinNoise: {type: "t", value: PerlinNoiseTexture},
         tHDRTexture: { type: "t", value: hdrTexture },
 
         uCameraIsMoving: {type: "b1", value: false},
