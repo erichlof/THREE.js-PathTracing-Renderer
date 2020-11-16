@@ -1,5 +1,4 @@
 // scene/demo-specific variables go here
-var EPS_intersect;
 var sceneIsDynamic = true;
 var earthRadius = 6360;
 var atmosphereRadius = 6420;
