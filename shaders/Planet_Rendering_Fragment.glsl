@@ -754,10 +754,9 @@ void SetupScene(void)
 // tentFilter from Peter Shirley's 'Realistic Ray Tracing (2nd Edition)' book, pg. 60		
 float tentFilter(float x)
 {
-	if (x < 0.5) 
-		return sqrt(2.0 * x) - 1.0;
-	else return 1.0 - sqrt(2.0 - (2.0 * x));
+	return (x < 0.5) ? sqrt(2.0 * x) - 1.0 : 1.0 - sqrt(2.0 - (2.0 * x));
 }
+
 
 void main( void )
 {
@@ -768,8 +767,10 @@ void main( void )
 	vec3 camUp      = normalize( vec3( uCameraMatrix[1][0],  uCameraMatrix[1][1],  uCameraMatrix[1][2]) );    
 	vec3 camForward = normalize( vec3(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]) );
 
-	// calculate unique seed for rand() function
-	seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord);
+	// calculate unique seed for rng() function
+	//seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord); // old way of generating random numbers
+
+	randVec4 = texture(tBlueNoiseTexture, (gl_FragCoord.xy + (uRandomVec2 * 256.0)) / 256.0 ); // new way of rand()
 
 	vec2 pixelPos = vec2(0);
 	vec2 pixelOffset = vec2(0);
@@ -777,14 +778,9 @@ void main( void )
 	float x = rand();
 	float y = rand();
 
-	//if (!uCameraIsMoving)
-	{
-		pixelOffset.x = tentFilter(x);
-		pixelOffset.y = tentFilter(y);
-	}
+	pixelOffset = vec2(tentFilter(x), tentFilter(y));
 	
-	// pixelOffset ranges from -1.0 to +1.0, so only need to divide by half resolution
-	pixelOffset /= (uResolution * 1.0); // normally this is * 0.5, but for dynamic scenes, * 1.0 looks sharper
+	pixelOffset /= uResolution;
 
 	// we must map pixelPos into the range -1.0 to +1.0
 	pixelPos = (gl_FragCoord.xy / uResolution) * 2.0 - 1.0;
