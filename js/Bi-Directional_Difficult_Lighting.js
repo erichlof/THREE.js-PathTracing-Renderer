@@ -358,38 +358,16 @@ function initSceneData() {
 // called automatically from within initTHREEjs() function
 function initPathTracingShaders() {
  
-        // scene/demo-specific uniforms go here
-        pathTracingUniforms = {
-					
-                tPreviousTexture: { type: "t", value: screenCopyRenderTarget.texture },
-                tTriangleTexture: { type: "t", value: triangleDataTexture },
-                tAABBTexture: { type: "t", value: aabbDataTexture },
-                
-                tPaintingTexture: { type: "t", value: paintingTexture },
-                tDarkWoodTexture: { type: "t", value: darkWoodTexture },
-                tLightWoodTexture: { type: "t", value: lightWoodTexture },
-                tMarbleTexture: { type: "t", value: marbleTexture },
-                tHammeredMetalNormalMapTexture: { type: "t", value: hammeredMetalNormalMapTexture },
-                
-                uCameraIsMoving: { type: "b1", value: false },
-
-                uEPS_intersect: { type: "f", value: EPS_intersect },
-                uTime: { type: "f", value: 0.0 },
-                uSampleCounter: { type: "f", value: 0.0 },
-                uFrameCounter: { type: "f", value: 1.0 },
-                uULen: { type: "f", value: 1.0 },
-                uVLen: { type: "f", value: 1.0 },
-                uApertureSize: { type: "f", value: 0.0 },
-                uFocusDistance: { type: "f", value: focusDistance },
-                
-                uResolution: { type: "v2", value: new THREE.Vector2() },
-        
-                uCameraMatrix: { type: "m4", value: new THREE.Matrix4() },
-                
-                uDoorObjectInvMatrix: { type: "m4", value: new THREE.Matrix4() },
-                uDoorObjectNormalMatrix: { type: "m3", value: new THREE.Matrix3() }
-
-        };
+        // scene/demo-specific uniforms go here    
+        pathTracingUniforms.tTriangleTexture = { type: "t", value: triangleDataTexture };
+	pathTracingUniforms.tAABBTexture = { type: "t", value: aabbDataTexture };    
+	pathTracingUniforms.tPaintingTexture = { type: "t", value: paintingTexture };
+	pathTracingUniforms.tDarkWoodTexture = { type: "t", value: darkWoodTexture };
+	pathTracingUniforms.tLightWoodTexture = { type: "t", value: lightWoodTexture };
+	pathTracingUniforms.tMarbleTexture = { type: "t", value: marbleTexture };
+	pathTracingUniforms.tHammeredMetalNormalMapTexture = { type: "t", value: hammeredMetalNormalMapTexture };  
+	pathTracingUniforms.uDoorObjectInvMatrix = { type: "m4", value: new THREE.Matrix4() };
+	pathTracingUniforms.uDoorObjectNormalMatrix = { type: "m3", value: new THREE.Matrix3() };
 
         pathTracingDefines = {
         	//NUMBER_OF_TRIANGLES: total_number_of_triangles_0
