@@ -46,7 +46,7 @@ function init_GUI() {
                 mouseControl = false;
                 // if on mobile device, unpause the app because there is no ESC key and no mouse capture to do
                 isPaused = false;
-		
+                
                 ableToEngagePointerLock = true;
 
                 mobileJoystickControls = new MobileJoystickControls ({
@@ -129,30 +129,8 @@ function initSceneData() {
 function initPathTracingShaders() {
  
         // scene/demo-specific uniforms go here
-        pathTracingUniforms = {
-
-                tPreviousTexture: { type: "t", value: screenCopyRenderTarget.texture },
-
-                uCameraIsMoving: { type: "b1", value: false },
-        
-                uMaterialType: { type: "i", value: 4 },
-
-                uEPS_intersect: { type: "f", value: EPS_intersect },
-                uTime: { type: "f", value: 0.0 },
-                uSampleCounter: { type: "f", value: 0.0 },
-                uFrameCounter: { type: "f", value: 1.0 },
-                uULen: { type: "f", value: 1.0 },
-                uVLen: { type: "f", value: 1.0 },
-                uApertureSize: { type: "f", value: 0.0 },
-                uFocusDistance: { type: "f", value: focusDistance },
-
-                uResolution: { type: "v2", value: new THREE.Vector2() },
-        
-                uMaterialColor: { type: "v3", value: new THREE.Color(0.0, 1.0, 1.0) },
-        
-                uCameraMatrix: { type: "m4", value: new THREE.Matrix4() }
-        
-        };
+        pathTracingUniforms.uMaterialType = { type: "i", value: 4 };
+        pathTracingUniforms.uMaterialColor = { type: "v3", value: new THREE.Color(0.0, 1.0, 1.0) };
 
         pathTracingDefines = {
         	//NUMBER_OF_TRIANGLES: total_number_of_triangles
