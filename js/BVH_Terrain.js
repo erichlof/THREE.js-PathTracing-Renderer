@@ -128,8 +128,8 @@ function load_GLTF_Model()
 // called automatically from within initTHREEjs() function
 function initSceneData()
 {
-
         // scene/demo-specific three.js objects setup goes here
+        EPS_intersect = mouseControl ? 0.01 : 1.0; // less precision on mobile
 
         // set camera's field of view
         worldCamera.fov = 60;
@@ -340,30 +340,9 @@ function initSceneData()
 // called automatically from within initTHREEjs() function
 function initPathTracingShaders()
 {
-
         // scene/demo-specific uniforms go here
-        pathTracingUniforms = {
-
-                tPreviousTexture: { type: "t", value: screenCopyRenderTarget.texture },
-                tTriangleTexture: { type: "t", value: triangleDataTexture },
-                tAABBTexture: { type: "t", value: aabbDataTexture },
-                tAlbedoMap: { type: "t", value: albedoMap },
-
-                uCameraIsMoving: { type: "b1", value: false },
-
-                uTime: { type: "f", value: 0.0 },
-                uSampleCounter: { type: "f", value: 1.0 },
-                uFrameCounter: { type: "f", value: 1.0 },
-                uULen: { type: "f", value: 1.0 },
-                uVLen: { type: "f", value: 1.0 },
-                uApertureSize: { type: "f", value: 0.0 },
-                uFocusDistance: { type: "f", value: 100.0 },
-
-                uResolution: { type: "v2", value: new THREE.Vector2() },
-
-                uCameraMatrix: { type: "m4", value: new THREE.Matrix4() }
-
-        };
+        pathTracingUniforms.tTriangleTexture = { type: "t", value: triangleDataTexture };
+        pathTracingUniforms.tAABBTexture = { type: "t", value: aabbDataTexture };
 
         pathTracingDefines = {
                 //NUMBER_OF_TRIANGLES: total_number_of_triangles
