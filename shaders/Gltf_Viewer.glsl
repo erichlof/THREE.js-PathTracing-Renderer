@@ -5,7 +5,6 @@ precision highp sampler2D;
 #include <pathtracing_uniforms_and_defines>
 
 uniform vec3 uSunDirection;
-uniform sampler2D t_PerlinNoise;
 uniform sampler2D tTriangleTexture;
 uniform sampler2D tAABBTexture;
 uniform sampler2D tAlbedoTextures[8]; // 8 = max number of diffuse albedo textures per model
