@@ -51,6 +51,7 @@ let pinchDeltaX = 0;
 let pinchDeltaY = 0;
 let fontAspect;
 let useGenericInput = true;
+let blueNoiseTexture;
 
 // the following variables will be used to calculate rotations and directions from the camera
 let cameraDirectionVector = new THREE.Vector3(); //for moving where the camera is looking
@@ -336,6 +337,15 @@ function initTHREEjs() {
         });
         screenCopyRenderTarget.texture.generateMipmaps = false;
 
+        // blueNoise texture used in all demos
+        blueNoiseTexture = new THREE.TextureLoader().load('textures/blueNoise.png');
+        // blueNoiseTexture.wrapS = THREE.RepeatWrapping; // not used in glsl texelFetch()
+        // blueNoiseTexture.wrapT = THREE.RepeatWrapping; // not used in glsl texelFetch()
+        blueNoiseTexture.flipY = false;
+        blueNoiseTexture.minFilter = THREE.NearestFilter;
+        blueNoiseTexture.magFilter = THREE.NearestFilter;
+        blueNoiseTexture.generateMipmaps = false;
+
 
         // setup scene/demo-specific objects, variables, and data
         initSceneData();
@@ -345,6 +355,29 @@ function initTHREEjs() {
 
         // this full-screen quad mesh performs the path tracing operations and produces a screen-sized image
         pathTracingGeometry = new THREE.PlaneBufferGeometry(2, 2);
+        pathTracingUniforms = {
+
+                tPreviousTexture: { type: "t", value: screenCopyRenderTarget.texture },
+                tBlueNoiseTexture: { type: "t", value: blueNoiseTexture },
+
+                uCameraIsMoving: { type: "b1", value: false },
+                uSceneIsDynamic: { type: "b1", value: sceneIsDynamic },
+
+                uEPS_intersect: { type: "f", value: EPS_intersect },
+                uTime: { type: "f", value: 0.0 },
+                uSampleCounter: { type: "f", value: 0.0 },
+                uFrameCounter: { type: "f", value: 1.0 },
+                uULen: { type: "f", value: 1.0 },
+                uVLen: { type: "f", value: 1.0 },
+                uApertureSize: { type: "f", value: 0.0 },
+                uFocusDistance: { type: "f", value: focusDistance },
+
+                uResolution: { type: "v2", value: new THREE.Vector2() },
+                uRandomVec2: { type: "v2", value: new THREE.Vector2() },
+
+                uCameraMatrix: { type: "m4", value: new THREE.Matrix4() }
+        };
+
         initPathTracingShaders();
 
         
@@ -654,6 +687,7 @@ function animate() {
         pathTracingUniforms.uCameraIsMoving.value = cameraIsMoving;
         pathTracingUniforms.uSampleCounter.value = sampleCounter;
         pathTracingUniforms.uFrameCounter.value = frameCounter;
+        pathTracingUniforms.uRandomVec2.value.set(Math.random(), Math.random());
 
         // CAMERA
         cameraControlsObject.updateMatrixWorld(true);
