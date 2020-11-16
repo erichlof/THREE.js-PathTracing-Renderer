@@ -73,7 +73,6 @@ Box boxes[N_BOXES];
 #include <pathtracing_sample_sphere_light>
 
 
-
 //------------------------------------------------------------------------------------
 float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExiting )
 //------------------------------------------------------------------------------------
@@ -222,8 +221,8 @@ vec3 CalculateRadiance(Ray r)
 	bool sampleLight = false;
 	bool isRayExiting;
 
-	randChoose = rand() * N_LIGHTS; // 3 lights to choose from
-	lightChoice = spheres[int(randChoose)];
+	// randChoose = rand() * N_LIGHTS; // 3 lights to choose from
+	// lightChoice = spheres[int(randChoose)];
 
 	
 	for (int bounces = 0; bounces < 6; bounces++)
@@ -258,8 +257,8 @@ vec3 CalculateRadiance(Ray r)
                 nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
 		x = r.origin + r.direction * t;
 
-		// randChoose = rand() * 3.0; // 3 lights to choose from
-		// lightChoice = spheres[int(randChoose)];
+		randChoose = rand() * N_LIGHTS; // 3 lights to choose from
+		lightChoice = spheres[int(randChoose)];
 
 		    
                 if (intersec.type == DIFF || intersec.type == CHECK) // Ideal DIFFUSE reflection
