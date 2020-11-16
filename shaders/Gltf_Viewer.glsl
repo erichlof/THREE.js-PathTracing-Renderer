@@ -332,7 +332,7 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 			mask *= intersec.color;
             		bounceIsSpecular = false;
 
-			/*
+			
 			// Russian Roulette
 			float p = max(mask.r, max(mask.g, mask.b));
 			if (bounces > 0)
@@ -342,7 +342,7 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection)
                 		else
                     			break;
 			}
-			*/
+			
 
 			if (diffuseCount == 1 && rng() < 0.5)
 			{
