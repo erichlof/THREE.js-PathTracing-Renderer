@@ -86,36 +86,15 @@ function initSceneData() {
 // called automatically from within initTHREEjs() function
 function initPathTracingShaders() {
  
-        // scene/demo-specific uniforms go here
-        pathTracingUniforms = {
-					
-                tPreviousTexture: { type: "t", value: screenCopyRenderTarget.texture },		
-                t_PerlinNoise: { type: "t", value: PerlinNoiseTexture },
-                
-                uCameraIsMoving: { type: "b1", value: false },
-                uCameraWithinAtmosphere: { type: "b1", value: cameraWithinAtmosphere },
-                
-                uEPS_intersect: { type: "f", value: EPS_intersect },
-                uTime: { type: "f", value: 0.0 },
-                uSampleCounter: { type: "f", value: 0.0 },
-                uFrameCounter: { type: "f", value: 1.0 },
-                uULen: { type: "f", value: 1.0 },
-                uVLen: { type: "f", value: 1.0 },
-                uApertureSize: { type: "f", value: 0.0 },
-                uFocusDistance: { type: "f", value: focusDistance },
-                uCameraUnderWater: { type: "f", value: 0.0 },
-                uSunAngle: { type: "f", value: 0.0 },
-                
-                uResolution: { type: "v2", value: new THREE.Vector2() },
-                
-                uSunDirection: { type: "v3", value: new THREE.Vector3() },
-                uCameraFrameRight: { type: "v3", value: new THREE.Vector3() },
-                uCameraFrameForward: { type: "v3", value: new THREE.Vector3() },
-                uCameraFrameUp: { type: "v3", value: new THREE.Vector3() },
-                
-                uCameraMatrix: { type: "m4", value: new THREE.Matrix4() }
-
-        };
+        // scene/demo-specific uniforms go here	
+        pathTracingUniforms.t_PerlinNoise = { type: "t", value: PerlinNoiseTexture };
+	pathTracingUniforms.uCameraWithinAtmosphere = { type: "b1", value: cameraWithinAtmosphere };
+	pathTracingUniforms.uSunAngle = { type: "f", value: 0.0 };
+	pathTracingUniforms.uCameraUnderWater = { type: "f", value: 0.0 };
+	pathTracingUniforms.uSunDirection = { type: "v3", value: new THREE.Vector3() };
+	pathTracingUniforms.uCameraFrameRight = { type: "v3", value: new THREE.Vector3() };
+	pathTracingUniforms.uCameraFrameForward = { type: "v3", value: new THREE.Vector3() };
+	pathTracingUniforms.uCameraFrameUp = { type: "v3", value: new THREE.Vector3() };
 
         pathTracingDefines = {
         	//NUMBER_OF_TRIANGLES: total_number_of_triangles
