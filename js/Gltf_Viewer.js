@@ -662,7 +662,8 @@ async function prepareGeometryForPT(meshList, pathTracingMaterialList, triangleM
         uSunColor: {type: "v3", value: new THREE.Color().fromArray(sunColor.map(x => x / 255))},
 
         uResolution: {type: "v2", value: new THREE.Vector2()},
-
+		uRandomVec2: { type: "v2", value: new THREE.Vector2() },
+	    
         uSunDirection: {type: "v3", value: new THREE.Vector3()},
         uCameraMatrix: {type: "m4", value: new THREE.Matrix4()},
 
@@ -1132,6 +1133,8 @@ function animate() {
     //pathTracingUniforms.uTime.value = elapsedTime;
     pathTracingUniforms.uCameraIsMoving.value = cameraIsMoving;
     pathTracingUniforms.uFrameCounter.value = frameCounter;
+	pathTracingUniforms.uRandomVec2.value.set(Math.random(), Math.random());
+	
     // CAMERA
     cameraControlsObject.updateMatrixWorld(true);
     pathTracingUniforms.uCameraMatrix.value.copy(worldCamera.matrixWorld);
