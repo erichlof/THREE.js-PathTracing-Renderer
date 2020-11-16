@@ -1,6 +1,7 @@
 THREE.ShaderChunk[ 'pathtracing_uniforms_and_defines' ] = `
 
 uniform bool uCameraIsMoving;
+uniform bool uSceneIsDynamic;
 uniform float uEPS_intersect;
 uniform float uTime;
 uniform float uSampleCounter;
@@ -12,10 +13,12 @@ uniform float uFocusDistance;
 uniform float uSamplesPerFrame;
 uniform float uFrameBlendingAmount;
 uniform vec2 uResolution;
-uniform vec3 uRandomVector;
+uniform vec2 uRandomVec2;
 uniform mat4 uCameraMatrix;
 uniform sampler2D tPreviousTexture;
+uniform sampler2D tBlueNoiseTexture;
 in vec2 vUv;
+
 #define PI               3.14159265358979323
 #define TWO_PI           6.28318530717958648
 #define FOUR_PI          12.5663706143591729
@@ -1234,11 +1237,27 @@ vec3 Get_Sky_Color(Ray r, vec3 sunDirection)
 
 THREE.ShaderChunk[ 'pathtracing_random_functions' ] = `
 
-// global seed used in rand() function
-uvec2 seed;
+// globals used in rand() function
+vec4 randVec4; // samples and holds the RGBA blueNoise texture value for this pixel
+float randNumber = 0.0; // the final randomly generated number (range: 0.0 to 1.0)
+float counter = -1.0; // will get incremented by 1 on each call to rand()
+float modulus = 4.0; // used in the channel selection mod calc that cycles through the channels (range: 1.0 to 4.0)
+int channel = 0; // the final selected color channel to use for rand() calc (range: 0 to 3, corresponds to R,G,B, or A)
+
+float rand()
+{
+	counter += 1.0; // increment counter by 1 on every call to rand()
+	// cycles through channels, if 'modulus' is 1.0, channel will always be 0 (the R color channel)
+	channel = int(mod(counter, modulus)); 
+	// but if 'modulus' was 4.0, channel will cycle through all available channels: 0,1,2,3,0,1,2,3, and so on...
+	randNumber += randVec4[channel]; // add value stored in channel 0:R, 1:G, 2:B, or 3:A to accumulating randNumber
+	return fract(randNumber); // we're only interested in randNumber's fractional value between 0.0 (inclusive) and 1.0 (non-inclusive)
+}
 
 // from iq https://www.shadertoy.com/view/4tXyWN
-float rand()
+// global seed used in rng() function
+uvec2 seed;
+float rng()
 {
 	seed += uvec2(1);
     	uvec2 q = 1103515245U * ( (seed >> 1U) ^ (seed.yx) );
@@ -1432,29 +1451,8 @@ float tentFilter(float x)
 {
 	return (x < 0.5) ? sqrt(2.0 * x) - 1.0 : 1.0 - sqrt(2.0 - (2.0 * x));
 }
-/*
-// cubicSplineFilter from Peter Shirley's 'Realistic Ray Tracing (2nd Edition)' book, pg. 58
-float solve(float r)
-{
-	float u = r;
-	for (int i = 0; i < 5; i++)
-	{
-		u = (11.0 * r + u * u * (6.0 + u * (8.0 - 9.0 * u))) /
-			(4.0 + 12.0 * u * (1.0 + u * (1.0 - u)));
-	}
-	return u;
-}
-float cubicFilter(float x)
-{
-	if (x < 1.0 / 24.0)
-		return pow(24.0 * x, 0.25) - 2.0;
-	else if (x < 0.5)
-		return solve(24.0 * (x - 1.0 / 24.0) / 11.0) - 1.0;
-	else if (x < 23.0 / 24.0)
-		return 1.0 - solve(24.0 * (23.0 / 24.0 - x) / 11.0);
-	else return 2.0 - pow(24.0 * (1.0 - x), 0.25);
-}
-*/
+
+
 void main( void )
 {
 	// not needed, three.js has a built-in uniform named cameraPosition
@@ -1464,26 +1462,22 @@ void main( void )
 	vec3 camUp      = vec3( uCameraMatrix[1][0],  uCameraMatrix[1][1],  uCameraMatrix[1][2]);
 	vec3 camForward = vec3(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]);
 	
-	// calculate unique seed for rand() function
-	seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord);
+	// calculate unique seed for rng() function
+	//seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord); // old way
+
+	randVec4 = texelFetch(tBlueNoiseTexture, ivec2(mod(gl_FragCoord.xy + (uRandomVec2 * 1024.0), 1024.0)), 0);
+
 	vec2 pixelPos = vec2(0);
 	vec2 pixelOffset = vec2(0);
 	
 	float x = rand();
 	float y = rand();
-	if (!uCameraIsMoving)
-	{
-		pixelOffset.x = tentFilter(x);
-		pixelOffset.y = tentFilter(y);
-		//pixelOffset.x = cubicFilter(x);
-		//pixelOffset.y = cubicFilter(y);
-	}
-	
-	// pixelOffset ranges from -1.0 to +1.0, so only need to divide by half resolution
-	pixelOffset /= (uResolution * 0.5);
+
+	pixelOffset = vec2(tentFilter(x), tentFilter(y));
+
 	// we must map pixelPos into the range -1.0 to +1.0
-	pixelPos = (gl_FragCoord.xy / uResolution) * 2.0 - 1.0;
-	pixelPos += pixelOffset;
+	pixelPos = ((gl_FragCoord.xy + pixelOffset) / uResolution) * 2.0 - 1.0;
+
 	vec3 rayDir = normalize( pixelPos.x * camRight * uULen + pixelPos.y * camUp * uVLen + camForward );
 	
 	// depth of field
