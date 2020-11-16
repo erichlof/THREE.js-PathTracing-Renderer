@@ -1463,9 +1463,9 @@ void main( void )
 	vec3 camForward = vec3(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]);
 	
 	// calculate unique seed for rng() function
-	//seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord); // old way
+	//seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord); // old way of generating random numbers
 
-	randVec4 = texelFetch(tBlueNoiseTexture, ivec2(mod(gl_FragCoord.xy + (uRandomVec2 * 1024.0), 1024.0)), 0);
+	randVec4 = texture(tBlueNoiseTexture, (gl_FragCoord.xy + (uRandomVec2 * 256.0)) / 256.0 ); // new way of rand()
 
 	vec2 pixelPos = vec2(0);
 	vec2 pixelOffset = vec2(0);
