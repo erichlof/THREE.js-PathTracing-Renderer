@@ -1,5 +1,4 @@
 // scene/demo-specific variables go here
-var EPS_intersect;
 var doorObject;
 var paintingTexture, darkWoodTexture, lightWoodTexture, marbleTexture;
 var hammeredMetalNormalMapTexture;
