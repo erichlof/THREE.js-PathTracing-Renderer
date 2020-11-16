@@ -3,6 +3,7 @@ let container, canvas, stats, controls, renderer, clock;
 // PathTracing scene variables
 let pathTracingScene, screenTextureScene, screenOutputScene;
 let pathTracingUniforms, screenTextureUniforms, screenOutputUniforms, pathTracingDefines, screenOutputMaterial, pathTracingRenderTarget;
+let blueNoiseTexture;
 // Camera variables
 let quadCamera, worldCamera;
 // HDR image variables
@@ -629,6 +630,15 @@ async function prepareGeometryForPT(meshList, pathTracingMaterialList, triangleM
         texture.magFilter = THREE.NearestFilter;
         texture.flipY = true;
     } );
+	
+	// blueNoise texture for efficient random number generation on calls to rand()
+	blueNoiseTexture = new THREE.TextureLoader().load('textures/BlueNoise_RGBA256.png');
+	blueNoiseTexture.wrapS = THREE.RepeatWrapping;
+	blueNoiseTexture.wrapT = THREE.RepeatWrapping;
+	blueNoiseTexture.flipY = false;
+	blueNoiseTexture.minFilter = THREE.NearestFilter;
+	blueNoiseTexture.magFilter = THREE.NearestFilter;
+	blueNoiseTexture.generateMipmaps = false;
 
     pathTracingUniforms = {
 
@@ -637,6 +647,7 @@ async function prepareGeometryForPT(meshList, pathTracingMaterialList, triangleM
         tAABBTexture: {type: "t", value: aabbDataTexture},
         tAlbedoTextures: {type: "t", value: uniqueMaterialTextures},
         tHDRTexture: { type: "t", value: hdrTexture },
+		tBlueNoiseTexture: { type: "t", value: blueNoiseTexture },
 
         uCameraIsMoving: {type: "b1", value: false},
 
