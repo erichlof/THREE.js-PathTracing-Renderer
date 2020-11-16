@@ -1,5 +1,4 @@
 // scene/demo-specific variables go here
-var EPS_intersect;
 var sceneIsDynamic = true;
 var camFlightSpeed = 300;
 var waterLevel = 0.0;
