@@ -389,7 +389,8 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 				}
 			}
 				
-			vec3 shadowRayDirection = normalize(normalize(sunDirection) + (randomSkyVec * 0.3));						
+			
+			vec3 shadowRayDirection = randomDirectionInSpecularLobe(uSunDirection, 0.4);						
 			if ( isLightSourceVisible(x, n, shadowRayDirection) && x.y > uWaterLevel ) // in direct sunlight
 			{
 				mask = intersec.color * sunColor;	
