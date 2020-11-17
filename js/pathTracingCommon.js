@@ -1238,7 +1238,7 @@ vec3 Get_Sky_Color(Ray r, vec3 sunDirection)
 THREE.ShaderChunk[ 'pathtracing_random_functions' ] = `
 
 // globals used in rand() function
-vec4 randVec4; // samples and holds the RGBA blueNoise texture value for this pixel
+vec4 randVec4 = vec4(0); // samples and holds the RGBA blueNoise texture value for this pixel
 float randNumber = 0.0; // the final randomly generated number (range: 0.0 to 1.0)
 float counter = -1.0; // will get incremented by 1 on each call to rand()
 float modulus = 4.0; // used in the channel selection mod calc that cycles through the channels (range: 1.0 to 4.0)
@@ -1338,8 +1338,9 @@ vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 
 vec3 randomDirectionInSpecularLobe(vec3 reflectionDir, float roughness)
 {
-	roughness = mix( 13.0, 0.0, sqrt(clamp(roughness, 0.0, 1.0)) );
-	float cosTheta = pow(rand(), 1.0 / (exp(roughness) + 1.0));
+	roughness = clamp(roughness, 0.0, 1.0);
+	float exponent = mix(7.0, 0.0, sqrt(roughness));
+	float cosTheta = pow(rand(), 1.0 / (exp(exponent) + 1.0));
 	float sinTheta = sqrt(max(0.0, 1.0 - cosTheta * cosTheta));
 	float phi = rand() * TWO_PI;
 
@@ -1350,7 +1351,7 @@ vec3 randomDirectionInSpecularLobe(vec3 reflectionDir, float roughness)
 	vec3 T = vec3( 1.0 + signf * reflectionDir.x * reflectionDir.x * a, signf * b, -signf * reflectionDir.x );
 	vec3 B = vec3( b, signf + reflectionDir.y * reflectionDir.y * a, -reflectionDir.y );
 	
-	return normalize(T * cos(phi) * sinTheta + B * sin(phi) * sinTheta + reflectionDir * cosTheta);
+	return mix(reflectionDir, normalize(T * cos(phi) * sinTheta + B * sin(phi) * sinTheta + reflectionDir * cosTheta), roughness);
 }
 
 // //the following alternative skips the creation of tangent and bi-tangent vectors u and v 
