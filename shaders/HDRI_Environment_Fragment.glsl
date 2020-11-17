@@ -106,6 +106,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExi
 	bool skip = false;
 	bool triangleLookupNeeded = false;
 	bool isRayExiting = false;
+	intersec.isModel = false;
 
 	
 	for (int i = 0; i < N_SPHERES; i++)
@@ -322,11 +323,12 @@ vec3 CalculateRadiance(Ray r)
 	bool isRayExiting = false;
 	
 	
-	for (int bounces = 0; bounces < 6; bounces++)
+	for (int bounces = 0; bounces < 5; bounces++)
 	{
 
 		t = SceneIntersect(r, intersec, isRayExiting);
 		roughness = intersec.isModel ? uRoughness : roughness;
+		
 		
 		if (t == INFINITY)
 		{	
@@ -339,10 +341,32 @@ vec3 CalculateRadiance(Ray r)
 				break;
 			}
 
-			// random diffuse bounce hits sky
-			if ( !bounceIsSpecular && !sampleLight)
+			
+
+			// sun light source location in HDRI image is sampled by a diffuse surface
+			// mask has already been down-weighted in this case
+			if (sampleLight)
 			{
-				weight = dot(r.direction, normalize(SUN_DIRECTION)) < 0.98 ? 1.0 : 0.0;
+				accumCol = mask * environmentCol;
+				break;
+			}
+
+			// sky image seen in a reflection or refraction
+			// if (bounceIsSpecular)
+			// {
+			// 	// try to get rid of fireflies on rougher surfaces
+			// 	if (dot(r.direction, SUN_DIRECTION) > 0.98)
+			// 		environmentCol = vec3(1);
+			// 		//environmentCol = mix( vec3(1), environmentCol, clamp(pow(roughness, 0.0), 0.0, 1.0) );
+				
+			// 	accumCol = mask * environmentCol;
+			// 	break;
+			// }
+
+			// random diffuse bounce hits sky
+			if ( !bounceIsSpecular )
+			{
+				weight = dot(r.direction, SUN_DIRECTION) < 0.98 ? 1.0 : 0.0;
 				accumCol = mask * environmentCol * weight;
 
 				if (bounces == 3)
@@ -351,25 +375,14 @@ vec3 CalculateRadiance(Ray r)
 				break;
 			}
 			
-			// sky image seen in a reflection or refraction
 			if (bounceIsSpecular)
 			{
-				// try to get rid of fireflies on rougher surfaces
-				if (dot(r.direction, normalize(SUN_DIRECTION)) > 0.98)
-					environmentCol = mix( vec3(1), environmentCol, pow((1.0 - roughness), roughness * 100.0) );
+				if (dot(r.direction, SUN_DIRECTION) > 0.8)
+					environmentCol = mix(vec3(1), environmentCol, clamp(pow(1.0-roughness, 20.0), 0.0, 1.0));
+				accumCol = mask * environmentCol;
+				break;
+			}
 					
-				accumCol = mask * environmentCol;
-				break;
-			}
-			
-			// sun light source location in HDRI image is sampled by a diffuse surface
-			// mask has already been down-weighted in this case
-			if (sampleLight)
-			{
-				accumCol = mask * environmentCol;
-				break;
-			}
-				
 			// reached the HDRI sky light, so we can exit
 			break;
 		} // end if (t == INFINITY)
@@ -408,7 +421,7 @@ vec3 CalculateRadiance(Ray r)
 				continue;
 			}
 
-			r = Ray( x, normalize(SUN_DIRECTION) );
+			r = Ray( x, SUN_DIRECTION );
 			r.direction = randomDirectionInSpecularLobe(r.direction, 0.01);
 			r.origin += nl * uEPS_intersect;
 			weight = max(0.0, dot(r.direction, nl)) * 0.00002; // down-weight directSunLight contribution
@@ -447,9 +460,8 @@ vec3 CalculateRadiance(Ray r)
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
-
+			
 			// transmit ray through surface
-
 			mask *= TP;
 
 			// is ray leaving a solid object from the inside? 
@@ -505,7 +517,7 @@ vec3 CalculateRadiance(Ray r)
 				continue;
 			}
 
-			r = Ray( x, normalize(SUN_DIRECTION) );
+			r = Ray( x, SUN_DIRECTION );
 			r.direction = randomDirectionInSpecularLobe(r.direction, 0.01);
 			r.origin += nl * uEPS_intersect;
 			weight = max(0.0, dot(r.direction, nl)) * 0.00002; // down-weight directSunLight contribution
@@ -538,7 +550,7 @@ void SetupScene(void)
 	
 	// this long red metal cylinder points to the sun in an HDR image.  Unfortunately for a random image, the SUN_DIRECTION
 	// vector pointing directly to the sun has to be found by trial and error. To see this helper, uncomment cylinder intersection code above 
-	openCylinders[0] = OpenCylinder(vec3(0, 0, 0), normalize(SUN_DIRECTION) * 100000.0, 10.0, z, vec3(1, 0, 0), SPEC);
+	openCylinders[0] = OpenCylinder(vec3(0, 0, 0), SUN_DIRECTION * 100000.0, 10.0, z, vec3(1, 0, 0), SPEC);
 
 	boxes[0] = Box( vec3(-20.0,11.0,-110.0), vec3(70.0,18.0,-20.0), z, vec3(0.2,0.9,0.7), REFR);//Glass Box
 	boxes[1] = Box( vec3(-14.0,13.0,-104.0), vec3(64.0,16.0,-26.0), z, vec3(0),           DIFF);//Inner Box
