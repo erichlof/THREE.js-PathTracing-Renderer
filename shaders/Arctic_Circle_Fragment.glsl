@@ -362,7 +362,7 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 			vec3 randomSkyVec = randomCosWeightedDirectionInHemisphere(mix(n, up, 0.9));
 			vec3 skyColor = Get_Sky_Color( Ray(x, randomSkyVec), uSunDirection );
 			if (dot(randomSkyVec, uSunDirection) > 0.98) skyColor *= 0.01;
-			vec3 sunColor = clamp(Get_Sky_Color( Ray(x, randomDirectionInSpecularLobe(uSunDirection, 0.0)), uSunDirection ), 0.0, 2.0);
+			vec3 sunColor = clamp(Get_Sky_Color( Ray(x, randomDirectionInSpecularLobe(uSunDirection, 0.1)), uSunDirection ), 0.0, 2.0);
 			float terrainLayer = clamp( ((x.y + -TERRAIN_LIFT) + (rockNoise * 1000.0) * n.y) / (TERRAIN_HEIGHT * 1.2), 0.0, 1.0 );
 			
 			if (x.y > uWaterLevel && terrainLayer > 0.95 && terrainLayer > 0.9 - n.y)
