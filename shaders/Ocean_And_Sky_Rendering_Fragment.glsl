@@ -699,7 +699,7 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 				// save intersection data for future shadowray trace
 				firstTypeWasDIFF = true;
 				firstRay = Ray( x, normalize(sunDirection) );// create shadow ray pointed towards light
-				firstRay.direction = randomDirectionInSpecularLobe(firstRay.direction, 0.001);
+				firstRay.direction = randomDirectionInSpecularLobe(firstRay.direction, 0.1);
 				firstRay.origin += nl * uEPS_intersect;
 				
 				weight = max(0.0, dot(firstRay.direction, nl)) * 0.05; // down-weight directSunLight contribution
@@ -719,7 +719,7 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 			}
                         
 			r = Ray( x, normalize(sunDirection) );// create shadow ray pointed towards light
-			r.direction = randomDirectionInSpecularLobe(r.direction, 0.001);
+			r.direction = randomDirectionInSpecularLobe(r.direction, 0.1);
 			r.origin += nl * uEPS_intersect;
 			
 			weight = max(0.0, dot(r.direction, nl)) * 0.05; // down-weight directSunLight contribution
@@ -832,7 +832,7 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection)
                         }
 			
 			r = Ray( x, sunDirection);// create shadow ray pointed towards light
-			r.direction = randomDirectionInSpecularLobe(r.direction, 0.001);
+			r.direction = randomDirectionInSpecularLobe(r.direction, 0.1);
 			r.origin += nl * uEPS_intersect;
 
 			weight = max(0.0, dot(r.direction, nl)) * 0.05; // down-weight directSunLight contribution
