@@ -12,6 +12,7 @@ uniform float uApertureSize;
 uniform float uFocusDistance;
 uniform float uSamplesPerFrame;
 uniform float uFrameBlendingAmount;
+uniform float uSunAngularDiameterCos;
 uniform vec2 uResolution;
 uniform vec2 uRandomVec2;
 uniform mat4 uCameraMatrix;
@@ -75,7 +76,7 @@ THREE.ShaderChunk[ 'pathtracing_skymodel_defines' ] = `
 #define UP_VECTOR vec3(0.0, 1.0, 0.0)
 #define SUN_POWER 1000.0
 // 66 arc seconds -> degrees, and the cosine of that
-#define SUN_ANGULAR_DIAMETER_COS 0.99985 //0.9999566769
+//#define SUN_ANGULAR_DIAMETER_COS 0.9998 //0.9999566769
 #define CUTOFF_ANGLE 1.6110731556870734
 #define STEEPNESS 1.5
 `;
@@ -1209,7 +1210,7 @@ vec3 Get_Sky_Color(Ray r, vec3 sunDirection)
 	vec3 L0 = vec3( 0.1 ) * Fex;
 
 	// composition + solar disc
-	float sundisk = smoothstep( SUN_ANGULAR_DIAMETER_COS, SUN_ANGULAR_DIAMETER_COS + 0.00002, cosViewSunAngle );
+	float sundisk = smoothstep( uSunAngularDiameterCos, uSunAngularDiameterCos + 0.00002, cosViewSunAngle );
 	L0 += ( sunE * 19000.0 * Fex ) * sundisk;
 
 	vec3 texColor = ( Lin + L0 ) * 0.04 + vec3( 0.0, 0.0003, 0.00075 );
@@ -1217,21 +1218,6 @@ vec3 Get_Sky_Color(Ray r, vec3 sunDirection)
 	vec3 retColor = pow( texColor, vec3( 1.0 / ( 1.2 + ( 1.2 * sunfade ) ) ) );
 
 	return retColor;
-     
-    	// vec3 totalLightAtX = rayleighAtX + mieAtX;
-    	// vec3 lightFromXtoEye = rayleighXtoEye + mieXtoEye; 
-    
-    	// vec3 somethingElse = sunE * (lightFromXtoEye / totalLightAtX);
-    
-    	// vec3 sky = somethingElse * (1.0 - Fex);
-	// float oneMinusCosSun = 1.0 - cosSunUpAngle;
-    	// sky *= mix( vec3(1.0), pow(somethingElse * Fex,vec3(0.5)), 
-	//     clamp(oneMinusCosSun * oneMinusCosSun * oneMinusCosSun * oneMinusCosSun * oneMinusCosSun, 0.0, 1.0) );
-	// // composition + solar disk
-    	// float sundisk = smoothstep(SUN_ANGULAR_DIAMETER_COS - 0.0001, SUN_ANGULAR_DIAMETER_COS, cosViewSunAngle);
-	// vec3 sun = (sunE * SUN_POWER * Fex) * sundisk;
-	
-	// return sky + sun;
 }
 `;
 
