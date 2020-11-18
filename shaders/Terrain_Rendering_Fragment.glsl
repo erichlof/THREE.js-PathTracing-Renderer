@@ -453,7 +453,7 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 			vec3 randomSkyVec = randomCosWeightedDirectionInHemisphere(mix(n, up, 0.9));
 			vec3 skyColor = Get_Sky_Color( Ray(x, randomSkyVec), sunDirection );
 			if (dot(randomSkyVec, sunDirection) > 0.98) skyColor *= 0.01;
-			vec3 sunColor = clamp(Get_Sky_Color( Ray(x, randomDirectionInSpecularLobe(sunDirection, 0.0)), sunDirection ), 0.0, 4.0);
+			vec3 sunColor = clamp(Get_Sky_Color( Ray(x, randomDirectionInSpecularLobe(sunDirection, 0.1)), sunDirection ), 0.0, 4.0);
 			float terrainLayer = clamp( (x.y + (rockNoise * 500.0) * n.y) / (TERRAIN_HEIGHT * 1.5 + TERRAIN_LIFT), 0.0, 1.0 );
 			
 			if (terrainLayer > 0.8 && terrainLayer > 1.0 - n.y)
@@ -463,7 +463,7 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 				
 			mask = intersec.color * skyColor; // ambient color from sky light
 
-			vec3 shadowRayDirection = randomDirectionInSpecularLobe(sunDirection, 0.01);						
+			vec3 shadowRayDirection = randomDirectionInSpecularLobe(sunDirection, 0.1);						
 			if (bounces == 0 && dot(n, shadowRayDirection) > 0.1 && isLightSourceVisible(x, n, shadowRayDirection) ) // in direct sunlight
 			{
 				mask = intersec.color * mix(skyColor, sunColor, clamp(dot(n,shadowRayDirection),0.0,1.0));	
@@ -541,7 +541,7 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 	if ( skyHit ) // sky and clouds
 	{
 		vec3 cloudColor = cld.rgb / (cld.a + 0.00001);
-		vec3 sunColor = clamp(Get_Sky_Color( Ray(skyPos, randomDirectionInSpecularLobe(sunDirection, 0.0)), sunDirection ), 0.0, 5.0);
+		vec3 sunColor = clamp(Get_Sky_Color( Ray(skyPos, randomDirectionInSpecularLobe(sunDirection, 0.1)), sunDirection ), 0.0, 5.0);
 		
 		cloudColor *= sunColor;
 		cloudColor = mix(initialSkyColor, cloudColor, clamp(cld.a, 0.0, 1.0));
