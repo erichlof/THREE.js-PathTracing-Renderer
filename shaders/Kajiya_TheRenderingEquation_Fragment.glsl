@@ -193,9 +193,6 @@ vec3 CalculateRadiance(Ray r)
 		n = normalize(intersec.normal);
                 nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
 		x = r.origin + r.direction * t;
-		
-		// randChoose = rand() * N_LIGHTS; // 3 lights to choose from
-		// lightChoice = rectangles[int(randChoose)];
 
 		    
                 if (intersec.type == DIFF ) // Ideal DIFFUSE reflection
