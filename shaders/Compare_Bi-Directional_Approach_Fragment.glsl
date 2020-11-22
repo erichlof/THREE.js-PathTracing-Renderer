@@ -139,9 +139,8 @@ vec3 CalculateRadiance(Ray originalRay)
 	bool diffuseFound = false;
 
 	// first light trace
-	//Ray r = Ray(randPointOnLight, randomCosWeightedDirectionInHemisphere(normalize(quads[5].normal)));
-	Ray r = Ray(randPointOnLight, normalize(quads[5].normal));
-	r.origin += normalize(quads[5].normal) * uEPS_intersect;
+	Ray r = Ray(randPointOnLight, quads[5].normal);
+	r.origin += quads[5].normal * uEPS_intersect;
 	t = SceneIntersect(r, intersec);
 
 	if (t < INFINITY && intersec.type == DIFF)
@@ -228,7 +227,7 @@ vec3 CalculateRadiance(Ray originalRay)
 
 			bounceIsSpecular = false;
 
-			if (diffuseCount < 3 && rand() < 0.5)
+			if (diffuseCount < 3 && rand() < 0.8)
 			{	
 				// choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
