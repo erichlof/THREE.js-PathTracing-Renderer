@@ -121,8 +121,8 @@ vec3 CalculateRadiance(Ray r)
 
 	bool bounceIsSpecular = true;
 
-	// hope with 10 bounces that we get lucky enough to find the blocked light source
-	for (int bounces = 0; bounces < 10; bounces++)
+	// hope that we get lucky enough to find the blocked light source
+	for (int bounces = 0; bounces < 5; bounces++)
 	{
                 
 		t = SceneIntersect(r, intersec);
@@ -157,10 +157,10 @@ vec3 CalculateRadiance(Ray r)
 			mask /= p; */
 			
 			// Russian Roulette (from pbrt book)
-			float q = max(mask.r, max(mask.g, mask.b));
-			q = max(0.05, 1.0 - q);
-			if (rand() < q) break;
-			mask /= (1.0 - q);
+			// float q = max(mask.r, max(mask.g, mask.b));
+			// q = max(0.05, 1.0 - q);
+			// if (rand() < q) break;
+			// mask /= (1.0 - q);
 			
 			// choose random Diffuse sample vector
 			r = Ray( x, randomDirectionInHemisphere(nl) );
