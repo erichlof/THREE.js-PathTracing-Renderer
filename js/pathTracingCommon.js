@@ -1227,16 +1227,25 @@ THREE.ShaderChunk[ 'pathtracing_random_functions' ] = `
 vec4 randVec4 = vec4(0); // samples and holds the RGBA blueNoise texture value for this pixel
 float randNumber = 0.0; // the final randomly generated number (range: 0.0 to 1.0)
 float counter = -1.0; // will get incremented by 1 on each call to rand()
-float modulus = 4.0; // used in the channel selection mod calc that cycles through the channels (range: 1.0 to 4.0)
 int channel = 0; // the final selected color channel to use for rand() calc (range: 0 to 3, corresponds to R,G,B, or A)
+
+// float rand()
+// {
+// 	counter += 1.0; // increment counter by 1 on every call to rand()
+// 	// cycles through channels, if 'modulus' is 1.0, channel will always be 0 (the R color channel)
+// 	channel = int(mod(counter, modulus)); 
+// 	// but if 'modulus' was 4.0, channel will cycle through all available channels: 0,1,2,3,0,1,2,3, and so on...
+// 	randNumber += randVec4[channel]; // add value stored in channel 0:R, 1:G, 2:B, or 3:A to accumulating randNumber
+// 	return fract(randNumber); // we're only interested in randNumber's fractional value between 0.0 (inclusive) and 1.0 (non-inclusive)
+// }
 
 float rand()
 {
-	counter += 1.0; // increment counter by 1 on every call to rand()
-	// cycles through channels, if 'modulus' is 1.0, channel will always be 0 (the R color channel)
-	channel = int(mod(counter, modulus)); 
-	// but if 'modulus' was 4.0, channel will cycle through all available channels: 0,1,2,3,0,1,2,3, and so on...
-	randNumber += randVec4[channel]; // add value stored in channel 0:R, 1:G, 2:B, or 3:A to accumulating randNumber
+	counter++; // increment counter by 1 on every call to rand()
+	// cycles through channels, if modulus is 1.0, channel will always be 0 (the R color channel)
+	channel = int(mod(counter, 4.0)); 
+	// but if modulus was 4.0, channel will cycle through all available channels: 0,1,2,3,0,1,2,3, and so on...
+	randNumber = randVec4[channel]; // get value stored in channel 0:R, 1:G, 2:B, or 3:A
 	return fract(randNumber); // we're only interested in randNumber's fractional value between 0.0 (inclusive) and 1.0 (non-inclusive)
 }
 
@@ -1267,17 +1276,17 @@ vec3 randomDirectionInHemisphere(vec3 nl)
 	float y = r * sin(phi);
 	float z = sqrt(1.0 - x*x - y*y);
 	
-	// vec3 u = normalize( cross( abs(nl.x) > 0.1 ? vec3(0, 1, 0) : vec3(1, 0, 0), nl ) );
-	// vec3 v = cross(nl, u);
-	// return normalize(x * u + y * v + z * nl);
+	vec3 u = normalize( cross( abs(nl.x) > 0.1 ? vec3(0, 1, 0) : vec3(1, 0, 0), nl ) );
+	vec3 v = cross(nl, u);
+	return normalize(x * u + y * v + z * nl);
 
 	// from "Building an Orthonormal Basis, Revisited" http://jcgt.org/published/0006/01/01/
-	float signf = nl.z >= 0.0 ? 1.0 : -1.0;
-	float a = -1.0 / (signf + nl.z);
-	float b = nl.x * nl.y * a;
-	vec3 T = vec3( 1.0 + signf * nl.x * nl.x * a, signf * b, -signf * nl.x );
-	vec3 B = vec3( b, signf + nl.y * nl.y * a, -nl.y );
-	return normalize(x * T + y * B + z * nl);
+	// float signf = nl.z >= 0.0 ? 1.0 : -1.0;
+	// float a = -1.0 / (signf + nl.z);
+	// float b = nl.x * nl.y * a;
+	// vec3 T = vec3( 1.0 + signf * nl.x * nl.x * a, signf * b, -signf * nl.x );
+	// vec3 B = vec3( b, signf + nl.y * nl.y * a, -nl.y );
+	// return normalize(x * T + y * B + z * nl);
 }
 
 vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
@@ -1288,17 +1297,17 @@ vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 	float y = r * sin(phi);
 	float z = sqrt(1.0 - x*x - y*y);
 	
-	// vec3 u = normalize( cross( abs(nl.x) > 0.1 ? vec3(0, 1, 0) : vec3(1, 0, 0), nl ) );
-	// vec3 v = cross(nl, u);
-	// return normalize(x * u + y * v + z * nl);
+	vec3 U = normalize( cross(vec3(0.7071067811865475, 0.7071067811865475, 0), nl ) );
+	vec3 V = cross(nl, U);
+	return normalize(x * U + y * V + z * nl);
 
 	// from "Building an Orthonormal Basis, Revisited" http://jcgt.org/published/0006/01/01/
-	float signf = nl.z >= 0.0 ? 1.0 : -1.0;
-	float a = -1.0 / (signf + nl.z);
-	float b = nl.x * nl.y * a;
-	vec3 T = vec3( 1.0 + signf * nl.x * nl.x * a, signf * b, -signf * nl.x );
-	vec3 B = vec3( b, signf + nl.y * nl.y * a, -nl.y );
-	return normalize(x * T + y * B + z * nl);
+	// float signf = nl.z >= 0.0 ? 1.0 : -1.0;
+	// float a = -1.0 / (signf + nl.z);
+	// float b = nl.x * nl.y * a;
+	// vec3 T = vec3( 1.0 + signf * nl.x * nl.x * a, signf * b, -signf * nl.x );
+	// vec3 B = vec3( b, signf + nl.y * nl.y * a, -nl.y );
+	// return normalize(x * T + y * B + z * nl);
 }
 
 // #define N_POINTS 32.0
@@ -1330,14 +1339,17 @@ vec3 randomDirectionInSpecularLobe(vec3 reflectionDir, float roughness)
 	float sinTheta = sqrt(max(0.0, 1.0 - cosTheta * cosTheta));
 	float phi = rand() * TWO_PI;
 
-	// from "Building an Orthonormal Basis, Revisited" http://jcgt.org/published/0006/01/01/
-	float signf = reflectionDir.z >= 0.0 ? 1.0 : -1.0;
-	float a = -1.0 / (signf + reflectionDir.z);
-	float b = reflectionDir.x * reflectionDir.y * a;
-	vec3 T = vec3( 1.0 + signf * reflectionDir.x * reflectionDir.x * a, signf * b, -signf * reflectionDir.x );
-	vec3 B = vec3( b, signf + reflectionDir.y * reflectionDir.y * a, -reflectionDir.y );
+	// // from "Building an Orthonormal Basis, Revisited" http://jcgt.org/published/0006/01/01/
+	// float signf = reflectionDir.z >= 0.0 ? 1.0 : -1.0;
+	// float a = -1.0 / (signf + reflectionDir.z);
+	// float b = reflectionDir.x * reflectionDir.y * a;
+	// vec3 T = vec3( 1.0 + signf * reflectionDir.x * reflectionDir.x * a, signf * b, -signf * reflectionDir.x );
+	// vec3 B = vec3( b, signf + reflectionDir.y * reflectionDir.y * a, -reflectionDir.y );
 	
-	return mix(reflectionDir, normalize(T * cos(phi) * sinTheta + B * sin(phi) * sinTheta + reflectionDir * cosTheta), roughness);
+	vec3 U = normalize( cross(vec3(0.7071067811865475, 0.7071067811865475, 0), reflectionDir ) );
+	vec3 V = cross(reflectionDir, U);
+	return normalize(mix(reflectionDir, (U * cos(phi) * sinTheta + V * sin(phi) * sinTheta + reflectionDir * cosTheta), roughness));
+	//return normalize(U * cos(phi) * sinTheta + V * sin(phi) * sinTheta + reflectionDir * cosTheta);
 }
 
 // //the following alternative skips the creation of tangent and bi-tangent vectors u and v 
@@ -1450,9 +1462,9 @@ void main( void )
 	vec3 camForward = vec3(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]);
 	
 	// calculate unique seed for rng() function
-	//seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord); // old way of generating random numbers
+	seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord); // old way of generating random numbers
 
-	randVec4 = texture(tBlueNoiseTexture, (gl_FragCoord.xy + (uRandomVec2 * 256.0)) / 256.0 ); // new way of rand()
+	randVec4 = texture(tBlueNoiseTexture, (gl_FragCoord.xy + (uRandomVec2 * 255.0)) / 255.0 ); // new way of rand()
 
 	vec2 pixelPos = vec2(0);
 	vec2 pixelOffset = vec2(0);
