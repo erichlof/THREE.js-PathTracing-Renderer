@@ -221,8 +221,8 @@ vec3 CalculateRadiance(Ray r)
 	bool sampleLight = false;
 	bool isRayExiting;
 
-	// randChoose = rand() * N_LIGHTS; // 3 lights to choose from
-	// lightChoice = spheres[int(randChoose)];
+	randChoose = rand() * N_LIGHTS; // 3 lights to choose from
+	lightChoice = spheres[int(randChoose)];
 
 	
 	for (int bounces = 0; bounces < 6; bounces++)
@@ -256,9 +256,6 @@ vec3 CalculateRadiance(Ray r)
 		n = normalize(intersec.normal);
                 nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
 		x = r.origin + r.direction * t;
-
-		randChoose = rand() * N_LIGHTS; // 3 lights to choose from
-		lightChoice = spheres[int(randChoose)];
 
 		    
                 if (intersec.type == DIFF || intersec.type == CHECK) // Ideal DIFFUSE reflection
