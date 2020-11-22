@@ -135,12 +135,14 @@ float RectangleIntersect( vec3 pos, vec3 normal, float radiusU, float radiusV, R
 	vec3 hit = r.origin + r.direction * t;
 	vec3 vi = hit - pos;
 	// from "Building an Orthonormal Basis, Revisited" http://jcgt.org/published/0006/01/01/
-	float signf = normal.z >= 0.0 ? 1.0 : -1.0;
-	float a = -1.0 / (signf + normal.z);
-	float b = normal.x * normal.y * a;
-	vec3 T = vec3( 1.0 + signf * normal.x * normal.x * a, signf * b, -signf * normal.x );
-	vec3 B = vec3( b, signf + normal.y * normal.y * a, -normal.y );
-	return (abs(dot(T, vi)) > radiusU || abs(dot(B, vi)) > radiusV) ? INFINITY : t;
+	// float signf = normal.z >= 0.0 ? 1.0 : -1.0;
+	// float a = -1.0 / (signf + normal.z);
+	// float b = normal.x * normal.y * a;
+	// vec3 T = vec3( 1.0 + signf * normal.x * normal.x * a, signf * b, -signf * normal.x );
+	// vec3 B = vec3( b, signf + normal.y * normal.y * a, -normal.y );
+	vec3 U = normalize( cross(vec3(0.7071067811865475, 0.7071067811865475, 0), normal ) );
+	vec3 V = cross(normal, U);
+	return (abs(dot(V, vi)) > radiusU || abs(dot(U, vi)) > radiusV) ? INFINITY : t;
 }
 `;
 
@@ -1276,9 +1278,9 @@ vec3 randomDirectionInHemisphere(vec3 nl)
 	float y = r * sin(phi);
 	float z = sqrt(1.0 - x*x - y*y);
 	
-	vec3 u = normalize( cross( abs(nl.x) > 0.1 ? vec3(0, 1, 0) : vec3(1, 0, 0), nl ) );
-	vec3 v = cross(nl, u);
-	return normalize(x * u + y * v + z * nl);
+	vec3 U = normalize( cross(vec3(0.7071067811865475, 0.7071067811865475, 0), nl ) );
+	vec3 V = cross(nl, U);
+	return normalize(x * U + y * V + z * nl);
 
 	// from "Building an Orthonormal Basis, Revisited" http://jcgt.org/published/0006/01/01/
 	// float signf = nl.z >= 0.0 ? 1.0 : -1.0;
@@ -1388,14 +1390,10 @@ vec3 sampleSphereLight(vec3 x, vec3 nl, Sphere light, vec3 dirToLight, out float
 	float phi = rand() * TWO_PI;
 	dirToLight = normalize(dirToLight);
 	
-	// from "Building an Orthonormal Basis, Revisited" http://jcgt.org/published/0006/01/01/
-	float signf = dirToLight.z >= 0.0 ? 1.0 : -1.0;
-	float a = -1.0 / (signf + dirToLight.z);
-	float b = dirToLight.x * dirToLight.y * a;
-	vec3 T = vec3( 1.0 + signf * dirToLight.x * dirToLight.x * a, signf * b, -signf * dirToLight.x );
-	vec3 B = vec3( b, signf + dirToLight.y * dirToLight.y * a, -dirToLight.y );
+	vec3 U = normalize( cross(vec3(0.7071067811865475, 0.7071067811865475, 0), dirToLight ) );
+	vec3 V = cross(dirToLight, U);
 	
-	vec3 sampleDir = normalize(T * cos(phi) * sin_alpha + B * sin(phi) * sin_alpha + dirToLight * cos_alpha);
+	vec3 sampleDir = normalize(U * cos(phi) * sin_alpha + V * sin(phi) * sin_alpha + dirToLight * cos_alpha);
 	weight = clamp(2.0 * (1.0 - cos_alpha_max) * max(0.0, dot(nl, sampleDir)), 0.0, 1.0);
 	
 	return sampleDir;
