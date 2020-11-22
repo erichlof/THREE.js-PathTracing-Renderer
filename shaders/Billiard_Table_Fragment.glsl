@@ -156,7 +156,6 @@ vec3 CalculateRadiance(Ray r)
 	Intersection intersec;
 	Quad lightChoice;
 
-	vec3 randVec = vec3(rand() * 2.0 - 1.0, rand() * 2.0 - 1.0, rand() * 2.0 - 1.0);
 	vec3 accumCol = vec3(0);
 	vec3 mask = vec3(1);
 	vec3 tdir;
@@ -207,17 +206,13 @@ vec3 CalculateRadiance(Ray r)
                 nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
 		x = r.origin + r.direction * t;
 
-		clothTextureColor = pow(clamp(texture(tClothTexture, (10.0 * x.xz) / 512.0).rgb, 0.0, 1.0), vec3(2.2));
-		darkWoodTextureColor = pow(clamp(texture(tDarkWoodTexture, 3.5 * x.xz / 512.0).rgb, 0.0, 1.0), vec3(2.2));
-		lightWoodTextureColor = pow(clamp(texture(tLightWoodTexture, 6.0 * x.xz / 512.0).rgb, 0.0, 1.0), vec3(2.2));
-
 		
                 if (intersec.type == DIFF || intersec.type == CLOTH ) // Ideal DIFFUSE reflection
 		{
 			diffuseCount++;
 
 			if (intersec.type == CLOTH)
-				intersec.color *= clothTextureColor;
+				intersec.color *= pow(clamp(texture(tClothTexture, (10.0 * x.xz) / 512.0).rgb, 0.0, 1.0), vec3(2.2));;
 
 			mask *= intersec.color;
 
@@ -252,7 +247,7 @@ vec3 CalculateRadiance(Ray r)
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 
-			if (rand() < P)
+			if (bounces == 0 && rand() < P)
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
@@ -298,7 +293,7 @@ vec3 CalculateRadiance(Ray r)
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 
-			if (rand() < P)
+			if (bounces == 0 && rand() < P)
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
@@ -351,12 +346,12 @@ vec3 CalculateRadiance(Ray r)
 				isSpot = true;
 			
 			if (intersec.type == DARKWOOD)
-				intersec.color *= darkWoodTextureColor;
+				intersec.color *= pow(clamp(texture(tDarkWoodTexture, 3.5 * x.xz / 512.0).rgb, 0.0, 1.0), vec3(2.2));
 			if (isSpot)
 				intersec.color = clamp(intersec.color + 0.5, 0.0, 1.0);
 				
 			if (intersec.type == LIGHTWOOD)	
-				intersec.color *= lightWoodTextureColor;
+				intersec.color *= pow(clamp(texture(tLightWoodTexture, 6.0 * x.xz / 512.0).rgb, 0.0, 1.0), vec3(2.2));
 		
 			// handle diffuse surface underneath
 
@@ -387,7 +382,7 @@ vec3 CalculateRadiance(Ray r)
 		} //end if (intersec.type == LIGHTWOOD || intersec.type == DARKWOOD)
 		
 		
-	} // end for (int bounces = 0; bounces < 6; bounces++)
+	} // end for (int bounces = 0; bounces < 3; bounces++)
 	
 
 	return max(vec3(0), accumCol);
