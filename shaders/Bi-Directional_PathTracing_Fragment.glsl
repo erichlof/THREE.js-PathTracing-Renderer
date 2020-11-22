@@ -191,7 +191,7 @@ vec3 CalculateRadiance(Ray originalRay)
 //-----------------------------------------------------------------------
 {
 	Intersection intersec;
-	int randChoose = int(rand() * 2.0); // 2 lights to choose from
+	int randChoose = int(rng() * 2.0); // 2 lights to choose from
 	Sphere lightChoice = spheres[randChoose]; 
 	//lightChoice = spheres[1]; // override lightChoice
 	
