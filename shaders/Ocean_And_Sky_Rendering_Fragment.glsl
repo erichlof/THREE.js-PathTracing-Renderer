@@ -917,7 +917,7 @@ void main( void )
 	// calculate unique seed for rng() function
 	//seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord); // old way of generating random numbers
 
-	randVec4 = texture(tBlueNoiseTexture, (gl_FragCoord.xy + (uRandomVec2 * 256.0)) / 256.0 ); // new way of rand()
+	randVec4 = texture(tBlueNoiseTexture, (gl_FragCoord.xy + (uRandomVec2 * 255.0)) / 255.0 ); // new way of rand()
 
 	vec2 pixelPos = vec2(0);
 	vec2 pixelOffset = vec2(0);
