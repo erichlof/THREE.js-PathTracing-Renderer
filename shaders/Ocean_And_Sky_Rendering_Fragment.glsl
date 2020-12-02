@@ -6,9 +6,7 @@ uniform float uCameraUnderWater;
 uniform vec3 uSunDirection;
 
 uniform mat4 uShortBoxInvMatrix;
-uniform mat3 uShortBoxNormalMatrix;
 uniform mat4 uTallBoxInvMatrix;
-uniform mat3 uTallBoxNormalMatrix;
 
 #include <pathtracing_uniforms_and_defines>
 
@@ -370,8 +368,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkOcean )
 		
 		// transfom normal back into world space
 		normal = normalize(normal);
-		normal = vec3(uTallBoxNormalMatrix * normal);
-		intersec.normal = normalize(normal);
+		intersec.normal = normalize(transpose(mat3(uTallBoxInvMatrix)) * normal);
 		intersec.emission = boxes[0].emission;
 		intersec.color = boxes[0].color;
 		intersec.type = boxes[0].type;
@@ -390,8 +387,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkOcean )
 		
 		// transfom normal back into world space
 		normal = normalize(normal);
-		normal = vec3(uShortBoxNormalMatrix * normal);
-		intersec.normal = normalize(normal);
+		intersec.normal = normalize(transpose(mat3(uShortBoxInvMatrix)) * normal);
 		intersec.emission = boxes[1].emission;
 		intersec.color = boxes[1].color;
 		intersec.type = boxes[1].type;
