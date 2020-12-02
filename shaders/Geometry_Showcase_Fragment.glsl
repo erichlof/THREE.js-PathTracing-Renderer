@@ -5,7 +5,6 @@ precision highp sampler2D;
 #include <pathtracing_uniforms_and_defines>
 
 uniform mat4 uTorusInvMatrix;
-uniform mat3 uTorusNormalMatrix;
 
 #define N_LIGHTS 3.0
 #define N_SPHERES 6
@@ -180,9 +179,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExi
 	{
 		t = d;
 		vec3 hit = rObj.origin + rObj.direction * t;
-		intersec.normal = calcNormal_Torus(hit);
+		n = calcNormal_Torus(hit);
 		// transfom normal back into world space
-		intersec.normal = vec3(uTorusNormalMatrix * intersec.normal);
+		intersec.normal = normalize(transpose(mat3(uTorusInvMatrix)) * n);
 		intersec.emission = torii[0].emission;
 		intersec.color = torii[0].color;
 		intersec.type = torii[0].type;
