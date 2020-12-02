@@ -112,10 +112,6 @@ function createPathTracingMaterial() {
                 //   of the camera at all times. This is necessary because without it, the scene 
                 //   quad will fall out of view and get clipped when the camera rotates past 180 degrees.
                 worldCamera.add(pathTracingMesh);
-
-                // these transforms only need to be set once at init time
-                pathTracingUniforms.uTallBoxInvMatrix.value.getInverse( tallBoxMesh.matrixWorld );
-                pathTracingUniforms.uShortBoxInvMatrix.value.getInverse( shortBoxMesh.matrixWorld );
                 
         });
 
@@ -133,8 +129,8 @@ function updateVariablesAndUniforms() {
         
         // scene/demo-specific uniforms
         // BOXES
-        //pathTracingUniforms.uTallBoxInvMatrix.value.getInverse( tallBoxMesh.matrixWorld );
-        //pathTracingUniforms.uShortBoxInvMatrix.value.getInverse( shortBoxMesh.matrixWorld );
+        pathTracingUniforms.uTallBoxInvMatrix.value.copy(tallBoxMesh.matrixWorld).invert();
+        pathTracingUniforms.uShortBoxInvMatrix.value.copy(shortBoxMesh.matrixWorld).invert();
 
         // INFO
         cameraInfoElement.innerHTML = "FOV: " + worldCamera.fov + " / Aperture: " + apertureSize.toFixed(2) + " / FocusDistance: " + focusDistance + "<br>" + "Samples: " + sampleCounter;
