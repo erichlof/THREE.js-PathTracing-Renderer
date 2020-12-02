@@ -3,7 +3,6 @@ precision highp int;
 precision highp sampler2D;
 
 uniform mat4 uGLTF_Model_InvMatrix;
-uniform mat3 uGLTF_Model_NormalMatrix;
 uniform vec3 uGLTF_Model_Position;
 
 #include <pathtracing_uniforms_and_defines>
@@ -339,12 +338,12 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool isRayExiting 
 		// interpolated normal using triangle intersection's uv's
 		triangleW = 1.0 - triangleU - triangleV;
 		intersec.uv = triangleW * vec2(vd4.zw) + triangleU * vec2(vd5.xy) + triangleV * vec2(vd5.zw);
-		intersec.normal = normalize(triangleW * vec3(vd2.yzw) + triangleU * vec3(vd3.xyz) + triangleV * vec3(vd3.w, vd4.xy));
+		normal = normalize(triangleW * vec3(vd2.yzw) + triangleU * vec3(vd3.xyz) + triangleV * vec3(vd3.w, vd4.xy));
 		
-		intersec.normal = perturbNormal(intersec.normal, vec2(1.0, 1.0), intersec.uv);
+		intersec.normal = perturbNormal(normal, vec2(1.0, 1.0), intersec.uv);
 
 		// transform normal back into world space
-		intersec.normal = normalize((uGLTF_Model_NormalMatrix * intersec.normal));
+		intersec.normal = normalize(transpose(mat3(uGLTF_Model_InvMatrix)) * normal);
 		intersec.emission = vec3(1, 0, 1); // use this if intersec.type will be LIGHT
 		intersec.color = vd6.yzw;
 		
