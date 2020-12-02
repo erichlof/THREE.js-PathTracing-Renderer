@@ -354,7 +354,6 @@ function initPathTracingShaders() {
 	pathTracingUniforms.tNormalMap = { type: "t", value: normalMap };
 	pathTracingUniforms.uGLTF_Model_Position = { type: "v3", value: new THREE.Vector3() };
 	pathTracingUniforms.uGLTF_Model_InvMatrix = { type: "m4", value: new THREE.Matrix4() };
-	pathTracingUniforms.uGLTF_Model_NormalMatrix = { type: "m3", value: new THREE.Matrix3() };
 
         pathTracingDefines = {
         	//NUMBER_OF_TRIANGLES: total_number_of_triangles
@@ -411,8 +410,7 @@ function updateVariablesAndUniforms() {
 
         GLTF_Model_Mesh.updateMatrixWorld(true); // 'true' forces immediate matrix update
         pathTracingUniforms.uGLTF_Model_Position.value.copy(GLTF_Model_Mesh.position);
-        pathTracingUniforms.uGLTF_Model_InvMatrix.value.getInverse( GLTF_Model_Mesh.matrixWorld );
-        pathTracingUniforms.uGLTF_Model_NormalMatrix.value.getNormalMatrix( GLTF_Model_Mesh.matrixWorld );
+        pathTracingUniforms.uGLTF_Model_InvMatrix.value.copy( GLTF_Model_Mesh.matrixWorld ).invert();
         
         // INFO
         cameraInfoElement.innerHTML = "FOV: " + worldCamera.fov + " / Aperture: " + apertureSize.toFixed(2) +
