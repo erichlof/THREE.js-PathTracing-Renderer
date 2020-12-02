@@ -35,7 +35,6 @@ function initPathTracingShaders() {
  
         // scene/demo-specific uniforms go here
         pathTracingUniforms.uTorusInvMatrix = { type: "m4", value: new THREE.Matrix4() };
-        pathTracingUniforms.uTorusNormalMatrix = { type: "m3", value: new THREE.Matrix3() };
 
         pathTracingDefines = {
         	//NUMBER_OF_TRIANGLES: total_number_of_triangles
@@ -86,8 +85,7 @@ function updateVariablesAndUniforms() {
         
         // TORUS
         torusObject.updateMatrixWorld(true); // 'true' forces immediate matrix update
-        pathTracingUniforms.uTorusInvMatrix.value.getInverse(torusObject.matrixWorld);
-        pathTracingUniforms.uTorusNormalMatrix.value.getNormalMatrix(torusObject.matrixWorld);
+        pathTracingUniforms.uTorusInvMatrix.value.copy(torusObject.matrixWorld).invert();
         
         // INFO
         cameraInfoElement.innerHTML = "FOV: " + worldCamera.fov + " / Aperture: " + apertureSize.toFixed(2) + " / FocusDistance: " + focusDistance + "<br>" + "Samples: " + sampleCounter;
