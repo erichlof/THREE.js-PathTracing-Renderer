@@ -366,7 +366,6 @@ function initPathTracingShaders() {
 	pathTracingUniforms.tMarbleTexture = { type: "t", value: marbleTexture };
 	pathTracingUniforms.tHammeredMetalNormalMapTexture = { type: "t", value: hammeredMetalNormalMapTexture };  
 	pathTracingUniforms.uDoorObjectInvMatrix = { type: "m4", value: new THREE.Matrix4() };
-	pathTracingUniforms.uDoorObjectNormalMatrix = { type: "m3", value: new THREE.Matrix3() };
 
         pathTracingDefines = {
         	//NUMBER_OF_TRIANGLES: total_number_of_triangles_0
@@ -446,8 +445,7 @@ function updateVariablesAndUniforms() {
 
         // DOOR
         doorObject.updateMatrixWorld(true); // 'true' forces immediate matrix update
-        pathTracingUniforms.uDoorObjectInvMatrix.value.getInverse( doorObject.matrixWorld );
-        pathTracingUniforms.uDoorObjectNormalMatrix.value.getNormalMatrix( doorObject.matrixWorld );
+        pathTracingUniforms.uDoorObjectInvMatrix.value.copy( doorObject.matrixWorld ).invert();
         
         // INFO
         cameraInfoElement.innerHTML = "Press E and R to open and close door: " + "<br>" + "FOV: " + worldCamera.fov + " / Aperture: " + 
