@@ -5,7 +5,6 @@ precision highp sampler2D;
 #include <pathtracing_uniforms_and_defines>
 
 uniform mat4 uTorusInvMatrix;
-uniform mat3 uTorusNormalMatrix;
 
 #define N_LIGHTS 3.0
 #define N_SPHERES 6
@@ -83,8 +82,8 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExi
 	float t = INFINITY;
 	bool isRayExiting = false;
 	
-        for (int i = 0; i < N_SPHERES; i++)
-        {
+	for (int i = 0; i < N_SPHERES; i++)
+	{
 		d = SphereIntersect( spheres[i].radius, spheres[i].position, r );
 		if (d < t)
 		{
@@ -97,7 +96,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExi
 	}
 	
 	for (int i = 0; i < N_BOXES; i++)
-        {
+	{
 		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, r, n, isRayExiting );
 		if (d < t)
 		{
@@ -108,7 +107,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExi
 			intersec.type = boxes[i].type;
 			finalIsRayExiting = isRayExiting;
 		}
-        }
+	}
 	
 	d = EllipsoidIntersect( ellipsoids[0].radii, ellipsoids[0].position, r );
 	if (d < t)
@@ -140,7 +139,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExi
 		intersec.color = openCylinders[0].color;
 		intersec.type = openCylinders[0].type;
 	}
-        
+		
 	d = CappedCylinderIntersect( cappedCylinders[0].cap1pos, cappedCylinders[0].cap2pos, cappedCylinders[0].radius, r, n);
 	if (d < t)
 	{
@@ -150,7 +149,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExi
 		intersec.color = cappedCylinders[0].color;
 		intersec.type = cappedCylinders[0].type;
 	}
-        
+		
 	d = ConeIntersect( cones[0].pos0, cones[0].radius0, cones[0].pos1, cones[0].radius1, r, n );
 	if (d < t)
 	{
@@ -160,7 +159,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExi
 		intersec.color = cones[0].color;
 		intersec.type = cones[0].type;
 	}
-        
+		
 	d = CapsuleIntersect( capsules[0].pos0, capsules[0].radius0, capsules[0].pos1, capsules[0].radius1, r, n );
 	if (d < t)
 	{
@@ -170,7 +169,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExi
 		intersec.color = capsules[0].color;
 		intersec.type = capsules[0].type;
 	}
-        
+		
 	Ray rObj;
 	// transform ray into Torus's object space
 	rObj.origin = vec3( uTorusInvMatrix * vec4(r.origin, 1.0) );
@@ -181,14 +180,14 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExi
 	{
 		t = d;
 		vec3 hit = rObj.origin + rObj.direction * t;
-		intersec.normal = calcNormal_Torus(hit);
+		n = calcNormal_Torus(hit);
 		// transfom normal back into world space
-		intersec.normal = vec3(uTorusNormalMatrix * intersec.normal);
+		intersec.normal = normalize(transpose(mat3(uTorusInvMatrix)) * n);
 		intersec.emission = torii[0].emission;
 		intersec.color = torii[0].color;
 		intersec.type = torii[0].type;
 	}
-        
+		
 	return t;
 	
 } // end float SceneIntersect( Ray r, inout Intersection intersec )
@@ -202,13 +201,13 @@ vec3 CalculateRadiance(Ray r)
 	Sphere lightChoice;
 
 	vec3 accumCol = vec3(0);
-        vec3 mask = vec3(1);
+	vec3 mask = vec3(1);
 	vec3 checkCol0 = vec3(1);
 	vec3 checkCol1 = vec3(0.5);
 	vec3 dirToLight;
 	vec3 tdir;
 	vec3 x, n, nl;
-        
+		
 	float t;
 	float nc, nt, ratioIoR, Re, Tr;
 	float P, RP, TP;
@@ -235,7 +234,7 @@ vec3 CalculateRadiance(Ray r)
 		//not used in this scene because we are inside a huge sphere - no rays can escape
 		if (t == INFINITY)
 		{
-                        break;
+			break;
 		}
 		*/
 		
@@ -254,15 +253,15 @@ vec3 CalculateRadiance(Ray r)
 
 		// useful data 
 		n = normalize(intersec.normal);
-                nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
+		nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
 		x = r.origin + r.direction * t;
 
-		    
-                if (intersec.type == DIFF || intersec.type == CHECK) // Ideal DIFFUSE reflection
+			
+		if (intersec.type == DIFF || intersec.type == CHECK) // Ideal DIFFUSE reflection
 		{
 			diffuseCount++;
 
-			if( intersec.type == CHECK )
+			if (intersec.type == CHECK )
 			{
 				float q = clamp( mod( dot( floor(x.xz * 0.04), vec2(1.0) ), 2.0 ) , 0.0, 1.0 );
 				intersec.color = checkCol0 * q + checkCol1 * (1.0 - q);	
@@ -286,7 +285,7 @@ vec3 CalculateRadiance(Ray r)
 
 			sampleLight = true;
 			continue;
-                        
+						
 		} // end if (intersec.type == DIFF)
 		
 		if (intersec.type == SPEC)  // Ideal SPECULAR reflection
@@ -308,8 +307,8 @@ vec3 CalculateRadiance(Ray r)
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 			P  = 0.25 + (0.5 * Re);
-                	RP = Re / P;
-                	TP = Tr / (1.0 - P);
+			RP = Re / P;
+			TP = Tr / (1.0 - P);
 
 			if (rand() < P)
 			{
@@ -355,8 +354,8 @@ vec3 CalculateRadiance(Ray r)
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 			P  = 0.25 + (0.5 * Re);
-                	RP = Re / P;
-                	TP = Tr / (1.0 - P);
+			RP = Re / P;
+			TP = Tr / (1.0 - P);
 			
 			if (rand() < P)
 			{
@@ -414,14 +413,14 @@ void SetupScene(void)
 	vec3 L2 = vec3(1.0, 0.8, 0.2) * 10.0;// Yellow light
 	vec3 L3 = vec3(0.1, 0.7, 1.0) * 5.0; // Blue light
 		
-        spheres[0] = Sphere(150.0, vec3(-400, 900, 200), L1, z, LIGHT);//spherical white Light1 
+	spheres[0] = Sphere(150.0, vec3(-400, 900, 200), L1, z, LIGHT);//spherical white Light1 
 	spheres[1] = Sphere(100.0, vec3( 300, 400,-300), L2, z, LIGHT);//spherical yellow Light2
 	spheres[2] = Sphere( 50.0, vec3( 500, 250,-100), L3, z, LIGHT);//spherical blue Light3
 	
 	spheres[3] = Sphere(1000.0, vec3(  0.0, 1000.0,  0.0), z, vec3(1.0, 1.0, 1.0), CHECK);//Checkered Floor
-        spheres[4] = Sphere(  16.5, vec3(-26.0,   17.2,  5.0), z, vec3(0.95, 0.95, 0.95), SPEC);//Mirror sphere
-        spheres[5] = Sphere(  15.0, vec3( sin(mod(uTime * 0.3, TWO_PI)) * 80.0, 25, cos(mod(uTime * 0.1, TWO_PI)) * 80.0 ), z, vec3(1.0, 1.0, 1.0), REFR);//Glass sphere
-        
+	spheres[4] = Sphere(  16.5, vec3(-26.0,   17.2,  5.0), z, vec3(0.95, 0.95, 0.95), SPEC);//Mirror sphere
+	spheres[5] = Sphere(  15.0, vec3( sin(mod(uTime * 0.3, TWO_PI)) * 80.0, 25, cos(mod(uTime * 0.1, TWO_PI)) * 80.0 ), z, vec3(1.0, 1.0, 1.0), REFR);//Glass sphere
+		
 	ellipsoids[0] = Ellipsoid(  vec3(30,40,16), vec3(cos(mod(uTime * 0.5, TWO_PI)) * 80.0,5,-30), z, vec3(1.0, 0.765557, 0.336057), SPEC);//metallic gold ellipsoid
 	
 	paraboloids[0] = Paraboloid(  16.5, 50.0, vec3(20,1,-50), z, vec3(1.0, 0.2, 0.7), REFR);//paraboloid
@@ -497,14 +496,14 @@ void main( void )
 
 	if (uCameraIsMoving)
 	{
-                previousColor *= 0.5; // motion-blur trail amount (old image)
-                pixelColor *= 0.5; // brightness of new image (noisy)
-        }
+		previousColor *= 0.5; // motion-blur trail amount (old image)
+		pixelColor *= 0.5; // brightness of new image (noisy)
+	}
 	else
 	{
-                previousColor *= 0.94; // motion-blur trail amount (old image)
-                pixelColor *= 0.06; // brightness of new image (noisy)
-        }
+		previousColor *= 0.94; // motion-blur trail amount (old image)
+		pixelColor *= 0.06; // brightness of new image (noisy)
+	}
 	
-        pc_fragColor = vec4( pixelColor + previousColor, 1.0 );	
+	pc_fragColor = vec4( pixelColor + previousColor, 1.0 );	
 }
