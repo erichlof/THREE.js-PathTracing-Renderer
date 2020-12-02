@@ -15,7 +15,6 @@ uniform sampler2D tMarbleTexture;
 uniform sampler2D tHammeredMetalNormalMapTexture;
 
 uniform mat4 uDoorObjectInvMatrix;
-uniform mat3 uDoorObjectNormalMatrix;
 
 #define INV_TEXTURE_WIDTH 0.00048828125
 
@@ -180,9 +179,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkModels )
 		t = d;
 		
 		// transfom normal back into world space
-		normal = vec3(uDoorObjectNormalMatrix * normal);
-		
-		intersec.normal = normalize(normal);
+		intersec.normal = normalize(transpose(mat3(uDoorObjectInvMatrix)) * normal);
 		intersec.emission = boxes[9].emission;
 		intersec.color = boxes[9].color;
 		intersec.type = boxes[9].type;
@@ -211,8 +208,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkModels )
 			t = d;
 
 			normal = normalize((rObj.origin + rObj.direction * t) - spheres[i].position);
-			normal = vec3(uDoorObjectNormalMatrix * normal);
-			intersec.normal = normalize(normal);
+			intersec.normal = normalize(transpose(mat3(uDoorObjectInvMatrix)) * normal);
 			intersec.emission = spheres[i].emission;
 			intersec.color = spheres[i].color;
 			intersec.type = spheres[i].type;
