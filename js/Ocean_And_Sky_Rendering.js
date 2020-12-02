@@ -73,10 +73,8 @@ function initPathTracingShaders() {
         pathTracingUniforms.t_PerlinNoise = { type: "t", value: PerlinNoiseTexture };        
         pathTracingUniforms.uCameraUnderWater = { type: "f", value: 0.0 };                
         pathTracingUniforms.uSunDirection = { type: "v3", value: new THREE.Vector3() };   
-        pathTracingUniforms.uShortBoxInvMatrix = { type: "m4", value: new THREE.Matrix4() };
-        pathTracingUniforms.uShortBoxNormalMatrix = { type: "m3", value: new THREE.Matrix3() };       
         pathTracingUniforms.uTallBoxInvMatrix = { type: "m4", value: new THREE.Matrix4() };
-        pathTracingUniforms.uTallBoxNormalMatrix = { type: "m3", value: new THREE.Matrix3() };
+        pathTracingUniforms.uShortBoxInvMatrix = { type: "m4", value: new THREE.Matrix4() };
 
         pathTracingDefines = {
         	//NUMBER_OF_TRIANGLES: total_number_of_triangles
@@ -134,10 +132,8 @@ function updateVariablesAndUniforms() {
         pathTracingUniforms.uSunDirection.value.copy(sunDirection);
         
         // BOXES
-        pathTracingUniforms.uTallBoxInvMatrix.value.getInverse( tallBoxMesh.matrixWorld );
-        pathTracingUniforms.uTallBoxNormalMatrix.value.getNormalMatrix( tallBoxMesh.matrixWorld );
-        pathTracingUniforms.uShortBoxInvMatrix.value.getInverse( shortBoxMesh.matrixWorld );
-        pathTracingUniforms.uShortBoxNormalMatrix.value.getNormalMatrix( shortBoxMesh.matrixWorld );
+        pathTracingUniforms.uTallBoxInvMatrix.value.copy(tallBoxMesh.matrixWorld).invert();
+        pathTracingUniforms.uShortBoxInvMatrix.value.copy(shortBoxMesh.matrixWorld).invert();
                                 
         // CAMERA
         if (cameraControlsObject.position.y < 2.0)
