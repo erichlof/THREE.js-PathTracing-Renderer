@@ -3,9 +3,7 @@ precision highp int;
 precision highp sampler2D;
 
 uniform mat4 uShortBoxInvMatrix;
-uniform mat3 uShortBoxNormalMatrix;
 uniform mat4 uTallBoxInvMatrix;
-uniform mat3 uTallBoxNormalMatrix;
 
 #include <pathtracing_uniforms_and_defines>
 
