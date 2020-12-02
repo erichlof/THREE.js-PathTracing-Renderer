@@ -60,12 +60,9 @@ function initSceneData() {
 function initPathTracingShaders() {
  
         // scene/demo-specific uniforms go here     
-        pathTracingUniforms.uShortBoxInvMatrix = { type: "m4", value: new THREE.Matrix4() };
-        pathTracingUniforms.uShortBoxNormalMatrix = { type: "m3", value: new THREE.Matrix3() };       
         pathTracingUniforms.uTallBoxInvMatrix = { type: "m4", value: new THREE.Matrix4() };
-        pathTracingUniforms.uTallBoxNormalMatrix = { type: "m3", value: new THREE.Matrix3() };
+        pathTracingUniforms.uShortBoxInvMatrix = { type: "m4", value: new THREE.Matrix4() };
         
-
         pathTracingDefines = {
         	//NUMBER_OF_TRIANGLES: total_number_of_triangles
         };
@@ -114,10 +111,8 @@ function createPathTracingMaterial() {
 function updateVariablesAndUniforms() {
         
         // BOXES
-        pathTracingUniforms.uTallBoxInvMatrix.value.getInverse( tallBoxMesh.matrixWorld );
-        pathTracingUniforms.uTallBoxNormalMatrix.value.getNormalMatrix( tallBoxMesh.matrixWorld );
-        pathTracingUniforms.uShortBoxInvMatrix.value.getInverse( shortBoxMesh.matrixWorld );
-        pathTracingUniforms.uShortBoxNormalMatrix.value.getNormalMatrix( shortBoxMesh.matrixWorld );
+        pathTracingUniforms.uTallBoxInvMatrix.value.copy(tallBoxMesh.matrixWorld).invert();
+        pathTracingUniforms.uShortBoxInvMatrix.value.copy(shortBoxMesh.matrixWorld).invert();
         
         // INFO
         cameraInfoElement.innerHTML = "FOV: " + worldCamera.fov + " / Aperture: " + apertureSize.toFixed(2) + " / FocusDistance: " + focusDistance + "<br>" + "Samples: " + sampleCounter;
