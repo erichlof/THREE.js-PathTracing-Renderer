@@ -314,7 +314,7 @@ vec3 CalculateRadiance(Ray r)
 				continue;
 			}
 
-			dirToLight = sampleSphereLight(x, nl, lightChoice, dirToLight, weight);
+			dirToLight = sampleSphereLight(x, nl, lightChoice, weight);
 			mask *= weight * N_LIGHTS;
 
 			r = Ray( x, dirToLight );
@@ -414,9 +414,9 @@ vec3 CalculateRadiance(Ray r)
 			}
 			
 			if (intersec.color.r == 1.0) // this makes capsule more white
-				dirToLight = sampleSphereLight(x, nl, spheres[0], dirToLight, weight);
+				dirToLight = sampleSphereLight(x, nl, spheres[0], weight);
 			else
-				dirToLight = sampleSphereLight(x, nl, lightChoice, dirToLight, weight);
+				dirToLight = sampleSphereLight(x, nl, lightChoice, weight);
 			
 			mask *= weight * N_LIGHTS;
 			
