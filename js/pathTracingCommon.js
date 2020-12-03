@@ -1281,14 +1281,6 @@ vec3 randomDirectionInHemisphere(vec3 nl)
 	vec3 U = normalize( cross(vec3(0.7071067811865475, 0.7071067811865475, 0), nl ) );
 	vec3 V = cross(nl, U);
 	return normalize(x * U + y * V + z * nl);
-
-	// from "Building an Orthonormal Basis, Revisited" http://jcgt.org/published/0006/01/01/
-	// float signf = nl.z >= 0.0 ? 1.0 : -1.0;
-	// float a = -1.0 / (signf + nl.z);
-	// float b = nl.x * nl.y * a;
-	// vec3 T = vec3( 1.0 + signf * nl.x * nl.x * a, signf * b, -signf * nl.x );
-	// vec3 B = vec3( b, signf + nl.y * nl.y * a, -nl.y );
-	// return normalize(x * T + y * B + z * nl);
 }
 
 vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
@@ -1302,14 +1294,6 @@ vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 	vec3 U = normalize( cross(vec3(0.7071067811865475, 0.7071067811865475, 0), nl ) );
 	vec3 V = cross(nl, U);
 	return normalize(x * U + y * V + z * nl);
-
-	// from "Building an Orthonormal Basis, Revisited" http://jcgt.org/published/0006/01/01/
-	// float signf = nl.z >= 0.0 ? 1.0 : -1.0;
-	// float a = -1.0 / (signf + nl.z);
-	// float b = nl.x * nl.y * a;
-	// vec3 T = vec3( 1.0 + signf * nl.x * nl.x * a, signf * b, -signf * nl.x );
-	// vec3 B = vec3( b, signf + nl.y * nl.y * a, -nl.y );
-	// return normalize(x * T + y * B + z * nl);
 }
 
 // #define N_POINTS 32.0
@@ -1340,18 +1324,11 @@ vec3 randomDirectionInSpecularLobe(vec3 reflectionDir, float roughness)
 	float cosTheta = pow(rand(), 1.0 / (exp(exponent) + 1.0));
 	float sinTheta = sqrt(max(0.0, 1.0 - cosTheta * cosTheta));
 	float phi = rand() * TWO_PI;
-
-	// // from "Building an Orthonormal Basis, Revisited" http://jcgt.org/published/0006/01/01/
-	// float signf = reflectionDir.z >= 0.0 ? 1.0 : -1.0;
-	// float a = -1.0 / (signf + reflectionDir.z);
-	// float b = reflectionDir.x * reflectionDir.y * a;
-	// vec3 T = vec3( 1.0 + signf * reflectionDir.x * reflectionDir.x * a, signf * b, -signf * reflectionDir.x );
-	// vec3 B = vec3( b, signf + reflectionDir.y * reflectionDir.y * a, -reflectionDir.y );
 	
 	vec3 U = normalize( cross(vec3(0.7071067811865475, 0.7071067811865475, 0), reflectionDir ) );
 	vec3 V = cross(reflectionDir, U);
+
 	return normalize(mix(reflectionDir, (U * cos(phi) * sinTheta + V * sin(phi) * sinTheta + reflectionDir * cosTheta), roughness));
-	//return normalize(U * cos(phi) * sinTheta + V * sin(phi) * sinTheta + reflectionDir * cosTheta);
 }
 
 // //the following alternative skips the creation of tangent and bi-tangent vectors u and v 
@@ -1379,9 +1356,9 @@ vec3 randomDirectionInSpecularLobe(vec3 reflectionDir, float roughness)
 
 
 THREE.ShaderChunk[ 'pathtracing_sample_sphere_light' ] = `
-vec3 sampleSphereLight(vec3 x, vec3 nl, Sphere light, vec3 dirToLight, out float weight)
+vec3 sampleSphereLight(vec3 x, vec3 nl, Sphere light, out float weight)
 {
-	dirToLight = (light.position - x); // no normalize (for distance calc below)
+	vec3 dirToLight = (light.position - x); // no normalize (for distance calc below)
 	float cos_alpha_max = sqrt(1.0 - clamp((light.radius * light.radius) / dot(dirToLight, dirToLight), 0.0, 1.0));
 	
 	float cos_alpha = mix( cos_alpha_max, 1.0, rand() ); // 1.0 + (rand() * (cos_alpha_max - 1.0));
@@ -1401,13 +1378,13 @@ vec3 sampleSphereLight(vec3 x, vec3 nl, Sphere light, vec3 dirToLight, out float
 `;
 
 THREE.ShaderChunk[ 'pathtracing_sample_quad_light' ] = `
-vec3 sampleQuadLight(vec3 x, vec3 nl, Quad light, vec3 dirToLight, out float weight)
+vec3 sampleQuadLight(vec3 x, vec3 nl, Quad light, out float weight)
 {
 	vec3 randPointOnLight;
 	randPointOnLight.x = mix(light.v0.x, light.v1.x, clamp(rand(), 0.1, 0.9));
 	randPointOnLight.y = light.v0.y;
 	randPointOnLight.z = mix(light.v0.z, light.v3.z, clamp(rand(), 0.1, 0.9));
-	dirToLight = randPointOnLight - x;
+	vec3 dirToLight = randPointOnLight - x;
 	float r2 = distance(light.v0, light.v1) * distance(light.v0, light.v3);
 	float d2 = dot(dirToLight, dirToLight);
 	float cos_a_max = sqrt(1.0 - clamp( r2 / d2, 0.0, 1.0));
