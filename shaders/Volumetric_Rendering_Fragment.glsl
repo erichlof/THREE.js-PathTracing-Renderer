@@ -194,7 +194,7 @@ vec3 CalculateRadiance(Ray r)
 				continue;
 			}
 			
-			dirToLight = sampleSphereLight(x, nl, spheres[0], dirToLight, weight);
+			dirToLight = sampleSphereLight(x, nl, spheres[0], weight);
 			mask *= weight;
 
 			r = Ray( x, dirToLight );
@@ -284,7 +284,7 @@ vec3 CalculateRadiance(Ray r)
 				continue;
                         }
                         
-			dirToLight = sampleSphereLight(x, nl, spheres[0], dirToLight, weight);
+			dirToLight = sampleSphereLight(x, nl, spheres[0], weight);
 			mask *= weight;
 
 			r = Ray( x, dirToLight );
