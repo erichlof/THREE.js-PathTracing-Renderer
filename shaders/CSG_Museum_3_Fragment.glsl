@@ -940,7 +940,7 @@ vec3 CalculateRadiance(Ray r)
 				continue;
 			}
                         
-			dirToLight = sampleQuadLight(x, nl, lightChoice, dirToLight, weight);
+			dirToLight = sampleQuadLight(x, nl, lightChoice, weight);
 			mask *= weight * N_LIGHTS;
 
 			r = Ray( x, dirToLight );
@@ -1047,7 +1047,7 @@ vec3 CalculateRadiance(Ray r)
 				continue;
 			}
 
-			dirToLight = sampleQuadLight(x, nl, lightChoice, dirToLight, weight);
+			dirToLight = sampleQuadLight(x, nl, lightChoice, weight);
 			mask *= weight * N_LIGHTS;
 			
 			r = Ray( x, dirToLight );
