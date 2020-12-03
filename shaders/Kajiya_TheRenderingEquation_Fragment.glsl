@@ -106,7 +106,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 } // end float SceneIntersect( Ray r, inout Intersection intersec )
 
 
-vec3 sampleRectangleLight(vec3 x, vec3 nl, Rectangle light, vec3 dirToLight, out float weight)
+vec3 sampleRectangleLight(vec3 x, vec3 nl, Rectangle light, out float weight)
 {
 	vec3 u = normalize(cross( abs(light.normal.y) < 0.9 ? vec3(0, 1, 0) : vec3(0, 0, 1), light.normal));
 	vec3 v = cross(light.normal, u);
@@ -115,7 +115,7 @@ vec3 sampleRectangleLight(vec3 x, vec3 nl, Rectangle light, vec3 dirToLight, out
 	randPointOnLight += mix(u * -light.radiusU * 0.9, u * light.radiusU * 0.9, rand());
 	randPointOnLight += mix(v * -light.radiusV * 0.9, v * light.radiusV * 0.9, rand());
 	
-	dirToLight = randPointOnLight - x;
+	vec3 dirToLight = randPointOnLight - x;
 	float r2 = (light.radiusU * 2.0) * (light.radiusV * 2.0);
 	float d2 = dot(dirToLight, dirToLight);
 	float cos_a_max = sqrt(1.0 - clamp( r2 / d2, 0.0, 1.0));
@@ -212,7 +212,7 @@ vec3 CalculateRadiance(Ray r)
 				continue;
 			}
                         
-			dirToLight = sampleRectangleLight(x, nl, lightChoice, dirToLight, weight);
+			dirToLight = sampleRectangleLight(x, nl, lightChoice, weight);
 			mask *= weight * N_LIGHTS;
 
 			r = Ray( x, dirToLight );
