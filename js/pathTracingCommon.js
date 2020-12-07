@@ -87,10 +87,23 @@ THREE.ShaderChunk[ 'pathtracing_plane_intersect' ] = `
 float PlaneIntersect( vec4 pla, Ray r )
 //-----------------------------------------------------------------------
 {
-	vec3 n = normalize(pla.xyz);
+	vec3 n = pla.xyz;
 	float denom = dot(n, r.direction);
-	// uncomment the following if single-sided plane is desired
-	//if (denom >= 0.0) return INFINITY;
+	
+        vec3 pOrO = (pla.w * n) - r.origin; 
+        float result = dot(pOrO, n) / denom;
+	return (result > 0.0) ? result : INFINITY;
+}
+`;
+
+THREE.ShaderChunk[ 'pathtracing_single_sided_plane_intersect' ] = `
+//-----------------------------------------------------------------------
+float SingleSidedPlaneIntersect( vec4 pla, Ray r )
+//-----------------------------------------------------------------------
+{
+	vec3 n = pla.xyz;
+	float denom = dot(n, r.direction);
+	if (denom > 0.0) return INFINITY;
 	
         vec3 pOrO = (pla.w * n) - r.origin; 
         float result = dot(pOrO, n) / denom;
@@ -1441,16 +1454,9 @@ void main( void )
 
 	randVec4 = texture(tBlueNoiseTexture, (gl_FragCoord.xy + (uRandomVec2 * 255.0)) / 255.0 ); // new way of rand()
 
-	vec2 pixelPos = vec2(0);
-	vec2 pixelOffset = vec2(0);
-	
-	float x = rand();
-	float y = rand();
-
-	pixelOffset = vec2(tentFilter(x), tentFilter(y));
-
+	vec2 pixelOffset = vec2( tentFilter(rng()), tentFilter(rng()) );
 	// we must map pixelPos into the range -1.0 to +1.0
-	pixelPos = ((gl_FragCoord.xy + pixelOffset) / uResolution) * 2.0 - 1.0;
+	vec2 pixelPos = ((gl_FragCoord.xy + pixelOffset) / uResolution) * 2.0 - 1.0;
 
 	vec3 rayDir = normalize( pixelPos.x * camRight * uULen + pixelPos.y * camUp * uVLen + camForward );
 	
