@@ -119,11 +119,20 @@ Before I got into this world of path tracing, I was a 3D game programmer (and st
 * [Future Game Engine PathTracer Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/GameEngine_PathTracer.html)<br>
 To my knowledge, this is just about as fast as I can push the path tracing engine and WebGL in general, and still retain good lighting, accurate reflections, and almost instant image convergence.  As computers get faster, this will be the heart of future game rendering engines - a simple path tracer that is just around 500 to 1000 lines of code, is easy to maintain and debug, and which gives photo-realistic real-time results! I already have some ideas for some simple 3d games that can use this technology.  I'll keep you posted! <br>
 <br>
-*Update: May 24th, 2019*
-- As promised I wanted to post an exciting update to the game engine path tracer.  What better way to give proof of concept and put it through its paces than an actual game!  I am pleased to announce the first ever pathtraced game for desktop and mobile: AntiGravity Pool!  Since it uses a physics engine and various custom components, I decided to create a dedicated repository for just this new game. Be sure to check it out!<br><br>
+
+<h2>PATH TRACED GAMES</h2>
+
+*Update: 5/24/2019*
+- I am pleased to announce the first ever pathtraced game for desktop and mobile: AntiGravity Pool!  Since it uses a physics engine and various custom components, I decided to create a dedicated repository for just this new game. Be sure to check it out!<br>
 
 * [AntiGravity Pool game](https://erichlof.github.io/AntiGravity-Pool/AntiGravityPool.html) on Desktop, press SPACEBAR to shoot! :)
-* [AntiGravity Pool project](https://github.com/erichlof/AntiGravity-Pool)
+* [AntiGravity Pool project](https://github.com/erichlof/AntiGravity-Pool) <br><br>
+
+*Update: 12/18/2020*
+- Continuing my series of pathtraced games for desktop and mobile, I happily present: Path Traced Pong!  The classic game of Pong holds a special place in my heart as it was my first computer game experience as a 6 year old in 1979, played on my brand new Atari 2600!  My version of Pong brings the classic into 3D, with real time raytraced reflections, soft shadows, and path traced global illumination.  As with AntiGravity Pool, I made a dedicated repository for just this new game. I must say, once you start playing, it's hard to stop!  I didn't realize how addictive it would become.  Check it out!<br><br>
+
+* [Path Traced Pong game](https://erichlof.github.io/PathTracedPong/Path_Traced_Pong.html) on Desktop, click to capture Mouse
+* [Path Traced Pong project](https://github.com/erichlof/PathTracedPong) <br>
 
 <br>
 <br>
