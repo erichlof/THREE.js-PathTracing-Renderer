@@ -225,37 +225,33 @@ float EllipsoidParamIntersect( float yMinPercent, float yMaxPercent, float phiMa
 //------------------------------------------------------------------------------------------------------------
 {
 	vec3 pHit;
-	float t0, t1, phi;
+	float t, t0, t1, phi;
 	// implicit equation of a unit (radius of 1) sphere:
 	// x^2 + y^2 + z^2 - 1 = 0
 	float a = dot(rd, rd);
 	float b = 2.0 * dot(rd, ro);
 	float c = dot(ro, ro) - 1.0;
+
 	solveQuadratic(a, b, c, t0, t1);
+	if (t1 <= 0.0) return INFINITY;
+
+	t = t0 > 0.0 ? t0 : INFINITY;
+	pHit = ro + rd * t;
+	phi = mod(atan(pHit.z, pHit.x), TWO_PI);
+
+	if (pHit.y > yMaxPercent || pHit.y < yMinPercent || phi > phiMaxRadians)
+	{
+		t = t1;
+		pHit = ro + rd * t;
+		phi = mod(atan(pHit.z, pHit.x), TWO_PI);
+		if (pHit.y > yMaxPercent || pHit.y < yMinPercent || phi > phiMaxRadians)
+			t = INFINITY;
+	}
 	
-	if ( t0 > 0.0 )
-	{
-		pHit = ro + rd * t0;
-		phi = mod(atan(pHit.z, pHit.x), TWO_PI);
-		n = vec3(2.0 * pHit.x, 2.0 * pHit.y, 2.0 * pHit.z);
-		// flip normal if it is facing away from us
-		n *= sign(-dot(rd, n)) * 2.0 - 1.0; // sign is 0 or 1, map it to -1 and +1
-		
-		if (pHit.y < yMaxPercent && pHit.y > yMinPercent && phi < phiMaxRadians)
-			return t0;
-	}
-	if ( t1 > 0.0 )
-	{
-		pHit = ro + rd * t1;
-		phi = mod(atan(pHit.z, pHit.x), TWO_PI);
-		n = vec3(2.0 * pHit.x, 2.0 * pHit.y, 2.0 * pHit.z);
-		// flip normal if it is facing away from us
-		n *= sign(-dot(rd, n)) * 2.0 - 1.0; // sign is 0 or 1, map it to -1 and +1
-		
-		if (pHit.y < yMaxPercent && pHit.y > yMinPercent && phi < phiMaxRadians)
-			return t1;
-	}
-	return INFINITY;
+	n = vec3(2.0 * pHit.x, 2.0 * pHit.y, 2.0 * pHit.z);
+	n = dot(rd, n) < 0.0 ? n : -n; // flip normal if it is facing away from us
+
+	return t;
 }
 `;
 
@@ -265,37 +261,33 @@ float CylinderParamIntersect( float yMinPercent, float yMaxPercent, float phiMax
 //------------------------------------------------------------------------------------------------------------
 {
 	vec3 pHit;
-	float t0, t1, phi;
+	float t, t0, t1, phi;
 	// implicit equation of a unit (radius of 1) cylinder, extending infinitely in the +Y and -Y directions:
 	// x^2 + z^2 - 1 = 0
 	float a = (rd.x * rd.x + rd.z * rd.z);
     	float b = 2.0 * (rd.x * ro.x + rd.z * ro.z);
     	float c = (ro.x * ro.x + ro.z * ro.z) - 1.0;
+
 	solveQuadratic(a, b, c, t0, t1);
+	if (t1 <= 0.0) return INFINITY;
 		
-	if ( t0 > 0.0 )
+	t = t0 > 0.0 ? t0 : INFINITY;
+	pHit = ro + rd * t;
+	phi = mod(atan(pHit.z, pHit.x), TWO_PI);
+
+	if (pHit.y > yMaxPercent || pHit.y < yMinPercent || phi > phiMaxRadians)
 	{
-		pHit = ro + rd * t0;
+		t = t1;
+		pHit = ro + rd * t;
 		phi = mod(atan(pHit.z, pHit.x), TWO_PI);
-		n = vec3(2.0 * pHit.x, 0.0, 2.0 * pHit.z);
-		// flip normal if it is facing away from us
-		n *= sign(-dot(rd, n)) * 2.0 - 1.0; // sign is 0 or 1, map it to -1 and +1
-		
-		if (pHit.y < yMaxPercent && pHit.y > yMinPercent && phi < phiMaxRadians)
-			return t0;
+		if (pHit.y > yMaxPercent || pHit.y < yMinPercent || phi > phiMaxRadians)
+			t = INFINITY;
 	}
-	if ( t1 > 0.0 )
-	{
-		pHit = ro + rd * t1;
-		phi = mod(atan(pHit.z, pHit.x), TWO_PI);
-		n = vec3(2.0 * pHit.x, 0.0, 2.0 * pHit.z);
-		// flip normal if it is facing away from us
-		n *= sign(-dot(rd, n)) * 2.0 - 1.0; // sign is 0 or 1, map it to -1 and +1
+	
+	n = vec3(2.0 * pHit.x, 0.0, 2.0 * pHit.z);
+	n = dot(rd, n) < 0.0 ? n : -n; // flip normal if it is facing away from us
 		
-		if (pHit.y < yMaxPercent && pHit.y > yMinPercent && phi < phiMaxRadians)
-			return t1;
-	}
-	return INFINITY;
+	return t;
 }
 `;
 
@@ -305,7 +297,7 @@ float ConeParamIntersect( float yMinPercent, float yMaxPercent, float phiMaxRadi
 //------------------------------------------------------------------------------------------------------------
 {
 	vec3 pHit;
-	float t0, t1, phi;
+	float t, t0, t1, phi;
 	// implicit equation of a double-cone extending infinitely in +Y and -Y directions
 	// x^2 + z^2 - y^2 = 0
 	// code below cuts off top cone, leaving bottom cone with apex at the top (+1.0), and circular base (radius of 1) at the bottom (-1.0)
@@ -315,30 +307,25 @@ float ConeParamIntersect( float yMinPercent, float yMaxPercent, float phiMaxRadi
     	float c = ro.x * ro.x + ro.z * ro.z - k * (ro.y - 1.0) * (ro.y - 1.0);
 	
 	solveQuadratic(a, b, c, t0, t1);
+	if (t1 <= 0.0) return INFINITY;
 		
-	if ( t0 > 0.0 )
+	t = t0 > 0.0 ? t0 : INFINITY;
+	pHit = ro + rd * t;
+	phi = mod(atan(pHit.z, pHit.x), TWO_PI);
+
+	if (pHit.y > yMaxPercent || pHit.y < yMinPercent || phi > phiMaxRadians)
 	{
-		pHit = ro + rd * t0;
+		t = t1;
+		pHit = ro + rd * t;
 		phi = mod(atan(pHit.z, pHit.x), TWO_PI);
-		n = vec3(2.0 * pHit.x, -2.0 * (pHit.y - 1.0) * k, 2.0 * pHit.z);
-		// flip normal if it is facing away from us
-		n *= sign(-dot(rd, n)) * 2.0 - 1.0; // sign is 0 or 1, map it to -1 and +1
-		
-		if (pHit.y < yMaxPercent && pHit.y > yMinPercent && phi < phiMaxRadians)
-			return t0;
+		if (pHit.y > yMaxPercent || pHit.y < yMinPercent || phi > phiMaxRadians)
+			t = INFINITY;
 	}
-	if ( t1 > 0.0 )
-	{
-		pHit = ro + rd * t1;
-		phi = mod(atan(pHit.z, pHit.x), TWO_PI);
-		n = vec3(2.0 * pHit.x, -2.0 * (pHit.y - 1.0) * k, 2.0 * pHit.z);
-		// flip normal if it is facing away from us
-		n *= sign(-dot(rd, n)) * 2.0 - 1.0; // sign is 0 or 1, map it to -1 and +1
-		
-		if (pHit.y < yMaxPercent && pHit.y > yMinPercent && phi < phiMaxRadians)
-			return t1;
-	}
-	return INFINITY;
+
+	n = vec3(2.0 * pHit.x, 2.0 * (1.0 - pHit.y) * k, 2.0 * pHit.z);
+	n = dot(rd, n) < 0.0 ? n : -n; // flip normal if it is facing away from us
+
+	return t;
 }
 `;
 
@@ -348,7 +335,7 @@ float ParaboloidParamIntersect( float yMinPercent, float yMaxPercent, float phiM
 //------------------------------------------------------------------------------------------------------------
 {
 	vec3 pHit;
-	float t0, t1, phi;
+	float t, t0, t1, phi;
 	// implicit equation of a paraboloid (bowl or vase-shape extending infinitely in the +Y direction):
 	// x^2 + z^2 - y = 0
 	ro.y += 1.0; // this essentially centers the paraboloid so that the bottom is at -1.0 and 
@@ -357,34 +344,31 @@ float ParaboloidParamIntersect( float yMinPercent, float yMaxPercent, float phiM
 	float a = (rd.x * rd.x + rd.z * rd.z);
     	float b = 2.0 * (rd.x * ro.x + rd.z * ro.z) - k * rd.y;
     	float c = (ro.x * ro.x + ro.z * ro.z) - k * ro.y;
+
 	solveQuadratic(a, b, c, t0, t1);
+	if (t1 <= 0.0) return INFINITY;
 	
 	// this takes into account that we shifted the ray origin by +1.0
 	yMaxPercent += 1.0;
 	yMinPercent += 1.0;
-	if ( t0 > 0.0 )
+
+	t = t0 > 0.0 ? t0 : INFINITY;
+	pHit = ro + rd * t;
+	phi = mod(atan(pHit.z, pHit.x), TWO_PI);
+
+	if (pHit.y > yMaxPercent || pHit.y < yMinPercent || phi > phiMaxRadians)
 	{
-		pHit = ro + rd * t0;
+		t = t1;
+		pHit = ro + rd * t;
 		phi = mod(atan(pHit.z, pHit.x), TWO_PI);
-		n = vec3(2.0 * pHit.x, -1.0 * k, 2.0 * pHit.z);
-		// flip normal if it is facing away from us
-		n *= sign(-dot(rd, n)) * 2.0 - 1.0; // sign is 0 or 1, map it to -1 and +1
-		
-		if (pHit.y < yMaxPercent && pHit.y > yMinPercent && phi < phiMaxRadians)
-			return t0;
+		if (pHit.y > yMaxPercent || pHit.y < yMinPercent || phi > phiMaxRadians)
+			t = INFINITY;
 	}
-	if ( t1 > 0.0 )
-	{
-		pHit = ro + rd * t1;
-		phi = mod(atan(pHit.z, pHit.x), TWO_PI);
-		n = vec3(2.0 * pHit.x, -1.0 * k, 2.0 * pHit.z);
-		// flip normal if it is facing away from us
-		n *= sign(-dot(rd, n)) * 2.0 - 1.0; // sign is 0 or 1, map it to -1 and +1
-		
-		if (pHit.y < yMaxPercent && pHit.y > yMinPercent && phi < phiMaxRadians)
-			return t1;
-	}
-	return INFINITY;
+	
+	n = vec3(2.0 * pHit.x, -1.0 * k, 2.0 * pHit.z);
+	n = dot(rd, n) < 0.0 ? n : -n; // flip normal if it is facing away from us
+			
+	return t;
 }
 `;
 
@@ -394,7 +378,7 @@ float HyperboloidParamIntersect( float k, float yMinPercent, float yMaxPercent, 
 //------------------------------------------------------------------------------------------------------------
 {
 	vec3 pHit;
-	float t0, t1, phi;
+	float t, t0, t1, phi;
 	// implicit equation of a hyperboloid of 1 sheet (hourglass shape extending infinitely in the +Y and -Y directions):
 	// x^2 + z^2 - y^2 - 1 = 0
 	// implicit equation of a hyperboloid of 2 sheets (2 mirrored opposing paraboloids, non-connecting, top extends infinitely in +Y, bottom in -Y):
@@ -406,30 +390,27 @@ float HyperboloidParamIntersect( float k, float yMinPercent, float yMaxPercent, 
 	float a = k * rd.x * rd.x + k * rd.z * rd.z - j * rd.y * rd.y;
 	float b = 2.0 * (k * rd.x * ro.x + k * rd.z * ro.z - j * rd.y * ro.y);
 	float c = (k * ro.x * ro.x + k * ro.z * ro.z - j * ro.y * ro.y) - 1.0;
+
 	solveQuadratic(a, b, c, t0, t1);
+	if (t1 <= 0.0) return INFINITY;
 	
-	if ( t0 > 0.0 )
+	t = t0 > 0.0 ? t0 : INFINITY;
+	pHit = ro + rd * t;
+	phi = mod(atan(pHit.z, pHit.x), TWO_PI);
+
+	if (pHit.y > yMaxPercent || pHit.y < yMinPercent || phi > phiMaxRadians)
 	{
-		pHit = ro + rd * t0;
+		t = t1;
+		pHit = ro + rd * t;
 		phi = mod(atan(pHit.z, pHit.x), TWO_PI);
-		n = vec3(2.0 * pHit.x * k, -2.0 * pHit.y * j, 2.0 * pHit.z * k);
-		// flip normal if it is facing away from us
-		n *= sign(-dot(rd, n)) * 2.0 - 1.0; // sign is 0 or 1, map it to -1 and +1
+		if (pHit.y > yMaxPercent || pHit.y < yMinPercent || phi > phiMaxRadians)
+			t = INFINITY;
+	}
+	
+	n = vec3(2.0 * pHit.x * k, 2.0 * -pHit.y * j, 2.0 * pHit.z * k);
+	n = dot(rd, n) < 0.0 ? n : -n; // flip normal if it is facing away from us
 		
-		if (pHit.y < yMaxPercent && pHit.y > yMinPercent && phi < phiMaxRadians)
-			return t0;
-	}
-	if ( t1 > 0.0 )
-	{
-		pHit = ro + rd * t1;
-		phi = mod(atan(pHit.z, pHit.x), TWO_PI);
-		n = vec3(2.0 * pHit.x * k, -2.0 * pHit.y * j, 2.0 * pHit.z * k);
-		// flip normal if it is facing away from us
-		n *= sign(-dot(rd, n)) * 2.0 - 1.0; // sign is 0 or 1, map it to -1 and +1
-		if (pHit.y < yMaxPercent && pHit.y > yMinPercent && phi < phiMaxRadians)
-			return t1;
-	}
-	return INFINITY;
+	return t;
 }
 `;
 
@@ -439,35 +420,33 @@ float HyperbolicParaboloidParamIntersect( float yMinPercent, float yMaxPercent, 
 //------------------------------------------------------------------------------------------------------------
 {
 	vec3 pHit;
-	float t0, t1, phi;
+	float t, t0, t1, phi;
 	// implicit equation of an infinite hyperbolic paraboloid (saddle shape):
 	// x^2 - z^2 - y = 0
 	float a = rd.x * rd.x - rd.z * rd.z;
 	float b = 2.0 * (rd.x * ro.x - rd.z * ro.z) - rd.y;
 	float c = (ro.x * ro.x - ro.z * ro.z) - ro.y;
+
 	solveQuadratic(a, b, c, t0, t1);
-	if ( t0 > 0.0 )
+	if (t1 <= 0.0) return INFINITY;
+
+	t = t0 > 0.0 ? t0 : INFINITY;
+	pHit = ro + rd * t;
+	phi = mod(atan(pHit.z, pHit.x), TWO_PI);
+
+	if (abs(pHit.x) > yMaxPercent || abs(pHit.y) > yMaxPercent || abs(pHit.z) > yMaxPercent || phi > phiMaxRadians)
 	{
-		pHit = ro + rd * t0;
+		t = t1;
+		pHit = ro + rd * t;
 		phi = mod(atan(pHit.z, pHit.x), TWO_PI);
-		n = vec3(2.0 * pHit.x, -1.0, -2.0 * pHit.z);
-		// flip normal if it is facing away from us
-		n *= sign(-dot(rd, n)) * 2.0 - 1.0; // sign is 0 or 1, map it to -1 and +1
-		if (abs(pHit.x) < yMaxPercent && abs(pHit.y) < yMaxPercent && abs(pHit.z) < yMaxPercent && phi < phiMaxRadians)
-			return t0;
+		if (abs(pHit.x) > yMaxPercent || abs(pHit.y) > yMaxPercent || abs(pHit.z) > yMaxPercent || phi > phiMaxRadians)
+			t = INFINITY;
 	}
-	if ( t1 > 0.0 )
-	{
-		pHit = ro + rd * t1;
-		phi = mod(atan(pHit.z, pHit.x), TWO_PI);
-		n = vec3(2.0 * pHit.x, -1.0, -2.0 * pHit.z);
-		// flip normal if it is facing away from us
-		n *= sign(-dot(rd, n)) * 2.0 - 1.0; // sign is 0 or 1, map it to -1 and +1
+	
+	n = vec3(2.0 * pHit.x, -1.0, -2.0 * pHit.z);
+	n = dot(rd, n) < 0.0 ? n : -n; // flip normal if it is facing away from us
 		
-		if (abs(pHit.x) < yMaxPercent && abs(pHit.y) < yMaxPercent && abs(pHit.z) < yMaxPercent && phi < phiMaxRadians)
-			return t1;
-	}
-	return INFINITY;
+	return t;
 }
 `;
 
@@ -1118,7 +1097,8 @@ float BoundingBoxIntersect( vec3 minCorner, vec3 maxCorner, vec3 rayOrigin, vec3
 	float t0 = max( max(tmin.x, tmin.y), tmin.z);
 	float t1 = min( min(tmax.x, tmax.y), tmax.z);
 	
-	return (t0 > t1 || t1 < 0.0) ? INFINITY : t0;
+	//return t1 >= max(t0, 0.0) ? t0 : INFINITY;
+	return max(t0, 0.0) > t1 ? INFINITY : t0;
 }
 `;
 
