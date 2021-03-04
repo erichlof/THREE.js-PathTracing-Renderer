@@ -45,10 +45,14 @@ For comparison, here is a real photograph of the original Cornell Box vs. a rend
 
 * [GLTF Viewer Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Gltf_Viewer.html) This cool viewer not only loads models in glTF format, but also uses three.js' RGBE.Loader to load an equi-rectangular HDR image as the background and for global lighting. Many thanks to github user [n2k3](https://github.com/n2k3) for his awesome contributions to this viewer!  He implemented a slick loading animation as well as a GUI panel that allows you to change the sun angle, sun intensity, sun color, hdr intensity, and hdr exposure. <br>
 
-<h3>Constructive Solid Geometry(CSG) Museum Demos</h3>
+<h3>Constructive Solid Geometry(CSG) Demos</h3>
 
-The following demos showcase different techniques in Constructive Solid Geometry - taking one 3D shape and either adding, removing, or overlapping a second shape. *Note: these demos may take several seconds to compile* <br>
-All 4 demos feature a large dark glass sculpture in the center of the room, which shows Ellipsoid vs. Sphere CSG. <br>
+The following demos showcase different techniques in Constructive Solid Geometry(CSG) - taking one 3D shape and either adding, removing, or intersecting a second shape. <br>
+
+* [Constructive Solid Geometry Viewer](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Constructive_Solid_Geometry_Viewer.html)
+This viewer allows you to easily experiment with different CSG configurations while seeing the results path-traced in real time!  You can select a CSG Operation from the Operations list - Union (A+B), Difference (A-B), or Intersection (A^B).  Briefly, a 'Union' operation means that the outside of shape A is fused with the outside of shape B, creating a new single shape with a single interior volume.  A 'Difference' operation means that shape A is cut out with shape B (shape B by itself will be invisible, but its influence will be visible as a cut-out of shape A where the two overlap).  An 'Intersection' operation means that wherever shape A touches shape B, a new shape/volume will be created (the two shapes *must* overlap, otherwise no new shape will be seen).  I added a detailed and fully-featured GUI menu system so that you can easily modify the CSG Operation type, both shapes' Transforms (Position, Scale, Skew, Rotation), both shapes' base geometry (Sphere, Box, Cylinder, Cone, Paraboloid), their material type (Diffuse, Transparent Refractive, Metal, ClearCoat Diffuse) and their material color. I have spent hours trying various configuration possibilities, which are seemingly endless (ha)!  I hope that you too will have fun experimenting with this viewer and seeing what new shapes you can create!  ;-) <br>
+
+All of the following 4 demos feature a large dark glass sculpture in the center of the room, which shows Ellipsoid vs. Sphere CSG. <br>
 Along the back wall, a study in Box vs. Sphere CSG: [CSG_Museum Demo #1](https://erichlof.github.io/THREE.js-PathTracing-Renderer/CSG_Museum_1.html) <br>
 Along the right wall, a glass-encased monolith, and a study in Sphere vs. Cylinder CSG: [CSG_Museum Demo #2](https://erichlof.github.io/THREE.js-PathTracing-Renderer/CSG_Museum_2.html) <br>
 Along the wall behind the camera, a study in Ellipsoid vs. Sphere CSG: [CSG_Museum Demo #3](https://erichlof.github.io/THREE.js-PathTracing-Renderer/CSG_Museum_3.html) <br>
