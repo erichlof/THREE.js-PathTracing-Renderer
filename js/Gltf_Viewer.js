@@ -38,6 +38,7 @@ let uniqueMaterialTextures = [];
 var aabb_array;
 // Menu variables
 var gui;
+var ableToEngagePointerLock = true;
 var lightingSettingsFolder;
 var cameraSettingsFolder;
 const minFov = 1, maxFov = 150;
@@ -297,6 +298,8 @@ function initThree() {
         window.addEventListener('wheel', onMouseWheel, false);
 
         document.body.addEventListener("click", function () {
+		if (!ableToEngagePointerLock)
+                                return;
             this.requestPointerLock = this.requestPointerLock || this.mozRequestPointerLock;
             this.requestPointerLock();
         }, false);
@@ -839,6 +842,14 @@ function initMenu() {
         return;
 
     gui = new dat.GUI();
+	if (mouseControl) {
+		gui.domElement.addEventListener("mouseenter", function(event) {
+				ableToEngagePointerLock = false;	
+		}, false);
+		gui.domElement.addEventListener("mouseleave", function(event) {
+				ableToEngagePointerLock = true;
+		}, false);
+	}
     gui.domElement.classList.add("hidden");
 
     gui.add(this, 'pixelRatio', 0.25, 1).step(0.01).onChange(function (value) {
