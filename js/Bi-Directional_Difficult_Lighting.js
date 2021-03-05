@@ -415,11 +415,11 @@ function createPathTracingMaterial() {
 // called automatically from within the animate() function
 function updateVariablesAndUniforms() {
         
-        if ( keyboard.pressed('E') && !keyboard.pressed('R') ) {
+        if (keyPressed('e') && !keyPressed('r')) {
 					
                 decreaseDoorAngle = true;
         }
-        if ( keyboard.pressed('R') && !keyboard.pressed('E') ) {
+        if (keyPressed('r') && !keyPressed('e')) {
                 
                 increaseDoorAngle = true;
         }
