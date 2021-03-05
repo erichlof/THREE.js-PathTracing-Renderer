@@ -1,3 +1,5 @@
+<h3>3/5/2021 2:00 p.m. CST: entire repo 'HouseCleaning' for 20 minutes or so... (hang tight, demos will be working again shortly!)</h3>
+
 # THREE.js-PathTracing-Renderer
 Real-time PathTracing with global illumination and progressive rendering, all on top of the Three.js WebGL framework.
 
