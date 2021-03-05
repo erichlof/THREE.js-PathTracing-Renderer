@@ -85,12 +85,19 @@ function init_GUI() {
                 }, false);
 
 
-                var pointerlockChange = function ( event ) {
-                        if ( document.pointerLockElement === document.body || 
-                            document.mozPointerLockElement === document.body || document.webkitPointerLockElement === document.body ) {
-
+                pointerlockChange = function (event)
+                {
+                        if (document.pointerLockElement === document.body ||
+                                document.mozPointerLockElement === document.body || document.webkitPointerLockElement === document.body)
+                        {
+                                document.addEventListener('keydown', onKeyDown, false);
+                                document.addEventListener('keyup', onKeyUp, false);
                                 isPaused = false;
-                        } else {
+                        }
+                        else
+                        {
+                                document.removeEventListener('keydown', onKeyDown, false);
+                                document.removeEventListener('keyup', onKeyUp, false);
                                 isPaused = true;
                         }
                 };
