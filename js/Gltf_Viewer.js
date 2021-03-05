@@ -155,7 +155,8 @@ initModels(modelPaths);
 
 function onMouseWheel(event) {
 
-    event.preventDefault();
+    if (isPaused)
+	return;
     event.stopPropagation();
 
     if (event.deltaY > 0)
@@ -295,7 +296,7 @@ function initThree() {
 
         window.addEventListener('wheel', onMouseWheel, false);
 
-        canvas.addEventListener("click", function () {
+        document.body.addEventListener("click", function () {
             this.requestPointerLock = this.requestPointerLock || this.mozRequestPointerLock;
             this.requestPointerLock();
         }, false);
