@@ -26,7 +26,6 @@ var sceneIsDynamic = false;
 var isPaused = true;
 var oldYawRotation = 0, oldPitchRotation = 0, oldDeltaX = 0, oldDeltaY = 0, newDeltaX = 0, newDeltaY = 0;
 var mouseControl = true;
-var keyboard = new THREEx.KeyboardState();
 var mobileJoystickControls = null;
 // Mobile Input variables
 var mobileControlsMoveX = 0, mobileControlsMoveY = 0, oldPinchWidthX = 0, oldPinchWidthY = 0, pinchDeltaX = 0, pinchDeltaY = 0;
@@ -93,6 +92,57 @@ function filePromiseLoader(url, onProgress) {
         fileLoader.load(url, resolve, onProgress, reject);
     });
 }
+
+const KEYS = {
+	a: 65, b: 66, c: 67, d: 68, e: 69, f: 70, g: 71, h: 72, i: 73, j: 74, k: 75, l: 76, m: 77,
+	n: 78, o: 79, p: 80, q: 81, r: 82, s: 83, t: 84, u: 85, v: 86, w: 87, x: 88, y: 89, z: 90,
+	left: 37, up: 38, right: 39, down: 40, space: 32, pageup: 33, pagedown: 34, tab: 9,
+	dash: 189, equals: 187, comma: 188, period: 190, escape: 27, enter: 13, return: 13
+}
+let KeyboardState = {
+	a: false, b: false, c: false, d: false, e: false, f: false, g: false, h: false, i: false, j: false, k: false, l: false, m: false,
+	n: false, o: false, p: false, q: false, r: false, s: false, t: false, u: false, v: false, w: false, x: false, y: false, z: false,
+	left: false, up: false, right: false, down: false, space: false, pageup: false, pagedown: false, tab: false,
+	dash: false, equals: false, comma: false, period: false, escape: false, enter: false, return: false
+}
+
+function onKeyDown(event)
+{
+	event.preventDefault();
+
+	for (const key in KEYS)
+	{
+		if (KEYS[key] == event.keyCode)
+		{
+			KeyboardState[key] = true;
+			return;
+		}
+	}
+}
+
+function onKeyUp(event)
+{
+	event.preventDefault();
+
+	for (const key in KEYS)
+	{
+		if (KEYS[key] == event.keyCode)
+		{
+			KeyboardState[key] = false;
+			return;
+		}
+	}
+}
+
+function keyPressed(keyName)
+{
+	if (!mouseControl)
+		return;
+
+	return KeyboardState[keyName];
+}
+
+
 
 // init Three.js
 initThree();
@@ -251,7 +301,19 @@ function initThree() {
         }, false);
 
         var pointerlockChange = () => {
-            isPaused = !(document.pointerLockElement === canvas || document.mozPointerLockElement === canvas || document.webkitPointerLockElement === canvas);
+		if (document.pointerLockElement === document.body ||
+			document.mozPointerLockElement === document.body || document.webkitPointerLockElement === document.body)
+		{
+			document.addEventListener('keydown', onKeyDown, false);
+			document.addEventListener('keyup', onKeyUp, false);
+			isPaused = false;
+		}
+		else
+		{
+			document.removeEventListener('keydown', onKeyDown, false);
+			document.removeEventListener('keyup', onKeyUp, false);
+			isPaused = true;
+		}
         };
 
         // Hook pointer lock state change events
@@ -1009,57 +1071,53 @@ function animate() {
     let cameraWorldQuaternion = new THREE.Quaternion(); //for rotating scene objects to match camera's current rotation
     worldCamera.getWorldQuaternion(cameraWorldQuaternion);
 
-    var camFlightSpeed;
-    if (keyboard.modifiers && keyboard.modifiers.shift)
-        camFlightSpeed = speed * 2;
-    else
-        camFlightSpeed = speed;
+    var camFlightSpeed = speed;
 
     // allow flying camera
-    if ((keyboard.pressed('W') || button3Pressed) && !(keyboard.pressed('S') || button4Pressed)) {
+    if ((keyPressed('w') || button3Pressed) && !(keyPressed('s') || button4Pressed)) {
 
         cameraControlsObject.position.add(cameraDirectionVector.multiplyScalar(camFlightSpeed * frameTime));
         cameraIsMoving = true;
     }
-    if ((keyboard.pressed('S') || button4Pressed) && !(keyboard.pressed('W') || button3Pressed)) {
+    if ((keyPressed('s') || button4Pressed) && !(keyPressed('w') || button3Pressed)) {
 
         cameraControlsObject.position.sub(cameraDirectionVector.multiplyScalar(camFlightSpeed * frameTime));
         cameraIsMoving = true;
     }
-    if ((keyboard.pressed('A') || button1Pressed) && !(keyboard.pressed('D') || button2Pressed)) {
+    if ((keyPressed('a') || button1Pressed) && !(keyPressed('d') || button2Pressed)) {
 
         cameraControlsObject.position.sub(cameraRightVector.multiplyScalar(camFlightSpeed * frameTime));
         cameraIsMoving = true;
     }
-    if ((keyboard.pressed('D') || button2Pressed) && !(keyboard.pressed('A') || button1Pressed)) {
+    if ((keyPressed('d') || button2Pressed) && !(keyPressed('a') || button1Pressed)) {
 
         cameraControlsObject.position.add(cameraRightVector.multiplyScalar(camFlightSpeed * frameTime));
         cameraIsMoving = true;
     }
-    if (keyboard.pressed('E') && !keyboard.pressed('Q')) {
+    if (keyPressed('e') && !keyPressed('q')) {
 
         cameraControlsObject.position.add(cameraUpVector.multiplyScalar(camFlightSpeed * frameTime));
         cameraIsMoving = true;
     }
-    if (keyboard.pressed('Q') && !keyboard.pressed('E')) {
+    if (keyPressed('q') && !keyPressed('e')) {
 
         cameraControlsObject.position.sub(cameraUpVector.multiplyScalar(camFlightSpeed * frameTime));
         cameraIsMoving = true;
     }
-    if ((keyboard.pressed('up') || button5Pressed) && !(keyboard.pressed('down') || button6Pressed)) {
+    if ((keyPressed('up') || button5Pressed) && !(keyPressed('down') || button6Pressed)) {
         focusDistance++;
         focusDistanceChanged = true;
     }
-    if ((keyboard.pressed('down') || button6Pressed) && !(keyboard.pressed('up') || button5Pressed)) {
+    if ((keyPressed('down') || button6Pressed) && !(keyPressed('up') || button5Pressed)) {
         if (focusDistance > minFocusDistance) {
             focusDistance--;
             focusDistanceChanged = true;
         }
     }
-    if (keyboard.pressed('right') && !keyboard.pressed('left')) {
+    if (keyPressed('right') && !keyPressed('left')) {
         increaseApertureSize();
     }
-    if (keyboard.pressed('left') && !keyboard.pressed('right')) {
+    if (keyPressed('left') && !keyPressed('right')) {
         decreaseApertureSize()
     }
 
