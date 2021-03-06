@@ -32,7 +32,6 @@ let windowIsBeingResized = false;
 let TWO_PI = Math.PI * 2;
 let sampleCounter = 1.0;
 let frameCounter = 1.0;
-//let keyboard = null;
 let cameraIsMoving = false;
 let cameraRecentlyMoving = false;
 let isPaused = true;
