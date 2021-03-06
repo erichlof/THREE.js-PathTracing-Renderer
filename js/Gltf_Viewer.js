@@ -1,11 +1,13 @@
 // Three.js related variables
 let container, canvas, stats, controls, renderer, clock;
+let frameTime;
 // PathTracing scene variables
 let pathTracingScene, screenTextureScene, screenOutputScene;
 let pathTracingUniforms, screenTextureUniforms, screenOutputUniforms, pathTracingDefines, screenOutputMaterial, pathTracingRenderTarget;
 let blueNoiseTexture;
 // Camera variables
 let quadCamera, worldCamera;
+let cameraDirectionVector = new THREE.Vector3(), cameraRightVector = new THREE.Vector3(), cameraUpVector = new THREE.Vector3();
 // HDR image variables
 var hdrPath, hdrTexture, hdrLoader, hdrExposure = 1.0;
 // Environment variables
@@ -15,7 +17,8 @@ var cameraControlsObject; //for positioning and moving the camera itself
 var cameraControlsYawObject; //allows access to control camera's left/right movements through mobile input
 var cameraControlsPitchObject; //allows access to control camera's up/down movements through mobile input
 // Camera setting variables
-var apertureSize = 0.0, focusDistance = 100.0, speed = 60;
+var apertureSize = 0.0, focusDistance = 100.0, speed = 60, camFlightSpeed;
+var fovScale;
 // Rendering variables
 var pixelRatio = 0.5; // 1 is full resolution, 0.5 is half, 0.25 is quarter, etc. (must be > than 0.0)
 var sunAngle = Math.PI / 2.5;
@@ -28,6 +31,8 @@ var oldYawRotation = 0, oldPitchRotation = 0, oldDeltaX = 0, oldDeltaY = 0, newD
 var mouseControl = true;
 var mobileJoystickControls = null;
 // Mobile Input variables
+var newPinchWidthX;
+var newPinchWidthY;
 var mobileControlsMoveX = 0, mobileControlsMoveY = 0, oldPinchWidthX = 0, oldPinchWidthY = 0, pinchDeltaX = 0, pinchDeltaY = 0;
 var stillFlagX = true, stillFlagY = true;
 var fontAspect;
@@ -77,6 +82,7 @@ let modelPaths = [
 let modelScale = 10.0;
 let modelRotationY = Math.PI; // in radians
 let modelPositionOffset = new THREE.Vector3(0, 0, 0);
+let sunDirection = new THREE.Vector3();
 
 var gltfLoader = new THREE.GLTFLoader();
 var fileLoader = new THREE.FileLoader();
@@ -94,45 +100,31 @@ function filePromiseLoader(url, onProgress) {
     });
 }
 
-const KEYS = {
-	a: 65, b: 66, c: 67, d: 68, e: 69, f: 70, g: 71, h: 72, i: 73, j: 74, k: 75, l: 76, m: 77,
-	n: 78, o: 79, p: 80, q: 81, r: 82, s: 83, t: 84, u: 85, v: 86, w: 87, x: 88, y: 89, z: 90,
-	left: 37, up: 38, right: 39, down: 40, space: 32, pageup: 33, pagedown: 34, tab: 9,
-	dash: 189, equals: 187, comma: 188, period: 190, escape: 27, enter: 13, return: 13
+const KEYCODE_NAMES = {
+	65: 'a', 66: 'b', 67: 'c', 68: 'd', 69: 'e', 70: 'f', 71: 'g', 72: 'h', 73: 'i', 74: 'j', 75: 'k', 76: 'l', 77: 'm',
+	78: 'n', 79: 'o', 80: 'p', 81: 'q', 82: 'r', 83: 's', 84: 't', 85: 'u', 86: 'v', 87: 'w', 88: 'x', 89: 'y', 90: 'z',
+	37: 'left', 38: 'up', 39: 'right', 40: 'down', 32: 'space', 33: 'pageup', 34: 'pagedown', 9: 'tab',
+	189: 'dash', 187: 'equals', 188: 'comma', 190: 'period', 27: 'escape', 13: 'enter'
 }
 let KeyboardState = {
 	a: false, b: false, c: false, d: false, e: false, f: false, g: false, h: false, i: false, j: false, k: false, l: false, m: false,
 	n: false, o: false, p: false, q: false, r: false, s: false, t: false, u: false, v: false, w: false, x: false, y: false, z: false,
 	left: false, up: false, right: false, down: false, space: false, pageup: false, pagedown: false, tab: false,
-	dash: false, equals: false, comma: false, period: false, escape: false, enter: false, return: false
+	dash: false, equals: false, comma: false, period: false, escape: false, enter: false
 }
 
 function onKeyDown(event)
 {
 	event.preventDefault();
-
-	for (const key in KEYS)
-	{
-		if (KEYS[key] == event.keyCode)
-		{
-			KeyboardState[key] = true;
-			return;
-		}
-	}
+	
+	KeyboardState[KEYCODE_NAMES[event.keyCode]] = true;
 }
 
 function onKeyUp(event)
 {
 	event.preventDefault();
-
-	for (const key in KEYS)
-	{
-		if (KEYS[key] == event.keyCode)
-		{
-			KeyboardState[key] = false;
-			return;
-		}
-	}
+	
+	KeyboardState[KEYCODE_NAMES[event.keyCode]] = false;
 }
 
 function keyPressed(keyName)
@@ -142,7 +134,6 @@ function keyPressed(keyName)
 
 	return KeyboardState[keyName];
 }
-
 
 
 // init Three.js
@@ -977,7 +968,7 @@ function onWindowResize() {
 
 function animate() {
 
-    let frameTime = clock.getDelta();
+    frameTime = clock.getDelta();
 
     //elapsedTime = clock.getElapsedTime() % 1000;
 
@@ -1048,8 +1039,8 @@ function animate() {
             stillFlagY = true;
         }
 
-        var newPinchWidthX = pinchWidthX;
-        var newPinchWidthY = pinchWidthY;
+        newPinchWidthX = pinchWidthX;
+        newPinchWidthY = pinchWidthY;
         pinchDeltaX = newPinchWidthX - oldPinchWidthX;
         pinchDeltaY = newPinchWidthY - oldPinchWidthY;
 
@@ -1072,18 +1063,12 @@ function animate() {
     // the following variables will be used to calculate rotations and directions from the camera
     // this gives us a vector in the direction that the camera is pointing,
     // which will be useful for moving the camera 'forward' and shooting projectiles in that direction
-    let cameraDirectionVector = new THREE.Vector3(), cameraRightVector = new THREE.Vector3(), cameraUpVector = new THREE.Vector3();
     controls.getDirection(cameraDirectionVector); //for moving where the camera is looking
     cameraDirectionVector.normalize();
     controls.getRightVector(cameraRightVector); //for strafing the camera right and left
     controls.getUpVector(cameraUpVector); //for moving camera up and down
 
-    // the following gives us a rotation quaternion (4D vector), which will be useful for
-    // rotating scene objects to match the camera's rotation
-    let cameraWorldQuaternion = new THREE.Quaternion(); //for rotating scene objects to match camera's current rotation
-    worldCamera.getWorldQuaternion(cameraWorldQuaternion);
-
-    var camFlightSpeed = speed;
+    camFlightSpeed = speed;
 
     // allow flying camera
     if ((keyPressed('w') || button3Pressed) && !(keyPressed('s') || button4Pressed)) {
@@ -1137,12 +1122,12 @@ function animate() {
         cameraIsMoving = true;
 
         // Iterate over all GUI controllers
-        for (var i in cameraSettingsFolder.__controllers)
+        for (let i in cameraSettingsFolder.__controllers)
             cameraSettingsFolder.__controllers[i].updateDisplay();
     }
 
     if (fovChanged) {
-        var fovScale = worldCamera.fov * 0.5 * (Math.PI / 180.0);
+        fovScale = worldCamera.fov * 0.5 * (Math.PI / 180.0);
         pathTracingUniforms.uVLen.value = Math.tan(fovScale);
         pathTracingUniforms.uULen.value = pathTracingUniforms.uVLen.value * worldCamera.aspect;
         fovChanged = false;
@@ -1196,7 +1181,7 @@ function animate() {
 
     //sunAngle = (elapsedTime * 0.03) % Math.PI;
     // sunAngle = Math.PI / 2.5;
-    let sunDirection = new THREE.Vector3(Math.cos(sunAngle) * 1.2, Math.sin(sunAngle), -Math.cos(sunAngle) * 3.0);
+    sunDirection.set(Math.cos(sunAngle) * 1.2, Math.sin(sunAngle), -Math.cos(sunAngle) * 3.0);
     sunDirection.normalize();
 
     pathTracingUniforms.uSunDirection.value.copy(sunDirection);
