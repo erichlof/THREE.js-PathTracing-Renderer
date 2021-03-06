@@ -54,19 +54,6 @@ let sunAngularDiameterCos;
 let EPS_intersect;
 let blueNoiseTexture;
 
-const KEYS = {
-	a: 65, b: 66, c: 67, d: 68, e: 69, f: 70, g: 71, h: 72, i: 73, j: 74, k: 75, l: 76, m: 77,
-	n: 78, o: 79, p: 80, q: 81, r: 82, s: 83, t: 84, u: 85, v: 86, w: 87, x: 88, y: 89, z: 90,
-	left: 37, up: 38, right: 39, down: 40, space: 32, pageup: 33, pagedown: 34, tab: 9,
-	dash: 189, equals: 187, comma: 188, period: 190, escape: 27, enter: 13, return: 13
-}
-let KeyboardState = {
-	a: false, b: false, c: false, d: false, e: false, f: false, g: false, h: false, i: false, j: false, k: false, l: false, m: false,
-	n: false, o: false, p: false, q: false, r: false, s: false, t: false, u: false, v: false, w: false, x: false, y: false, z: false,
-	left: false, up: false, right: false, down: false, space: false, pageup: false, pagedown: false, tab: false,
-	dash: false, equals: false, comma: false, period: false, escape: false, enter: false, return: false
-}
-
 // the following variables will be used to calculate rotations and directions from the camera
 let cameraDirectionVector = new THREE.Vector3(); //for moving where the camera is looking
 let cameraRightVector = new THREE.Vector3(); //for strafing the camera right and left
@@ -92,33 +79,31 @@ let mouseControl = true;
 let pointerlockChange;
 let fileLoader = new THREE.FileLoader();
 
+const KEYCODE_NAMES = {
+	65: 'a', 66: 'b', 67: 'c', 68: 'd', 69: 'e', 70: 'f', 71: 'g', 72: 'h', 73: 'i', 74: 'j', 75: 'k', 76: 'l', 77: 'm',
+	78: 'n', 79: 'o', 80: 'p', 81: 'q', 82: 'r', 83: 's', 84: 't', 85: 'u', 86: 'v', 87: 'w', 88: 'x', 89: 'y', 90: 'z',
+	37: 'left', 38: 'up', 39: 'right', 40: 'down', 32: 'space', 33: 'pageup', 34: 'pagedown', 9: 'tab',
+	189: 'dash', 187: 'equals', 188: 'comma', 190: 'period', 27: 'escape', 13: 'enter'
+}
+let KeyboardState = {
+	a: false, b: false, c: false, d: false, e: false, f: false, g: false, h: false, i: false, j: false, k: false, l: false, m: false,
+	n: false, o: false, p: false, q: false, r: false, s: false, t: false, u: false, v: false, w: false, x: false, y: false, z: false,
+	left: false, up: false, right: false, down: false, space: false, pageup: false, pagedown: false, tab: false,
+	dash: false, equals: false, comma: false, period: false, escape: false, enter: false
+}
 
 function onKeyDown(event)
 {
 	event.preventDefault();
-
-	for (const key in KEYS)
-	{
-		if (KEYS[key] == event.keyCode)
-		{
-			KeyboardState[key] = true;
-			return;
-		}	
-	}
+	
+	KeyboardState[KEYCODE_NAMES[event.keyCode]] = true;
 }
 
 function onKeyUp(event)
 {
 	event.preventDefault();
-
-	for (const key in KEYS)
-	{
-		if (KEYS[key] == event.keyCode)
-		{
-			KeyboardState[key] = false;
-			return;
-		}	
-	}
+	
+	KeyboardState[KEYCODE_NAMES[event.keyCode]] = false;
 }
 
 function keyPressed(keyName)
