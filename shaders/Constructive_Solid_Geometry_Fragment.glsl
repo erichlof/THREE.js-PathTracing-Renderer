@@ -60,8 +60,12 @@ float SceneIntersect(Ray r, inout Intersection intersec)
 	vec3 n, A_n0, A_n1, B_n0, B_n1, n0, n1;
 	vec3 A_color, B_color, color0, color1;
 	vec3 hit;
-	float A_t0, A_t1, B_t0, B_t1;
-	float t0, t1;
+	float A_t0 = 0.0;
+	float A_t1 = 0.0;
+	float B_t0 = 0.0; 
+	float B_t1 = 0.0;
+	float t0 = 0.0;
+	float t1 = 0.0;
 	float d = INFINITY;
 	float t = INFINITY;
 	int A_type, B_type, type0, type1;
@@ -144,7 +148,7 @@ float SceneIntersect(Ray r, inout Intersection intersec)
 	if (t0 > 0.0 && t0 < t)
 	{
 		t = t0;
-		intersec.normal = n0;
+		intersec.normal = normalize(n0);
 		intersec.emission = vec3(0);
 		intersec.color = color0;
 		intersec.type = type0;
@@ -152,7 +156,7 @@ float SceneIntersect(Ray r, inout Intersection intersec)
 	else if (t1 > 0.0 && t1 < t)
 	{
 		t = t1;
-		intersec.normal = n1;
+		intersec.normal = normalize(n1);
 		intersec.emission = vec3(0);
 		intersec.color = color1;
 		intersec.type = type1;
@@ -176,11 +180,10 @@ vec3 CalculateRadiance(Ray r)
 	vec3 tdir;
 	vec3 x, n, nl;
         
-	float t;
+	float t = INFINITY;
 	float nc, nt, ratioIoR, Re, Tr;
 	float P, RP, TP;
 	float weight;
-        float thickness;
 
 	int diffuseCount = 0;
 
@@ -274,15 +277,6 @@ vec3 CalculateRadiance(Ray r)
 			}
 
 			// transmit ray through surface
-			
-			/* // is ray leaving a solid object from the inside? 
-			// If so, attenuate ray color with object color by how far ray has travelled through the medium
-			if (distance(n, nl) > 0.1)
-			{
-				thickness = 0.05;
-				mask *= exp( log(clamp(intersec.color, 0.01, 0.99)) * thickness * t );
-			} */
-
 			mask *= intersec.color;
 			mask *= TP;
 
@@ -356,7 +350,6 @@ void SetupScene(void)
 	vec3 z  = vec3(0);// No color value, Black        
 	vec3 L1 = vec3(1.0, 1.0, 1.0) * 8.0;// Bright light
 	
-	//spheres[0] = Sphere( 90.0, vec3(150.0,  91.0, -200.0),  z, vec3(0.4, 1.0, 1.0),  REFR);// Sphere Left
 	float wallRadius = 50.0;
 	quads[0] = Quad( vec3(0,0,1), vec3(-wallRadius,-wallRadius,-wallRadius), vec3(wallRadius,-wallRadius,-wallRadius), vec3(wallRadius, wallRadius,-wallRadius), vec3(-wallRadius, wallRadius,-wallRadius), z, vec3(1), DIFF);// Back Wall
 	quads[1] = Quad( vec3(1,0,0), vec3(-wallRadius,-wallRadius,wallRadius), vec3(-wallRadius,-wallRadius,-wallRadius), vec3(-wallRadius, wallRadius,-wallRadius), vec3(-wallRadius, wallRadius,wallRadius), z, vec3(0.7, 0.05, 0.05), DIFF);// Left Wall Red
