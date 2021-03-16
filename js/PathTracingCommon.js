@@ -1,5 +1,4 @@
 THREE.ShaderChunk[ 'pathtracing_uniforms_and_defines' ] = `
-
 uniform bool uCameraIsMoving;
 uniform bool uSceneIsDynamic;
 uniform float uEPS_intersect;
@@ -19,7 +18,6 @@ uniform mat4 uCameraMatrix;
 uniform sampler2D tPreviousTexture;
 uniform sampler2D tBlueNoiseTexture;
 in vec2 vUv;
-
 #define PI               3.14159265358979323
 #define TWO_PI           6.28318530717958648
 #define FOUR_PI          12.5663706143591729
@@ -54,7 +52,6 @@ in vec2 vUv;
 `;
 
 THREE.ShaderChunk[ 'pathtracing_skymodel_defines' ] = `
-
 #define TURBIDITY 1.0
 #define RAYLEIGH_COEFFICIENT 3.0
 #define MIE_COEFFICIENT 0.03
@@ -247,6 +244,7 @@ void Cylinder_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1, out v
 {
 	vec3 hit;
 	float d0, d1;
+	d0 = d1 = 0.0;
 	vec3 dn0, dn1;
 	// implicit equation of a unit (radius of 1) cylinder, extending infinitely in the +Y and -Y directions:
 	// x^2 + z^2 - 1 = 0
@@ -299,7 +297,7 @@ void Cone_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1, out vec3 
 //------------------------------------------------------------------------------------------------------------
 {
 	vec3 hit;
-	float d;
+	float d = 0.0;
 	vec3 dn;
 	// implicit equation of a double-cone extending infinitely in +Y and -Y directions
 	// x^2 + z^2 - y^2 = 0
@@ -317,13 +315,12 @@ void Cone_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1, out vec3 
 	hit = ro + rd * t1;
 	t1 = (hit.y > 1.0 || hit.y < -1.0) ? 0.0 : t1; // invalidate t1 if it's outside unit radius bounds
 	n1 = vec3(2.0 * hit.x, 2.0 * (1.0 - hit.y) * k, 2.0 * hit.z);
-
 	// since the infinite cone is artificially cut off, if t0 intersection was invalidated, try t1
 	if (t0 == 0.0)
 	{
 		t0 = t1;
 		n0 = n1;
-	} 
+	}
 
 	// now intersect unit disk located at bottom opening of unit cone shape
 	d = (ro.y + 1.0) / -rd.y;
@@ -352,7 +349,7 @@ void Paraboloid_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1, out
 //------------------------------------------------------------------------------------------------------------
 {
 	vec3 hit;
-	float d;
+	float d = 0.0;
 	vec3 dn;
 	// implicit equation of a paraboloid (bowl or vase-shape extending infinitely in the +Y direction):
 	// x^2 + z^2 - y = 0
@@ -371,19 +368,18 @@ void Paraboloid_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1, out
 	hit = ro + rd * t1;
 	t1 = (hit.y > 2.0) ? 0.0 : t1; // invalidate t1 if it's outside unit radius bounds
 	n1 = vec3(2.0 * hit.x, -1.0 * k, 2.0 * hit.z);
-
 	// since the infinite paraboloid is artificially cut off at the top,
 	// if t0 intersection was invalidated, try t1
 	if (t0 == 0.0)
 	{
 		t0 = t1;
 		n0 = n1;
-	} 
-
+	}
+	
 	// now intersect unit disk located at top opening of unit paraboloid shape
 	d = (ro.y - 2.0) / -rd.y;
 	hit = ro + rd * d;
-	if (hit.x * hit.x + hit.z * hit.z <= 1.0) // unit radius disk
+	if (hit.x * hit.x + hit.z * hit.z <= 1.0) // disk with unit radius
 	{
 		if (rd.y > 0.0)
 		{
@@ -401,6 +397,83 @@ void Paraboloid_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1, out
 }
 `;
 
+THREE.ShaderChunk[ 'pathtracing_hyperboloid_csg_intersect' ] = `
+//------------------------------------------------------------------------------------------------------------
+void Hyperboloid_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out float t1, out vec3 n0, out vec3 n1 )
+//------------------------------------------------------------------------------------------------------------
+{
+	vec3 hit;
+	float d0, d1, dr0, dr1;
+	d0 = d1 = dr0 = dr1 = 0.0;
+	vec3 dn0, dn1;
+
+	// implicit equation of a hyperboloid of 1 sheet (hourglass shape extending infinitely in the +Y and -Y directions):
+	// x^2 + z^2 - y^2 - 1 = 0
+	// for CSG purposes, we artificially truncate the hyperboloid at the middle downward, so that only the top half of the hourglass remains with added top/bottom caps...
+	// This way, the total number of possible intersections will be 2 max (t0/t1), rather than possibly 4 (if we left it as a full hourglass with added top/bottom caps)
+	
+	// conservative range of k: 1 to 100
+	// k must be positive for hyperboloid of 1 sheet (a negative k would produce a 2-sheet hyperboloid (2 mirrored paraboloids), which is not as useful for CSG operations
+	// 	because you could have just used 2 paraboloid csg shapes with one rotated 180 degrees)
+	float j = k - 1.0;
+	
+	float a = k * rd.x * rd.x + k * rd.z * rd.z - j * rd.y * rd.y;
+	float b = 2.0 * (k * rd.x * ro.x + k * rd.z * ro.z - j * rd.y * ro.y);
+	float c = (k * ro.x * ro.x + k * ro.z * ro.z - j * ro.y * ro.y) - 1.0;
+	solveQuadratic(a, b, c, t0, t1);
+
+	hit = ro + rd * t0;
+	t0 = (hit.y > 1.0 || hit.y < 0.0) ? 0.0 : t0; // invalidate t0 if it's outside unit radius bounds of top half
+	n0 = vec3(2.0 * hit.x * k, 2.0 * -hit.y * j, 2.0 * hit.z * k);
+
+	hit = ro + rd * t1;
+	t1 = (hit.y > 1.0 || hit.y < 0.0) ? 0.0 : t1; // invalidate t1 if it's outside unit radius bounds of top half
+	n1 = vec3(2.0 * hit.x * k, 2.0 * -hit.y * j, 2.0 * hit.z * k);
+
+	// since the infinite hyperboloid is artificially cut off at the top and bottom so that it has a unit radius top cap,
+	// if t0 intersection was invalidated, try t1
+	if (t0 == 0.0)
+	{
+		t0 = t1;
+		n0 = n1;
+	}
+
+	if (rd.y < 0.0)
+	{
+		d0 = (ro.y - 1.0) / -rd.y;
+		dn0 = vec3(0,1,0);
+		d1 = (ro.y + 0.0) / -rd.y;
+		dn1 = vec3(0,-1,0);
+		dr0 = 1.0; // top cap is unit radius
+		dr1 = 1.0 / k; // bottom cap is inverse size of k (smaller than 1)
+	}
+	else
+	{
+		d1 = (ro.y - 1.0) / -rd.y;
+		dn1 = vec3(0,1,0);
+		d0 = (ro.y + 0.0) / -rd.y;
+		dn0 = vec3(0,-1,0);
+		dr0 = 1.0 / k; // bottom cap is inverse size of k (smaller than 1)
+		dr1 = 1.0; // top cap is unit radius
+	}
+	
+	hit = ro + rd * d0;
+	if (hit.x * hit.x + hit.z * hit.z <= dr0)
+	{
+		t1 = t0;
+		n1 = n0;
+		t0 = d0;
+		n0 = dn0;
+	}
+	hit = ro + rd * d1;
+	if (hit.x * hit.x + hit.z * hit.z <= dr1)
+	{
+		t1 = d1;
+		n1 = dn1;
+	}
+}
+`;
+
 THREE.ShaderChunk[ 'pathtracing_box_csg_intersect' ] = `
 //------------------------------------------------------------------------------------------------------------
 void Box_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1, out vec3 n0, out vec3 n1 )
@@ -412,12 +485,10 @@ void Box_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1, out vec3 n
 	
 	vec3 tmin = min(near, far);
 	vec3 tmax = max(near, far);
-
 	t0 = max( max(tmin.x, tmin.y), tmin.z);
 	t1 = min( min(tmax.x, tmax.y), tmax.z);
 	n0 = -sign(rd) * step(tmin.yzx, tmin) * step(tmin.zxy, tmin);
 	n1 = -sign(rd) * step(tmax, tmax.yzx) * step(tmax, tmax.zxy);
-
 	if (t0 > t1) // invalid intersection
 		t0 = t1 = 0.0;
 }
@@ -435,7 +506,6 @@ void CSG_Union_Operation( float A_t0, vec3 A_n0, float A_t1, vec3 A_n1, float B_
 	vec3 temp_n0, temp_n1, temp_col;
 	float temp_t0, temp_t1;
 	int temp_type;
-
 	// if shape B is closer than A, swap shapes
 	if (B_t0 < A_t0)
 	{
@@ -445,14 +515,12 @@ void CSG_Union_Operation( float A_t0, vec3 A_n0, float A_t1, vec3 A_n1, float B_
 		temp_n1 = A_n1;
 		temp_col = A_color;
 		temp_type = A_type;
-
 		A_t0 = B_t0;
 		A_t1 = B_t1;
 		A_n0 = B_n0;
 		A_n1 = B_n1;
 		A_color = B_color;
 		A_type = B_type;
-
 		B_t0 = temp_t0;
 		B_t1 = temp_t1;
 		B_n0 = temp_n0;
@@ -460,7 +528,6 @@ void CSG_Union_Operation( float A_t0, vec3 A_n0, float A_t1, vec3 A_n1, float B_
 		B_color = temp_col;
 		B_type = temp_type;
 	}
-
 	// shape A is always considered first
 	t0 = A_t0;
 	n0 = A_n0;
@@ -479,7 +546,6 @@ void CSG_Union_Operation( float A_t0, vec3 A_n0, float A_t1, vec3 A_n1, float B_
 		type0 = B_type;
 		color0 = B_color;
 	}
-
 	// A is behind us and completely in front of B
 	if (A_t1 <= 0.0 && A_t1 < B_t0)
 	{
@@ -507,7 +573,6 @@ void CSG_Union_Operation( float A_t0, vec3 A_n0, float A_t1, vec3 A_n1, float B_
 		color1 = A_color;
 	}
 }
-
 //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 void CSG_Difference_Operation( float A_t0, vec3 A_n0, float A_t1, vec3 A_n1, float B_t0, vec3 B_n0, float B_t1, vec3 B_n1, int A_type, vec3 A_color, int B_type, vec3 B_color, 
 				 out float t0, out vec3 n0, out float t1, out vec3 n1, out int type0, out vec3 color0, out int type1, out vec3 color1  )
@@ -549,7 +614,6 @@ void CSG_Difference_Operation( float A_t0, vec3 A_n0, float A_t1, vec3 A_n1, flo
 		color1 = A_color;
 	}
 }
-
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 void CSG_Intersection_Operation( float A_t0, vec3 A_n0, float A_t1, vec3 A_n1, float B_t0, vec3 B_n0, float B_t1, vec3 B_n1, int A_type, vec3 A_color, int B_type, vec3 B_color, 
 				   out float t0, out vec3 n0, out float t1, out vec3 n1, out int type0, out vec3 color0, out int type1, out vec3 color1  )
@@ -557,11 +621,9 @@ void CSG_Intersection_Operation( float A_t0, vec3 A_n0, float A_t1, vec3 A_n1, f
 {
 	// CSG INTERSECTION OPERATION [A ^ B] (Only valid where shape A overlaps shape B)
 	// (ray must intersect both shape A and shape B)
-
 	vec3 temp_n0, temp_n1, temp_col;
 	float temp_t0, temp_t1;
 	int temp_type;
-
 	// if shape B is closer than A, swap shapes
 	if (B_t0 < A_t0)
 	{
@@ -571,14 +633,12 @@ void CSG_Intersection_Operation( float A_t0, vec3 A_n0, float A_t1, vec3 A_n1, f
 		temp_n1 = A_n1;
 		temp_col = A_color;
 		temp_type = A_type;
-
 		A_t0 = B_t0;
 		A_t1 = B_t1;
 		A_n0 = B_n0;
 		A_n1 = B_n1;
 		A_color = B_color;
 		A_type = B_type;
-
 		B_t0 = temp_t0;
 		B_t1 = temp_t1;
 		B_n0 = temp_n0;
@@ -586,7 +646,6 @@ void CSG_Intersection_Operation( float A_t0, vec3 A_n0, float A_t1, vec3 A_n1, f
 		B_color = temp_col;
 		B_type = temp_type;
 	}
-
 	if (B_t0 < A_t1)
 	{
 		t0 = B_t0;
@@ -595,7 +654,6 @@ void CSG_Intersection_Operation( float A_t0, vec3 A_n0, float A_t1, vec3 A_n1, f
 		type0 = A_type; 
 		color0 = A_color;
 	}
-
 	if (A_t1 > B_t0 && A_t1 < B_t1)
 	{
 		t1 = A_t1;
@@ -627,14 +685,11 @@ float EllipsoidParamIntersect( float yMinPercent, float yMaxPercent, float phiMa
 	float a = dot(rd, rd);
 	float b = 2.0 * dot(rd, ro);
 	float c = dot(ro, ro) - 1.0;
-
 	solveQuadratic(a, b, c, t0, t1);
 	if (t1 <= 0.0) return INFINITY;
-
 	t = t0 > 0.0 ? t0 : INFINITY;
 	pHit = ro + rd * t;
 	phi = mod(atan(pHit.z, pHit.x), TWO_PI);
-
 	if (pHit.y > yMaxPercent || pHit.y < yMinPercent || phi > phiMaxRadians)
 	{
 		t = t1;
@@ -646,7 +701,6 @@ float EllipsoidParamIntersect( float yMinPercent, float yMaxPercent, float phiMa
 	
 	n = vec3(2.0 * pHit.x, 2.0 * pHit.y, 2.0 * pHit.z);
 	n = dot(rd, n) < 0.0 ? n : -n; // flip normal if it is facing away from us
-
 	return t;
 }
 `;
@@ -663,14 +717,12 @@ float CylinderParamIntersect( float yMinPercent, float yMaxPercent, float phiMax
 	float a = (rd.x * rd.x + rd.z * rd.z);
     	float b = 2.0 * (rd.x * ro.x + rd.z * ro.z);
     	float c = (ro.x * ro.x + ro.z * ro.z) - 1.0;
-
 	solveQuadratic(a, b, c, t0, t1);
 	if (t1 <= 0.0) return INFINITY;
 		
 	t = t0 > 0.0 ? t0 : INFINITY;
 	pHit = ro + rd * t;
 	phi = mod(atan(pHit.z, pHit.x), TWO_PI);
-
 	if (pHit.y > yMaxPercent || pHit.y < yMinPercent || phi > phiMaxRadians)
 	{
 		t = t1;
@@ -708,7 +760,6 @@ float ConeParamIntersect( float yMinPercent, float yMaxPercent, float phiMaxRadi
 	t = t0 > 0.0 ? t0 : INFINITY;
 	pHit = ro + rd * t;
 	phi = mod(atan(pHit.z, pHit.x), TWO_PI);
-
 	if (pHit.y > yMaxPercent || pHit.y < yMinPercent || phi > phiMaxRadians)
 	{
 		t = t1;
@@ -717,10 +768,8 @@ float ConeParamIntersect( float yMinPercent, float yMaxPercent, float phiMaxRadi
 		if (pHit.y > yMaxPercent || pHit.y < yMinPercent || phi > phiMaxRadians)
 			t = INFINITY;
 	}
-
 	n = vec3(2.0 * pHit.x, 2.0 * (1.0 - pHit.y) * k, 2.0 * pHit.z);
 	n = dot(rd, n) < 0.0 ? n : -n; // flip normal if it is facing away from us
-
 	return t;
 }
 `;
@@ -740,18 +789,15 @@ float ParaboloidParamIntersect( float yMinPercent, float yMaxPercent, float phiM
 	float a = (rd.x * rd.x + rd.z * rd.z);
     	float b = 2.0 * (rd.x * ro.x + rd.z * ro.z) - k * rd.y;
     	float c = (ro.x * ro.x + ro.z * ro.z) - k * ro.y;
-
 	solveQuadratic(a, b, c, t0, t1);
 	if (t1 <= 0.0) return INFINITY;
 	
 	// this takes into account that we shifted the ray origin by +1.0
 	yMaxPercent += 1.0;
 	yMinPercent += 1.0;
-
 	t = t0 > 0.0 ? t0 : INFINITY;
 	pHit = ro + rd * t;
 	phi = mod(atan(pHit.z, pHit.x), TWO_PI);
-
 	if (pHit.y > yMaxPercent || pHit.y < yMinPercent || phi > phiMaxRadians)
 	{
 		t = t1;
@@ -786,14 +832,12 @@ float HyperboloidParamIntersect( float k, float yMinPercent, float yMaxPercent, 
 	float a = k * rd.x * rd.x + k * rd.z * rd.z - j * rd.y * rd.y;
 	float b = 2.0 * (k * rd.x * ro.x + k * rd.z * ro.z - j * rd.y * ro.y);
 	float c = (k * ro.x * ro.x + k * ro.z * ro.z - j * ro.y * ro.y) - 1.0;
-
 	solveQuadratic(a, b, c, t0, t1);
 	if (t1 <= 0.0) return INFINITY;
 	
 	t = t0 > 0.0 ? t0 : INFINITY;
 	pHit = ro + rd * t;
 	phi = mod(atan(pHit.z, pHit.x), TWO_PI);
-
 	if (pHit.y > yMaxPercent || pHit.y < yMinPercent || phi > phiMaxRadians)
 	{
 		t = t1;
@@ -822,14 +866,11 @@ float HyperbolicParaboloidParamIntersect( float yMinPercent, float yMaxPercent, 
 	float a = rd.x * rd.x - rd.z * rd.z;
 	float b = 2.0 * (rd.x * ro.x - rd.z * ro.z) - rd.y;
 	float c = (ro.x * ro.x - ro.z * ro.z) - ro.y;
-
 	solveQuadratic(a, b, c, t0, t1);
 	if (t1 <= 0.0) return INFINITY;
-
 	t = t0 > 0.0 ? t0 : INFINITY;
 	pHit = ro + rd * t;
 	phi = mod(atan(pHit.z, pHit.x), TWO_PI);
-
 	if (abs(pHit.x) > yMaxPercent || abs(pHit.y) > yMaxPercent || abs(pHit.z) > yMaxPercent || phi > phiMaxRadians)
 	{
 		t = t1;
@@ -1537,8 +1578,6 @@ float BVH_DoubleSidedTriangleIntersect( vec3 v0, vec3 v1, vec3 v2, Ray r, out fl
 `;
 
 THREE.ShaderChunk[ 'pathtracing_physical_sky_functions' ] = `
-
-
 float RayleighPhase(float cosTheta)
 {
 	return THREE_OVER_SIXTEENPI * (1.0 + (cosTheta * cosTheta));
@@ -1582,7 +1621,6 @@ vec3 Get_Sky_Color(Ray r, vec3 sunDirection)
 	// optical length
 	float zenithAngle = acos( max( 0.0, dot( UP_VECTOR, viewDirection ) ) );
 	float inverse = 1.0 / ( cos( zenithAngle ) + 0.15 * pow( 93.885 - ( ( zenithAngle * 180.0 ) / PI ), -1.253 ) );
-
 	float rayleighOpticalLength = RAYLEIGH_ZENITH_LENGTH * inverse;
 	float mieOpticalLength = MIE_ZENITH_LENGTH * inverse;
 	// combined extinction factor	
@@ -1593,33 +1631,27 @@ vec3 Get_Sky_Color(Ray r, vec3 sunDirection)
 	
 	vec3 Lin = pow( sunE * ( ( betaRTheta + betaMTheta ) / ( rayleighAtX + mieAtX ) ) * ( 1.0 - Fex ), vec3( 1.5 ) );
 	Lin *= mix( vec3( 1.0 ), pow( sunE * ( ( betaRTheta + betaMTheta ) / ( rayleighAtX + mieAtX ) ) * Fex, vec3( 1.0 / 2.0 ) ), clamp( pow( 1.0 - cosSunUpAngle, 5.0 ), 0.0, 1.0 ) );
-
 	// nightsky
 	float theta = acos( viewDirection.y ); // elevation --> y-axis, [-pi/2, pi/2]
 	float phi = atan( viewDirection.z, viewDirection.x ); // azimuth --> x-axis [-pi/2, pi/2]
 	vec2 uv = vec2( phi, theta ) / vec2( 2.0 * PI, PI ) + vec2( 0.5, 0.0 );
 	vec3 L0 = vec3( 0.1 ) * Fex;
-
 	// composition + solar disc
 	float sundisk = smoothstep( uSunAngularDiameterCos, uSunAngularDiameterCos + 0.00002, cosViewSunAngle );
 	L0 += ( sunE * 19000.0 * Fex ) * sundisk;
-
 	vec3 texColor = ( Lin + L0 ) * 0.04 + vec3( 0.0, 0.0003, 0.00075 );
 	float sunfade = 1.0 - clamp( 1.0 - exp( ( sunDirection.y / 450000.0 ) ), 0.0, 1.0 );
 	vec3 retColor = pow( texColor, vec3( 1.0 / ( 1.2 + ( 1.2 * sunfade ) ) ) );
-
 	return retColor;
 }
 `;
 
 THREE.ShaderChunk[ 'pathtracing_random_functions' ] = `
-
 // globals used in rand() function
 vec4 randVec4 = vec4(0); // samples and holds the RGBA blueNoise texture value for this pixel
 float randNumber = 0.0; // the final randomly generated number (range: 0.0 to 1.0)
 float counter = -1.0; // will get incremented by 1 on each call to rand()
 int channel = 0; // the final selected color channel to use for rand() calc (range: 0 to 3, corresponds to R,G,B, or A)
-
 // float rand()
 // {
 // 	counter += 1.0; // increment counter by 1 on every call to rand()
@@ -1629,7 +1661,6 @@ int channel = 0; // the final selected color channel to use for rand() calc (ran
 // 	randNumber += randVec4[channel]; // add value stored in channel 0:R, 1:G, 2:B, or 3:A to accumulating randNumber
 // 	return fract(randNumber); // we're only interested in randNumber's fractional value between 0.0 (inclusive) and 1.0 (non-inclusive)
 // }
-
 float rand()
 {
 	counter++; // increment counter by 1 on every call to rand()
@@ -1639,7 +1670,6 @@ float rand()
 	randNumber = randVec4[channel]; // get value stored in channel 0:R, 1:G, 2:B, or 3:A
 	return fract(randNumber); // we're only interested in randNumber's fractional value between 0.0 (inclusive) and 1.0 (non-inclusive)
 }
-
 // from iq https://www.shadertoy.com/view/4tXyWN
 // global seed used in rng() function
 uvec2 seed;
@@ -1650,7 +1680,6 @@ float rng()
     	uint  n = 1103515245U * ( (q.x) ^ (q.y >> 3U) );
 	return float(n) * (1.0 / float(0xffffffffU));
 }
-
 vec3 randomSphereDirection()
 {
     	float up = rand() * 2.0 - 1.0; // range: -1 to +1
@@ -1658,7 +1687,6 @@ vec3 randomSphereDirection()
 	float around = rand() * TWO_PI;
 	return normalize(vec3(cos(around) * over, up, sin(around) * over));	
 }
-
 vec3 randomDirectionInHemisphere(vec3 nl)
 {
 	float r = rand(); // uniform distribution in hemisphere
@@ -1671,7 +1699,6 @@ vec3 randomDirectionInHemisphere(vec3 nl)
 	vec3 V = cross(nl, U);
 	return normalize(x * U + y * V + z * nl);
 }
-
 vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 {
 	float r = sqrt(rand()); // cos-weighted distribution in hemisphere
@@ -1684,7 +1711,6 @@ vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 	vec3 V = cross(nl, U);
 	return normalize(x * U + y * V + z * nl);
 }
-
 // #define N_POINTS 32.0
 // vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 // {
@@ -1705,7 +1731,6 @@ vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 	
 // 	return normalize(x * T + y * B + z * nl);
 // }
-
 vec3 randomDirectionInSpecularLobe(vec3 reflectionDir, float roughness)
 {
 	roughness = clamp(roughness, 0.0, 1.0);
@@ -1716,10 +1741,8 @@ vec3 randomDirectionInSpecularLobe(vec3 reflectionDir, float roughness)
 	
 	vec3 U = normalize( cross(vec3(0.7071067811865475, 0.7071067811865475, 0), reflectionDir ) );
 	vec3 V = cross(reflectionDir, U);
-
 	return normalize(mix(reflectionDir, (U * cos(phi) * sinTheta + V * sin(phi) * sinTheta + reflectionDir * cosTheta), roughness));
 }
-
 // //the following alternative skips the creation of tangent and bi-tangent vectors u and v 
 // vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 // {
@@ -1727,7 +1750,6 @@ vec3 randomDirectionInSpecularLobe(vec3 reflectionDir, float roughness)
 // 	float theta = 2.0 * rand() - 1.0;
 // 	return nl + vec3(sqrt(1.0 - theta * theta) * vec2(cos(phi), sin(phi)), theta);
 // }
-
 // vec3 randomDirectionInPhongSpecular(vec3 reflectionDir, float roughness)
 // {
 // 	float phi = rand() * TWO_PI;
@@ -1814,8 +1836,6 @@ float tentFilter(float x)
 {
 	return (x < 0.5) ? sqrt(2.0 * x) - 1.0 : 1.0 - sqrt(2.0 - (2.0 * x));
 }
-
-
 void main( void )
 {
 	// not needed, three.js has a built-in uniform named cameraPosition
@@ -1827,13 +1847,10 @@ void main( void )
 	
 	// calculate unique seed for rng() function
 	seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord); // old way of generating random numbers
-
 	randVec4 = texture(tBlueNoiseTexture, (gl_FragCoord.xy + (uRandomVec2 * 255.0)) / 255.0 ); // new way of rand()
-
 	vec2 pixelOffset = vec2( tentFilter(rng()), tentFilter(rng()) );
 	// we must map pixelPos into the range -1.0 to +1.0
 	vec2 pixelPos = ((gl_FragCoord.xy + pixelOffset) / uResolution) * 2.0 - 1.0;
-
 	vec3 rayDir = normalize( pixelPos.x * camRight * uULen + pixelPos.y * camUp * uVLen + camForward );
 	
 	// depth of field
