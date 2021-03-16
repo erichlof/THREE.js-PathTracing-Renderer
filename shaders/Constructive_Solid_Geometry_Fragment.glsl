@@ -8,6 +8,8 @@ uniform int uShapeAType;
 uniform int uMaterialAType;
 uniform int uShapeBType;
 uniform int uMaterialBType;
+uniform float uA_kParameter;
+uniform float uB_kParameter;
 uniform vec3 uMaterialAColor;
 uniform vec3 uMaterialBColor;
 uniform mat4 uCSG_ShapeA_InvMatrix;
@@ -41,6 +43,8 @@ Quad quads[N_QUADS];
 #include <pathtracing_cone_csg_intersect>
 
 #include <pathtracing_paraboloid_csg_intersect>
+
+#include <pathtracing_hyperboloid_csg_intersect>
 
 #include <pathtracing_box_csg_intersect>
 
@@ -97,8 +101,10 @@ float SceneIntersect(Ray r, inout Intersection intersec)
 		Cylinder_CSG_Intersect( rObj.origin, rObj.direction, A_t0, A_t1, A_n0, A_n1 );
 	else if (uShapeAType == 3)
 		Cone_CSG_Intersect( rObj.origin, rObj.direction, A_t0, A_t1, A_n0, A_n1 );
-	else
+	else if (uShapeAType == 4)
 		Paraboloid_CSG_Intersect( rObj.origin, rObj.direction, A_t0, A_t1, A_n0, A_n1 );
+	else 
+		Hyperboloid_CSG_Intersect( uA_kParameter, rObj.origin, rObj.direction, A_t0, A_t1, A_n0, A_n1 );
 	
 	n = normalize(A_n0);
 	A_n0 = normalize(transpose(mat3(uCSG_ShapeA_InvMatrix)) * n);
@@ -118,8 +124,11 @@ float SceneIntersect(Ray r, inout Intersection intersec)
 		Cylinder_CSG_Intersect( rObj.origin, rObj.direction, B_t0, B_t1, B_n0, B_n1 );
 	else if (uShapeBType == 3)
 		Cone_CSG_Intersect( rObj.origin, rObj.direction, B_t0, B_t1, B_n0, B_n1 );
-	else
+	else if (uShapeBType == 4)
 		Paraboloid_CSG_Intersect( rObj.origin, rObj.direction, B_t0, B_t1, B_n0, B_n1 );
+	else
+		Hyperboloid_CSG_Intersect( uB_kParameter, rObj.origin, rObj.direction, B_t0, B_t1, B_n0, B_n1 );
+
 	n = normalize(B_n0);
 	B_n0 = normalize(transpose(mat3(uCSG_ShapeB_InvMatrix)) * n);
 	n = normalize(B_n1);
