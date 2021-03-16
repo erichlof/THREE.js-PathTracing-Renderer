@@ -33,6 +33,7 @@ let transformA_RotationXController, transformA_RotationXObject;
 let transformA_RotationYController, transformA_RotationYObject;
 let transformA_RotationZController, transformA_RotationZObject;
 let shapeA_TypeController, shapeA_TypeObject;
+let parameterA_kController, parameterA_kObject;
 let materialA_TypeController, materialA_TypeObject;
 let materialA_ColorController, materialA_ColorObject;
 let needChangeAPosition = false;
@@ -41,6 +42,7 @@ let needChangeAScale = false;
 let needChangeASkew = false;
 let needChangeARotation = false;
 let needChangeShapeAType = false;
+let needChangeParameterAk = false;
 let needChangeMaterialAType = false;
 let needChangeMaterialAColor = false;
 
@@ -66,6 +68,7 @@ let transformB_RotationXController, transformB_RotationXObject;
 let transformB_RotationYController, transformB_RotationYObject;
 let transformB_RotationZController, transformB_RotationZObject;
 let shapeB_TypeController, shapeB_TypeObject;
+let parameterB_kController, parameterB_kObject;
 let materialB_TypeController, materialB_TypeObject;
 let materialB_ColorController, materialB_ColorObject;
 let needChangeBPosition = false;
@@ -74,6 +77,7 @@ let needChangeBScale = false;
 let needChangeBSkew = false;
 let needChangeBRotation = false;
 let needChangeShapeBType = false;
+let needChangeParameterBk = false;
 let needChangeMaterialBType = false;
 let needChangeMaterialBColor = false;
 
@@ -139,6 +143,9 @@ function init_GUI()
 	shapeA_TypeObject = {
 		A_Shape: 'Sphere'
 	};
+	parameterA_kObject = {
+		A_kParameter: 2
+	};
 	materialA_TypeObject = {
 		A_matType: 'Transparent Refractive'
 	};
@@ -198,6 +205,9 @@ function init_GUI()
 	shapeB_TypeObject = {
 		B_Shape: 'Box'
 	};
+	parameterB_kObject = {
+		B_kParameter: 2
+	};
 	materialB_TypeObject = {
 		B_matType: 'ClearCoat Diffuse'
 	};
@@ -234,6 +244,10 @@ function init_GUI()
 	{
 		needChangeShapeAType = true;
 	}
+	function handleAParameterKChange()
+	{
+		needChangeParameterAk = true;
+	}
 	function handleMaterialATypeChange()
 	{
 		needChangeMaterialAType = true;
@@ -267,6 +281,10 @@ function init_GUI()
 	{
 		needChangeShapeBType = true;
 	}
+	function handleBParameterKChange()
+	{
+		needChangeParameterBk = true;
+	}
 	function handleMaterialBTypeChange()
 	{
 		needChangeMaterialBType = true;
@@ -281,18 +299,18 @@ function init_GUI()
 		'Intersection (A ^ B)']).onChange(handleOperationTypeChange);
 
 	transformA_Folder = gui.addFolder('A_Transform');
-	
+
 	positionA_Folder = transformA_Folder.addFolder('A_Position');
 	transformA_PositionXController = positionA_Folder.add(transformA_PositionXObject, 'positionX', -50, 50, 1).onChange(handleAPositionChange);
 	transformA_PositionYController = positionA_Folder.add(transformA_PositionYObject, 'positionY', -50, 50, 1).onChange(handleAPositionChange);
 	transformA_PositionZController = positionA_Folder.add(transformA_PositionZObject, 'positionZ', -50, 50, 1).onChange(handleAPositionChange);
-	
+
 	scaleA_Folder = transformA_Folder.addFolder('A_Scale');
 	transformA_ScaleUniformController = scaleA_Folder.add(transformA_ScaleUniformObject, 'uniformScale', 1, 30, 1).onChange(handleAScaleUniformChange);
 	transformA_ScaleXController = scaleA_Folder.add(transformA_ScaleXObject, 'scaleX', 1, 30, 1).onChange(handleAScaleChange);
 	transformA_ScaleYController = scaleA_Folder.add(transformA_ScaleYObject, 'scaleY', 1, 30, 1).onChange(handleAScaleChange);
 	transformA_ScaleZController = scaleA_Folder.add(transformA_ScaleZObject, 'scaleZ', 1, 30, 1).onChange(handleAScaleChange);
-	
+
 	skewA_Folder = transformA_Folder.addFolder('A_Skew');
 	transformA_SkewX_YController = skewA_Folder.add(transformA_SkewX_YObject, 'skewX_Y', -0.9, 0.9, 0.1).onChange(handleASkewChange);
 	transformA_SkewX_ZController = skewA_Folder.add(transformA_SkewX_ZObject, 'skewX_Z', -0.9, 0.9, 0.1).onChange(handleASkewChange);
@@ -300,14 +318,16 @@ function init_GUI()
 	transformA_SkewY_ZController = skewA_Folder.add(transformA_SkewY_ZObject, 'skewY_Z', -0.9, 0.9, 0.1).onChange(handleASkewChange);
 	transformA_SkewZ_XController = skewA_Folder.add(transformA_SkewZ_XObject, 'skewZ_X', -0.9, 0.9, 0.1).onChange(handleASkewChange);
 	transformA_SkewZ_YController = skewA_Folder.add(transformA_SkewZ_YObject, 'skewZ_Y', -0.9, 0.9, 0.1).onChange(handleASkewChange);
-	
+
 	rotationA_Folder = transformA_Folder.addFolder('A_Rotation');
 	transformA_RotationXController = rotationA_Folder.add(transformA_RotationXObject, 'rotationX', 0, 359, 1).onChange(handleARotationChange);
 	transformA_RotationYController = rotationA_Folder.add(transformA_RotationYObject, 'rotationY', 0, 359, 1).onChange(handleARotationChange);
 	transformA_RotationZController = rotationA_Folder.add(transformA_RotationZObject, 'rotationZ', 0, 359, 1).onChange(handleARotationChange);
-	
+
 	shapeA_TypeController = gui.add(shapeA_TypeObject, 'A_Shape', ['Sphere', 'Box', 'Cylinder',
-		'Cone', 'Paraboloid']).onChange(handleShapeATypeChange);
+		'Cone', 'Paraboloid', 'Hyperboloid']).onChange(handleShapeATypeChange);
+
+	parameterA_kController = gui.add(parameterA_kObject, 'A_kParameter', 1, 80, 0.5).onChange(handleAParameterKChange);
 
 	materialA_TypeController = gui.add(materialA_TypeObject, 'A_matType', ['Diffuse', 'Transparent Refractive',
 		'Metal', 'ClearCoat Diffuse']).onChange(handleMaterialATypeChange);
@@ -342,14 +362,16 @@ function init_GUI()
 	transformB_RotationZController = rotationB_Folder.add(transformB_RotationZObject, 'rotationZ', 0, 359, 1).onChange(handleBRotationChange);
 
 	shapeB_TypeController = gui.add(shapeB_TypeObject, 'B_Shape', ['Sphere', 'Box', 'Cylinder',
-		'Cone', 'Paraboloid']).onChange(handleShapeBTypeChange);
+		'Cone', 'Paraboloid', 'Hyperboloid']).onChange(handleShapeBTypeChange);
+
+	parameterB_kController = gui.add(parameterB_kObject, 'B_kParameter', 1, 80, 0.5).onChange(handleBParameterKChange);
 
 	materialB_TypeController = gui.add(materialB_TypeObject, 'B_matType', ['Diffuse', 'Transparent Refractive',
 		'Metal', 'ClearCoat Diffuse']).onChange(handleMaterialBTypeChange);
 
 	materialB_ColorController = gui.addColor(materialB_ColorObject, 'B_matColor').onChange(handleMaterialBColorChange);
 
-	
+
 	// jumpstart all the gui change controller handlers so that the pathtracing fragment shader uniforms are correct and up-to-date
 	handleOperationTypeChange();
 	handleAPositionChange();
@@ -358,6 +380,7 @@ function init_GUI()
 	handleASkewChange();
 	handleARotationChange();
 	handleShapeATypeChange();
+	handleAParameterKChange();
 	handleMaterialATypeChange();
 	handleMaterialAColorChange();
 	handleBPositionChange();
@@ -366,6 +389,7 @@ function init_GUI()
 	handleBSkewChange();
 	handleBRotationChange();
 	handleShapeBTypeChange();
+	handleBParameterKChange();
 	handleMaterialBTypeChange();
 	handleMaterialBColorChange();
 
@@ -389,7 +413,7 @@ function init_GUI()
 
 	if (mouseControl)
 	{
-	
+
 		window.addEventListener('wheel', onMouseWheel, false);
 
 		window.addEventListener("click", function (event)
@@ -490,6 +514,8 @@ function initPathTracingShaders()
 	pathTracingUniforms.uMaterialAType = { type: "i", value: 4 };
 	pathTracingUniforms.uShapeBType = { type: "i", value: 1 };
 	pathTracingUniforms.uMaterialBType = { type: "i", value: 1 };
+	pathTracingUniforms.uA_kParameter = { type: "f", value: 2.0 };
+	pathTracingUniforms.uB_kParameter = { type: "f", value: 2.0 };
 	pathTracingUniforms.uMaterialAColor = { type: "v3", value: new THREE.Color(1.0, 1.0, 0.0) };
 	pathTracingUniforms.uMaterialBColor = { type: "v3", value: new THREE.Color(1.0, 0.0, 1.0) };
 	pathTracingUniforms.uCSG_ShapeA_InvMatrix = { type: "m4", value: new THREE.Matrix4() };
@@ -545,7 +571,7 @@ function createPathTracingMaterial()
 // called automatically from within the animate() function
 function updateVariablesAndUniforms()
 {
-	
+
 	if (needChangeOperationType)
 	{
 		if (csgOperation_TypeController.getValue() == 'Union (A + B)')
@@ -569,9 +595,9 @@ function updateVariablesAndUniforms()
 	if (needChangeAPosition)
 	{
 		CSG_shapeA.position.set(transformA_PositionXController.getValue(),
-			transformA_PositionYController.getValue(), 
+			transformA_PositionYController.getValue(),
 			transformA_PositionZController.getValue());
-		
+
 		cameraIsMoving = true;
 		needChangeAPosition = false;
 	}
@@ -627,26 +653,45 @@ function updateVariablesAndUniforms()
 		if (shapeA_TypeController.getValue() == 'Sphere')
 		{
 			pathTracingUniforms.uShapeAType.value = 0;
+			parameterA_kController.domElement.hidden = true;
 		}
 		else if (shapeA_TypeController.getValue() == 'Box')
 		{
 			pathTracingUniforms.uShapeAType.value = 1;
+			parameterA_kController.domElement.hidden = true;
 		}
 		else if (shapeA_TypeController.getValue() == 'Cylinder')
 		{
 			pathTracingUniforms.uShapeAType.value = 2;
+			parameterA_kController.domElement.hidden = true;
 		}
 		else if (shapeA_TypeController.getValue() == 'Cone')
 		{
 			pathTracingUniforms.uShapeAType.value = 3;
+			parameterA_kController.domElement.hidden = true;
 		}
 		else if (shapeA_TypeController.getValue() == 'Paraboloid')
 		{
 			pathTracingUniforms.uShapeAType.value = 4;
+			parameterA_kController.domElement.hidden = true;
+		}
+		else if (shapeA_TypeController.getValue() == 'Hyperboloid')
+		{
+			pathTracingUniforms.uShapeAType.value = 5;
+			parameterA_kController.domElement.hidden = false;
+			
 		}
 
 		cameraIsMoving = true;
 		needChangeShapeAType = false;
+	}
+
+	if (needChangeParameterAk)
+	{
+		pathTracingUniforms.uA_kParameter.value = parameterA_kController.getValue();
+
+		cameraIsMoving = true;
+		needChangeParameterAk = false;
 	}
 
 	if (needChangeMaterialAType)
@@ -745,26 +790,44 @@ function updateVariablesAndUniforms()
 		if (shapeB_TypeController.getValue() == 'Sphere')
 		{
 			pathTracingUniforms.uShapeBType.value = 0;
+			parameterB_kController.domElement.hidden = true;
 		}
 		else if (shapeB_TypeController.getValue() == 'Box')
 		{
 			pathTracingUniforms.uShapeBType.value = 1;
+			parameterB_kController.domElement.hidden = true;
 		}
 		else if (shapeB_TypeController.getValue() == 'Cylinder')
 		{
 			pathTracingUniforms.uShapeBType.value = 2;
+			parameterB_kController.domElement.hidden = true;
 		}
 		else if (shapeB_TypeController.getValue() == 'Cone')
 		{
 			pathTracingUniforms.uShapeBType.value = 3;
+			parameterB_kController.domElement.hidden = true;
 		}
 		else if (shapeB_TypeController.getValue() == 'Paraboloid')
 		{
 			pathTracingUniforms.uShapeBType.value = 4;
+			parameterB_kController.domElement.hidden = true;
+		}
+		else if (shapeB_TypeController.getValue() == 'Hyperboloid')
+		{
+			pathTracingUniforms.uShapeBType.value = 5;
+			parameterB_kController.domElement.hidden = false;
 		}
 
 		cameraIsMoving = true;
 		needChangeShapeBType = false;
+	}
+
+	if (needChangeParameterBk)
+	{
+		pathTracingUniforms.uB_kParameter.value = parameterB_kController.getValue();
+
+		cameraIsMoving = true;
+		needChangeParameterBk = false;
 	}
 
 	if (needChangeMaterialBType)
@@ -799,6 +862,7 @@ function updateVariablesAndUniforms()
 		cameraIsMoving = true;
 		needChangeMaterialBColor = false;
 	}
+
 
 	CSG_shapeA.matrixWorld.multiply(A_SkewMatrix); // multiply shapeA's matrix by my custom skew(shear) matrix4
 	pathTracingUniforms.uCSG_ShapeA_InvMatrix.value.copy(CSG_shapeA.matrixWorld).invert();
