@@ -45,6 +45,8 @@ let needChangeShapeAType = false;
 let needChangeParameterAk = false;
 let needChangeMaterialAType = false;
 let needChangeMaterialAColor = false;
+let lastATypeWasHyperboloid = false;
+let lastBTypeWasHyperboloid = false;
 
 let transformB_Folder;
 let positionB_Folder;
@@ -654,32 +656,37 @@ function updateVariablesAndUniforms()
 		{
 			pathTracingUniforms.uShapeAType.value = 0;
 			parameterA_kController.domElement.hidden = true;
+			lastATypeWasHyperboloid = false;
 		}
 		else if (shapeA_TypeController.getValue() == 'Box')
 		{
 			pathTracingUniforms.uShapeAType.value = 1;
 			parameterA_kController.domElement.hidden = true;
+			lastATypeWasHyperboloid = false;
 		}
 		else if (shapeA_TypeController.getValue() == 'Cylinder')
 		{
 			pathTracingUniforms.uShapeAType.value = 2;
 			parameterA_kController.domElement.hidden = true;
+			lastATypeWasHyperboloid = false;
 		}
 		else if (shapeA_TypeController.getValue() == 'Cone')
 		{
 			pathTracingUniforms.uShapeAType.value = 3;
 			parameterA_kController.domElement.hidden = true;
+			lastATypeWasHyperboloid = false;
 		}
 		else if (shapeA_TypeController.getValue() == 'Paraboloid')
 		{
 			pathTracingUniforms.uShapeAType.value = 4;
 			parameterA_kController.domElement.hidden = true;
+			lastATypeWasHyperboloid = false;
 		}
 		else if (shapeA_TypeController.getValue() == 'Hyperboloid')
 		{
 			pathTracingUniforms.uShapeAType.value = 5;
 			parameterA_kController.domElement.hidden = false;
-			
+			lastATypeWasHyperboloid = true;
 		}
 
 		cameraIsMoving = true;
@@ -791,31 +798,37 @@ function updateVariablesAndUniforms()
 		{
 			pathTracingUniforms.uShapeBType.value = 0;
 			parameterB_kController.domElement.hidden = true;
+			lastBTypeWasHyperboloid = false;
 		}
 		else if (shapeB_TypeController.getValue() == 'Box')
 		{
 			pathTracingUniforms.uShapeBType.value = 1;
 			parameterB_kController.domElement.hidden = true;
+			lastBTypeWasHyperboloid = false;
 		}
 		else if (shapeB_TypeController.getValue() == 'Cylinder')
 		{
 			pathTracingUniforms.uShapeBType.value = 2;
 			parameterB_kController.domElement.hidden = true;
+			lastBTypeWasHyperboloid = false;
 		}
 		else if (shapeB_TypeController.getValue() == 'Cone')
 		{
 			pathTracingUniforms.uShapeBType.value = 3;
 			parameterB_kController.domElement.hidden = true;
+			lastBTypeWasHyperboloid = false;
 		}
 		else if (shapeB_TypeController.getValue() == 'Paraboloid')
 		{
 			pathTracingUniforms.uShapeBType.value = 4;
 			parameterB_kController.domElement.hidden = true;
+			lastBTypeWasHyperboloid = false;
 		}
 		else if (shapeB_TypeController.getValue() == 'Hyperboloid')
 		{
 			pathTracingUniforms.uShapeBType.value = 5;
 			parameterB_kController.domElement.hidden = false;
+			lastBTypeWasHyperboloid = true;
 		}
 
 		cameraIsMoving = true;
@@ -863,11 +876,33 @@ function updateVariablesAndUniforms()
 		needChangeMaterialBColor = false;
 	}
 
-
+	
 	CSG_shapeA.matrixWorld.multiply(A_SkewMatrix); // multiply shapeA's matrix by my custom skew(shear) matrix4
+	
+	if (lastATypeWasHyperboloid)
+	{	// make hyperboloid as tall as other shapes (mathematically, its intersection routine only covers the top half, which looks too short)
+		CSG_shapeA.matrixWorld.elements[5] *= 2.0; // elements[5] = Y scale
+		CSG_shapeA.matrixWorld.elements[13] -= CSG_shapeA.scale.y; // elements[13] = Y position
+	}
 	pathTracingUniforms.uCSG_ShapeA_InvMatrix.value.copy(CSG_shapeA.matrixWorld).invert();
+	if (lastATypeWasHyperboloid)
+	{	// now set everything back to normal
+		CSG_shapeA.matrixWorld.elements[5] *= 0.5; // elements[5] = Y scale
+		CSG_shapeA.matrixWorld.elements[13] += CSG_shapeA.scale.y; // elements[13] = Y position
+	}
+
 	CSG_shapeB.matrixWorld.multiply(B_SkewMatrix); // multiply shapeB's matrix by my custom skew(shear) matrix4
+	if (lastBTypeWasHyperboloid)
+	{	// make hyperboloid as tall as other shapes (mathematically, its intersection routine only covers the top half, which looks too short)
+		CSG_shapeB.matrixWorld.elements[5] *= 2.0; // elements[5] = Y scale
+		CSG_shapeB.matrixWorld.elements[13] -= CSG_shapeB.scale.y; // elements[13] = Y position
+	}
 	pathTracingUniforms.uCSG_ShapeB_InvMatrix.value.copy(CSG_shapeB.matrixWorld).invert();
+	if (lastBTypeWasHyperboloid)
+	{	// now set everything back to normal
+		CSG_shapeB.matrixWorld.elements[5] *= 0.5; // elements[5] = Y scale
+		CSG_shapeB.matrixWorld.elements[13] += CSG_shapeB.scale.y; // elements[13] = Y position
+	}
 
 	// INFO
 	cameraInfoElement.innerHTML = "FOV: " + worldCamera.fov + " / Aperture: " + apertureSize.toFixed(2) + " / FocusDistance: " + focusDistance + "<br>" + "Samples: " + sampleCounter;
