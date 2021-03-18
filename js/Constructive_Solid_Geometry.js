@@ -327,9 +327,9 @@ function init_GUI()
 	transformA_RotationZController = rotationA_Folder.add(transformA_RotationZObject, 'rotationZ', 0, 359, 1).onChange(handleARotationChange);
 
 	shapeA_TypeController = gui.add(shapeA_TypeObject, 'A_Shape', ['Sphere', 'Box', 'Cylinder',
-		'Cone', 'Paraboloid', 'Hyperboloid']).onChange(handleShapeATypeChange);
+		'Cone', 'Paraboloid', 'Hyperboloid', 'Capsule']).onChange(handleShapeATypeChange);
 
-	parameterA_kController = gui.add(parameterA_kObject, 'A_kParameter', 1, 80, 0.5).onChange(handleAParameterKChange);
+	parameterA_kController = gui.add(parameterA_kObject, 'A_kParameter', 1, 50, 0.5).onChange(handleAParameterKChange);
 
 	materialA_TypeController = gui.add(materialA_TypeObject, 'A_matType', ['Diffuse', 'Transparent Refractive',
 		'Metal', 'ClearCoat Diffuse']).onChange(handleMaterialATypeChange);
@@ -364,9 +364,9 @@ function init_GUI()
 	transformB_RotationZController = rotationB_Folder.add(transformB_RotationZObject, 'rotationZ', 0, 359, 1).onChange(handleBRotationChange);
 
 	shapeB_TypeController = gui.add(shapeB_TypeObject, 'B_Shape', ['Sphere', 'Box', 'Cylinder',
-		'Cone', 'Paraboloid', 'Hyperboloid']).onChange(handleShapeBTypeChange);
+		'Cone', 'Paraboloid', 'Hyperboloid', 'Capsule']).onChange(handleShapeBTypeChange);
 
-	parameterB_kController = gui.add(parameterB_kObject, 'B_kParameter', 1, 80, 0.5).onChange(handleBParameterKChange);
+	parameterB_kController = gui.add(parameterB_kObject, 'B_kParameter', 1, 50, 0.5).onChange(handleBParameterKChange);
 
 	materialB_TypeController = gui.add(materialB_TypeObject, 'B_matType', ['Diffuse', 'Transparent Refractive',
 		'Metal', 'ClearCoat Diffuse']).onChange(handleMaterialBTypeChange);
@@ -687,6 +687,20 @@ function updateVariablesAndUniforms()
 			pathTracingUniforms.uShapeAType.value = 5;
 			parameterA_kController.domElement.hidden = false;
 			lastATypeWasHyperboloid = true;
+			parameterA_kController.min(1);
+			parameterA_kController.max(50);
+			parameterA_kController.step(0.5);
+			parameterA_kController.setValue(2);
+		}
+		else if (shapeA_TypeController.getValue() == 'Capsule')
+		{
+			pathTracingUniforms.uShapeAType.value = 6;
+			parameterA_kController.domElement.hidden = false;
+			lastATypeWasHyperboloid = false;
+			parameterA_kController.min(0.1);
+			parameterA_kController.max(3.0);
+			parameterA_kController.step(0.1);
+			parameterA_kController.setValue(0.5);
 		}
 
 		cameraIsMoving = true;
@@ -829,6 +843,20 @@ function updateVariablesAndUniforms()
 			pathTracingUniforms.uShapeBType.value = 5;
 			parameterB_kController.domElement.hidden = false;
 			lastBTypeWasHyperboloid = true;
+			parameterB_kController.min(1);
+			parameterB_kController.max(50);
+			parameterB_kController.step(0.5);
+			parameterB_kController.setValue(2);
+		}
+		else if (shapeB_TypeController.getValue() == 'Capsule')
+		{
+			pathTracingUniforms.uShapeBType.value = 6;
+			parameterB_kController.domElement.hidden = false;
+			lastBTypeWasHyperboloid = false;
+			parameterB_kController.min(0.1);
+			parameterB_kController.max(3.0);
+			parameterB_kController.step(0.1);
+			parameterB_kController.setValue(0.5);
 		}
 
 		cameraIsMoving = true;
