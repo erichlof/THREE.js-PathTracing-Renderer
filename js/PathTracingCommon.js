@@ -228,10 +228,8 @@ void Sphere_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1, out vec
 	float b = 2.0 * dot(rd, ro);
 	float c = dot(ro, ro) - 1.0;
 	solveQuadratic(a, b, c, t0, t1);
-
 	hit = ro + rd * t0;
 	n0 = vec3(2.0 * hit.x, 2.0 * hit.y, 2.0 * hit.z);
-
 	hit = ro + rd * t1;
 	n1 = vec3(2.0 * hit.x, 2.0 * hit.y, 2.0 * hit.z);
 }
@@ -252,15 +250,12 @@ void Cylinder_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1, out v
     	float b = 2.0 * (rd.x * ro.x + rd.z * ro.z);
     	float c = (ro.x * ro.x + ro.z * ro.z) - 1.0;
 	solveQuadratic(a, b, c, t0, t1);
-
 	hit = ro + rd * t0;
 	t0 = (hit.y > 1.0 || hit.y < -1.0) ? 0.0 : t0;
 	n0 = vec3(2.0 * hit.x, 0.0, 2.0 * hit.z);
-
 	hit = ro + rd * t1;
 	t1 = (hit.y > 1.0 || hit.y < -1.0) ? 0.0 : t1;
 	n1 = vec3(2.0 * hit.x, 0.0, 2.0 * hit.z);
-
 	if (rd.y < 0.0)
 	{
 		d0 = (ro.y - 1.0) / -rd.y;
@@ -307,11 +302,9 @@ void Cone_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1, out vec3 
     	float b = 2.0 * (rd.x * ro.x + rd.z * ro.z - k * rd.y * (ro.y - 1.0));
     	float c = ro.x * ro.x + ro.z * ro.z - k * (ro.y - 1.0) * (ro.y - 1.0);
 	solveQuadratic(a, b, c, t0, t1);
-
 	hit = ro + rd * t0;
 	t0 = (hit.y > 1.0 || hit.y < -1.0) ? 0.0 : t0; // invalidate t0 if it's outside unit radius bounds
 	n0 = vec3(2.0 * hit.x, 2.0 * (1.0 - hit.y) * k, 2.0 * hit.z);
-
 	hit = ro + rd * t1;
 	t1 = (hit.y > 1.0 || hit.y < -1.0) ? 0.0 : t1; // invalidate t1 if it's outside unit radius bounds
 	n1 = vec3(2.0 * hit.x, 2.0 * (1.0 - hit.y) * k, 2.0 * hit.z);
@@ -321,7 +314,6 @@ void Cone_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1, out vec3 
 		t0 = t1;
 		n0 = n1;
 	}
-
 	// now intersect unit disk located at bottom opening of unit cone shape
 	d = (ro.y + 1.0) / -rd.y;
 	hit = ro + rd * d;
@@ -360,11 +352,9 @@ void Paraboloid_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1, out
     	float b = 2.0 * (rd.x * ro.x + rd.z * ro.z) - k * rd.y;
     	float c = (ro.x * ro.x + ro.z * ro.z) - k * ro.y;
 	solveQuadratic(a, b, c, t0, t1);
-
 	hit = ro + rd * t0;
 	t0 = (hit.y > 2.0) ? 0.0 : t0; // invalidate t0 if it's outside unit radius bounds
 	n0 = vec3(2.0 * hit.x, -1.0 * k, 2.0 * hit.z);
-
 	hit = ro + rd * t1;
 	t1 = (hit.y > 2.0) ? 0.0 : t1; // invalidate t1 if it's outside unit radius bounds
 	n1 = vec3(2.0 * hit.x, -1.0 * k, 2.0 * hit.z);
@@ -406,7 +396,6 @@ void Hyperboloid_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out flo
 	float d0, d1, dr0, dr1;
 	d0 = d1 = dr0 = dr1 = 0.0;
 	vec3 dn0, dn1;
-
 	// implicit equation of a hyperboloid of 1 sheet (hourglass shape extending infinitely in the +Y and -Y directions):
 	// x^2 + z^2 - y^2 - 1 = 0
 	// for CSG purposes, we artificially truncate the hyperboloid at the middle downward, so that only the top half of the hourglass remains with added top/bottom caps...
@@ -421,15 +410,12 @@ void Hyperboloid_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out flo
 	float b = 2.0 * (k * rd.x * ro.x + k * rd.z * ro.z - j * rd.y * ro.y);
 	float c = (k * ro.x * ro.x + k * ro.z * ro.z - j * ro.y * ro.y) - 1.0;
 	solveQuadratic(a, b, c, t0, t1);
-
 	hit = ro + rd * t0;
 	t0 = (hit.y > 1.0 || hit.y < 0.0) ? 0.0 : t0; // invalidate t0 if it's outside unit radius bounds of top half
 	n0 = vec3(2.0 * hit.x * k, 2.0 * -hit.y * j, 2.0 * hit.z * k);
-
 	hit = ro + rd * t1;
 	t1 = (hit.y > 1.0 || hit.y < 0.0) ? 0.0 : t1; // invalidate t1 if it's outside unit radius bounds of top half
 	n1 = vec3(2.0 * hit.x * k, 2.0 * -hit.y * j, 2.0 * hit.z * k);
-
 	// since the infinite hyperboloid is artificially cut off at the top and bottom so that it has a unit radius top cap,
 	// if t0 intersection was invalidated, try t1
 	if (t0 == 0.0)
@@ -437,7 +423,6 @@ void Hyperboloid_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out flo
 		t0 = t1;
 		n0 = n1;
 	}
-
 	if (rd.y < 0.0)
 	{
 		d0 = (ro.y - 1.0) / -rd.y;
@@ -470,6 +455,83 @@ void Hyperboloid_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out flo
 	{
 		t1 = d1;
 		n1 = dn1;
+	}
+}
+`;
+
+THREE.ShaderChunk[ 'pathtracing_capsule_csg_intersect' ] = `
+//------------------------------------------------------------------------------------------------------------
+void Capsule_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out float t1, out vec3 n0, out vec3 n1 )
+//------------------------------------------------------------------------------------------------------------
+{
+	vec3 hit, s0n0, s0n1, s1n0, s1n1;
+	float s0t0, s0t1, s1t0, s1t1;
+	s0t0 = s0t1 = s1t0 = s1t1 = 0.0;
+	// implicit equation of a unit (radius of 1) cylinder, extending infinitely in the +Y and -Y directions:
+	// x^2 + z^2 - 1 = 0
+	float a = (rd.x * rd.x + rd.z * rd.z);
+    	float b = 2.0 * (rd.x * ro.x + rd.z * ro.z);
+    	float c = (ro.x * ro.x + ro.z * ro.z) - 1.0;
+	solveQuadratic(a, b, c, t0, t1);
+
+	hit = ro + rd * t0;
+	t0 = (hit.y > k || hit.y < -k) ? 0.0 : t0;
+	n0 = vec3(2.0 * hit.x, 0.0, 2.0 * hit.z);
+
+	hit = ro + rd * t1;
+	t1 = (hit.y > k || hit.y < -k) ? 0.0 : t1;
+	n1 = vec3(2.0 * hit.x, 0.0, 2.0 * hit.z);
+
+	vec3 s0pos = vec3(0, k, 0);
+	vec3 L = ro - s0pos;
+	a = dot(rd, rd);
+	b = 2.0 * dot(rd, L);
+	c = dot(L, L) - 1.0;
+	solveQuadratic(a, b, c, s0t0, s0t1);
+
+	hit = ro + rd * s0t0;
+	s0n0 = vec3(2.0 * hit.x, 2.0 * (hit.y - s0pos.y), 2.0 * hit.z);
+	s0t0 = (hit.y < k) ? 0.0 : s0t0;
+
+	hit = ro + rd * s0t1;
+	s0n1 = vec3(2.0 * hit.x, 2.0 * (hit.y - s0pos.y), 2.0 * hit.z);
+	s0t1 = (hit.y < k) ? 0.0 : s0t1;
+
+	vec3 s1pos = vec3(0, -k, 0);
+	L = ro - s1pos;
+	a = dot(rd, rd);
+	b = 2.0 * dot(rd, L);
+	c = dot(L, L) - 1.0;
+	solveQuadratic(a, b, c, s1t0, s1t1);
+
+	hit = ro + rd * s1t0;
+	s1n0 = vec3(2.0 * hit.x, 2.0 * (hit.y - s1pos.y), 2.0 * hit.z);
+	s1t0 = (hit.y > -k) ? 0.0 : s1t0;
+
+	hit = ro + rd * s1t1;
+	s1n1 = vec3(2.0 * hit.x, 2.0 * (hit.y - s1pos.y), 2.0 * hit.z);
+	s1t1 = (hit.y > -k) ? 0.0 : s1t1;
+
+	if (s0t0 != 0.0)
+	{
+		t0 = s0t0;
+		n0 = s0n0;
+	}
+	else if (s1t0 != 0.0)
+	{
+		t0 = s1t0;
+		n0 = s1n0;
+	}
+	
+	if (s0t1 != 0.0)
+	{
+		t1 = s0t1;
+		n1 = s0n1;
+	}
+	else if (s1t1 != 0.0)
+	{
+		t1 = s1t1;
+		n1 = s1n1;
 	}
 }
 `;
