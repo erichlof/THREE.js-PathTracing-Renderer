@@ -102,7 +102,7 @@ float SceneIntersect(Ray r, inout Intersection intersec)
 	else if (uShapeAType == 2)
 		Cylinder_CSG_Intersect( rObj.origin, rObj.direction, A_t0, A_t1, A_n0, A_n1 );
 	else if (uShapeAType == 3)
-		Cone_CSG_Intersect( rObj.origin, rObj.direction, A_t0, A_t1, A_n0, A_n1 );
+		Cone_CSG_Intersect( uA_kParameter, rObj.origin, rObj.direction, A_t0, A_t1, A_n0, A_n1 );
 	else if (uShapeAType == 4)
 		Paraboloid_CSG_Intersect( rObj.origin, rObj.direction, A_t0, A_t1, A_n0, A_n1 );
 	else if (uShapeAType == 5)
@@ -127,7 +127,7 @@ float SceneIntersect(Ray r, inout Intersection intersec)
 	else if (uShapeBType == 2)
 		Cylinder_CSG_Intersect( rObj.origin, rObj.direction, B_t0, B_t1, B_n0, B_n1 );
 	else if (uShapeBType == 3)
-		Cone_CSG_Intersect( rObj.origin, rObj.direction, B_t0, B_t1, B_n0, B_n1 );
+		Cone_CSG_Intersect( uB_kParameter, rObj.origin, rObj.direction, B_t0, B_t1, B_n0, B_n1 );
 	else if (uShapeBType == 4)
 		Paraboloid_CSG_Intersect( rObj.origin, rObj.direction, B_t0, B_t1, B_n0, B_n1 );
 	else if (uShapeBType == 5)
