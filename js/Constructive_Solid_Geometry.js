@@ -45,8 +45,7 @@ let needChangeShapeAType = false;
 let needChangeParameterAk = false;
 let needChangeMaterialAType = false;
 let needChangeMaterialAColor = false;
-let lastATypeWasHyperboloid = false;
-let lastBTypeWasHyperboloid = false;
+let currentAShapeType = '';
 
 let transformB_Folder;
 let positionB_Folder;
@@ -82,9 +81,10 @@ let needChangeShapeBType = false;
 let needChangeParameterBk = false;
 let needChangeMaterialBType = false;
 let needChangeMaterialBColor = false;
+let currentBShapeType = '';
 
 let needChangeOperationType = false;
-
+let kValue = 0;
 
 
 function init_GUI()
@@ -308,10 +308,10 @@ function init_GUI()
 	transformA_PositionZController = positionA_Folder.add(transformA_PositionZObject, 'positionZ', -50, 50, 1).onChange(handleAPositionChange);
 
 	scaleA_Folder = transformA_Folder.addFolder('A_Scale');
-	transformA_ScaleUniformController = scaleA_Folder.add(transformA_ScaleUniformObject, 'uniformScale', 1, 30, 1).onChange(handleAScaleUniformChange);
-	transformA_ScaleXController = scaleA_Folder.add(transformA_ScaleXObject, 'scaleX', 1, 30, 1).onChange(handleAScaleChange);
-	transformA_ScaleYController = scaleA_Folder.add(transformA_ScaleYObject, 'scaleY', 1, 30, 1).onChange(handleAScaleChange);
-	transformA_ScaleZController = scaleA_Folder.add(transformA_ScaleZObject, 'scaleZ', 1, 30, 1).onChange(handleAScaleChange);
+	transformA_ScaleUniformController = scaleA_Folder.add(transformA_ScaleUniformObject, 'uniformScale', 1, 50, 1).onChange(handleAScaleUniformChange);
+	transformA_ScaleXController = scaleA_Folder.add(transformA_ScaleXObject, 'scaleX', 1, 50, 1).onChange(handleAScaleChange);
+	transformA_ScaleYController = scaleA_Folder.add(transformA_ScaleYObject, 'scaleY', 1, 50, 1).onChange(handleAScaleChange);
+	transformA_ScaleZController = scaleA_Folder.add(transformA_ScaleZObject, 'scaleZ', 1, 50, 1).onChange(handleAScaleChange);
 
 	skewA_Folder = transformA_Folder.addFolder('A_Skew');
 	transformA_SkewX_YController = skewA_Folder.add(transformA_SkewX_YObject, 'skewX_Y', -0.9, 0.9, 0.1).onChange(handleASkewChange);
@@ -329,7 +329,7 @@ function init_GUI()
 	shapeA_TypeController = gui.add(shapeA_TypeObject, 'A_Shape', ['Sphere', 'Box', 'Cylinder',
 		'Cone', 'Paraboloid', 'Hyperboloid', 'Capsule']).onChange(handleShapeATypeChange);
 
-	parameterA_kController = gui.add(parameterA_kObject, 'A_kParameter', 1, 50, 0.5).onChange(handleAParameterKChange);
+	parameterA_kController = gui.add(parameterA_kObject, 'A_kParameter', -100, 100, 0.5).onChange(handleAParameterKChange);
 
 	materialA_TypeController = gui.add(materialA_TypeObject, 'A_matType', ['Diffuse', 'Transparent Refractive',
 		'Metal', 'ClearCoat Diffuse']).onChange(handleMaterialATypeChange);
@@ -345,10 +345,10 @@ function init_GUI()
 	transformB_PositionZController = positionB_Folder.add(transformB_PositionZObject, 'positionZ', -50, 50, 1).onChange(handleBPositionChange);
 
 	scaleB_Folder = transformB_Folder.addFolder('B_Scale');
-	transformB_ScaleUniformController = scaleB_Folder.add(transformB_ScaleUniformObject, 'uniformScale', 1, 30, 1).onChange(handleBScaleUniformChange);
-	transformB_ScaleXController = scaleB_Folder.add(transformB_ScaleXObject, 'scaleX', 1, 30, 1).onChange(handleBScaleChange);
-	transformB_ScaleYController = scaleB_Folder.add(transformB_ScaleYObject, 'scaleY', 1, 30, 1).onChange(handleBScaleChange);
-	transformB_ScaleZController = scaleB_Folder.add(transformB_ScaleZObject, 'scaleZ', 1, 30, 1).onChange(handleBScaleChange);
+	transformB_ScaleUniformController = scaleB_Folder.add(transformB_ScaleUniformObject, 'uniformScale', 1, 50, 1).onChange(handleBScaleUniformChange);
+	transformB_ScaleXController = scaleB_Folder.add(transformB_ScaleXObject, 'scaleX', 1, 50, 1).onChange(handleBScaleChange);
+	transformB_ScaleYController = scaleB_Folder.add(transformB_ScaleYObject, 'scaleY', 1, 50, 1).onChange(handleBScaleChange);
+	transformB_ScaleZController = scaleB_Folder.add(transformB_ScaleZObject, 'scaleZ', 1, 50, 1).onChange(handleBScaleChange);
 
 	skewB_Folder = transformB_Folder.addFolder('B_Skew');
 	transformB_SkewX_YController = skewB_Folder.add(transformB_SkewX_YObject, 'skewX_Y', -0.9, 0.9, 0.1).onChange(handleBSkewChange);
@@ -366,7 +366,7 @@ function init_GUI()
 	shapeB_TypeController = gui.add(shapeB_TypeObject, 'B_Shape', ['Sphere', 'Box', 'Cylinder',
 		'Cone', 'Paraboloid', 'Hyperboloid', 'Capsule']).onChange(handleShapeBTypeChange);
 
-	parameterB_kController = gui.add(parameterB_kObject, 'B_kParameter', 1, 50, 0.5).onChange(handleBParameterKChange);
+	parameterB_kController = gui.add(parameterB_kObject, 'B_kParameter', -100, 100, 0.5).onChange(handleBParameterKChange);
 
 	materialB_TypeController = gui.add(materialB_TypeObject, 'B_matType', ['Diffuse', 'Transparent Refractive',
 		'Metal', 'ClearCoat Diffuse']).onChange(handleMaterialBTypeChange);
@@ -652,51 +652,50 @@ function updateVariablesAndUniforms()
 
 	if (needChangeShapeAType)
 	{
-		if (shapeA_TypeController.getValue() == 'Sphere')
+		currentAShapeType = shapeA_TypeController.getValue();
+
+		if (currentAShapeType == 'Sphere')
 		{
 			pathTracingUniforms.uShapeAType.value = 0;
 			parameterA_kController.domElement.hidden = true;
-			lastATypeWasHyperboloid = false;
 		}
-		else if (shapeA_TypeController.getValue() == 'Box')
+		else if (currentAShapeType == 'Box')
 		{
 			pathTracingUniforms.uShapeAType.value = 1;
 			parameterA_kController.domElement.hidden = true;
-			lastATypeWasHyperboloid = false;
 		}
-		else if (shapeA_TypeController.getValue() == 'Cylinder')
+		else if (currentAShapeType == 'Cylinder')
 		{
 			pathTracingUniforms.uShapeAType.value = 2;
 			parameterA_kController.domElement.hidden = true;
-			lastATypeWasHyperboloid = false;
 		}
-		else if (shapeA_TypeController.getValue() == 'Cone')
+		else if (currentAShapeType == 'Cone')
 		{
 			pathTracingUniforms.uShapeAType.value = 3;
-			parameterA_kController.domElement.hidden = true;
-			lastATypeWasHyperboloid = false;
+			parameterA_kController.domElement.hidden = false;
+			parameterA_kController.min(0.0);
+			parameterA_kController.max(1.0);
+			parameterA_kController.step(0.01);
+			parameterA_kController.setValue(1.0);
 		}
-		else if (shapeA_TypeController.getValue() == 'Paraboloid')
+		else if (currentAShapeType == 'Paraboloid')
 		{
 			pathTracingUniforms.uShapeAType.value = 4;
 			parameterA_kController.domElement.hidden = true;
-			lastATypeWasHyperboloid = false;
 		}
-		else if (shapeA_TypeController.getValue() == 'Hyperboloid')
+		else if (currentAShapeType == 'Hyperboloid')
 		{
 			pathTracingUniforms.uShapeAType.value = 5;
 			parameterA_kController.domElement.hidden = false;
-			lastATypeWasHyperboloid = true;
-			parameterA_kController.min(1);
-			parameterA_kController.max(50);
+			parameterA_kController.min(-100);
+			parameterA_kController.max(100);
 			parameterA_kController.step(0.5);
 			parameterA_kController.setValue(2);
 		}
-		else if (shapeA_TypeController.getValue() == 'Capsule')
+		else if (currentAShapeType == 'Capsule')
 		{
 			pathTracingUniforms.uShapeAType.value = 6;
 			parameterA_kController.domElement.hidden = false;
-			lastATypeWasHyperboloid = false;
 			parameterA_kController.min(0.1);
 			parameterA_kController.max(3.0);
 			parameterA_kController.step(0.1);
@@ -709,8 +708,21 @@ function updateVariablesAndUniforms()
 
 	if (needChangeParameterAk)
 	{
-		pathTracingUniforms.uA_kParameter.value = parameterA_kController.getValue();
+		kValue = parameterA_kController.getValue();
+		if (kValue > parameterA_kController.__max)
+		{
+			kValue = parameterA_kController.__max;
+			parameterA_kController.setValue(kValue);
+		}
+			
+		if (kValue < parameterA_kController.__min)
+		{
+			kValue = parameterA_kController.__min;
+			parameterA_kController.setValue(kValue);
+		}
 
+		pathTracingUniforms.uA_kParameter.value = kValue;
+		
 		cameraIsMoving = true;
 		needChangeParameterAk = false;
 	}
@@ -808,51 +820,50 @@ function updateVariablesAndUniforms()
 
 	if (needChangeShapeBType)
 	{
-		if (shapeB_TypeController.getValue() == 'Sphere')
+		currentBShapeType = shapeB_TypeController.getValue();
+
+		if (currentBShapeType == 'Sphere')
 		{
 			pathTracingUniforms.uShapeBType.value = 0;
 			parameterB_kController.domElement.hidden = true;
-			lastBTypeWasHyperboloid = false;
 		}
-		else if (shapeB_TypeController.getValue() == 'Box')
+		else if (currentBShapeType == 'Box')
 		{
 			pathTracingUniforms.uShapeBType.value = 1;
 			parameterB_kController.domElement.hidden = true;
-			lastBTypeWasHyperboloid = false;
 		}
-		else if (shapeB_TypeController.getValue() == 'Cylinder')
+		else if (currentBShapeType == 'Cylinder')
 		{
 			pathTracingUniforms.uShapeBType.value = 2;
 			parameterB_kController.domElement.hidden = true;
-			lastBTypeWasHyperboloid = false;
 		}
-		else if (shapeB_TypeController.getValue() == 'Cone')
+		else if (currentBShapeType == 'Cone')
 		{
 			pathTracingUniforms.uShapeBType.value = 3;
-			parameterB_kController.domElement.hidden = true;
-			lastBTypeWasHyperboloid = false;
+			parameterB_kController.domElement.hidden = false;
+			parameterB_kController.min(0.0);
+			parameterB_kController.max(1.0);
+			parameterB_kController.step(0.01);
+			parameterB_kController.setValue(1.0);
 		}
-		else if (shapeB_TypeController.getValue() == 'Paraboloid')
+		else if (currentBShapeType == 'Paraboloid')
 		{
 			pathTracingUniforms.uShapeBType.value = 4;
 			parameterB_kController.domElement.hidden = true;
-			lastBTypeWasHyperboloid = false;
 		}
-		else if (shapeB_TypeController.getValue() == 'Hyperboloid')
+		else if (currentBShapeType == 'Hyperboloid')
 		{
 			pathTracingUniforms.uShapeBType.value = 5;
 			parameterB_kController.domElement.hidden = false;
-			lastBTypeWasHyperboloid = true;
-			parameterB_kController.min(1);
-			parameterB_kController.max(50);
+			parameterB_kController.min(-100);
+			parameterB_kController.max(100);
 			parameterB_kController.step(0.5);
 			parameterB_kController.setValue(2);
 		}
-		else if (shapeB_TypeController.getValue() == 'Capsule')
+		else if (currentBShapeType == 'Capsule')
 		{
 			pathTracingUniforms.uShapeBType.value = 6;
 			parameterB_kController.domElement.hidden = false;
-			lastBTypeWasHyperboloid = false;
 			parameterB_kController.min(0.1);
 			parameterB_kController.max(3.0);
 			parameterB_kController.step(0.1);
@@ -865,7 +876,20 @@ function updateVariablesAndUniforms()
 
 	if (needChangeParameterBk)
 	{
-		pathTracingUniforms.uB_kParameter.value = parameterB_kController.getValue();
+		kValue = parameterB_kController.getValue();
+		if (kValue > parameterB_kController.__max)
+		{
+			kValue = parameterB_kController.__max;
+			parameterB_kController.setValue(kValue);
+		}
+
+		if (kValue < parameterB_kController.__min)
+		{
+			kValue = parameterB_kController.__min;
+			parameterB_kController.setValue(kValue);
+		}
+
+		pathTracingUniforms.uB_kParameter.value = kValue;
 
 		cameraIsMoving = true;
 		needChangeParameterBk = false;
@@ -907,31 +931,14 @@ function updateVariablesAndUniforms()
 	
 	CSG_shapeA.matrixWorld.multiply(A_SkewMatrix); // multiply shapeA's matrix by my custom skew(shear) matrix4
 	
-	if (lastATypeWasHyperboloid)
-	{	// make hyperboloid as tall as other shapes (mathematically, its intersection routine only covers the top half, which looks too short)
-		CSG_shapeA.matrixWorld.elements[5] *= 2.0; // elements[5] = Y scale
-		CSG_shapeA.matrixWorld.elements[13] -= CSG_shapeA.scale.y; // elements[13] = Y position
-	}
 	pathTracingUniforms.uCSG_ShapeA_InvMatrix.value.copy(CSG_shapeA.matrixWorld).invert();
-	if (lastATypeWasHyperboloid)
-	{	// now set everything back to normal
-		CSG_shapeA.matrixWorld.elements[5] *= 0.5; // elements[5] = Y scale
-		CSG_shapeA.matrixWorld.elements[13] += CSG_shapeA.scale.y; // elements[13] = Y position
-	}
+	
 
 	CSG_shapeB.matrixWorld.multiply(B_SkewMatrix); // multiply shapeB's matrix by my custom skew(shear) matrix4
-	if (lastBTypeWasHyperboloid)
-	{	// make hyperboloid as tall as other shapes (mathematically, its intersection routine only covers the top half, which looks too short)
-		CSG_shapeB.matrixWorld.elements[5] *= 2.0; // elements[5] = Y scale
-		CSG_shapeB.matrixWorld.elements[13] -= CSG_shapeB.scale.y; // elements[13] = Y position
-	}
+	
 	pathTracingUniforms.uCSG_ShapeB_InvMatrix.value.copy(CSG_shapeB.matrixWorld).invert();
-	if (lastBTypeWasHyperboloid)
-	{	// now set everything back to normal
-		CSG_shapeB.matrixWorld.elements[5] *= 0.5; // elements[5] = Y scale
-		CSG_shapeB.matrixWorld.elements[13] += CSG_shapeB.scale.y; // elements[13] = Y position
-	}
-
+	
+	
 	// INFO
 	cameraInfoElement.innerHTML = "FOV: " + worldCamera.fov + " / Aperture: " + apertureSize.toFixed(2) + " / FocusDistance: " + focusDistance + "<br>" + "Samples: " + sampleCounter;
 
