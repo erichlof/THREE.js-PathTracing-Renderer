@@ -326,10 +326,10 @@ function init_GUI()
 	transformA_RotationYController = rotationA_Folder.add(transformA_RotationYObject, 'rotationY', 0, 359, 1).onChange(handleARotationChange);
 	transformA_RotationZController = rotationA_Folder.add(transformA_RotationZObject, 'rotationZ', 0, 359, 1).onChange(handleARotationChange);
 
-	shapeA_TypeController = gui.add(shapeA_TypeObject, 'A_Shape', ['Sphere', 'Box', 'Cylinder',
-		'Cone', 'Paraboloid', 'Hyperboloid', 'Capsule']).onChange(handleShapeATypeChange);
+	shapeA_TypeController = gui.add(shapeA_TypeObject, 'A_Shape', ['Sphere', 'Cylinder', 'Cone', 'Paraboloid', 'Hyperboloid_1Sheet', 'Hyperboloid_2Sheets',
+		'Capsule', 'Box', 'ConicalPrism', 'ParabolicPrism', 'HyperbolicPrism_1Sheet', 'HyperbolicPrism_2Sheets']).onChange(handleShapeATypeChange);
 
-	parameterA_kController = gui.add(parameterA_kObject, 'A_kParameter', -100, 100, 0.5).onChange(handleAParameterKChange);
+	parameterA_kController = gui.add(parameterA_kObject, 'A_kParameter', 0, 100, 0.5).onChange(handleAParameterKChange);
 
 	materialA_TypeController = gui.add(materialA_TypeObject, 'A_matType', ['Diffuse', 'Transparent Refractive',
 		'Metal', 'ClearCoat Diffuse']).onChange(handleMaterialATypeChange);
@@ -363,10 +363,10 @@ function init_GUI()
 	transformB_RotationYController = rotationB_Folder.add(transformB_RotationYObject, 'rotationY', 0, 359, 1).onChange(handleBRotationChange);
 	transformB_RotationZController = rotationB_Folder.add(transformB_RotationZObject, 'rotationZ', 0, 359, 1).onChange(handleBRotationChange);
 
-	shapeB_TypeController = gui.add(shapeB_TypeObject, 'B_Shape', ['Sphere', 'Box', 'Cylinder',
-		'Cone', 'Paraboloid', 'Hyperboloid', 'Capsule']).onChange(handleShapeBTypeChange);
+	shapeB_TypeController = gui.add(shapeB_TypeObject, 'B_Shape', ['Sphere', 'Cylinder', 'Cone', 'Paraboloid', 'Hyperboloid_1Sheet', 'Hyperboloid_2Sheets',
+		'Capsule', 'Box', 'ConicalPrism', 'ParabolicPrism', 'HyperbolicPrism_1Sheet', 'HyperbolicPrism_2Sheets']).onChange(handleShapeBTypeChange);
 
-	parameterB_kController = gui.add(parameterB_kObject, 'B_kParameter', -100, 100, 0.5).onChange(handleBParameterKChange);
+	parameterB_kController = gui.add(parameterB_kObject, 'B_kParameter', 0, 100, 0.5).onChange(handleBParameterKChange);
 
 	materialB_TypeController = gui.add(materialB_TypeObject, 'B_matType', ['Diffuse', 'Transparent Refractive',
 		'Metal', 'ClearCoat Diffuse']).onChange(handleMaterialBTypeChange);
@@ -514,7 +514,7 @@ function initPathTracingShaders()
 	pathTracingUniforms.uCSG_OperationType = { type: "i", value: 0 };
 	pathTracingUniforms.uShapeAType = { type: "i", value: 0 };
 	pathTracingUniforms.uMaterialAType = { type: "i", value: 4 };
-	pathTracingUniforms.uShapeBType = { type: "i", value: 1 };
+	pathTracingUniforms.uShapeBType = { type: "i", value: 0 };
 	pathTracingUniforms.uMaterialBType = { type: "i", value: 1 };
 	pathTracingUniforms.uA_kParameter = { type: "f", value: 2.0 };
 	pathTracingUniforms.uB_kParameter = { type: "f", value: 2.0 };
@@ -659,19 +659,14 @@ function updateVariablesAndUniforms()
 			pathTracingUniforms.uShapeAType.value = 0;
 			parameterA_kController.domElement.hidden = true;
 		}
-		else if (currentAShapeType == 'Box')
+		else if (currentAShapeType == 'Cylinder')
 		{
 			pathTracingUniforms.uShapeAType.value = 1;
 			parameterA_kController.domElement.hidden = true;
 		}
-		else if (currentAShapeType == 'Cylinder')
-		{
-			pathTracingUniforms.uShapeAType.value = 2;
-			parameterA_kController.domElement.hidden = true;
-		}
 		else if (currentAShapeType == 'Cone')
 		{
-			pathTracingUniforms.uShapeAType.value = 3;
+			pathTracingUniforms.uShapeAType.value = 2;
 			parameterA_kController.domElement.hidden = false;
 			parameterA_kController.min(0.0);
 			parameterA_kController.max(1.0);
@@ -680,26 +675,72 @@ function updateVariablesAndUniforms()
 		}
 		else if (currentAShapeType == 'Paraboloid')
 		{
-			pathTracingUniforms.uShapeAType.value = 4;
+			pathTracingUniforms.uShapeAType.value = 3;
 			parameterA_kController.domElement.hidden = true;
 		}
-		else if (currentAShapeType == 'Hyperboloid')
+		else if (currentAShapeType == 'Hyperboloid_1Sheet')
 		{
-			pathTracingUniforms.uShapeAType.value = 5;
+			pathTracingUniforms.uShapeAType.value = 4;
 			parameterA_kController.domElement.hidden = false;
-			parameterA_kController.min(-100);
+			parameterA_kController.min(1);
 			parameterA_kController.max(100);
 			parameterA_kController.step(0.5);
 			parameterA_kController.setValue(2);
+		}
+		else if (currentAShapeType == 'Hyperboloid_2Sheets')
+		{
+			pathTracingUniforms.uShapeAType.value = 5;
+			parameterA_kController.domElement.hidden = false;
+			parameterA_kController.min(1);
+			parameterA_kController.max(100);
+			parameterA_kController.step(0.5);
+			parameterA_kController.setValue(10);
 		}
 		else if (currentAShapeType == 'Capsule')
 		{
 			pathTracingUniforms.uShapeAType.value = 6;
 			parameterA_kController.domElement.hidden = false;
 			parameterA_kController.min(0.1);
-			parameterA_kController.max(3.0);
+			parameterA_kController.max(5.0);
 			parameterA_kController.step(0.1);
 			parameterA_kController.setValue(0.5);
+		}
+		else if (currentAShapeType == 'Box')
+		{
+			pathTracingUniforms.uShapeAType.value = 7;
+			parameterA_kController.domElement.hidden = true;
+		}
+		else if (currentAShapeType == 'ConicalPrism')
+		{
+			pathTracingUniforms.uShapeAType.value = 8;
+			parameterA_kController.domElement.hidden = false;
+			parameterA_kController.min(0.0);
+			parameterA_kController.max(1.0);
+			parameterA_kController.step(0.01);
+			parameterA_kController.setValue(1.0);
+		}
+		else if (currentAShapeType == 'ParabolicPrism')
+		{
+			pathTracingUniforms.uShapeAType.value = 9;
+			parameterA_kController.domElement.hidden = true;
+		}
+		else if (currentAShapeType == 'HyperbolicPrism_1Sheet')
+		{
+			pathTracingUniforms.uShapeAType.value = 10;
+			parameterA_kController.domElement.hidden = false;
+			parameterA_kController.min(1);
+			parameterA_kController.max(100);
+			parameterA_kController.step(0.5);
+			parameterA_kController.setValue(2);
+		}
+		else if (currentAShapeType == 'HyperbolicPrism_2Sheets')
+		{
+			pathTracingUniforms.uShapeAType.value = 11;
+			parameterA_kController.domElement.hidden = false;
+			parameterA_kController.min(1);
+			parameterA_kController.max(100);
+			parameterA_kController.step(0.5);
+			parameterA_kController.setValue(10);
 		}
 
 		cameraIsMoving = true;
@@ -827,19 +868,14 @@ function updateVariablesAndUniforms()
 			pathTracingUniforms.uShapeBType.value = 0;
 			parameterB_kController.domElement.hidden = true;
 		}
-		else if (currentBShapeType == 'Box')
+		else if (currentBShapeType == 'Cylinder')
 		{
 			pathTracingUniforms.uShapeBType.value = 1;
 			parameterB_kController.domElement.hidden = true;
 		}
-		else if (currentBShapeType == 'Cylinder')
-		{
-			pathTracingUniforms.uShapeBType.value = 2;
-			parameterB_kController.domElement.hidden = true;
-		}
 		else if (currentBShapeType == 'Cone')
 		{
-			pathTracingUniforms.uShapeBType.value = 3;
+			pathTracingUniforms.uShapeBType.value = 2;
 			parameterB_kController.domElement.hidden = false;
 			parameterB_kController.min(0.0);
 			parameterB_kController.max(1.0);
@@ -848,26 +884,72 @@ function updateVariablesAndUniforms()
 		}
 		else if (currentBShapeType == 'Paraboloid')
 		{
-			pathTracingUniforms.uShapeBType.value = 4;
+			pathTracingUniforms.uShapeBType.value = 3;
 			parameterB_kController.domElement.hidden = true;
 		}
-		else if (currentBShapeType == 'Hyperboloid')
+		else if (currentBShapeType == 'Hyperboloid_1Sheet')
 		{
-			pathTracingUniforms.uShapeBType.value = 5;
+			pathTracingUniforms.uShapeBType.value = 4;
 			parameterB_kController.domElement.hidden = false;
-			parameterB_kController.min(-100);
+			parameterB_kController.min(1);
 			parameterB_kController.max(100);
 			parameterB_kController.step(0.5);
 			parameterB_kController.setValue(2);
+		}
+		else if (currentBShapeType == 'Hyperboloid_2Sheets')
+		{
+			pathTracingUniforms.uShapeBType.value = 5;
+			parameterB_kController.domElement.hidden = false;
+			parameterB_kController.min(1);
+			parameterB_kController.max(100);
+			parameterB_kController.step(0.5);
+			parameterB_kController.setValue(10);
 		}
 		else if (currentBShapeType == 'Capsule')
 		{
 			pathTracingUniforms.uShapeBType.value = 6;
 			parameterB_kController.domElement.hidden = false;
 			parameterB_kController.min(0.1);
-			parameterB_kController.max(3.0);
+			parameterB_kController.max(5.0);
 			parameterB_kController.step(0.1);
 			parameterB_kController.setValue(0.5);
+		}
+		else if (currentBShapeType == 'Box')
+		{
+			pathTracingUniforms.uShapeBType.value = 7;
+			parameterB_kController.domElement.hidden = true;
+		}
+		else if (currentBShapeType == 'ConicalPrism')
+		{
+			pathTracingUniforms.uShapeBType.value = 8;
+			parameterB_kController.domElement.hidden = false;
+			parameterB_kController.min(0.0);
+			parameterB_kController.max(1.0);
+			parameterB_kController.step(0.01);
+			parameterB_kController.setValue(1.0);
+		}
+		else if (currentBShapeType == 'ParabolicPrism')
+		{
+			pathTracingUniforms.uShapeBType.value = 9;
+			parameterB_kController.domElement.hidden = true;
+		}
+		else if (currentBShapeType == 'HyperbolicPrism_1Sheet')
+		{
+			pathTracingUniforms.uShapeBType.value = 10;
+			parameterB_kController.domElement.hidden = false;
+			parameterB_kController.min(1);
+			parameterB_kController.max(100);
+			parameterB_kController.step(0.5);
+			parameterB_kController.setValue(2);
+		}
+		else if (currentBShapeType == 'HyperbolicPrism_2Sheets')
+		{
+			pathTracingUniforms.uShapeBType.value = 11;
+			parameterB_kController.domElement.hidden = false;
+			parameterB_kController.min(1);
+			parameterB_kController.max(100);
+			parameterB_kController.step(0.5);
+			parameterB_kController.setValue(10);
 		}
 
 		cameraIsMoving = true;
