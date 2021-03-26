@@ -228,8 +228,10 @@ void Sphere_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1, out vec
 	float b = 2.0 * dot(rd, ro);
 	float c = dot(ro, ro) - 1.0;
 	solveQuadratic(a, b, c, t0, t1);
+
 	hit = ro + rd * t0;
 	n0 = vec3(2.0 * hit.x, 2.0 * hit.y, 2.0 * hit.z);
+
 	hit = ro + rd * t1;
 	n1 = vec3(2.0 * hit.x, 2.0 * hit.y, 2.0 * hit.z);
 }
@@ -258,6 +260,8 @@ void Cylinder_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1, out v
 	hit = ro + rd * t1;
 	t1 = (hit.y > 1.0 || hit.y < -1.0) ? 0.0 : t1;
 	n1 = vec3(2.0 * hit.x, 0.0, 2.0 * hit.z);
+
+	// intersect top and bottom unit-radius disk caps
 	if (rd.y < 0.0)
 	{
 		d0 = (ro.y - 1.0) / -rd.y;
@@ -319,13 +323,14 @@ void Cone_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out float t1, 
 	t1 = (hit.y > 1.0 || hit.y < -1.0) ? 0.0 : t1; // invalidate t1 if it's outside truncated cone's height bounds
 	n1 = vec3(2.0 * hit.x * j, 2.0 * (h - hit.y) * (k * 0.25), 2.0 * hit.z * j);
 
-	// since the infinite cone is artificially cut off, if t0 intersection was invalidated, try t1
+	// since the infinite double-cone is artificially cut off, if t0 intersection was invalidated, try t1
 	if (t0 == 0.0)
 	{
 		t0 = t1;
 		n0 = n1;
 	}
 
+	// intersect top and bottom disk caps
 	if (rd.y < 0.0)
 	{
 		d0 = (ro.y - 1.0) / -rd.y;
@@ -359,6 +364,122 @@ void Cone_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out float t1, 
 		t1 = d1;
 		n1 = dn1;
 	}
+}
+`;
+
+THREE.ShaderChunk[ 'pathtracing_conicalprism_csg_intersect' ] = `
+//------------------------------------------------------------------------------------------------------------
+void ConicalPrism_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out float t1, out vec3 n0, out vec3 n1 )
+//------------------------------------------------------------------------------------------------------------
+{
+	vec3 hit;
+	float d0, d1, dr0, dr1;
+	d0 = d1 = dr0 = dr1 = 0.0;
+	vec3 dn0, dn1;
+	// start with implicit equation of a double-cone extending infinitely in +Y and -Y directions
+	// x^2 + z^2 - y^2 = 0
+	// To obtain a conical prism along the Z axis, the Z component is simply removed, leaving:
+	// x^2 - y^2 = 0
+	// code below cuts off top cone of the double-cone, leaving bottom cone with apex at the top (+1.0), and base (radius of 1) at the bottom (-1.0)
+	
+	// valid range for k: 0.01 to 1.0 (1.0 being the default for cone with a sharp, pointed apex)
+	k = clamp(k, 0.01, 1.0);
+	
+	float j = 1.0 / k;
+	float h = j * 2.0 - 1.0;		   // (k * 0.25) makes the normal cone's bottom circular base have a unit radius of 1.0
+	float a = j * rd.x * rd.x - (k * 0.25) * rd.y * rd.y;
+    	float b = 2.0 * (j * rd.x * ro.x - (k * 0.25) * rd.y * (ro.y - h));
+    	float c = j * ro.x * ro.x - (k * 0.25) * (ro.y - h) * (ro.y - h);
+	solveQuadratic(a, b, c, t0, t1);
+
+	hit = ro + rd * t0;
+	t0 = (hit.x > 1.0 || hit.x < -1.0 || hit.y < -1.0 || hit.y > 1.0 || hit.z < -1.0 || hit.z > 1.0) ? 0.0 : t0; // invalidate t0 if it's outside unit radius bounds
+	n0 = vec3(2.0 * hit.x * j, 2.0 * (hit.y - h) * -(k * 0.25), 0.0);
+	
+	hit = ro + rd * t1;
+	t1 = (hit.x > 1.0 || hit.x < -1.0 || hit.y < -1.0 || hit.y > 1.0 || hit.z < -1.0 || hit.z > 1.0) ? 0.0 : t1; // invalidate t1 if it's outside unit radius bounds
+	n1 = vec3(2.0 * hit.x * j, 2.0 * (hit.y - h) * -(k * 0.25), 0.0);
+	
+	// since the infinite double-cone shape is artificially cut off at the top and bottom,
+	// if t0 intersection was invalidated above, try t1
+	if (t0 == 0.0)
+	{
+		t0 = t1;
+		n0 = n1;
+	}
+
+	// intersect top and bottom base rectangles
+	if (rd.y < 0.0)
+	{
+		d0 = (ro.y - 1.0) / -rd.y;
+		dn0 = vec3(0,1,0);
+		d1 = (ro.y + 1.0) / -rd.y;
+		dn1 = vec3(0,-1,0);
+		dr0 = 1.0 - (k); // top cap's size is relative to k
+		dr1 = 1.0; // bottom cap is unit radius
+	}
+	else
+	{
+		d1 = (ro.y - 1.0) / -rd.y;
+		dn1 = vec3(0,1,0);
+		d0 = (ro.y + 1.0) / -rd.y;
+		dn0 = vec3(0,-1,0);
+		dr0 = 1.0; // bottom cap is unit radius
+		dr1 = 1.0 - (k);// top cap's size is relative to k
+	}
+
+	hit = ro + rd * d0;
+	if (hit.x <= dr0 && hit.x >= -dr0 && hit.z <= 1.0 && hit.z >= -1.0)
+	{
+		t1 = t0;
+		n1 = n0;
+		t0 = d0;
+		n0 = dn0;
+	}
+	hit = ro + rd * d1;
+	if (hit.x <= dr1 && hit.x >= -dr1 && hit.z <= 1.0 && hit.z >= -1.0)
+	{
+		t1 = d1;
+		n1 = dn1;
+	}
+
+	// intersect conical-shaped front and back wall pieces
+	if (rd.z < 0.0)
+	{
+		d0 = (ro.z - 1.0) / -rd.z;
+		dn0 = vec3(0,0,1);
+		d1 = (ro.z + 1.0) / -rd.z;
+		dn1 = vec3(0,0,-1);
+	}
+	else
+	{
+		d1 = (ro.z - 1.0) / -rd.z;
+		dn1 = vec3(0,0,1);
+		d0 = (ro.z + 1.0) / -rd.z;
+		dn0 = vec3(0,0,-1);
+	}
+	
+	hit = ro + rd * d0;
+	if (hit.x <= 1.0 && hit.x >= -1.0 && hit.y >= -1.0 && hit.y <= 1.0 && (j * hit.x * hit.x - k * 0.25 * (hit.y - h) * (hit.y - h)) <= 0.0) // y is a quadratic (conical) function of x
+	{
+		if (t0 != 0.0)
+		{
+			t1 = t0;
+			n1 = n0;
+		}
+		
+		t0 = d0;
+		n0 = dn0;
+	}
+
+	hit = ro + rd * d1;
+	if (hit.x <= 1.0 && hit.x >= -1.0 && hit.y >= -1.0 && hit.y <= 1.0 && (j * hit.x * hit.x - k * 0.25 * (hit.y - h) * (hit.y - h)) <= 0.0) // y is a quadratic (conical) function of x
+	{
+		t1 = d1;
+		n1 = dn1;
+	}
+
+	
 }
 `;
 
@@ -396,7 +517,7 @@ void Paraboloid_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1, out
 		n0 = n1;
 	}
 	
-	// now intersect unit disk located at bottom base opening of unit paraboloid shape
+	// now intersect unit-radius disk located at bottom base opening of unit paraboloid shape
 	d = (ro.y + 1.0) / -rd.y;
 	hit = ro + rd * d;
 	if (hit.x * hit.x + hit.z * hit.z <= 1.0) // disk with unit radius
@@ -417,9 +538,98 @@ void Paraboloid_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1, out
 }
 `;
 
-THREE.ShaderChunk[ 'pathtracing_hyperboloid_csg_intersect' ] = `
+THREE.ShaderChunk[ 'pathtracing_parabolicprism_csg_intersect' ] = `
 //------------------------------------------------------------------------------------------------------------
-void Hyperboloid_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out float t1, out vec3 n0, out vec3 n1 )
+void ParabolicPrism_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1, out vec3 n0, out vec3 n1 )
+//------------------------------------------------------------------------------------------------------------
+{
+	vec3 hit;
+	float d, d0, d1;
+	d = d0 = d1 = 0.0;
+	vec3 dn, dn0, dn1;
+	// start with implicit equation of a paraboloid (upside down rounded-v shape extending infinitely downward in the -Y direction):
+	// x^2 + z^2 + y = 0
+	// To obtain a parabolic prism along the Z axis, the Z component is simply removed, leaving:
+	// x^2 + y = 0
+	// code below centers the parabolic prism so that its rounded apex is at the top (+1.0) and 
+	//   its square base is of unit radius (1) and is located at the bottom (-1.0) where the infinite parabola shape is truncated also
+	
+	float k = 0.5; // k:0.5 narrows the parabola to ensure that when the lower portion of the parabola reaches the cut-off at the base, it is 1 unit wide
+	float a = rd.x * rd.x;
+    	float b = 2.0 * (rd.x * ro.x) + k * rd.y;
+    	float c = ro.x * ro.x + k * (ro.y - 1.0);
+	solveQuadratic(a, b, c, t0, t1);
+
+	hit = ro + rd * t0;
+	t0 = (hit.y < -1.0 || hit.z < -1.0 || hit.z > 1.0) ? 0.0 : t0; // invalidate t0 if it's outside unit radius bounds
+	n0 = vec3(2.0 * hit.x, 1.0 * k, 0.0);
+	
+	hit = ro + rd * t1;
+	t1 = (hit.y < -1.0 || hit.z < -1.0 || hit.z > 1.0) ? 0.0 : t1; // invalidate t1 if it's outside unit radius bounds
+	n1 = vec3(2.0 * hit.x, 1.0 * k, 0.0);
+	
+	// since the infinite parabolic shape is artificially cut off at the bottom,
+	// if t0 intersection was invalidated above, try t1
+	if (t0 == 0.0)
+	{
+		t0 = t1;
+		n0 = n1;
+	}
+	
+	// intersect unit-radius square located at bottom opening of unit paraboloid shape
+	d = (ro.y + 1.0) / -rd.y;
+	hit = ro + rd * d;
+	if (hit.x <= 1.0 && hit.x >= -1.0 && hit.z <= 1.0 && hit.z >= -1.0) // square with unit radius
+	{
+		if (rd.y < 0.0)
+		{
+			t1 = d;
+			n1 = vec3(0,-1,0);
+		}
+		else
+		{
+			t1 = t0;
+			n1 = n0;
+			t0 = d;
+			n0 = vec3(0,-1,0);
+		}
+	}
+
+	// intersect parabola-shaped front and back wall pieces
+	if (rd.z < 0.0)
+	{
+		d0 = (ro.z - 1.0) / -rd.z;
+		dn0 = vec3(0,0,1);
+		d1 = (ro.z + 1.0) / -rd.z;
+		dn1 = vec3(0,0,-1);
+	}
+	else
+	{
+		d1 = (ro.z - 1.0) / -rd.z;
+		dn1 = vec3(0,0,1);
+		d0 = (ro.z + 1.0) / -rd.z;
+		dn0 = vec3(0,0,-1);
+	}
+	
+	hit = ro + rd * d0;
+	if (hit.y >= -1.0 && (hit.x * hit.x + k * (hit.y - 1.0)) <= 0.0) // y is a parabolic function of x
+	{
+		t0 = d0;
+		n0 = dn0;
+	}
+
+	hit = ro + rd * d1;
+	if (hit.y >= -1.0 && (hit.x * hit.x + k * (hit.y - 1.0)) <= 0.0) // y is a parabolic function of x
+	{
+		t1 = d1;
+		n1 = dn1;
+	}
+}
+`;
+
+THREE.ShaderChunk[ 'pathtracing_hyperboloid1sheet_csg_intersect' ] = `
+//------------------------------------------------------------------------------------------------------------
+void Hyperboloid1Sheet_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out float t1, out vec3 n0, out vec3 n1 )
 //------------------------------------------------------------------------------------------------------------
 {
 	vec3 hit;
@@ -430,14 +640,11 @@ void Hyperboloid_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out flo
 	// x^2 + z^2 - y^2 - 1 = 0
 	// for CSG purposes, we artificially truncate the hyperboloid at the middle, so that only the top half of the hourglass remains with added top/bottom caps...
 	// This way, the total number of possible intersections will be 2 max (t0/t1), rather than possibly 4 (if we left it as a full hourglass with added top/bottom caps)
-	//rd.y *= 0.5;
-	ro.y += 0.5; // this places the top-to-middle portion of the shape right at its own origin, so that it rotates smoothly around its own middle. 
 	
-	// if k is positive, a 1-sheet Hyperboloid is created.  If k is negative, a 2-sheet Hyperboloid is created
-	// Since we are just keeping the middle to top portion of this shape, only 1 sheet of the 2-sheet Hyperboloid will be rendered (in order to have 2 intersections max(t0/t1), see above)
-	// conservative range of k: -100 to 100
+	ro.y += 0.5; // this places the top-to-middle portion of the shape closer to its own origin, so that it rotates smoothly around its own middle. 
+	
+	// conservative range of k: 1 to 100
 	float j = k - 1.0;
-	//float h = (1.0/k) * 2.0 - 1.0;
 	float a = k * rd.x * rd.x + k * rd.z * rd.z - j * rd.y * rd.y;
 	float b = 2.0 * (k * rd.x * ro.x + k * rd.z * ro.z - j * rd.y * ro.y);
 	float c = (k * ro.x * ro.x + k * ro.z * ro.z - j * ro.y * ro.y) - 1.0;
@@ -457,6 +664,7 @@ void Hyperboloid_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out flo
 		t0 = t1;
 		n0 = n1;
 	}
+
 	if (rd.y < 0.0)
 	{
 		d0 = (ro.y - 1.0) / -rd.y;
@@ -493,6 +701,280 @@ void Hyperboloid_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out flo
 }
 `;
 
+THREE.ShaderChunk[ 'pathtracing_hyperboloid2sheets_csg_intersect' ] = `
+//------------------------------------------------------------------------------------------------------------
+void Hyperboloid2Sheets_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out float t1, out vec3 n0, out vec3 n1 )
+//------------------------------------------------------------------------------------------------------------
+{
+	vec3 hit;
+	float d = 0.0;
+	vec3 dn;
+
+	// implicit equation of a hyperboloid of 2 sheets (2 rounded v shapes that are mirrored and pointing at each other)
+	// -x^2 - z^2 + y^2 - 1 = 0
+	// for CSG purposes, we artificially truncate the hyperboloid at the middle, so that only 1 sheet (the top sheet) of the 2 mirrored sheets remains...
+	// This way, the total number of possible intersections will be 2 max (t0/t1), rather than possibly 4 (if we left it as 2 full sheets with added top/bottom caps)
+	
+	ro.y += 0.5; // this places the top-to-middle portion of the shape closer to its own origin, so that it rotates smoothly around its own middle. 
+	
+	// conservative range of k: 1 to 100
+	float j = k + 1.0;
+	float a = -k * rd.x * rd.x - k * rd.z * rd.z + j * rd.y * rd.y;
+	float b = 2.0 * (-k * rd.x * ro.x - k * rd.z * ro.z + j * rd.y * ro.y);
+	float c = (-k * ro.x * ro.x - k * ro.z * ro.z + j * ro.y * ro.y) - 1.0;
+	solveQuadratic(a, b, c, t0, t1);
+
+	hit = ro + rd * t0;
+	t0 = (hit.y > 1.0 || hit.y < 0.0) ? 0.0 : t0; // invalidate t0 if it's outside unit radius bounds of top half
+	n0 = vec3(2.0 * -hit.x * k, 2.0 * hit.y * j, 2.0 * -hit.z * k);
+
+	hit = ro + rd * t1;
+	t1 = (hit.y > 1.0 || hit.y < 0.0) ? 0.0 : t1; // invalidate t1 if it's outside unit radius bounds of top half
+	n1 = vec3(2.0 * -hit.x * k, 2.0 * hit.y * j, 2.0 * -hit.z * k);
+	// since the infinite hyperboloid is artificially cut off at the top and bottom so that it has a unit radius top cap,
+	// if t0 intersection was invalidated, try t1
+	if (t0 == 0.0)
+	{
+		t0 = t1;
+		n0 = n1;
+	}
+
+	// intersect unit-radius disk located at top opening of unit hyperboloid shape
+	d = (ro.y - 1.0) / -rd.y;
+	hit = ro + rd * d;
+	if (hit.x * hit.x + hit.z * hit.z <= 1.0) // disk with unit radius
+	{
+		if (rd.y > 0.0)
+		{
+			t1 = d;
+			n1 = vec3(0,1,0);
+		}
+		else
+		{
+			t1 = t0;
+			n1 = n0;
+			t0 = d;
+			n0 = vec3(0,1,0);
+		}
+	}
+	
+}
+`;
+
+THREE.ShaderChunk[ 'pathtracing_hyperbolicprism1sheet_csg_intersect' ] = `
+//------------------------------------------------------------------------------------------------------------
+void HyperbolicPrism1Sheet_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out float t1, out vec3 n0, out vec3 n1 )
+//------------------------------------------------------------------------------------------------------------
+{
+	vec3 hit;
+	float d0, d1, dr0, dr1;
+	d0 = d1 = dr0 = dr1 = 0.0;
+	vec3 dn0, dn1;
+	// start with the implicit equation of a hyperboloid of 1 sheet (hourglass shape extending infinitely in the +Y and -Y directions):
+	// x^2 + z^2 - y^2 - 1 = 0
+	// To obtain a hyperbolic prism along the Z axis, the Z component is simply removed, leaving:
+	// x^2 - y^2 - 1 = 0
+	// for CSG purposes, we artificially truncate the hyperbolic prism at the middle, so that only the top half of the hourglass remains with added top/bottom caps...
+	// This way, the total number of possible intersections will be 2 max (t0/t1), rather than possibly 4 (if we left it as a full hourglass with added top/bottom caps)
+	
+	ro.y += 0.5; // this places the top-to-middle portion of the shape closer to its own origin, so that it rotates smoothly around its own middle. 
+	
+	// conservative range of k: 1 to 100
+	float j = k - 1.0;
+	float a = k * rd.x * rd.x - j * rd.y * rd.y;
+	float b = 2.0 * (k * rd.x * ro.x - j * rd.y * ro.y);
+	float c = (k * ro.x * ro.x - j * ro.y * ro.y) - 1.0;
+	solveQuadratic(a, b, c, t0, t1);
+
+	hit = ro + rd * t0;
+	t0 = (hit.y > 1.0 || hit.y < 0.0 || hit.z < -1.0 || hit.z > 1.0) ? 0.0 : t0; // invalidate t0 if it's outside unit radius bounds of top half
+	n0 = vec3(2.0 * hit.x * k, 2.0 * -hit.y * j, 0.0);
+
+	hit = ro + rd * t1;
+	t1 = (hit.y > 1.0 || hit.y < 0.0 || hit.z < -1.0 || hit.z > 1.0) ? 0.0 : t1; // invalidate t1 if it's outside unit radius bounds of top half
+	n1 = vec3(2.0 * hit.x * k, 2.0 * -hit.y * j, 0.0);
+	// since the infinite hyperbolic shape is artificially cut off at the top and bottom so that it has a unit radius top cap,
+	// if t0 intersection was invalidated, try t1
+	if (t0 == 0.0)
+	{
+		t0 = t1;
+		n0 = n1;
+	}
+
+	// intersect top and bottom base rectangles
+	if (rd.y < 0.0)
+	{
+		d0 = (ro.y - 1.0) / -rd.y;
+		dn0 = vec3(0,1,0);
+		d1 = (ro.y + 0.0) / -rd.y;
+		dn1 = vec3(0,-1,0);
+		dr0 = 1.0; // top cap is unit radius
+		dr1 = 1.0 / sqrt(abs(k)); // bottom cap is related to k (smaller than 1)
+	}
+	else
+	{
+		d1 = (ro.y - 1.0) / -rd.y;
+		dn1 = vec3(0,1,0);
+		d0 = (ro.y + 0.0) / -rd.y;
+		dn0 = vec3(0,-1,0);
+		dr0 = 1.0 / sqrt(abs(k)); // bottom cap is related to k (smaller than 1)
+		dr1 = 1.0; // top cap is unit radius
+	}
+	
+	hit = ro + rd * d0;
+	if (hit.x <= dr0 && hit.x >= -dr0 && hit.z <= 1.0 && hit.z >= -1.0)
+	{
+		if (t0 != 0.0)
+		{
+			t1 = t0;
+			n1 = n0;
+		}
+		t0 = d0;
+		n0 = dn0;
+	}
+	hit = ro + rd * d1;
+	if (hit.x <= dr1 && hit.x >= -dr1 && hit.z <= 1.0 && hit.z >= -1.0)
+	{
+		t1 = d1;
+		n1 = dn1;
+	}
+
+	// intersect hyperbolic-shaped front and back wall pieces
+	if (rd.z < 0.0)
+	{
+		d0 = (ro.z - 1.0) / -rd.z;
+		dn0 = vec3(0,0,1);
+		d1 = (ro.z + 1.0) / -rd.z;
+		dn1 = vec3(0,0,-1);
+	}
+	else
+	{
+		d1 = (ro.z - 1.0) / -rd.z;
+		dn1 = vec3(0,0,1);
+		d0 = (ro.z + 1.0) / -rd.z;
+		dn0 = vec3(0,0,-1);
+	}
+	
+	hit = ro + rd * d0;
+	if (hit.x <= 1.0 && hit.x >= -1.0 && hit.y >= 0.0 && hit.y <= 1.0 && (k * hit.x * hit.x - j * hit.y * hit.y - 1.0) <= 0.0) // y is a quadratic (hyperbolic) function of x
+	{
+		if (t0 != 0.0)
+		{
+			t1 = t0;
+			n1 = n0;
+		}
+		
+		t0 = d0;
+		n0 = dn0;
+	}
+
+	hit = ro + rd * d1;
+	if (hit.x <= 1.0 && hit.x >= -1.0 && hit.y >= 0.0 && hit.y <= 1.0 && (k * hit.x * hit.x - j * hit.y * hit.y - 1.0) <= 0.0) // y is a quadratic (hyperbolic) function of x
+	{
+		t1 = d1;
+		n1 = dn1;
+	}
+}
+`;
+
+
+THREE.ShaderChunk[ 'pathtracing_hyperbolicprism2sheets_csg_intersect' ] = `
+//------------------------------------------------------------------------------------------------------------
+void HyperbolicPrism2Sheets_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out float t1, out vec3 n0, out vec3 n1 )
+//------------------------------------------------------------------------------------------------------------
+{
+	vec3 hit;
+	float d, d0, d1, dr0, dr1;
+	d = d0 = d1 = dr0 = dr1 = 0.0;
+	vec3 dn0, dn1;
+	// start with the implicit equation of a hyperboloid of 2 sheets (2 rounded v shapes that are mirrored and pointing at each other)
+	// -x^2 - z^2 + y^2 - 1 = 0
+	// To obtain a hyperbolic prism along the Z axis, the Z component is simply removed, leaving:
+	// -x^2 + y^2 - 1 = 0
+	// for CSG purposes, we artificially truncate the hyperbolic prism at the middle, so that only 1 sheet (the top sheet) of the 2 mirrored sheets remains...
+	// This way, the total number of possible intersections will be 2 max (t0/t1), rather than possibly 4 (if we left it as 2 full sheets with added top/bottom caps)
+	
+	ro.y += 0.5; // this places the top-to-middle portion of the shape closer to its own origin, so that it rotates smoothly around its own middle. 
+	
+	// conservative range of k: 1 to 100
+	float j = k + 1.0;
+	float a = -k * rd.x * rd.x + j * rd.y * rd.y;
+	float b = 2.0 * (-k * rd.x * ro.x + j * rd.y * ro.y);
+	float c = (-k * ro.x * ro.x + j * ro.y * ro.y) - 1.0;
+	solveQuadratic(a, b, c, t0, t1);
+
+	hit = ro + rd * t0;
+	t0 = (hit.y > 1.0 || hit.y < 0.0 || hit.z < -1.0 || hit.z > 1.0) ? 0.0 : t0; // invalidate t0 if it's outside unit radius bounds of top half
+	n0 = vec3(2.0 * -hit.x * k, 2.0 * hit.y * j, 0.0);
+
+	hit = ro + rd * t1;
+	t1 = (hit.y > 1.0 || hit.y < 0.0 || hit.z < -1.0 || hit.z > 1.0) ? 0.0 : t1; // invalidate t1 if it's outside unit radius bounds of top half
+	n1 = vec3(2.0 * -hit.x * k, 2.0 * hit.y * j, 0.0);
+	// since the infinite hyperbolic shape is artificially cut off at the top and bottom so that it has a unit radius top cap,
+	// if t0 intersection was invalidated, try t1
+	if (t0 == 0.0)
+	{
+		t0 = t1;
+		n0 = n1;
+	}
+
+	// intersect unit-radius square located at top opening of hyperbolic prism shape
+	d = (ro.y - 1.0) / -rd.y;
+	hit = ro + rd * d;
+	if (hit.x <= 1.0 && hit.x >= -1.0 && hit.z <= 1.0 && hit.z >= -1.0) // square with unit radius
+	{
+		if (rd.y > 0.0)
+		{
+			t1 = d;
+			n1 = vec3(0,1,0);
+		}
+		else
+		{
+			t1 = t0;
+			n1 = n0;
+			t0 = d;
+			n0 = vec3(0,1,0);
+		}
+	}
+
+	// intersect hyperbolic v-shaped front and back wall pieces
+	if (rd.z < 0.0)
+	{
+		d0 = (ro.z - 1.0) / -rd.z;
+		dn0 = vec3(0,0,1);
+		d1 = (ro.z + 1.0) / -rd.z;
+		dn1 = vec3(0,0,-1);
+	}
+	else
+	{
+		d1 = (ro.z - 1.0) / -rd.z;
+		dn1 = vec3(0,0,1);
+		d0 = (ro.z + 1.0) / -rd.z;
+		dn0 = vec3(0,0,-1);
+	}
+	
+	hit = ro + rd * d0;
+	if (hit.x <= 1.0 && hit.x >= -1.0 && hit.y >= 0.0 && hit.y <= 1.0 && (-k * hit.x * hit.x + j * hit.y * hit.y - 1.0) >= 0.0) // y is a quadratic (hyperbolic) function of x
+	{
+		if (t0 != 0.0)
+		{
+			t1 = t0;
+			n1 = n0;
+		}
+		
+		t0 = d0;
+		n0 = dn0;
+	}
+
+	hit = ro + rd * d1;
+	if (hit.x <= 1.0 && hit.x >= -1.0 && hit.y >= 0.0 && hit.y <= 1.0 && (-k * hit.x * hit.x + j * hit.y * hit.y - 1.0) >= 0.0) // y is a quadratic (hyperbolic) function of x
+	{
+		t1 = d1;
+		n1 = dn1;
+	}
+}
+`;
+
 THREE.ShaderChunk[ 'pathtracing_capsule_csg_intersect' ] = `
 //------------------------------------------------------------------------------------------------------------
 void Capsule_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out float t1, out vec3 n0, out vec3 n1 )
@@ -516,6 +998,7 @@ void Capsule_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out float t
 	t1 = (hit.y > k || hit.y < -k) ? 0.0 : t1;
 	n1 = vec3(2.0 * hit.x, 0.0, 2.0 * hit.z);
 
+	// intersect unit-radius sphere located at top opening of cylinder
 	vec3 s0pos = vec3(0, k, 0);
 	vec3 L = ro - s0pos;
 	a = dot(rd, rd);
@@ -531,6 +1014,7 @@ void Capsule_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out float t
 	s0n1 = vec3(2.0 * hit.x, 2.0 * (hit.y - s0pos.y), 2.0 * hit.z);
 	s0t1 = (hit.y < k) ? 0.0 : s0t1;
 
+	// now intersect unit-radius sphere located at bottom opening of cylinder
 	vec3 s1pos = vec3(0, -k, 0);
 	L = ro - s1pos;
 	a = dot(rd, rd);
@@ -585,6 +1069,7 @@ void Box_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1, out vec3 n
 	t1 = min( min(tmax.x, tmax.y), tmax.z);
 	n0 = -sign(rd) * step(tmin.yzx, tmin) * step(tmin.zxy, tmin);
 	n1 = -sign(rd) * step(tmax, tmax.yzx) * step(tmax, tmax.zxy);
+
 	if (t0 > t1) // invalid intersection
 		t0 = t1 = 0.0;
 }
