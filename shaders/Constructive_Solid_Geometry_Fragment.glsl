@@ -60,6 +60,8 @@ Quad quads[N_QUADS];
 
 #include <pathtracing_box_csg_intersect>
 
+#include <pathtracing_pyramidfrustum_csg_intersect>
+
 #include <pathtracing_csg_operations>
 
 #include <pathtracing_quad_intersect>
@@ -122,12 +124,14 @@ float SceneIntersect(Ray r, inout Intersection intersec)
 	else if (uShapeAType == 7)
 		Box_CSG_Intersect( rObj.origin, rObj.direction, A_t0, A_t1, A_n0, A_n1 );
 	else if (uShapeAType == 8)
-		ConicalPrism_CSG_Intersect( uA_kParameter, rObj.origin, rObj.direction, A_t0, A_t1, A_n0, A_n1 );
+		PyramidFrustum_CSG_Intersect( uA_kParameter, rObj.origin, rObj.direction, A_t0, A_t1, A_n0, A_n1 );
 	else if (uShapeAType == 9)
-		ParabolicPrism_CSG_Intersect( rObj.origin, rObj.direction, A_t0, A_t1, A_n0, A_n1 );
+		ConicalPrism_CSG_Intersect( uA_kParameter, rObj.origin, rObj.direction, A_t0, A_t1, A_n0, A_n1 );
 	else if (uShapeAType == 10)
+		ParabolicPrism_CSG_Intersect( rObj.origin, rObj.direction, A_t0, A_t1, A_n0, A_n1 );
+	else if (uShapeAType == 11)
 		HyperbolicPrism1Sheet_CSG_Intersect( uA_kParameter, rObj.origin, rObj.direction, A_t0, A_t1, A_n0, A_n1 );
-	else //if (uShapeAType == 11)
+	else //if (uShapeAType == 12)
 		HyperbolicPrism2Sheets_CSG_Intersect( uA_kParameter, rObj.origin, rObj.direction, A_t0, A_t1, A_n0, A_n1 );
 
 	n = normalize(A_n0);
@@ -157,12 +161,14 @@ float SceneIntersect(Ray r, inout Intersection intersec)
 	else if (uShapeBType == 7)
 		Box_CSG_Intersect( rObj.origin, rObj.direction, B_t0, B_t1, B_n0, B_n1 );
 	else if (uShapeBType == 8)
-		ConicalPrism_CSG_Intersect( uB_kParameter, rObj.origin, rObj.direction, B_t0, B_t1, B_n0, B_n1 );
+		PyramidFrustum_CSG_Intersect( uB_kParameter, rObj.origin, rObj.direction, B_t0, B_t1, B_n0, B_n1 );
 	else if (uShapeBType == 9)
-		ParabolicPrism_CSG_Intersect( rObj.origin, rObj.direction, B_t0, B_t1, B_n0, B_n1 );
+		ConicalPrism_CSG_Intersect( uB_kParameter, rObj.origin, rObj.direction, B_t0, B_t1, B_n0, B_n1 );
 	else if (uShapeBType == 10)
+		ParabolicPrism_CSG_Intersect( rObj.origin, rObj.direction, B_t0, B_t1, B_n0, B_n1 );
+	else if (uShapeBType == 11)
 		HyperbolicPrism1Sheet_CSG_Intersect( uB_kParameter, rObj.origin, rObj.direction, B_t0, B_t1, B_n0, B_n1 );
-	else //if (uShapeBType == 11)
+	else //if (uShapeBType == 12)
 		HyperbolicPrism2Sheets_CSG_Intersect( uB_kParameter, rObj.origin, rObj.direction, B_t0, B_t1, B_n0, B_n1 );
 
 	n = normalize(B_n0);
