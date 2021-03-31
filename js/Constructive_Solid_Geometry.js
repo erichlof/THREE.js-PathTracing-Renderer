@@ -327,7 +327,7 @@ function init_GUI()
 	transformA_RotationZController = rotationA_Folder.add(transformA_RotationZObject, 'rotationZ', 0, 359, 1).onChange(handleARotationChange);
 
 	shapeA_TypeController = gui.add(shapeA_TypeObject, 'A_Shape', ['Sphere', 'Cylinder', 'Cone', 'Paraboloid', 'Hyperboloid_1Sheet', 'Hyperboloid_2Sheets',
-		'Capsule', 'Box', 'ConicalPrism', 'ParabolicPrism', 'HyperbolicPrism_1Sheet', 'HyperbolicPrism_2Sheets']).onChange(handleShapeATypeChange);
+		'Capsule', 'Box', 'Pyramid_Frustum', 'ConicalPrism', 'ParabolicPrism', 'HyperbolicPrism_1Sheet', 'HyperbolicPrism_2Sheets']).onChange(handleShapeATypeChange);
 
 	parameterA_kController = gui.add(parameterA_kObject, 'A_kParameter', 0, 100, 0.5).onChange(handleAParameterKChange);
 
@@ -364,7 +364,7 @@ function init_GUI()
 	transformB_RotationZController = rotationB_Folder.add(transformB_RotationZObject, 'rotationZ', 0, 359, 1).onChange(handleBRotationChange);
 
 	shapeB_TypeController = gui.add(shapeB_TypeObject, 'B_Shape', ['Sphere', 'Cylinder', 'Cone', 'Paraboloid', 'Hyperboloid_1Sheet', 'Hyperboloid_2Sheets',
-		'Capsule', 'Box', 'ConicalPrism', 'ParabolicPrism', 'HyperbolicPrism_1Sheet', 'HyperbolicPrism_2Sheets']).onChange(handleShapeBTypeChange);
+		'Capsule', 'Box', 'Pyramid_Frustum', 'ConicalPrism', 'ParabolicPrism', 'HyperbolicPrism_1Sheet', 'HyperbolicPrism_2Sheets']).onChange(handleShapeBTypeChange);
 
 	parameterB_kController = gui.add(parameterB_kObject, 'B_kParameter', 0, 100, 0.5).onChange(handleBParameterKChange);
 
@@ -710,7 +710,7 @@ function updateVariablesAndUniforms()
 			pathTracingUniforms.uShapeAType.value = 7;
 			parameterA_kController.domElement.hidden = true;
 		}
-		else if (currentAShapeType == 'ConicalPrism')
+		else if (currentAShapeType == 'Pyramid_Frustum')
 		{
 			pathTracingUniforms.uShapeAType.value = 8;
 			parameterA_kController.domElement.hidden = false;
@@ -719,14 +719,23 @@ function updateVariablesAndUniforms()
 			parameterA_kController.step(0.01);
 			parameterA_kController.setValue(1.0);
 		}
-		else if (currentAShapeType == 'ParabolicPrism')
+		else if (currentAShapeType == 'ConicalPrism')
 		{
 			pathTracingUniforms.uShapeAType.value = 9;
+			parameterA_kController.domElement.hidden = false;
+			parameterA_kController.min(0.0);
+			parameterA_kController.max(1.0);
+			parameterA_kController.step(0.01);
+			parameterA_kController.setValue(1.0);
+		}
+		else if (currentAShapeType == 'ParabolicPrism')
+		{
+			pathTracingUniforms.uShapeAType.value = 10;
 			parameterA_kController.domElement.hidden = true;
 		}
 		else if (currentAShapeType == 'HyperbolicPrism_1Sheet')
 		{
-			pathTracingUniforms.uShapeAType.value = 10;
+			pathTracingUniforms.uShapeAType.value = 11;
 			parameterA_kController.domElement.hidden = false;
 			parameterA_kController.min(1);
 			parameterA_kController.max(100);
@@ -735,7 +744,7 @@ function updateVariablesAndUniforms()
 		}
 		else if (currentAShapeType == 'HyperbolicPrism_2Sheets')
 		{
-			pathTracingUniforms.uShapeAType.value = 11;
+			pathTracingUniforms.uShapeAType.value = 12;
 			parameterA_kController.domElement.hidden = false;
 			parameterA_kController.min(1);
 			parameterA_kController.max(100);
@@ -919,7 +928,7 @@ function updateVariablesAndUniforms()
 			pathTracingUniforms.uShapeBType.value = 7;
 			parameterB_kController.domElement.hidden = true;
 		}
-		else if (currentBShapeType == 'ConicalPrism')
+		else if (currentBShapeType == 'Pyramid_Frustum')
 		{
 			pathTracingUniforms.uShapeBType.value = 8;
 			parameterB_kController.domElement.hidden = false;
@@ -928,14 +937,23 @@ function updateVariablesAndUniforms()
 			parameterB_kController.step(0.01);
 			parameterB_kController.setValue(1.0);
 		}
-		else if (currentBShapeType == 'ParabolicPrism')
+		else if (currentBShapeType == 'ConicalPrism')
 		{
 			pathTracingUniforms.uShapeBType.value = 9;
+			parameterB_kController.domElement.hidden = false;
+			parameterB_kController.min(0.0);
+			parameterB_kController.max(1.0);
+			parameterB_kController.step(0.01);
+			parameterB_kController.setValue(1.0);
+		}
+		else if (currentBShapeType == 'ParabolicPrism')
+		{
+			pathTracingUniforms.uShapeBType.value = 10;
 			parameterB_kController.domElement.hidden = true;
 		}
 		else if (currentBShapeType == 'HyperbolicPrism_1Sheet')
 		{
-			pathTracingUniforms.uShapeBType.value = 10;
+			pathTracingUniforms.uShapeBType.value = 11;
 			parameterB_kController.domElement.hidden = false;
 			parameterB_kController.min(1);
 			parameterB_kController.max(100);
@@ -944,7 +962,7 @@ function updateVariablesAndUniforms()
 		}
 		else if (currentBShapeType == 'HyperbolicPrism_2Sheets')
 		{
-			pathTracingUniforms.uShapeBType.value = 11;
+			pathTracingUniforms.uShapeBType.value = 12;
 			parameterB_kController.domElement.hidden = false;
 			parameterB_kController.min(1);
 			parameterB_kController.max(100);
