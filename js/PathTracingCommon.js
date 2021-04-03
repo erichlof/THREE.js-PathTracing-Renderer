@@ -254,11 +254,11 @@ void Cylinder_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1, out v
 	solveQuadratic(a, b, c, t0, t1);
 
 	hit = ro + rd * t0;
-	t0 = (hit.y > 1.0 || hit.y < -1.0) ? 0.0 : t0;
+	t0 = (abs(hit.y) > 1.0) ? 0.0 : t0;
 	n0 = vec3(2.0 * hit.x, 0.0, 2.0 * hit.z);
 
 	hit = ro + rd * t1;
-	t1 = (hit.y > 1.0 || hit.y < -1.0) ? 0.0 : t1;
+	t1 = (abs(hit.y) > 1.0) ? 0.0 : t1;
 	n1 = vec3(2.0 * hit.x, 0.0, 2.0 * hit.z);
 
 	// intersect top and bottom unit-radius disk caps
@@ -316,11 +316,11 @@ void Cone_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out float t1, 
 	solveQuadratic(a, b, c, t0, t1);
 	
 	hit = ro + rd * t0;
-	t0 = (hit.y > 1.0 || hit.y < -1.0) ? 0.0 : t0; // invalidate t0 if it's outside truncated cone's height bounds
+	t0 = (abs(hit.y) > 1.0) ? 0.0 : t0; // invalidate t0 if it's outside truncated cone's height bounds
 	n0 = vec3(2.0 * hit.x * j, 2.0 * (h - hit.y) * (k * 0.25), 2.0 * hit.z * j);
 	
 	hit = ro + rd * t1;
-	t1 = (hit.y > 1.0 || hit.y < -1.0) ? 0.0 : t1; // invalidate t1 if it's outside truncated cone's height bounds
+	t1 = (abs(hit.y) > 1.0) ? 0.0 : t1; // invalidate t1 if it's outside truncated cone's height bounds
 	n1 = vec3(2.0 * hit.x * j, 2.0 * (h - hit.y) * (k * 0.25), 2.0 * hit.z * j);
 
 	// since the infinite double-cone is artificially cut off, if t0 intersection was invalidated, try t1
@@ -393,11 +393,11 @@ void ConicalPrism_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out fl
 	solveQuadratic(a, b, c, t0, t1);
 
 	hit = ro + rd * t0;
-	t0 = (hit.x > 1.0 || hit.x < -1.0 || hit.y < -1.0 || hit.y > 1.0 || hit.z < -1.0 || hit.z > 1.0) ? 0.0 : t0; // invalidate t0 if it's outside unit radius bounds
+	t0 = (abs(hit.y) > 1.0 || abs(hit.z) > 1.0) ? 0.0 : t0; // invalidate t0 if it's outside unit radius bounds
 	n0 = vec3(2.0 * hit.x * j, 2.0 * (hit.y - h) * -(k * 0.25), 0.0);
 	
 	hit = ro + rd * t1;
-	t1 = (hit.x > 1.0 || hit.x < -1.0 || hit.y < -1.0 || hit.y > 1.0 || hit.z < -1.0 || hit.z > 1.0) ? 0.0 : t1; // invalidate t1 if it's outside unit radius bounds
+	t1 = (abs(hit.y) > 1.0 || abs(hit.z) > 1.0) ? 0.0 : t1; // invalidate t1 if it's outside unit radius bounds
 	n1 = vec3(2.0 * hit.x * j, 2.0 * (hit.y - h) * -(k * 0.25), 0.0);
 	
 	// since the infinite double-cone shape is artificially cut off at the top and bottom,
@@ -429,7 +429,7 @@ void ConicalPrism_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out fl
 	}
 
 	hit = ro + rd * d0;
-	if (hit.x <= dr0 && hit.x >= -dr0 && hit.z <= 1.0 && hit.z >= -1.0)
+	if (abs(hit.x) <= dr0 && abs(hit.z) <= 1.0)
 	{
 		t1 = t0;
 		n1 = n0;
@@ -437,7 +437,7 @@ void ConicalPrism_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out fl
 		n0 = dn0;
 	}
 	hit = ro + rd * d1;
-	if (hit.x <= dr1 && hit.x >= -dr1 && hit.z <= 1.0 && hit.z >= -1.0)
+	if (abs(hit.x) <= dr1 && abs(hit.z) <= 1.0)
 	{
 		t1 = d1;
 		n1 = dn1;
@@ -460,7 +460,7 @@ void ConicalPrism_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out fl
 	}
 	
 	hit = ro + rd * d0;
-	if (hit.x <= 1.0 && hit.x >= -1.0 && hit.y >= -1.0 && hit.y <= 1.0 && (j * hit.x * hit.x - k * 0.25 * (hit.y - h) * (hit.y - h)) <= 0.0) // y is a quadratic (conical) function of x
+	if (abs(hit.x) <= 1.0 && abs(hit.y) <= 1.0 && (j * hit.x * hit.x - k * 0.25 * (hit.y - h) * (hit.y - h)) <= 0.0) // y is a quadratic (conical) function of x
 	{
 		if (t0 != 0.0)
 		{
@@ -473,12 +473,11 @@ void ConicalPrism_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out fl
 	}
 
 	hit = ro + rd * d1;
-	if (hit.x <= 1.0 && hit.x >= -1.0 && hit.y >= -1.0 && hit.y <= 1.0 && (j * hit.x * hit.x - k * 0.25 * (hit.y - h) * (hit.y - h)) <= 0.0) // y is a quadratic (conical) function of x
+	if (abs(hit.x) <= 1.0 && abs(hit.y) <= 1.0 && (j * hit.x * hit.x - k * 0.25 * (hit.y - h) * (hit.y - h)) <= 0.0) // y is a quadratic (conical) function of x
 	{
 		t1 = d1;
 		n1 = dn1;
 	}
-
 	
 }
 `;
@@ -503,11 +502,11 @@ void Paraboloid_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1, out
 	solveQuadratic(a, b, c, t0, t1);
 
 	hit = ro + rd * t0;
-	t0 = (hit.y < -1.0 || hit.y > 1.0) ? 0.0 : t0; // invalidate t0 if it's outside unit radius bounds
+	t0 = (abs(hit.y) > 1.0) ? 0.0 : t0; // invalidate t0 if it's outside unit radius bounds
 	n0 = vec3(2.0 * hit.x, 1.0 * k, 2.0 * hit.z);
 
 	hit = ro + rd * t1;
-	t1 = (hit.y < -1.0 || hit.y > 1.0) ? 0.0 : t1; // invalidate t1 if it's outside unit radius bounds
+	t1 = (abs(hit.y) > 1.0) ? 0.0 : t1; // invalidate t1 if it's outside unit radius bounds
 	n1 = vec3(2.0 * hit.x, 1.0 * k, 2.0 * hit.z);
 	// since the infinite paraboloid is artificially cut off at the bottom,
 	// if t0 intersection was invalidated, try t1
@@ -561,11 +560,11 @@ void ParabolicPrism_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1,
 	solveQuadratic(a, b, c, t0, t1);
 
 	hit = ro + rd * t0;
-	t0 = (hit.y < -1.0 || hit.z < -1.0 || hit.z > 1.0) ? 0.0 : t0; // invalidate t0 if it's outside unit radius bounds
+	t0 = (hit.y < -1.0 || abs(hit.z) > 1.0) ? 0.0 : t0; // invalidate t0 if it's outside unit radius bounds
 	n0 = vec3(2.0 * hit.x, 1.0 * k, 0.0);
 	
 	hit = ro + rd * t1;
-	t1 = (hit.y < -1.0 || hit.z < -1.0 || hit.z > 1.0) ? 0.0 : t1; // invalidate t1 if it's outside unit radius bounds
+	t1 = (hit.y < -1.0 || abs(hit.z) > 1.0) ? 0.0 : t1; // invalidate t1 if it's outside unit radius bounds
 	n1 = vec3(2.0 * hit.x, 1.0 * k, 0.0);
 	
 	// since the infinite parabolic shape is artificially cut off at the bottom,
@@ -579,7 +578,7 @@ void ParabolicPrism_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1,
 	// intersect unit-radius square located at bottom opening of unit paraboloid shape
 	d = (ro.y + 1.0) / -rd.y;
 	hit = ro + rd * d;
-	if (hit.x <= 1.0 && hit.x >= -1.0 && hit.z <= 1.0 && hit.z >= -1.0) // square with unit radius
+	if (abs(hit.x) <= 1.0 && abs(hit.z) <= 1.0) // square with unit radius
 	{
 		if (rd.y < 0.0)
 		{
@@ -787,11 +786,11 @@ void HyperbolicPrism1Sheet_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t
 	solveQuadratic(a, b, c, t0, t1);
 
 	hit = ro + rd * t0;
-	t0 = (hit.y > 1.0 || hit.y < 0.0 || hit.z < -1.0 || hit.z > 1.0) ? 0.0 : t0; // invalidate t0 if it's outside unit radius bounds of top half
+	t0 = (hit.y > 1.0 || hit.y < 0.0 || abs(hit.z) > 1.0) ? 0.0 : t0; // invalidate t0 if it's outside unit radius bounds of top half
 	n0 = vec3(2.0 * hit.x * k, 2.0 * -hit.y * j, 0.0);
 
 	hit = ro + rd * t1;
-	t1 = (hit.y > 1.0 || hit.y < 0.0 || hit.z < -1.0 || hit.z > 1.0) ? 0.0 : t1; // invalidate t1 if it's outside unit radius bounds of top half
+	t1 = (hit.y > 1.0 || hit.y < 0.0 || abs(hit.z) > 1.0) ? 0.0 : t1; // invalidate t1 if it's outside unit radius bounds of top half
 	n1 = vec3(2.0 * hit.x * k, 2.0 * -hit.y * j, 0.0);
 	// since the infinite hyperbolic shape is artificially cut off at the top and bottom so that it has a unit radius top cap,
 	// if t0 intersection was invalidated, try t1
@@ -822,7 +821,7 @@ void HyperbolicPrism1Sheet_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t
 	}
 	
 	hit = ro + rd * d0;
-	if (hit.x <= dr0 && hit.x >= -dr0 && hit.z <= 1.0 && hit.z >= -1.0)
+	if (abs(hit.x) <= dr0 && abs(hit.z) <= 1.0)
 	{
 		if (t0 != 0.0)
 		{
@@ -833,7 +832,7 @@ void HyperbolicPrism1Sheet_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t
 		n0 = dn0;
 	}
 	hit = ro + rd * d1;
-	if (hit.x <= dr1 && hit.x >= -dr1 && hit.z <= 1.0 && hit.z >= -1.0)
+	if (abs(hit.x) <= dr1 && abs(hit.z) <= 1.0)
 	{
 		t1 = d1;
 		n1 = dn1;
@@ -856,7 +855,7 @@ void HyperbolicPrism1Sheet_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t
 	}
 	
 	hit = ro + rd * d0;
-	if (hit.x <= 1.0 && hit.x >= -1.0 && hit.y >= 0.0 && hit.y <= 1.0 && (k * hit.x * hit.x - j * hit.y * hit.y - 1.0) <= 0.0) // y is a quadratic (hyperbolic) function of x
+	if (abs(hit.x) <= 1.0 && hit.y >= 0.0 && hit.y <= 1.0 && (k * hit.x * hit.x - j * hit.y * hit.y - 1.0) <= 0.0) // y is a quadratic (hyperbolic) function of x
 	{
 		if (t0 != 0.0)
 		{
@@ -869,7 +868,7 @@ void HyperbolicPrism1Sheet_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t
 	}
 
 	hit = ro + rd * d1;
-	if (hit.x <= 1.0 && hit.x >= -1.0 && hit.y >= 0.0 && hit.y <= 1.0 && (k * hit.x * hit.x - j * hit.y * hit.y - 1.0) <= 0.0) // y is a quadratic (hyperbolic) function of x
+	if (abs(hit.x) <= 1.0 && hit.y >= 0.0 && hit.y <= 1.0 && (k * hit.x * hit.x - j * hit.y * hit.y - 1.0) <= 0.0) // y is a quadratic (hyperbolic) function of x
 	{
 		t1 = d1;
 		n1 = dn1;
@@ -904,11 +903,11 @@ void HyperbolicPrism2Sheets_CSG_Intersect( float k, vec3 ro, vec3 rd, out float 
 	solveQuadratic(a, b, c, t0, t1);
 
 	hit = ro + rd * t0;
-	t0 = (hit.y > 1.0 || hit.y < 0.0 || hit.z < -1.0 || hit.z > 1.0) ? 0.0 : t0; // invalidate t0 if it's outside unit radius bounds of top half
+	t0 = (hit.y > 1.0 || hit.y < 0.0 || abs(hit.z) > 1.0) ? 0.0 : t0; // invalidate t0 if it's outside unit radius bounds of top half
 	n0 = vec3(2.0 * -hit.x * k, 2.0 * hit.y * j, 0.0);
 
 	hit = ro + rd * t1;
-	t1 = (hit.y > 1.0 || hit.y < 0.0 || hit.z < -1.0 || hit.z > 1.0) ? 0.0 : t1; // invalidate t1 if it's outside unit radius bounds of top half
+	t1 = (hit.y > 1.0 || hit.y < 0.0 || abs(hit.z) > 1.0) ? 0.0 : t1; // invalidate t1 if it's outside unit radius bounds of top half
 	n1 = vec3(2.0 * -hit.x * k, 2.0 * hit.y * j, 0.0);
 	// since the infinite hyperbolic shape is artificially cut off at the top and bottom so that it has a unit radius top cap,
 	// if t0 intersection was invalidated, try t1
@@ -921,7 +920,7 @@ void HyperbolicPrism2Sheets_CSG_Intersect( float k, vec3 ro, vec3 rd, out float 
 	// intersect unit-radius square located at top opening of hyperbolic prism shape
 	d = (ro.y - 1.0) / -rd.y;
 	hit = ro + rd * d;
-	if (hit.x <= 1.0 && hit.x >= -1.0 && hit.z <= 1.0 && hit.z >= -1.0) // square with unit radius
+	if (abs(hit.x) <= 1.0 && abs(hit.z) <= 1.0) // square with unit radius
 	{
 		if (rd.y > 0.0)
 		{
@@ -954,7 +953,7 @@ void HyperbolicPrism2Sheets_CSG_Intersect( float k, vec3 ro, vec3 rd, out float 
 	}
 	
 	hit = ro + rd * d0;
-	if (hit.x <= 1.0 && hit.x >= -1.0 && hit.y >= 0.0 && hit.y <= 1.0 && (-k * hit.x * hit.x + j * hit.y * hit.y - 1.0) >= 0.0) // y is a quadratic (hyperbolic) function of x
+	if (abs(hit.x) <= 1.0 && hit.y >= 0.0 && hit.y <= 1.0 && (-k * hit.x * hit.x + j * hit.y * hit.y - 1.0) >= 0.0) // y is a quadratic (hyperbolic) function of x
 	{
 		if (t0 != 0.0)
 		{
@@ -967,7 +966,7 @@ void HyperbolicPrism2Sheets_CSG_Intersect( float k, vec3 ro, vec3 rd, out float 
 	}
 
 	hit = ro + rd * d1;
-	if (hit.x <= 1.0 && hit.x >= -1.0 && hit.y >= 0.0 && hit.y <= 1.0 && (-k * hit.x * hit.x + j * hit.y * hit.y - 1.0) >= 0.0) // y is a quadratic (hyperbolic) function of x
+	if (abs(hit.x) <= 1.0 && hit.y >= 0.0 && hit.y <= 1.0 && (-k * hit.x * hit.x + j * hit.y * hit.y - 1.0) >= 0.0) // y is a quadratic (hyperbolic) function of x
 	{
 		t1 = d1;
 		n1 = dn1;
@@ -991,11 +990,11 @@ void Capsule_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out float t
 	solveQuadratic(a, b, c, t0, t1);
 
 	hit = ro + rd * t0;
-	t0 = (hit.y > k || hit.y < -k) ? 0.0 : t0;
+	t0 = (abs(hit.y) > k) ? 0.0 : t0;
 	n0 = vec3(2.0 * hit.x, 0.0, 2.0 * hit.z);
 
 	hit = ro + rd * t1;
-	t1 = (hit.y > k || hit.y < -k) ? 0.0 : t1;
+	t1 = (abs(hit.y) > k) ? 0.0 : t1;
 	n1 = vec3(2.0 * hit.x, 0.0, 2.0 * hit.z);
 
 	// intersect unit-radius sphere located at top opening of cylinder
@@ -1279,7 +1278,7 @@ void PyramidFrustum_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out 
 	}
 
 	hit = ro + rd * d0;
-	if (hit.x <= dr0 && hit.x >= -dr0 && hit.z <= dr0 && hit.z >= -dr0)
+	if (abs(hit.x) <= dr0 && abs(hit.z) <= dr0)
 	{
 		t1 = t0;
 		n1 = n0;
@@ -1287,7 +1286,7 @@ void PyramidFrustum_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out 
 		n0 = dn0;
 	}
 	hit = ro + rd * d1;
-	if (hit.x <= dr1 && hit.x >= -dr1 && hit.z <= dr1 && hit.z >= -dr1)
+	if (abs(hit.x) <= dr1 && abs(hit.z) <= dr1)
 	{
 		t1 = d1;
 		n1 = dn1;
@@ -2638,14 +2637,15 @@ float tentFilter(float x)
 {
 	return (x < 0.5) ? sqrt(2.0 * x) - 1.0 : 1.0 - sqrt(2.0 - (2.0 * x));
 }
+
 void main( void )
 {
-	// not needed, three.js has a built-in uniform named cameraPosition
-	//vec3 camPos     = vec3( uCameraMatrix[3][0],  uCameraMatrix[3][1],  uCameraMatrix[3][2]);
 	
 	vec3 camRight   = vec3( uCameraMatrix[0][0],  uCameraMatrix[0][1],  uCameraMatrix[0][2]);
 	vec3 camUp      = vec3( uCameraMatrix[1][0],  uCameraMatrix[1][1],  uCameraMatrix[1][2]);
 	vec3 camForward = vec3(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]);
+	// the following is not needed - three.js has a built-in uniform named cameraPosition
+	//vec3 camPos   = vec3( uCameraMatrix[3][0],  uCameraMatrix[3][1],  uCameraMatrix[3][2]);
 	
 	// calculate unique seed for rng() function
 	seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord); // old way of generating random numbers
