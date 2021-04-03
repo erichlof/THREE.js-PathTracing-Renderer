@@ -590,8 +590,8 @@ vec3 CalculateRadiance(Ray originalRay)
 
 	vec3 lightHitEmission = quads[0].emission;
 	vec3 randPointOnLight;
-	randPointOnLight.x = mix(quads[0].v0.x, quads[0].v1.x, rand());
-	randPointOnLight.y = mix(quads[0].v0.y, quads[0].v3.y, rand());
+	randPointOnLight.x = mix(quads[0].v0.x, quads[0].v1.x, rng());
+	randPointOnLight.y = mix(quads[0].v0.y, quads[0].v3.y, rng());
 	randPointOnLight.z = quads[0].v0.z;
 	vec3 lightHitPos = randPointOnLight;
 	vec3 lightNormal = normalize(quads[0].normal);
