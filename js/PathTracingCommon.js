@@ -11,6 +11,9 @@ uniform float uApertureSize;
 uniform float uFocusDistance;
 uniform float uSamplesPerFrame;
 uniform float uFrameBlendingAmount;
+uniform float uColorEdgeSharpeningRate;
+uniform float uNormalEdgeSharpeningRate;
+uniform float uObjectEdgeSharpeningRate;
 uniform float uSunAngularDiameterCos;
 uniform vec2 uResolution;
 uniform vec2 uRandomVec2;
@@ -2449,27 +2452,20 @@ vec3 Get_Sky_Color(Ray r, vec3 sunDirection)
 
 THREE.ShaderChunk[ 'pathtracing_random_functions' ] = `
 // globals used in rand() function
-vec4 randVec4 = vec4(0); // samples and holds the RGBA blueNoise texture value for this pixel
-float randNumber = 0.0; // the final randomly generated number (range: 0.0 to 1.0)
-float counter = -1.0; // will get incremented by 1 on each call to rand()
-int channel = 0; // the final selected color channel to use for rand() calc (range: 0 to 3, corresponds to R,G,B, or A)
-// float rand()
-// {
-// 	counter += 1.0; // increment counter by 1 on every call to rand()
-// 	// cycles through channels, if 'modulus' is 1.0, channel will always be 0 (the R color channel)
-// 	channel = int(mod(counter, modulus)); 
-// 	// but if 'modulus' was 4.0, channel will cycle through all available channels: 0,1,2,3,0,1,2,3, and so on...
-// 	randNumber += randVec4[channel]; // add value stored in channel 0:R, 1:G, 2:B, or 3:A to accumulating randNumber
-// 	return fract(randNumber); // we're only interested in randNumber's fractional value between 0.0 (inclusive) and 1.0 (non-inclusive)
-// }
+vec4 randVec4; // samples and holds the RGBA blueNoise texture value for this pixel
+float randNumber; // the final randomly generated number (range: 0.0 to 1.0)
+float counter; // will get incremented by 1 on each call to rand()
+int channel; // the final selected color channel to use for rand() calc (range: 0 to 3, corresponds to R,G,B, or A)
+
 float rand()
 {
 	counter++; // increment counter by 1 on every call to rand()
 	// cycles through channels, if modulus is 1.0, channel will always be 0 (the R color channel)
-	channel = int(mod(counter, 4.0)); 
+	channel = int(mod(counter, 2.0)); 
 	// but if modulus was 4.0, channel will cycle through all available channels: 0,1,2,3,0,1,2,3, and so on...
 	randNumber = randVec4[channel]; // get value stored in channel 0:R, 1:G, 2:B, or 3:A
 	return fract(randNumber); // we're only interested in randNumber's fractional value between 0.0 (inclusive) and 1.0 (non-inclusive)
+	//return clamp(randNumber,0.0,0.999999999); // we're only interested in randNumber's fractional value between 0.0 (inclusive) and 1.0 (non-inclusive)
 }
 // from iq https://www.shadertoy.com/view/4tXyWN
 // global seed used in rng() function
@@ -2483,15 +2479,15 @@ float rng()
 }
 vec3 randomSphereDirection()
 {
-    	float up = rand() * 2.0 - 1.0; // range: -1 to +1
+    	float up = rng() * 2.0 - 1.0; // range: -1 to +1
 	float over = sqrt( max(0.0, 1.0 - up * up) );
-	float around = rand() * TWO_PI;
+	float around = rng() * TWO_PI;
 	return normalize(vec3(cos(around) * over, up, sin(around) * over));	
 }
 vec3 randomDirectionInHemisphere(vec3 nl)
 {
-	float r = rand(); // uniform distribution in hemisphere
-	float phi = rand() * TWO_PI;
+	float r = rng(); // uniform distribution in hemisphere
+	float phi = rng() * TWO_PI;
 	float x = r * cos(phi);
 	float y = r * sin(phi);
 	float z = sqrt(1.0 - x*x - y*y);
@@ -2502,8 +2498,8 @@ vec3 randomDirectionInHemisphere(vec3 nl)
 }
 vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 {
-	float r = sqrt(rand()); // cos-weighted distribution in hemisphere
-	float phi = rand() * TWO_PI;
+	float r = sqrt(rng()); // cos-weighted distribution in hemisphere
+	float phi = rng() * TWO_PI;
 	float x = r * cos(phi);
 	float y = r * sin(phi);
 	float z = sqrt(1.0 - x*x - y*y);
@@ -2515,7 +2511,7 @@ vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 // #define N_POINTS 32.0
 // vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 // {
-// 	float i = floor(N_POINTS * rand()) + (rand() * 0.5);
+// 	float i = floor(N_POINTS * rng()) + (rng() * 0.5);
 // 			// the Golden angle in radians
 // 	float theta = i * 2.39996322972865332 + mod(uSampleCounter, TWO_PI);
 // 	theta = mod(theta, TWO_PI);
@@ -2536,9 +2532,9 @@ vec3 randomDirectionInSpecularLobe(vec3 reflectionDir, float roughness)
 {
 	roughness = clamp(roughness, 0.0, 1.0);
 	float exponent = mix(7.0, 0.0, sqrt(roughness));
-	float cosTheta = pow(rand(), 1.0 / (exp(exponent) + 1.0));
+	float cosTheta = pow(rng(), 1.0 / (exp(exponent) + 1.0));
 	float sinTheta = sqrt(max(0.0, 1.0 - cosTheta * cosTheta));
-	float phi = rand() * TWO_PI;
+	float phi = rng() * TWO_PI;
 	
 	vec3 U = normalize( cross(vec3(0.7071067811865475, 0.7071067811865475, 0), reflectionDir ) );
 	vec3 V = cross(reflectionDir, U);
@@ -2547,18 +2543,18 @@ vec3 randomDirectionInSpecularLobe(vec3 reflectionDir, float roughness)
 // //the following alternative skips the creation of tangent and bi-tangent vectors u and v 
 // vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 // {
-// 	float phi = rand() * TWO_PI;
-// 	float theta = 2.0 * rand() - 1.0;
+// 	float phi = rng() * TWO_PI;
+// 	float theta = 2.0 * rng() - 1.0;
 // 	return nl + vec3(sqrt(1.0 - theta * theta) * vec2(cos(phi), sin(phi)), theta);
 // }
 // vec3 randomDirectionInPhongSpecular(vec3 reflectionDir, float roughness)
 // {
-// 	float phi = rand() * TWO_PI;
+// 	float phi = rng() * TWO_PI;
 // 	roughness = clamp(roughness, 0.0, 1.0);
 // 	roughness = mix(13.0, 0.0, sqrt(roughness));
 // 	float exponent = exp(roughness) + 1.0;
 // 	//weight = (exponent + 2.0) / (exponent + 1.0);
-// 	float cosTheta = pow(rand(), 1.0 / (exponent + 1.0));
+// 	float cosTheta = pow(rng(), 1.0 / (exponent + 1.0));
 // 	float radius = sqrt(max(0.0, 1.0 - cosTheta * cosTheta));
 // 	vec3 u = normalize( cross( abs(reflectionDir.x) > 0.1 ? vec3(0, 1, 0) : vec3(1, 0, 0), reflectionDir ) );
 // 	vec3 v = cross(reflectionDir, u);
@@ -2573,10 +2569,10 @@ vec3 sampleSphereLight(vec3 x, vec3 nl, Sphere light, out float weight)
 	vec3 dirToLight = (light.position - x); // no normalize (for distance calc below)
 	float cos_alpha_max = sqrt(1.0 - clamp((light.radius * light.radius) / dot(dirToLight, dirToLight), 0.0, 1.0));
 	
-	float cos_alpha = mix( cos_alpha_max, 1.0, rand() ); // 1.0 + (rand() * (cos_alpha_max - 1.0));
+	float cos_alpha = mix( cos_alpha_max, 1.0, rng() ); // 1.0 + (rng() * (cos_alpha_max - 1.0));
 	// * 0.75 below ensures shadow rays don't miss the light, due to shader float precision
 	float sin_alpha = sqrt(max(0.0, 1.0 - cos_alpha * cos_alpha)) * 0.75; 
-	float phi = rand() * TWO_PI;
+	float phi = rng() * TWO_PI;
 	dirToLight = normalize(dirToLight);
 	
 	vec3 U = normalize( cross(vec3(0.7071067811865475, 0.7071067811865475, 0), dirToLight ) );
@@ -2593,9 +2589,9 @@ THREE.ShaderChunk[ 'pathtracing_sample_quad_light' ] = `
 vec3 sampleQuadLight(vec3 x, vec3 nl, Quad light, out float weight)
 {
 	vec3 randPointOnLight;
-	randPointOnLight.x = mix(light.v0.x, light.v1.x, clamp(rand(), 0.1, 0.9));
+	randPointOnLight.x = mix(light.v0.x, light.v2.x, clamp(rng(), 0.1, 0.9));
 	randPointOnLight.y = light.v0.y;
-	randPointOnLight.z = mix(light.v0.z, light.v3.z, clamp(rand(), 0.1, 0.9));
+	randPointOnLight.z = mix(light.v0.z, light.v2.z, clamp(rng(), 0.1, 0.9));
 	vec3 dirToLight = randPointOnLight - x;
 	float r2 = distance(light.v0, light.v1) * distance(light.v0, light.v3);
 	float d2 = dot(dirToLight, dirToLight);
@@ -2640,7 +2636,6 @@ float tentFilter(float x)
 
 void main( void )
 {
-	
 	vec3 camRight   = vec3( uCameraMatrix[0][0],  uCameraMatrix[0][1],  uCameraMatrix[0][2]);
 	vec3 camUp      = vec3( uCameraMatrix[1][0],  uCameraMatrix[1][1],  uCameraMatrix[1][2]);
 	vec3 camForward = vec3(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]);
@@ -2648,38 +2643,88 @@ void main( void )
 	//vec3 camPos   = vec3( uCameraMatrix[3][0],  uCameraMatrix[3][1],  uCameraMatrix[3][2]);
 	
 	// calculate unique seed for rng() function
-	seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord); // old way of generating random numbers
-	randVec4 = texture(tBlueNoiseTexture, (gl_FragCoord.xy + (uRandomVec2 * 255.0)) / 255.0 ); // new way of rand()
+	seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord);
+	// initialize rand() variables
+	counter = -1.0; // will get incremented by 1 on each call to rand()
+	channel = 0; // the final selected color channel to use for rand() calc (range: 0 to 3, corresponds to R,G,B, or A)
+	randNumber = 0.0; // the final randomly-generated number (range: 0.0 to 1.0)
+	randVec4 = vec4(0); // samples and holds the RGBA blueNoise texture value for this pixel
+	randVec4 = texelFetch(tBlueNoiseTexture, ivec2(mod(gl_FragCoord.xy + floor(uRandomVec2 * 256.0), 256.0)), 0);
+	
+	// rand() produces higher FPS and almost immediate convergence, but may have very slight jagged diagonal edges on higher frequency color patterns, i.e. checkerboards.
+	//vec2 pixelOffset = vec2( tentFilter(rand()), tentFilter(rand()) );
+	// rng() has a little less FPS on mobile, and a little more noisy initially, but eventually converges on perfect anti-aliased edges - use this if 'beauty-render' is desired.
 	vec2 pixelOffset = vec2( tentFilter(rng()), tentFilter(rng()) );
+	
 	// we must map pixelPos into the range -1.0 to +1.0
 	vec2 pixelPos = ((gl_FragCoord.xy + pixelOffset) / uResolution) * 2.0 - 1.0;
 	vec3 rayDir = normalize( pixelPos.x * camRight * uULen + pixelPos.y * camUp * uVLen + camForward );
 	
 	// depth of field
 	vec3 focalPoint = uFocusDistance * rayDir;
-	float randomAngle = rand() * TWO_PI; // pick random point on aperture
-	float randomRadius = rand() * uApertureSize;
+	float randomAngle = rng() * TWO_PI; // pick random point on aperture
+	float randomRadius = rng() * uApertureSize;
 	vec3  randomAperturePos = ( cos(randomAngle) * camRight + sin(randomAngle) * camUp ) * sqrt(randomRadius);
 	// point on aperture to focal point
 	vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
 	
 	Ray ray = Ray( cameraPosition + randomAperturePos , finalRayDir );
 	SetupScene();
-				
-	// perform path tracing and get resulting pixel color
-	vec3 pixelColor = CalculateRadiance(ray);
 	
-	vec3 previousColor = texelFetch(tPreviousTexture, ivec2(gl_FragCoord.xy), 0).rgb;
+	// Edge Detection - don't want to blur edges where either surface normals change abruptly (i.e. room wall corners), objects overlap each other (i.e. edge of a foreground sphere in front of another sphere right behind it),
+	// or an abrupt color variation on the same smooth surface, even if it has similar surface normals (i.e. checkerboard pattern). Want to keep all of these cases as sharp as possible - no blur filter will be applied.
+	vec3 objectNormal, objectColor;
+	float objectID = -INFINITY;
+	float pixelSharpness = 0.0;
+	
+	// perform path tracing and get resulting pixel color
+	vec4 currentPixel = vec4( vec3(CalculateRadiance(ray, objectNormal, objectColor, objectID, pixelSharpness)), 0.0 );
+
+	// if difference between normals of neighboring pixels is less than the first edge0 threshold, the white edge line effect is considered off (0.0)
+	float edge0 = 0.2; // edge0 is the minimum difference required between normals of neighboring pixels to start becoming a white edge line
+	// any difference between normals of neighboring pixels that is between edge0 and edge1 smoothly ramps up the white edge line brightness (smoothstep 0.0-1.0)
+	float edge1 = 0.6; // once the difference between normals of neighboring pixels is >= this edge1 threshold, the white edge line is considered fully bright (1.0)
+	float difference_Nx = fwidth(objectNormal.x);
+	float difference_Ny = fwidth(objectNormal.y);
+	float difference_Nz = fwidth(objectNormal.z);
+	float normalDifference = smoothstep(edge0, edge1, difference_Nx) + smoothstep(edge0, edge1, difference_Ny) + smoothstep(edge0, edge1, difference_Nz);
+
+	edge0 = 0.0;
+	edge1 = 0.5;
+	float difference_obj = abs(dFdx(objectID)) > 0.0 ? 1.0 : 0.0;
+	difference_obj += abs(dFdy(objectID)) > 0.0 ? 1.0 : 0.0;
+	float objectDifference = smoothstep(edge0, edge1, difference_obj);
+
+	float difference_col = length(dFdx(objectColor)) > 0.0 ? 1.0 : 0.0;
+	difference_col += length(dFdy(objectColor)) > 0.0 ? 1.0 : 0.0;
+	float colorDifference = smoothstep(edge0, edge1, difference_col);
+	// edge detector (normal and object differences) white-line debug visualization
+	//currentPixel.rgb += 1.0 * vec3(max(normalDifference, objectDifference));
+	
+	vec4 previousPixel = texelFetch(tPreviousTexture, ivec2(gl_FragCoord.xy), 0);
+
 	if (uFrameCounter == 1.0) // camera just moved after being still
 	{
-		previousColor = vec3(0); // clear rendering accumulation buffer
+		previousPixel = vec4(0); // clear rendering accumulation buffer
 	}
 	else if (uCameraIsMoving) // camera is currently moving
 	{
-		previousColor *= 0.5; // motion-blur trail amount (old image)
-		pixelColor *= 0.5; // brightness of new image (noisy)
+		previousPixel.rgb *= 0.5; // motion-blur trail amount (old image)
+		currentPixel.rgb *= 0.5; // brightness of new image (noisy)
+		previousPixel.a = 0.0;
 	}
-		
-	pc_fragColor = vec4( pixelColor + previousColor, 1.0 );
+
+	currentPixel.a = pixelSharpness;
+
+	currentPixel.a = colorDifference  >= 1.0 ? min(uSampleCounter * uColorEdgeSharpeningRate , 1.01) : currentPixel.a;
+	currentPixel.a = normalDifference >= 1.0 ? min(uSampleCounter * uNormalEdgeSharpeningRate, 1.01) : currentPixel.a;
+	currentPixel.a = objectDifference >= 1.0 ? min(uSampleCounter * uObjectEdgeSharpeningRate, 1.01) : currentPixel.a;
+	
+	// Eventually, all edge-containing pixels' .a (alpha channel) values will converge to 1.01, which keeps them from getting blurred by the box-blur filter, thus retaining sharpness.
+	if (pixelSharpness == 1.0 || previousPixel.a == 1.01)
+		currentPixel.a = 1.01;
+	
+	
+	pc_fragColor = vec4(previousPixel.rgb + currentPixel.rgb, currentPixel.a);
 }
 `;
