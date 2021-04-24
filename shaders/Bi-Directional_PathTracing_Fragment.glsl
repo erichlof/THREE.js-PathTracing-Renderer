@@ -48,13 +48,13 @@ Box boxes[N_BOXES];
 
 #include <pathtracing_box_intersect>
 
-#include <pathtracing_sample_sphere_light>
+//#include <pathtracing_sample_sphere_light>
 
 
 
-//-----------------------------------------------------------------------
-float SceneIntersect( Ray r, inout Intersection intersec )
-//-----------------------------------------------------------------------
+//---------------------------------------------------------------------------------------
+float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedObjectID )
+//---------------------------------------------------------------------------------------
 {
 	vec3 normal;
         float d;
@@ -74,6 +74,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.color = quads[i].color;
 			intersec.roughness = quads[i].roughness;
 			intersec.type = quads[i].type;
+			intersectedObjectID = 0.0;
 		}
         }
 	
@@ -87,6 +88,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		intersec.color = boxes[0].color;
 		intersec.roughness = boxes[0].roughness;
 		intersec.type = boxes[0].type;
+		intersectedObjectID = 1.0;
 	}
 	
 	// TABLE LEGS, LAMP POST, and SPOTLIGHT CASING
@@ -101,6 +103,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.color = openCylinders[i].color;
 			intersec.roughness = openCylinders[i].roughness;
 			intersec.type = openCylinders[i].type;
+			intersectedObjectID = 2.0;
 		}
         }
 	
@@ -116,6 +119,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.color = spheres[i].color;
 			intersec.roughness = spheres[i].roughness;
 			intersec.type = spheres[i].type;
+			intersectedObjectID = 3.0;
 		}
         }
 	
@@ -131,6 +135,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.color = disks[i].color;
 			intersec.roughness = disks[i].roughness;
 			intersec.type = disks[i].type;
+			intersectedObjectID = 4.0;
 		}
 	}
 	
@@ -144,6 +149,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		intersec.color = cones[0].color;
 		intersec.roughness = cones[0].roughness;
 		intersec.type = cones[0].type;
+		intersectedObjectID = 5.0;
 	}
 	
 	
@@ -163,6 +169,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		intersec.color = ellipsoids[0].color;
 		intersec.roughness = ellipsoids[0].roughness;
 		intersec.type = ellipsoids[0].type;
+		intersectedObjectID = 6.0;
 	}
 	
 	d = SphereIntersect( spheres[3].radius, spheres[3].position, r );
@@ -178,22 +185,22 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		intersec.color = spheres[3].color;
 		intersec.roughness = spheres[3].roughness;
 		intersec.type = spheres[3].type;
+		intersectedObjectID = 6.0; // same as ellipsoid above - sphere and ellipsoid make up 1 object
 	}
 	
 	
 	return t;
-}
+} // end float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedObjectID )
 
 
 
-//-----------------------------------------------------------------------
-vec3 CalculateRadiance(Ray originalRay)
-//-----------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------------------------
+vec3 CalculateRadiance( Ray originalRay, out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
+//---------------------------------------------------------------------------------------------------------------------------------------
 {
 	Intersection intersec;
-	int randChoose = int(rng() * 2.0); // 2 lights to choose from
-	Sphere lightChoice = spheres[randChoose]; 
-	//lightChoice = spheres[1]; // override lightChoice
+	float randChoose = rand() * 2.0; // 2 lights to choose from
+	Sphere lightChoice = spheres[int(randChoose)]; 
 	
 	vec3 accumCol = vec3(0);
         vec3 mask = vec3(1);
@@ -205,7 +212,7 @@ vec3 CalculateRadiance(Ray originalRay)
 	//vec3 lightHitPos = lightChoice.position + normalize(randomSphereDirection()) * (lightChoice.radius * 0.5);
 	
 	vec3 lightNormal = vec3(0,1,0);
-	if (randChoose > 0)
+	if (randChoose >= 1.0)
 		lightNormal = spotlightDir;
 	lightNormal = normalize(lightNormal);
 	vec3 lightDir = randomCosWeightedDirectionInHemisphere(lightNormal);
@@ -219,8 +226,10 @@ vec3 CalculateRadiance(Ray originalRay)
 	float nc, nt, ratioIoR, Re, Tr;
 	float P, RP, TP;
 	float weight;
+	float intersectedObjectID;
 	
 	int diffuseCount = 0;
+	int previousIntersecType = -100;
 
 	bool bounceIsSpecular = true;
 	bool sampleLight = false;
@@ -232,29 +241,51 @@ vec3 CalculateRadiance(Ray originalRay)
 	Ray r = Ray(lightChoice.position, lightDir);
 	r.direction = normalize(r.direction);
 	r.origin += r.direction * (lightChoice.radius * 1.1);
-	t = SceneIntersect(r, intersec);
+	t = SceneIntersect(r, intersec, intersectedObjectID);
 	if (intersec.type == DIFF)
 	{
 		lightHitPos = r.origin + r.direction * t;
-		weight = max(0.0, dot(-r.direction, normalize(intersec.normal)));
-		lightHitEmission *= intersec.color * weight;
+		lightHitEmission *= intersec.color;
 	}
 
 	
 	// regular path tracing from camera
 	r = originalRay;
 
-	for (int bounces = 0; bounces < 5; bounces++)
+	intersectedObjectID = -100.0;
+
+
+	for (int bounces = 0; bounces < 6; bounces++)
 	{
 
-		t = SceneIntersect(r, intersec);
+		t = SceneIntersect(r, intersec, intersectedObjectID);
 		
 		if (t == INFINITY)
 			break;
 		
+
+		// useful data 
+		n = normalize(intersec.normal);
+                nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
+		x = r.origin + r.direction * t;
+
+		if (bounces == 0)
+		{
+			objectNormal = nl;
+			objectColor = intersec.color;
+			objectID = intersectedObjectID;
+		}
+			
+		
 		
 		if (intersec.type == LIGHT)
 		{	
+			if (diffuseCount == 0)
+			{
+				objectNormal = nl;
+				pixelSharpness = 1.0;
+			}
+
 			if (firstTypeWasDIFF && bounceIsSpecular)
 				accumCol = mask * intersec.emission * 50.0;		 
 			else if (bounceIsSpecular || sampleLight)
@@ -283,15 +314,12 @@ vec3 CalculateRadiance(Ray originalRay)
 		if (sampleLight)
 			break;
 
-		// useful data 
-		n = normalize(intersec.normal);
-                nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
-		x = r.origin + r.direction * t;
-
 		    
                 if (intersec.type == DIFF) // Ideal DIFFUSE reflection
 		{
 			diffuseCount++;
+
+			previousIntersecType = DIFF;
 
 			mask *= intersec.color;
 
@@ -300,7 +328,7 @@ vec3 CalculateRadiance(Ray originalRay)
 			if (bounces == 0)
 				firstTypeWasDIFF = true;
 
-			if (diffuseCount == 1 && rand() < 0.5)
+			if (diffuseCount == 1 && rng() < 0.3)
 			{	
 				// choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
@@ -323,6 +351,8 @@ vec3 CalculateRadiance(Ray originalRay)
 		
 		if (intersec.type == SPEC)  // Ideal SPECULAR reflection
 		{
+			previousIntersecType = SPEC;
+
 			mask *= intersec.color;
 
 			r = Ray( x, reflect(r.direction, nl) );
@@ -334,6 +364,8 @@ vec3 CalculateRadiance(Ray originalRay)
 		
 		if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
+			previousIntersecType = REFR;
+
 			nc = 1.0; // IOR of Air
 			nt = 1.45; // IOR of heavy Glass
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
@@ -342,7 +374,7 @@ vec3 CalculateRadiance(Ray originalRay)
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 			
-			if (rand() < P)
+			if (rng() < P)
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
@@ -359,7 +391,8 @@ vec3 CalculateRadiance(Ray originalRay)
 			r = Ray(x, tdir);
 			r.origin -= nl * uEPS_intersect;
 
-			bounceIsSpecular = true; // turn on refracting caustics
+			if (bounces == 1)
+				bounceIsSpecular = true; // turn on refracting caustics
 
 			continue;
 			
@@ -371,7 +404,7 @@ vec3 CalculateRadiance(Ray originalRay)
 
 	return max(vec3(0), accumCol);
 
-} // end vec3 CalculateRadiance(Ray r)
+} // end vec3 CalculateRadiance( Ray originalRay, out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
 
 
 
@@ -380,8 +413,8 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0);// No color value, Black        
-	vec3 L1 = vec3(1.0) * 20.0;// Bright White light
-	vec3 L2 = vec3(0.936507, 0.642866, 0.310431) * 15.0;// Bright Yellowish light
+	vec3 L1 = vec3(1.0) * 30.0;// Bright White light
+	vec3 L2 = vec3(0.936507, 0.642866, 0.310431) * 20.0;// Bright Yellowish light
 	vec3 wallColor = vec3(1.0, 0.98, 1.0) * 0.5;
 	vec3 tableColor = vec3(1.0, 0.55, 0.2) * 0.6;
 	vec3 lampColor = vec3(1.0, 1.0, 0.8) * 0.7;
