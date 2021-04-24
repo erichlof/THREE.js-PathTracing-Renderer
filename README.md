@@ -1,7 +1,3 @@
-<h2>4/24/21  --  1:45-2:15 p.m. Central time <br>
-Adding first attempt at de-noiser to most all demos across whole repo.  Demos should be working again very soon (around 30 minutes hopefully)! </h2>
-
-
 # THREE.js-PathTracing-Renderer
 Real-time PathTracing with global illumination and progressive rendering, all on top of the Three.js WebGL framework.
 
