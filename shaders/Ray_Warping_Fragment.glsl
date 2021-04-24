@@ -73,9 +73,9 @@ mat4 makeRotateZ(float rot)
 }
 
 
-//--------------------------------------------------------------------------
-float SceneIntersect(Ray r, inout Intersection intersec)
-//--------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------
+float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedObjectID )
+//---------------------------------------------------------------------------------------
 {
 	Ray warpedRay;
 	mat4 m;
@@ -105,6 +105,7 @@ float SceneIntersect(Ray r, inout Intersection intersec)
 			intersec.emission = quads[i].emission;
 			intersec.color = quads[i].color;
 			intersec.type = quads[i].type;
+			intersectedObjectID = 0.0;
 		}
         }
 
@@ -126,6 +127,7 @@ float SceneIntersect(Ray r, inout Intersection intersec)
 		intersec.emission = spheres[0].emission;
 		intersec.color = spheres[0].color;
 		intersec.type = spheres[0].type;
+		intersectedObjectID = 1.0;
 	}
 
 	// Twisted Glass Sphere Right
@@ -145,11 +147,12 @@ float SceneIntersect(Ray r, inout Intersection intersec)
 		intersec.emission = spheres[1].emission;
 		intersec.color = spheres[1].color;
 		intersec.type = spheres[1].type;
+		intersectedObjectID = 2.0;
 	}	
 			
 	// Purple Cloud Sphere
-	width = 2.0 * rand();
-	offset = (spheres[2].radius * 0.5) * (vec3(rand() * 2.0 - 1.0, rand() * 2.0 - 1.0, rand() * 2.0 - 1.0));
+	width = 2.0 * rng();
+	offset = (spheres[2].radius * 0.5) * (vec3(rng() * 2.0 - 1.0, rng() * 2.0 - 1.0, rng() * 2.0 - 1.0));
 	d = SphereIntersect( spheres[2].radius + width, spheres[2].position + offset, r);
 	if (d < t)
 	{
@@ -160,6 +163,7 @@ float SceneIntersect(Ray r, inout Intersection intersec)
 		intersec.emission = spheres[2].emission;
 		intersec.color = spheres[2].color;
 		intersec.type = spheres[2].type;
+		intersectedObjectID = 3.0;
 	}
 	
 
@@ -189,15 +193,16 @@ float SceneIntersect(Ray r, inout Intersection intersec)
 		intersec.emission = boxes[0].emission;
 		intersec.color = boxes[0].color;
 		intersec.type = boxes[0].type;
+		intersectedObjectID = 4.0;
 	}
 
 	return t;
 }
 
 
-//-----------------------------------------------------------------------
-vec3 CalculateRadiance(Ray r)
-//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------------------------------
+vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
+//-----------------------------------------------------------------------------------------------------------------------------
 {
 	Intersection intersec;
 	Quad light = quads[5];
@@ -212,8 +217,10 @@ vec3 CalculateRadiance(Ray r)
 	float nc, nt, ratioIoR, Re, Tr;
 	float P, RP, TP;
 	float weight;
+	float intersectedObjectID;
 
 	int diffuseCount = 0;
+	int previousIntersecType = -100;
 
 	bool bounceIsSpecular = true;
 	bool sampleLight = false;
@@ -222,15 +229,37 @@ vec3 CalculateRadiance(Ray r)
 	for (int bounces = 0; bounces < 5; bounces++)
 	{
 
-		t = SceneIntersect(r, intersec);
+		t = SceneIntersect(r, intersec, intersectedObjectID);
 		
 
 		if (t == INFINITY)	
 			break;
+
+		// useful data 
+		n = normalize(intersec.normal);
+                nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
+		x = r.origin + r.direction * t;
+
+		if (bounces == 0)
+		{
+			objectNormal = nl;
+			objectColor = intersec.color;
+			objectID = intersectedObjectID;
+		}
+		if (bounces == 1 && previousIntersecType == SPEC)
+		{
+			objectColor = intersec.color;
+		}
 		
 		
 		if (intersec.type == LIGHT)
 		{	
+			if (diffuseCount == 0)
+			{
+				objectNormal = nl;
+				pixelSharpness = 1.0;
+			}
+
 			if (bounceIsSpecular || sampleLight)
 				accumCol = mask * intersec.emission;
 			// reached a light, so we can exit
@@ -244,21 +273,18 @@ vec3 CalculateRadiance(Ray r)
 			break;
 		
 
-		// useful data 
-		n = normalize(intersec.normal);
-                nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
-		x = r.origin + r.direction * t;
-
 		    
                 if (intersec.type == DIFF) // Ideal DIFFUSE reflection
 		{
+			previousIntersecType = DIFF;
+
 			diffuseCount++;
 
 			mask *= intersec.color;
 
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && rand() < 0.5)
+			if (diffuseCount == 1 && rng() < 0.5)
 			{
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
 				r.origin += nl * uEPS_intersect;
@@ -278,6 +304,8 @@ vec3 CalculateRadiance(Ray r)
 		
 		if (intersec.type == SPEC)  // Ideal SPECULAR reflection
 		{
+			previousIntersecType = SPEC;
+
 			mask *= intersec.color;
 
 			r = Ray( x, reflect(r.direction, nl) );
@@ -288,6 +316,8 @@ vec3 CalculateRadiance(Ray r)
 		
 		if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
+			previousIntersecType = REFR;
+
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
@@ -296,7 +326,7 @@ vec3 CalculateRadiance(Ray r)
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 			
-			if (rand() < P)
+			if (rng() < P)
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
@@ -330,6 +360,8 @@ vec3 CalculateRadiance(Ray r)
 		
 		if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top
 		{
+			previousIntersecType = COAT;
+
 			nc = 1.0; // IOR of Air
 			nt = 1.4; // IOR of Clear Coat
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
@@ -338,7 +370,7 @@ vec3 CalculateRadiance(Ray r)
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 
-			if (rand() < P)
+			if (rng() < P)
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
@@ -352,7 +384,7 @@ vec3 CalculateRadiance(Ray r)
 
 			bounceIsSpecular = false;
 			
-			if (diffuseCount == 1 && rand() < 0.5)
+			if (diffuseCount == 1 && rng() < 0.5)
 			{
 				// choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
