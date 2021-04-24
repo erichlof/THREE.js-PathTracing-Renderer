@@ -85,9 +85,9 @@ Disk disks[N_DISKS];
 
 
 
-//------------------------------------------------------------------------------------
-float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExiting )
-//------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------
+float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExiting, out float intersectedObjectID )
+//-------------------------------------------------------------------------------------------------------------------
 {
 	vec3 n;
 	float d;
@@ -104,6 +104,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExi
 			intersec.emission = spheres[i].emission;
 			intersec.color = spheres[i].color;
 			intersec.type = spheres[i].type;
+			intersectedObjectID = 0.0;
 		}
         }
 	
@@ -117,6 +118,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExi
 			intersec.emission = ellipsoids[i].emission;
 			intersec.color = ellipsoids[i].color;
 			intersec.type = ellipsoids[i].type;
+			intersectedObjectID = 1.0;
 		}
 	}
 
@@ -128,6 +130,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExi
 		intersec.emission = disks[0].emission;
 		intersec.color = disks[0].color;
 		intersec.type = disks[0].type;
+		intersectedObjectID = 1.0;
 	}
 	
 	d = ParaboloidIntersect( paraboloids[0].rad, paraboloids[0].height, paraboloids[0].pos, r, n );
@@ -138,6 +141,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExi
 		intersec.emission = paraboloids[0].emission;
 		intersec.color = paraboloids[0].color;
 		intersec.type = paraboloids[0].type;
+		intersectedObjectID = 2.0;
 	}
 	
 	d = HyperbolicParaboloidIntersect( hyperbolicParaboloids[0].rad, hyperbolicParaboloids[0].height, hyperbolicParaboloids[0].pos, r, n );
@@ -148,6 +152,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExi
 		intersec.emission = hyperbolicParaboloids[0].emission;
 		intersec.color = hyperbolicParaboloids[0].color;
 		intersec.type = hyperbolicParaboloids[0].type;
+		intersectedObjectID = 3.0;
 	}
 	
 	d = HyperboloidIntersect( hyperboloids[0].rad, hyperboloids[0].height, hyperboloids[0].pos, r, n );
@@ -158,6 +163,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExi
 		intersec.emission = hyperboloids[0].emission;
 		intersec.color = hyperboloids[0].color;
 		intersec.type = hyperboloids[0].type;
+		intersectedObjectID = 4.0;
 	}
 	
 	
@@ -169,6 +175,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExi
 		intersec.emission = openCylinders[0].emission;
 		intersec.color = openCylinders[0].color;
 		intersec.type = openCylinders[0].type;
+		intersectedObjectID = 5.0;
 	}
 	
 	d = CappedCylinderIntersect( cappedCylinders[0].cap1pos, cappedCylinders[0].cap2pos, cappedCylinders[0].radius, r, n);
@@ -179,6 +186,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExi
 		intersec.emission = cappedCylinders[0].emission;
 		intersec.color = cappedCylinders[0].color;
 		intersec.type = cappedCylinders[0].type;
+		intersectedObjectID = 6.0;
 	}
 	
 	d = ConeIntersect( cones[0].pos0, cones[0].radius0, cones[0].pos1, cones[0].radius1, r, n );
@@ -189,6 +197,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExi
 		intersec.emission = cones[0].emission;
 		intersec.color = cones[0].color;
 		intersec.type = cones[0].type;
+		intersectedObjectID = 7.0;
 	}
 	
 	d = CapsuleIntersect( capsules[0].pos0, capsules[0].radius0, capsules[0].pos1, capsules[0].radius1, r, n );
@@ -199,6 +208,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExi
 		intersec.emission = capsules[0].emission;
 		intersec.color = capsules[0].color;
 		intersec.type = capsules[0].type;
+		intersectedObjectID = 8.0;
 	}
 	
 	Ray rObj;
@@ -217,6 +227,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExi
 		intersec.emission = torii[0].emission;
 		intersec.color = torii[0].color;
 		intersec.type = torii[0].type;
+		intersectedObjectID = 9.0;
 	}
         
 	
@@ -225,9 +236,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExi
 } // end float SceneIntersect( Ray r, inout Intersection intersec )
 
 
-//-----------------------------------------------------------------------
-vec3 CalculateRadiance(Ray r)
-//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------------------------------
+vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
+//-----------------------------------------------------------------------------------------------------------------------------
 {
 	Intersection intersec;
 	Sphere lightChoice;
@@ -243,24 +254,24 @@ vec3 CalculateRadiance(Ray r)
 	float t;
 	float nc, nt, ratioIoR, Re, Tr;
 	float P, RP, TP;
-	float randChoose;
 	float weight;
 	float thickness = 0.1;
+	float intersectedObjectID;
 
 	int diffuseCount = 0;
+	int previousIntersecType = -100;
 
 	bool bounceIsSpecular = true;
 	bool sampleLight = false;
 	bool isRayExiting;
 
-	randChoose = rand() * N_LIGHTS; // 3 lights to choose from
-	lightChoice = spheres[int(randChoose)];
+	lightChoice = spheres[int(rand() * N_LIGHTS)];
 
 	
 	for (int bounces = 0; bounces < 6; bounces++)
 	{
 
-		t = SceneIntersect(r, intersec, isRayExiting);
+		t = SceneIntersect(r, intersec, isRayExiting, intersectedObjectID);
 		
 		/*
 		//not used in this scene because we are inside a huge sphere - no rays can escape
@@ -269,45 +280,61 @@ vec3 CalculateRadiance(Ray r)
                         break;
 		}
 		*/
-		
-		
-		if (intersec.type == LIGHT)
-		{	
-			if (bounceIsSpecular || sampleLight)
-				accumCol = mask * intersec.emission;
-			// reached a light, so we can exit
-			break;
-
-		} // end if (intersec.type == LIGHT)
-
-		if (sampleLight)
-			break;
-
 
 		// useful data 
 		n = normalize(intersec.normal);
                 nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
 		x = r.origin + r.direction * t;
 
-		// randChoose = rand() * 3.0; // 3 lights to choose from
-		// lightChoice = spheres[int(randChoose)];
+		if (bounces == 0)
+		{
+			objectNormal = nl;
+			objectColor = intersec.color;
+			objectID = intersectedObjectID;
+		}
+		
+
+			
+		if (intersec.type == LIGHT)
+		{	
+			if (diffuseCount == 0)
+			{
+				objectNormal = nl;
+				pixelSharpness = 1.0;
+			}
+
+			if (bounceIsSpecular || sampleLight)
+				accumCol = mask * intersec.emission;
+			// reached a light, so we can exit
+			break;
+		} // end if (intersec.type == LIGHT)
+
+
+		if (sampleLight)
+			break;
+
 
 		    
                 if (intersec.type == DIFF || intersec.type == CHECK) // Ideal DIFFUSE reflection
 		{
-			diffuseCount++;
-
 			if( intersec.type == CHECK )
 			{
 				float q = clamp( mod( dot( floor(x.xz * 0.04), vec2(1.0) ), 2.0 ) , 0.0, 1.0 );
 				intersec.color = checkCol0 * q + checkCol1 * (1.0 - q);	
 			}
+			
+			if (bounces == 0 || diffuseCount == 0 && bounces < 3 && previousIntersecType != COAT)	
+				objectColor = intersec.color;
+
+			diffuseCount++;
+			
+			previousIntersecType = DIFF;
 
 			mask *= intersec.color;
 
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && rand() < 0.5)
+			if (diffuseCount == 1 && rng() < 0.5)
 			{
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
 				r.origin += nl * uEPS_intersect;
@@ -327,6 +354,8 @@ vec3 CalculateRadiance(Ray r)
 		
 		if (intersec.type == SPEC)  // Ideal SPECULAR reflection
 		{
+			previousIntersecType = SPEC;
+
 			mask *= intersec.color;
 
 			r = Ray( x, reflect(r.direction, nl) );
@@ -339,6 +368,8 @@ vec3 CalculateRadiance(Ray r)
 		
 		if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
+			previousIntersecType = REFR;
+
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
@@ -347,7 +378,7 @@ vec3 CalculateRadiance(Ray r)
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 
-			if (rand() < P)
+			if (rng() < P)
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
@@ -382,6 +413,8 @@ vec3 CalculateRadiance(Ray r)
 		
 		if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top
 		{
+			previousIntersecType = COAT;
+
 			nc = 1.0; // IOR of Air
 			nt = 1.4; // IOR of Clear Coat
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
@@ -390,7 +423,7 @@ vec3 CalculateRadiance(Ray r)
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 			
-			if (rand() < P)
+			if (rng() < P)
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
@@ -405,7 +438,7 @@ vec3 CalculateRadiance(Ray r)
 
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && rand() < 0.5)
+			if (diffuseCount == 1 && rng() < 0.5)
 			{
 				// choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
@@ -413,7 +446,7 @@ vec3 CalculateRadiance(Ray r)
 				continue;
 			}
 			
-			if (intersec.color.r == 1.0) // this makes capsule more white
+			if (intersec.color.r == 1.0) // this makes white capsule more 'white'
 				dirToLight = sampleSphereLight(x, nl, spheres[0], weight);
 			else
 				dirToLight = sampleSphereLight(x, nl, lightChoice, weight);
@@ -434,7 +467,8 @@ vec3 CalculateRadiance(Ray r)
 	
 	return max(vec3(0), accumCol);
 
-} // end vec3 CalculateRadiance(Ray r)
+} // end vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
+
 
 
 
