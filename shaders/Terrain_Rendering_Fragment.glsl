@@ -363,7 +363,7 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 	vec3 initialSkyColor = Get_Sky_Color(r, sunDirection);
 	
 	Ray skyRay = Ray( r.origin * vec3(0.02), normalize(vec3(r.direction.x, abs(r.direction.y), r.direction.z)) );
-	float dc = SphereIntersect( 20000.0, vec3(skyRay.origin.x, -19900.0, skyRay.origin.z) + vec3(rand() * 2.0), skyRay );
+	float dc = SphereIntersect( 20000.0, vec3(skyRay.origin.x, -19900.0, skyRay.origin.z) + vec3(rng() * 2.0), skyRay );
 	vec3 skyPos = skyRay.origin + skyRay.direction * dc;
 	vec4 cld = render_clouds(skyRay, skyPos, sunDirection);
 	
@@ -593,9 +593,14 @@ void main( void )
 	vec3 camForward = vec3(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]);
 	
 	// calculate unique seed for rng() function
-	seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord); // old way of generating random numbers
+	seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord);
 
-	randVec4 = texture(tBlueNoiseTexture, (gl_FragCoord.xy + (uRandomVec2 * 255.0)) / 255.0); // new way of rand()
+	/* // initialize rand() variables
+	counter = -1.0; // will get incremented by 1 on each call to rand()
+	channel = 0; // the final selected color channel to use for rand() calc (range: 0 to 3, corresponds to R,G,B, or A)
+	randNumber = 0.0; // the final randomly-generated number (range: 0.0 to 1.0)
+	randVec4 = vec4(0); // samples and holds the RGBA blueNoise texture value for this pixel
+	randVec4 = texelFetch(tBlueNoiseTexture, ivec2(mod(gl_FragCoord.xy + floor(uRandomVec2 * 256.0), 256.0)), 0); */
 	
 	vec2 pixelOffset = vec2( tentFilter(rng()), tentFilter(rng()) ) * 0.5;
 	// we must map pixelPos into the range -1.0 to +1.0
@@ -605,8 +610,8 @@ void main( void )
 	
 	// depth of field
 	vec3 focalPoint = uFocusDistance * rayDir;
-	float randomAngle = rand() * TWO_PI; // pick random point on aperture
-	float randomRadius = rand() * uApertureSize;
+	float randomAngle = rng() * TWO_PI; // pick random point on aperture
+	float randomRadius = rng() * uApertureSize;
 	vec3  randomAperturePos = ( cos(randomAngle) * camRight + sin(randomAngle) * camUp ) * sqrt(randomRadius);
 	// point on aperture to focal point
 	vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
