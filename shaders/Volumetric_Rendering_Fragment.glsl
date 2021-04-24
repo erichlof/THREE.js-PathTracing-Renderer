@@ -30,9 +30,9 @@ Quad quads[N_QUADS];
 #include <pathtracing_sample_sphere_light>
 
 
-//-----------------------------------------------------------------------
-float SceneIntersect( Ray r, inout Intersection intersec )
-//-----------------------------------------------------------------------
+//---------------------------------------------------------------------------------------
+float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedObjectID )
+//---------------------------------------------------------------------------------------
 {
 	float d;
 	float t = INFINITY;
@@ -47,6 +47,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.emission = spheres[i].emission;
 			intersec.color = spheres[i].color;
 			intersec.type = spheres[i].type;
+			intersectedObjectID = 0.0;
 		}
         }
 	
@@ -60,6 +61,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.emission = quads[i].emission;
 			intersec.color = quads[i].color;
 			intersec.type = quads[i].type;
+			intersectedObjectID = 1.0;
 		}
         }
 	
@@ -93,9 +95,9 @@ void sampleEquiAngular( float u, float maxDistance, Ray r, vec3 lightPos, out fl
 #define LIGHT_COLOR vec3(1.0, 1.0, 1.0) // color of light source
 #define LIGHT_POWER 30.0 // brightness of light source
 
-//-----------------------------------------------------------------------
-vec3 CalculateRadiance(Ray r)
-//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------------------------------
+vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
+//-----------------------------------------------------------------------------------------------------------------------------
 {
 	Intersection intersec;
 	Intersection vintersec;
@@ -118,6 +120,7 @@ vec3 CalculateRadiance(Ray r)
 	float d;
 	float geomTerm;
 	float trans;
+	float intersectedObjectID;
 
 	int diffuseCount = 0;
 	int prevIntersecType = -1;
@@ -129,13 +132,19 @@ vec3 CalculateRadiance(Ray r)
         for (int bounces = 0; bounces < 4; bounces++)
 	{
 		
-		float u = rand();
+		float u = rng();
 		
-		t = SceneIntersect(r, intersec);
+		t = SceneIntersect(r, intersec, intersectedObjectID);
 		
 		// on first loop iteration, save intersection distance along camera ray (t) into camt variable for use below
-		if (bounces == 0) 
+		if (bounces == 0)
+		{
 			camt = t;
+			//objectNormal = nl; // handled below
+			objectColor = intersec.color;
+			objectID = intersectedObjectID;
+		}
+			
 
 		// sample along intial ray from camera into the scene
 		sampleEquiAngular(u, camt, cameraRay, spheres[0].position, xx, pdf);
@@ -146,7 +155,7 @@ vec3 CalculateRadiance(Ray r)
 		d = length(lightVec);
 		vray = Ray(particlePos, normalize(lightVec));
 
-		vt = SceneIntersect(vray, vintersec);
+		vt = SceneIntersect(vray, vintersec, intersectedObjectID);
 		
 		// if the particle can see the light source, apply volumetric lighting calculation
 		if (vintersec.type == LIGHT)
@@ -158,10 +167,28 @@ vec3 CalculateRadiance(Ray r)
 		}
 		// otherwise the particle will remain in shadow - this is what produces the shafts of light vs. the volume shadows
 
-		
+
+		// useful data 
+		vec3 n = normalize(intersec.normal);
+                vec3 nl = dot(n,r.direction) < 0.0 ? normalize(n) : normalize(-n);
+		vec3 x = r.origin + r.direction * t;
+
+		if (bounces == 0)
+		{
+			objectNormal = nl;
+			//objectColor = intersec.color; // handled above
+			//objectID = intersectedObjectID; // handled above
+		}
+
 		// now do the normal path tracing routine with the camera ray
 		if (intersec.type == LIGHT)
-		{	
+		{
+			if (diffuseCount == 0)
+			{
+				objectNormal = nl;
+				pixelSharpness = 1.0;
+			}
+
 			if (bounceIsSpecular || sampleLight)
 			{
 				trans = exp( -((d + camt) * FOG_DENSITY) );
@@ -172,10 +199,7 @@ vec3 CalculateRadiance(Ray r)
 			continue; 
 		}
 		
-		// useful data 
-		vec3 n = normalize(intersec.normal);
-                vec3 nl = dot(n,r.direction) < 0.0 ? normalize(n) : normalize(-n);
-		vec3 x = r.origin + r.direction * t;
+		
 		
 		    
                 if (intersec.type == DIFF) // Ideal DIFFUSE reflection
@@ -186,7 +210,7 @@ vec3 CalculateRadiance(Ray r)
 
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && rand() < 0.5)
+			if (diffuseCount == 1 && rng() < 0.5)
 			{
 				// choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
@@ -227,7 +251,7 @@ vec3 CalculateRadiance(Ray r)
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 
-			if (rand() < P) // reflect ray from surface
+			if (rng() < P) // reflect ray from surface
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) );
@@ -261,7 +285,7 @@ vec3 CalculateRadiance(Ray r)
                 	TP = Tr / (1.0 - P);
 			
 			// choose either specular reflection or diffuse
-			if( rand() < P )
+			if(rng() < P)
 			{	
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) );
@@ -276,7 +300,7 @@ vec3 CalculateRadiance(Ray r)
 			mask *= TP;
 			mask *= intersec.color;
 
-			if (diffuseCount == 1 && rand() < 0.5)
+			if (diffuseCount == 1 && rng() < 0.5)
                         {
                                 // choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
@@ -309,7 +333,7 @@ vec3 CalculateRadiance(Ray r)
 	for (int bounces = 0; bounces < 3; bounces++)
 	{
 		
-		t = SceneIntersect(r, intersec);
+		t = SceneIntersect(r, intersec, intersectedObjectID);
 
 		// early out test, we are only looking for glass objects and light sources
 		if (intersec.type != REFR && intersec.type != LIGHT)
@@ -330,7 +354,7 @@ vec3 CalculateRadiance(Ray r)
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 			
-			if (rand() < P) // reflect ray from surface
+			if (rng() < P) // reflect ray from surface
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) );
@@ -355,6 +379,7 @@ vec3 CalculateRadiance(Ray r)
 
 		if (intersec.type == LIGHT)
 		{	
+			pixelSharpness = 0.0;
 			// if we have just traveled through a refractive surface(REFR) like glass, then 
 			// allow particle to be lit, producing volumetric caustics
 			if (prevIntersecType == REFR && bounces == 2)
