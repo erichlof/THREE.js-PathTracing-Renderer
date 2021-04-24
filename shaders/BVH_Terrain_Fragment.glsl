@@ -59,9 +59,9 @@ BoxNode GetBoxNode(const in float i)
 }
 
 
-//----------------------------------------------------------
-float SceneIntersect( Ray r, inout Intersection intersec )
-//----------------------------------------------------------
+//---------------------------------------------------------------------------------------
+float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedObjectID )
+//---------------------------------------------------------------------------------------
 {
 	BoxNode currentBoxNode, nodeA, nodeB, tmpNode;
 	
@@ -98,6 +98,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.color = spheres[i].color;
 			intersec.type = spheres[i].type;
 			intersec.albedoTextureID = -1;
+			intersectedObjectID = 0.0;
 		}
 	}
 	
@@ -226,6 +227,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		//intersec.type = int(vd6.x);
 		//intersec.albedoTextureID = int(vd7.x);
 		intersec.type = CHECK;//DIFF;
+		intersectedObjectID = 1.0;
 	}
 
 	return t;
@@ -233,9 +235,9 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 } // end float SceneIntersect( Ray r, inout Intersection intersec )
 
 
-//-----------------------------------------------------------------------
-vec3 CalculateRadiance(Ray r)
-//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------------------------------
+vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
+//-----------------------------------------------------------------------------------------------------------------------------
 {
 	Intersection intersec;
         vec4 texColor;
@@ -254,8 +256,10 @@ vec3 CalculateRadiance(Ray r)
 	float nc, nt, ratioIoR, Re, Tr;
 	float P, RP, TP;
 	float weight;
+	float intersectedObjectID;
 	
 	int diffuseCount = 0;
+	int previousIntersecType = -100;
 
 	bool bounceIsSpecular = true;
 	bool sampleLight = false;
@@ -264,7 +268,7 @@ vec3 CalculateRadiance(Ray r)
         for (int bounces = 0; bounces < 2; bounces++)
 	{
 
-		t = SceneIntersect(r, intersec);
+		t = SceneIntersect(r, intersec, intersectedObjectID);
 		
 		if (t == INFINITY)
 			break;
@@ -277,15 +281,24 @@ vec3 CalculateRadiance(Ray r)
 			
 			break;
 		}
-		
+
 		// useful data 
 		n = normalize(intersec.normal);
                 nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
 		x = r.origin + r.direction * t;
+
+		if (bounces == 0)
+		{
+			objectNormal = nl;
+			objectColor = intersec.color;
+			objectID = intersectedObjectID;
+		}
 		
 		    
                 if (intersec.type == DIFF || intersec.type == CHECK) // Ideal DIFFUSE reflection
                 {
+			previousIntersecType = DIFF;
+
 			diffuseCount++;
 
 			if ( intersec.type == CHECK )
@@ -293,6 +306,9 @@ vec3 CalculateRadiance(Ray r)
 				float q = clamp( mod( dot( floor(x.xz * 2.0), vec2(1.0) ), 2.0 ) , 0.0, 1.0 );
 				intersec.color = checkCol0 * q + checkCol1 * (1.0 - q);	
 			}
+
+			if (bounces == 0)
+				objectColor = intersec.color;
 			
 			mask *= intersec.color;
 
@@ -323,7 +339,7 @@ vec3 CalculateRadiance(Ray r)
                 	TP = Tr / (1.0 - P);
 			
 
-			if (rand() < P) // reflect ray from surface
+			if (rng() < P) // reflect ray from surface
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) );
