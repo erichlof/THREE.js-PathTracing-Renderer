@@ -354,6 +354,9 @@ function initPathTracingShaders() {
 	pathTracingUniforms.tNormalMap = { type: "t", value: normalMap };
 	pathTracingUniforms.uGLTF_Model_Position = { type: "v3", value: new THREE.Vector3() };
 	pathTracingUniforms.uGLTF_Model_InvMatrix = { type: "m4", value: new THREE.Matrix4() };
+        pathTracingUniforms.uColorEdgeSharpeningRate = { type: "f", value: 1.0 };
+        pathTracingUniforms.uNormalEdgeSharpeningRate = { type: "f", value: 1.0 };
+        pathTracingUniforms.uObjectEdgeSharpeningRate = { type: "f", value: 0.0 };
 
         pathTracingDefines = {
         	//NUMBER_OF_TRIANGLES: total_number_of_triangles
