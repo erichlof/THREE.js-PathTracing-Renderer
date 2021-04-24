@@ -173,6 +173,9 @@ function initPathTracingShaders() {
         pathTracingUniforms.uRightSphereMaterialType = { type: "f", value: 0.0 };
         pathTracingUniforms.uLeftSphereColor = { type: "v3", value: new THREE.Color() };
         pathTracingUniforms.uRightSphereColor = { type: "v3", value: new THREE.Color() };
+        pathTracingUniforms.uColorEdgeSharpeningRate = { type: "f", value: 1.0 };
+        pathTracingUniforms.uNormalEdgeSharpeningRate = { type: "f", value: 1.0 };
+        pathTracingUniforms.uObjectEdgeSharpeningRate = { type: "f", value: 1.0 };
                 
         pathTracingDefines = {
         	//NUMBER_OF_TRIANGLES: total_number_of_triangles
@@ -251,7 +254,7 @@ function updateVariablesAndUniforms() {
                         pathTracingUniforms.uLeftSphereColor.value.setRGB(0.5, 0.9, 1.0);
                 }
                 else if (matType == 7) { // SPECSUB
-                        pathTracingUniforms.uLeftSphereColor.value.setRGB(0.99, 0.99, 0.96);  
+                        pathTracingUniforms.uLeftSphereColor.value.setRGB(0.99, 0.99, 0.9);  
                 }
 
 		
@@ -293,7 +296,7 @@ function updateVariablesAndUniforms() {
                         pathTracingUniforms.uRightSphereColor.value.setRGB(1.0, 0.82, 0.8);
                 }
                 else if (matType == 7) { // SPECSUB
-                        pathTracingUniforms.uRightSphereColor.value.setRGB(0.0, 0.99, 0.8); 
+                        pathTracingUniforms.uRightSphereColor.value.setRGB(0.0, 0.99, 0.4); 
                 }
 
 		
