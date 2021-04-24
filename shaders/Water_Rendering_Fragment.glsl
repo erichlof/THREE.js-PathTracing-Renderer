@@ -52,9 +52,9 @@ float getWaterWaveHeight( vec3 pos )
 	return STILL_WATER_LEVEL + (waveOffset * WATER_WAVE_AMP);
 }
 
-//------------------------------------------------------------------------------------------------
-float SceneIntersect( Ray r, inout Intersection intersec, bool checkWater )
-//------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+float SceneIntersect( Ray r, inout Intersection intersec, bool checkWater, out float intersectedObjectID )
+//--------------------------------------------------------------------------------------------------------
 {
 	Ray rObj;
 	vec3 hitWorldSpace;
@@ -77,6 +77,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkWater )
 			intersec.emission = quads[i].emission;
 			intersec.color = quads[i].color;
 			intersec.type = quads[i].type;
+			intersectedObjectID = 0.0;
 		}
         }
 	
@@ -95,6 +96,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkWater )
 		intersec.emission = boxes[0].emission;
 		intersec.color = boxes[0].color;
 		intersec.type = boxes[0].type;
+		intersectedObjectID = 1.0;
 	}
 	
 	// SHORT DIFFUSE BOX
@@ -112,6 +114,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkWater )
 		intersec.emission = boxes[1].emission;
 		intersec.color = boxes[1].color;
 		intersec.type = boxes[1].type;
+		intersectedObjectID = 2.0;
 	}
 	
 	
@@ -165,9 +168,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkWater )
 }
 
 
-//-----------------------------------------------------------------------
-vec3 CalculateRadiance(Ray r)
-//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------------------------------
+vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
+//-----------------------------------------------------------------------------------------------------------------------------
 {
         Intersection intersec;
         Quad light = quads[5];
@@ -183,8 +186,10 @@ vec3 CalculateRadiance(Ray r)
 	float P, RP, TP;
 	float weight;
 	float thickness = 0.01; // 0.02
+	float intersectedObjectID;
 
 	int diffuseCount = 0;
+	int previousIntersecType = -100;
 
 	bool bounceIsSpecular = true;
 	bool sampleLight = false;
@@ -195,16 +200,34 @@ vec3 CalculateRadiance(Ray r)
 	for (int bounces = 0; bounces < 5; bounces++)
 	{
 
-		t = SceneIntersect(r, intersec, checkWater);
+		t = SceneIntersect(r, intersec, checkWater, intersectedObjectID);
 		checkWater = false;
 
 		
 		if (t == INFINITY)
 			break;
+
+		// useful data 
+		n = normalize(intersec.normal);
+                nl = dot(n, r.direction) < 0.0 ? n : normalize(-n);
+		x = r.origin + r.direction * t;
+
+		if (bounces == 0)
+		{
+			objectNormal = nl;
+			objectColor = intersec.color;
+			objectID = intersectedObjectID;
+		}
+		if (bounces == 1 && diffuseCount == 0)
+		{
+			objectNormal = nl;
+		}
 		
 		
 		if (intersec.type == LIGHT)
 		{	
+			pixelSharpness = diffuseCount == 0 && previousIntersecType != REFR ? 1.0 : 0.0;
+
 			if (sampleLight || bounceIsSpecular)
 				accumCol = mask * intersec.emission;
 			// reached a light, so we can exit
@@ -217,15 +240,12 @@ vec3 CalculateRadiance(Ray r)
 			break;
 		
 
-		// useful data 
-		n = normalize(intersec.normal);
-                nl = dot(n, r.direction) < 0.0 ? n : normalize(-n);
-		x = r.origin + r.direction * t;
+		
 
 		    
                 if (intersec.type == DIFF) // Ideal DIFFUSE reflection
 		{
-			diffuseCount++;
+			
 
 			if (!rayEnteredWater)
 				mask *= intersec.color;
@@ -235,9 +255,13 @@ vec3 CalculateRadiance(Ray r)
 				mask *= exp(log(WATER_COLOR) * thickness * t); 
 			}
 
+			previousIntersecType = DIFF;
+
+			diffuseCount++;
+
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && rand() < 0.5)
+			if (diffuseCount == 1 && rng() < 0.4)
 			{
 				// choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
@@ -265,6 +289,8 @@ vec3 CalculateRadiance(Ray r)
 				mask *= exp(log(WATER_COLOR) * thickness * t);
 			}
 
+			previousIntersecType = SPEC;
+
 			r = Ray( x, reflect(r.direction, nl) );
 			r.origin += nl * uEPS_intersect;
 
@@ -276,6 +302,8 @@ vec3 CalculateRadiance(Ray r)
 
 		if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
+			previousIntersecType = REFR;
+
 			nc = 1.0; // IOR of Air
 			nt = 1.33; // IOR of Water
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
@@ -284,7 +312,7 @@ vec3 CalculateRadiance(Ray r)
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 			
-			if (rand() < P)
+			if (rng() < P)
 			{	
 				mask *= RP;
 
@@ -341,6 +369,8 @@ void SetupScene(void)
 	boxes[1]  = Box( vec3(-86.0, -85.0, -80.0), vec3(86.0, 85.0, 80.0), z, vec3(1), DIFF);// Short Diffuse Box Right
 }	
 
+
+
 // tentFilter from Peter Shirley's 'Realistic Ray Tracing (2nd Edition)' book, pg. 60		
 float tentFilter(float x)
 {
@@ -350,52 +380,98 @@ float tentFilter(float x)
 
 void main( void )
 {
-	// not needed, three.js has a built-in uniform named cameraPosition
-	//vec3 camPos   = vec3( uCameraMatrix[3][0],  uCameraMatrix[3][1],  uCameraMatrix[3][2]);
-	
-    	vec3 camRight   = vec3( uCameraMatrix[0][0],  uCameraMatrix[0][1],  uCameraMatrix[0][2]);
-    	vec3 camUp      = vec3( uCameraMatrix[1][0],  uCameraMatrix[1][1],  uCameraMatrix[1][2]);
-	vec3 camForward = vec3(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]);
-	
-	// calculate unique seed for rng() function
-	seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord); // old way of generating random numbers
+        // not needed, three.js has a built-in uniform named cameraPosition
+        //vec3 camPos   = vec3( uCameraMatrix[3][0],  uCameraMatrix[3][1],  uCameraMatrix[3][2]);
+        
+        vec3 camRight   = vec3( uCameraMatrix[0][0],  uCameraMatrix[0][1],  uCameraMatrix[0][2]);
+        vec3 camUp      = vec3( uCameraMatrix[1][0],  uCameraMatrix[1][1],  uCameraMatrix[1][2]);
+        vec3 camForward = vec3(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]);
+        
+        // calculate unique seed for rng() function
+	seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord);
 
-	randVec4 = texture(tBlueNoiseTexture, (gl_FragCoord.xy + (uRandomVec2 * 255.0)) / 255.0); // new way of rand()
+	/* // initialize rand() variables
+	counter = -1.0; // will get incremented by 1 on each call to rand()
+	channel = 0; // the final selected color channel to use for rand() calc (range: 0 to 3, corresponds to R,G,B, or A)
+	randNumber = 0.0; // the final randomly-generated number (range: 0.0 to 1.0)
+	randVec4 = vec4(0); // samples and holds the RGBA blueNoise texture value for this pixel
+	randVec4 = texelFetch(tBlueNoiseTexture, ivec2(mod(gl_FragCoord.xy + floor(uRandomVec2 * 256.0), 256.0)), 0); */
 	
 	vec2 pixelOffset = vec2( tentFilter(rng()), tentFilter(rng()) ) * 0.5;
 	// we must map pixelPos into the range -1.0 to +1.0
 	vec2 pixelPos = ((gl_FragCoord.xy + pixelOffset) / uResolution) * 2.0 - 1.0;
 
-	vec3 rayDir = normalize( pixelPos.x * camRight * uULen + pixelPos.y * camUp * uVLen + camForward );
+        vec3 rayDir = normalize( pixelPos.x * camRight * uULen + pixelPos.y * camUp * uVLen + camForward );
+        
+        // depth of field
+        vec3 focalPoint = uFocusDistance * rayDir;
+        float randomAngle = rng() * TWO_PI; // pick random point on aperture
+        float randomRadius = rng() * uApertureSize;
+        vec3  randomAperturePos = ( cos(randomAngle) * camRight + sin(randomAngle) * camUp ) * sqrt(randomRadius);
+        // point on aperture to focal point
+        vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
+        
+        Ray ray = Ray( cameraPosition + randomAperturePos, finalRayDir );
+
+        SetupScene(); 
+
+        // Edge Detection - don't want to blur edges where either surface normals change abruptly (i.e. room wall corners), objects overlap each other (i.e. edge of a foreground sphere in front of another sphere right behind it),
+	// or an abrupt color variation on the same smooth surface, even if it has similar surface normals (i.e. checkerboard pattern). Want to keep all of these cases as sharp as possible - no blur filter will be applied.
+	vec3 objectNormal, objectColor;
+	float objectID = -INFINITY;
+	float pixelSharpness = 0.0;
 	
-	// depth of field
-	vec3 focalPoint = uFocusDistance * rayDir;
-	float randomAngle = rand() * TWO_PI; // pick random point on aperture
-	float randomRadius = rand() * uApertureSize;
-	vec3  randomAperturePos = ( cos(randomAngle) * camRight + sin(randomAngle) * camUp ) * sqrt(randomRadius);
-	// point on aperture to focal point
-	vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
-    
-	Ray ray = Ray( cameraPosition + randomAperturePos, finalRayDir );
-
-	SetupScene(); 
-
 	// perform path tracing and get resulting pixel color
-	vec3 pixelColor = CalculateRadiance(ray);
+	vec4 currentPixel = vec4( vec3(CalculateRadiance(ray, objectNormal, objectColor, objectID, pixelSharpness)), 0.0 );
+
+	// if difference between normals of neighboring pixels is less than the first edge0 threshold, the white edge line effect is considered off (0.0)
+	float edge0 = 0.2; // edge0 is the minimum difference required between normals of neighboring pixels to start becoming a white edge line
+	// any difference between normals of neighboring pixels that is between edge0 and edge1 smoothly ramps up the white edge line brightness (smoothstep 0.0-1.0)
+	float edge1 = 0.6; // once the difference between normals of neighboring pixels is >= this edge1 threshold, the white edge line is considered fully bright (1.0)
+	float difference_Nx = fwidth(objectNormal.x);
+	float difference_Ny = fwidth(objectNormal.y);
+	float difference_Nz = fwidth(objectNormal.z);
+	float normalDifference = smoothstep(edge0, edge1, difference_Nx) + smoothstep(edge0, edge1, difference_Ny) + smoothstep(edge0, edge1, difference_Nz);
+
+	edge0 = 0.0;
+	edge1 = 0.5;
+	float difference_obj = abs(dFdx(objectID)) > 0.0 ? 1.0 : 0.0;
+	difference_obj += abs(dFdy(objectID)) > 0.0 ? 1.0 : 0.0;
+	float objectDifference = smoothstep(edge0, edge1, difference_obj);
+
+	float difference_col = length(dFdx(objectColor)) > 0.0 ? 1.0 : 0.0;
+	difference_col += length(dFdy(objectColor)) > 0.0 ? 1.0 : 0.0;
+	float colorDifference = smoothstep(edge0, edge1, difference_col);
+	// edge detector (normal and object differences) white-line debug visualization
+	//currentPixel.rgb += 1.0 * vec3(max(normalDifference, objectDifference));
 	
-	vec3 previousColor = texelFetch(tPreviousTexture, ivec2(gl_FragCoord.xy), 0).rgb;
+	vec4 previousPixel = texelFetch(tPreviousTexture, ivec2(gl_FragCoord.xy), 0);
+
 	
-	if ( uCameraIsMoving )
+
+	if (uCameraIsMoving) // camera is currently moving
 	{
-		previousColor *= 0.8; // motion-blur trail amount (old image)
-		pixelColor *= 0.2; // brightness of new image (noisy)
+		previousPixel.rgb *= 0.5; // motion-blur trail amount (old image)
+		currentPixel.rgb *= 0.5; // brightness of new image (noisy)
+
+		previousPixel.a = 0.0;
 	}
 	else
 	{
-		previousColor *= 0.9; // motion-blur trail amount (old image)
-		pixelColor *= 0.1; // brightness of new image (noisy)
+		previousPixel.rgb *= 0.9; // motion-blur trail amount (old image)
+		currentPixel.rgb *= 0.1; // brightness of new image (noisy)
 	}
+
+	currentPixel.a = pixelSharpness;
+	
+	currentPixel.a = colorDifference  >= 1.0 ? min(uSampleCounter * uColorEdgeSharpeningRate , 1.01) : currentPixel.a;
+	currentPixel.a = normalDifference >= 1.0 ? min(uSampleCounter * uNormalEdgeSharpeningRate, 1.01) : currentPixel.a;
+	currentPixel.a = objectDifference >= 1.0 ? min(uSampleCounter * uObjectEdgeSharpeningRate, 1.01) : currentPixel.a;
+	
+	// Eventually, all edge-containing pixels' .a (alpha channel) values will converge to 1.01, which keeps them from getting blurred by the box-blur filter, thus retaining sharpness.
+	if (pixelSharpness == 1.0 || previousPixel.a == 1.01)
+		currentPixel.a = 1.01;
 	
 	
-	pc_fragColor = vec4( pixelColor + previousColor, 1.0 );	
+	pc_fragColor = vec4(previousPixel.rgb + currentPixel.rgb, currentPixel.a);
 }
