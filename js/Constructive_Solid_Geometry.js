@@ -481,7 +481,7 @@ function init_GUI()
 // called automatically from within initTHREEjs() function
 function initSceneData()
 {
-
+	//pixelRatio = 1;
 	// scene/demo-specific three.js objects setup goes here
 	EPS_intersect = mouseControl ? 0.01 : 1.0; // less precision on mobile
 
@@ -522,6 +522,9 @@ function initPathTracingShaders()
 	pathTracingUniforms.uMaterialBColor = { type: "v3", value: new THREE.Color(1.0, 0.0, 1.0) };
 	pathTracingUniforms.uCSG_ShapeA_InvMatrix = { type: "m4", value: new THREE.Matrix4() };
 	pathTracingUniforms.uCSG_ShapeB_InvMatrix = { type: "m4", value: new THREE.Matrix4() };
+	pathTracingUniforms.uColorEdgeSharpeningRate = { type: "f", value: 1.0 };
+	pathTracingUniforms.uNormalEdgeSharpeningRate = { type: "f", value: 0.1 };
+	pathTracingUniforms.uObjectEdgeSharpeningRate = { type: "f", value: 0.1 };
 
 	pathTracingDefines = {
 		//NUMBER_OF_TRIANGLES: total_number_of_triangles
