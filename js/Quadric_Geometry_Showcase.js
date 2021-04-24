@@ -35,6 +35,9 @@ function initPathTracingShaders() {
  
         // scene/demo-specific uniforms go here
         pathTracingUniforms.uTorusInvMatrix = { type: "m4", value: new THREE.Matrix4() };
+        pathTracingUniforms.uColorEdgeSharpeningRate = { type: "f", value: 0.08 };
+        pathTracingUniforms.uNormalEdgeSharpeningRate = { type: "f", value: 1.0 };
+        pathTracingUniforms.uObjectEdgeSharpeningRate = { type: "f", value: 0.05 };
 
         pathTracingDefines = {
         	//NUMBER_OF_TRIANGLES: total_number_of_triangles
