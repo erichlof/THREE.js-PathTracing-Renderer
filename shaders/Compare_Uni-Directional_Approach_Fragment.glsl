@@ -26,9 +26,9 @@ Box boxes[N_BOXES];
 #include <pathtracing_box_intersect>
 
 
-//-----------------------------------------------------------------------
-float SceneIntersect( Ray r, inout Intersection intersec )
-//-----------------------------------------------------------------------
+//---------------------------------------------------------------------------------------
+float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedObjectID )
+//---------------------------------------------------------------------------------------
 {
 	vec3 normal;
         float d;
@@ -45,6 +45,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.emission = quads[i].emission;
 			intersec.color = quads[i].color;
 			intersec.type = quads[i].type;
+			intersectedObjectID = 0.0;
 		}
         }
 	
@@ -57,6 +58,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		intersec.emission = boxes[2].emission;
 		intersec.color = boxes[2].color;
 		intersec.type = boxes[2].type;
+		intersectedObjectID = 1.0;
 	}
 	
 	
@@ -77,6 +79,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		intersec.emission = boxes[0].emission;
 		intersec.color = boxes[0].color;
 		intersec.type = boxes[0].type;
+		intersectedObjectID = 2.0;
 	}
 	
 	
@@ -96,6 +99,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		intersec.emission = boxes[1].emission;
 		intersec.color = boxes[1].color;
 		intersec.type = boxes[1].type;
+		intersectedObjectID = 3.0;
 	}
 	
 	
@@ -103,9 +107,9 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 }
 
 
-//-----------------------------------------------------------------------
-vec3 CalculateRadiance(Ray r)
-//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------------------------------
+vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
+//-----------------------------------------------------------------------------------------------------------------------------
 {
 	Intersection intersec;
 
@@ -114,19 +118,37 @@ vec3 CalculateRadiance(Ray r)
 	vec3 x, n, nl;
 
 	float t;
+	float intersectedObjectID;
+
+	int diffuseCount = 0;
+	int previousIntersecType = -100;
 
 	bool bounceIsSpecular = true;
+
+	pixelSharpness = 1.0;
 
 	// hope that we get lucky enough to find the blocked light source
 	for (int bounces = 0; bounces < 5; bounces++)
 	{
                 
-		t = SceneIntersect(r, intersec);
+		t = SceneIntersect(r, intersec, intersectedObjectID);
 		
 		if (t == INFINITY)
                         break;
 		
+		// useful data 
+		n = normalize(intersec.normal);
+                nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
+		x = r.origin + r.direction * t;
+
+		if (diffuseCount == 0)
+		{
+			objectNormal = nl;
+			objectColor = intersec.color;
+			objectID = intersectedObjectID;
+		}
 		
+
 		// if we reached something bright, don't spawn any more rays
 		if (intersec.type == LIGHT )
 		{
@@ -134,32 +156,31 @@ vec3 CalculateRadiance(Ray r)
 			break;
 		}
 		
-		// useful data
-		n = normalize(intersec.normal);
-                nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
-		x = r.origin + r.direction * t;
-		
 		    
                 if (intersec.type == DIFF) // Ideal DIFFUSE reflection
                 {
+			diffuseCount++;
+
+			previousIntersecType = DIFF;
+			
 			mask *= intersec.color;
 
 			bounceIsSpecular = false;
 
-			/* // Russian Roulette
+			// Russian Roulette
 			float p = max(mask.r, max(mask.g, mask.b));
-			if (rand() > p) 
+			if (rng() > p) 
 				break;
-			mask /= p; */
+			mask /= p;
 			
-			// Russian Roulette (from pbrt book)
-			// float q = max(mask.r, max(mask.g, mask.b));
-			// q = max(0.05, 1.0 - q);
-			// if (rand() < q) break;
-			// mask /= (1.0 - q);
+			/* // Russian Roulette (from pbrt book)
+			float q = max(mask.r, max(mask.g, mask.b));
+			q = max(0.05, 1.0 - q);
+			if (rng() < q) break;
+			mask /= (1.0 - q); */
 			
 			// choose random Diffuse sample vector
-			r = Ray( x, randomDirectionInHemisphere(nl) );
+			r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
 			r.origin += nl * uEPS_intersect;
 
 			mask *= max(0.0, dot(nl, r.direction));
@@ -168,6 +189,8 @@ vec3 CalculateRadiance(Ray r)
 		
                 if (intersec.type == SPEC)  // Ideal SPECULAR reflection
                 {
+			previousIntersecType = SPEC;
+
 			mask *= intersec.color;
 
 			r = Ray( x, reflect(r.direction, nl) );
@@ -177,7 +200,7 @@ vec3 CalculateRadiance(Ray r)
 		
 	} // for (int bounces = 0; bounces < 10; bounces++)
 	
-	return accumCol;      
+	return max(vec3(0), accumCol);      
 }
 
 
