@@ -366,6 +366,9 @@ function initPathTracingShaders() {
 	pathTracingUniforms.tMarbleTexture = { type: "t", value: marbleTexture };
 	pathTracingUniforms.tHammeredMetalNormalMapTexture = { type: "t", value: hammeredMetalNormalMapTexture };  
 	pathTracingUniforms.uDoorObjectInvMatrix = { type: "m4", value: new THREE.Matrix4() };
+        pathTracingUniforms.uColorEdgeSharpeningRate = { type: "f", value: 0.01 };
+        pathTracingUniforms.uNormalEdgeSharpeningRate = { type: "f", value: 0.005 };
+        pathTracingUniforms.uObjectEdgeSharpeningRate = { type: "f", value: 0.01 };
 
         pathTracingDefines = {
         	//NUMBER_OF_TRIANGLES: total_number_of_triangles_0
