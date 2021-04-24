@@ -21,6 +21,8 @@ Box boxes[N_BOXES];
 
 #include <pathtracing_random_functions>
 
+//#include <pathtracing_sphere_intersect>
+
 #include <pathtracing_quad_intersect>
 
 #include <pathtracing_box_intersect>
@@ -28,14 +30,15 @@ Box boxes[N_BOXES];
 #include <pathtracing_sample_quad_light>
 
 
-//-----------------------------------------------------------------------
-float SceneIntersect( Ray r, inout Intersection intersec )
-//-----------------------------------------------------------------------
+//---------------------------------------------------------------------------------------
+float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedObjectID )
+//---------------------------------------------------------------------------------------
 {
 	vec3 normal;
         float d;
 	float t = INFINITY;
 	bool isRayExiting = false;
+	
 		
 	for (int i = 0; i < N_QUADS; i++)
         {
@@ -47,6 +50,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.emission = quads[i].emission;
 			intersec.color = quads[i].color;
 			intersec.type = quads[i].type;
+			intersectedObjectID = 0.0;
 		}
         }
 	
@@ -68,6 +72,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		intersec.emission = boxes[0].emission;
 		intersec.color = boxes[0].color;
 		intersec.type = boxes[0].type;
+		intersectedObjectID = 1.0;
 	}
 	
 	
@@ -87,16 +92,16 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		intersec.emission = boxes[1].emission;
 		intersec.color = boxes[1].color;
 		intersec.type = boxes[1].type;
+		intersectedObjectID = 2.0;
 	}
-	
-	
+
 	return t;
-}
+} // end float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedObjectID )
 
 
-//-----------------------------------------------------------------------
-vec3 CalculateRadiance(Ray r)
-//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------------------------------
+vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
+//-----------------------------------------------------------------------------------------------------------------------------
 {
         Intersection intersec;
         Quad light = quads[5];
@@ -106,11 +111,13 @@ vec3 CalculateRadiance(Ray r)
         vec3 n, nl, x;
 	vec3 dirToLight;
         
-	float t;
+	float t = INFINITY;
 	float weight, p;
+	float intersectedObjectID;
 	
 	int diffuseCount = 0;
-
+	int previousIntersecType = -100;
+	
 	bool bounceIsSpecular = true;
 	bool sampleLight = false;
 	bool createCausticRay = false;
@@ -119,18 +126,38 @@ vec3 CalculateRadiance(Ray r)
 	for (int bounces = 0; bounces < 5; bounces++)
 	{
 
-		t = SceneIntersect(r, intersec);
-		
+		t = SceneIntersect(r, intersec, intersectedObjectID);
+
 		if (t == INFINITY)
 			break;
+
+		// useful data 
+		n = normalize(intersec.normal);
+                nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
+		x = r.origin + r.direction * t;
+
+		if (bounces == 0)
+		{
+			objectNormal = nl;
+			objectColor = intersec.color;
+			objectID = intersectedObjectID;
+		}
+		if (bounces == 1 && previousIntersecType == SPEC)
+		{
+			objectNormal = nl;
+		}
+		
 		
 		if (intersec.type == LIGHT)
 		{	
+			if (diffuseCount == 0)
+			{
+				objectNormal = nl;
+				pixelSharpness = 1.0;
+			}
+
 			if (bounceIsSpecular || sampleLight || createCausticRay)
 				accumCol = mask * intersec.emission;
-
-			// if (createCausticRay)
-			// 	accumCol = mask * intersec.emission * max(0.0, dot(-r.direction, normalize(intersec.normal)));
 
 			// reached a light source, so we can exit
 			break;
@@ -139,15 +166,13 @@ vec3 CalculateRadiance(Ray r)
 		// if we get here and sampleLight is still true, shadow ray failed to find a light source
 		if (sampleLight) 
 			break;
-		
-		// useful data 
-		n = normalize(intersec.normal);
-                nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
-		x = r.origin + r.direction * t;
-		
-		
+
+
+
                 if (intersec.type == DIFF) // Ideal DIFFUSE reflection
                 {
+			previousIntersecType = DIFF;
+
 			diffuseCount++;
 
 			mask *= intersec.color;
@@ -156,11 +181,11 @@ vec3 CalculateRadiance(Ray r)
 				break;
 
 			// create caustic ray
-                        if (diffuseCount == 1 && rand() < 0.25 && uSampleCounter > 20.0)
+                        if (diffuseCount == 1 && rng() < 0.25)// && uSampleCounter > 20.0)
                         {
 				createCausticRay = true;
 
-				vec3 randVec = vec3(rand() * 2.0 - 1.0, rand() * 2.0 - 1.0, rand() * 2.0 - 1.0);
+				vec3 randVec = vec3(rng() * 2.0 - 1.0, rng() * 2.0 - 1.0, rng() * 2.0 - 1.0);
 				vec3 offset = vec3(randVec.x * 82.0, randVec.y * 170.0, randVec.z * 80.0);
 				vec3 target = vec3(180.0 + offset.x, 170.0 + offset.y, -350.0 + offset.z);
 				r = Ray( x, normalize(target - x) );
@@ -174,7 +199,7 @@ vec3 CalculateRadiance(Ray r)
 
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && rand() < 0.5)
+			if (diffuseCount == 1 && rng() < 0.5)
 			{	
 				// choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
@@ -194,6 +219,8 @@ vec3 CalculateRadiance(Ray r)
 		
                 if (intersec.type == SPEC)  // Ideal SPECULAR reflection
 		{
+			previousIntersecType = SPEC;
+
 			mask *= intersec.color;
 
 			r = Ray( x, reflect(r.direction, nl) );
@@ -204,10 +231,9 @@ vec3 CalculateRadiance(Ray r)
 		
 	} // end for (int bounces = 0; bounces < 5; bounces++)
 	
-
 	return max(vec3(0), accumCol);
 
-}
+}  // end vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
 
 
 //-----------------------------------------------------------------------
