@@ -5,6 +5,7 @@ var camFlightSpeed = 300;
 // called automatically from within initTHREEjs() function
 function initSceneData()
 {
+        //pixelRatio = 1;
 
         // scene/demo-specific three.js objects setup goes here
         EPS_intersect = mouseControl ? 0.01 : 0.5; // less precision on mobile
@@ -28,7 +29,9 @@ function initSceneData()
 function initPathTracingShaders()
 {
         // scene/demo-specific uniforms go here
-        
+        pathTracingUniforms.uColorEdgeSharpeningRate = { type: "f", value: 1.0 };
+        pathTracingUniforms.uNormalEdgeSharpeningRate = { type: "f", value: 0.005 };
+        pathTracingUniforms.uObjectEdgeSharpeningRate = { type: "f", value: 0.002 };
 
         pathTracingDefines = {
                 //NUMBER_OF_TRIANGLES: total_number_of_triangles
