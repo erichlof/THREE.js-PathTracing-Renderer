@@ -70,9 +70,9 @@ Quad quads[N_QUADS];
 
 
 
-//--------------------------------------------------------------------------
-float SceneIntersect(Ray r, inout Intersection intersec)
-//--------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------
+float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedObjectID )
+//---------------------------------------------------------------------------------------
 {
 	Ray rObj; 
 	vec3 n, A_n0, A_n1, B_n0, B_n1, n0, n1;
@@ -99,6 +99,7 @@ float SceneIntersect(Ray r, inout Intersection intersec)
 			intersec.emission = quads[i].emission;
 			intersec.color = quads[i].color;
 			intersec.type = quads[i].type;
+			intersectedObjectID = 0.0;
 		}
         }
 
@@ -203,6 +204,7 @@ float SceneIntersect(Ray r, inout Intersection intersec)
 		intersec.emission = vec3(0);
 		intersec.color = color0;
 		intersec.type = type0;
+		intersectedObjectID = 1.0;
 	}
 	else if (t1 > 0.0 && t1 < t)
 	{
@@ -211,6 +213,7 @@ float SceneIntersect(Ray r, inout Intersection intersec)
 		intersec.emission = vec3(0);
 		intersec.color = color1;
 		intersec.type = type1;
+		intersectedObjectID = 2.0;
 	}
 
 
@@ -218,9 +221,9 @@ float SceneIntersect(Ray r, inout Intersection intersec)
 }
 
 
-//-----------------------------------------------------------------------
-vec3 CalculateRadiance(Ray r)
-//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------------------------------
+vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
+//-----------------------------------------------------------------------------------------------------------------------------
 {
 	Intersection intersec;
 	Quad light = quads[5];
@@ -235,25 +238,45 @@ vec3 CalculateRadiance(Ray r)
 	float nc, nt, ratioIoR, Re, Tr;
 	float P, RP, TP;
 	float weight;
+	float intersectedObjectID;
 
 	int diffuseCount = 0;
+	int previousIntersecType = -100;
 
 	bool bounceIsSpecular = true;
 	bool sampleLight = false;
 
-	
+
+
 	for (int bounces = 0; bounces < 6; bounces++)
 	{
 
-		t = SceneIntersect(r, intersec);
-		
+		t = SceneIntersect(r, intersec, intersectedObjectID);
 
 		if (t == INFINITY)	
 			break;
+
+		// useful data 
+		n = normalize(intersec.normal);
+                nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
+		x = r.origin + r.direction * t;
+
+		if (bounces == 0)
+		{
+			objectNormal = nl;
+			objectColor = intersec.color;
+			objectID = intersectedObjectID;
+		}
 		
 		
 		if (intersec.type == LIGHT)
 		{	
+			if (diffuseCount == 0)
+			{
+				objectNormal = nl;
+				pixelSharpness = 1.0;
+			}
+			
 			if (bounceIsSpecular || sampleLight)
 				accumCol = mask * intersec.emission;
 			// reached a light, so we can exit
@@ -265,23 +288,20 @@ vec3 CalculateRadiance(Ray r)
 		// if we get here and sampleLight is still true, shadow ray failed to find a light source
 		if (sampleLight)	
 			break;
+	
 		
-
-		// useful data 
-		n = normalize(intersec.normal);
-                nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
-		x = r.origin + r.direction * t;
-
 		    
                 if (intersec.type == DIFF) // Ideal DIFFUSE reflection
 		{
+			previousIntersecType = DIFF;
+
 			diffuseCount++;
 
 			mask *= intersec.color;
 
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && rand() < 0.5)
+			if (diffuseCount == 1 && rng() < 0.5)
 			{
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
 				r.origin += nl * uEPS_intersect;
@@ -301,6 +321,8 @@ vec3 CalculateRadiance(Ray r)
 		
 		if (intersec.type == SPEC)  // Ideal SPECULAR reflection
 		{
+			previousIntersecType = SPEC;
+
 			mask *= intersec.color;
 
 			r = Ray( x, reflect(r.direction, nl) );
@@ -311,6 +333,8 @@ vec3 CalculateRadiance(Ray r)
 		
 		if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
+			previousIntersecType = REFR;
+
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
@@ -319,7 +343,7 @@ vec3 CalculateRadiance(Ray r)
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 			
-			if (rand() < P)
+			if (rng() < P)
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
@@ -344,6 +368,8 @@ vec3 CalculateRadiance(Ray r)
 		
 		if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top
 		{
+			previousIntersecType = COAT;
+
 			nc = 1.0; // IOR of Air
 			nt = 1.4; // IOR of Clear Coat
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
@@ -352,7 +378,7 @@ vec3 CalculateRadiance(Ray r)
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 
-			if (rand() < P)
+			if (rng() < P)
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
@@ -366,7 +392,7 @@ vec3 CalculateRadiance(Ray r)
 
 			bounceIsSpecular = false;
 			
-			if (diffuseCount == 1 && rand() < 0.5)
+			if (diffuseCount == 1 && rng() < 0.5)
 			{
 				// choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
