@@ -26,9 +26,9 @@ Box boxes[N_BOXES];
 #include <pathtracing_box_intersect>
 
 
-//-----------------------------------------------------------------------
-float SceneIntersect( Ray r, inout Intersection intersec )
-//-----------------------------------------------------------------------
+//---------------------------------------------------------------------------------------
+float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedObjectID )
+//---------------------------------------------------------------------------------------
 {
 	vec3 normal;
         float d;
@@ -45,6 +45,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.emission = quads[i].emission;
 			intersec.color = quads[i].color;
 			intersec.type = quads[i].type;
+			intersectedObjectID = 0.0;
 		}
         }
 	
@@ -57,6 +58,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		intersec.emission = boxes[2].emission;
 		intersec.color = boxes[2].color;
 		intersec.type = boxes[2].type;
+		intersectedObjectID = 1.0;
 	}
 	
 	
@@ -77,6 +79,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		intersec.emission = boxes[0].emission;
 		intersec.color = boxes[0].color;
 		intersec.type = boxes[0].type;
+		intersectedObjectID = 2.0;
 	}
 	
 	
@@ -96,6 +99,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		intersec.emission = boxes[1].emission;
 		intersec.color = boxes[1].color;
 		intersec.type = boxes[1].type;
+		intersectedObjectID = 3.0;
 	}
 	
 	
@@ -104,9 +108,9 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 
 
 
-//-----------------------------------------------------------------------
-vec3 CalculateRadiance(Ray originalRay)
-//-----------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------------------------
+vec3 CalculateRadiance( Ray originalRay, out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
+//---------------------------------------------------------------------------------------------------------------------------------------
 {
 
 	Intersection intersec;
@@ -116,9 +120,9 @@ vec3 CalculateRadiance(Ray originalRay)
 	vec3 n, nl, x;
 	vec3 dirToLight;
 	vec3 tdir;
-	vec3 randPointOnLight = vec3( mix(quads[5].v0.x, quads[5].v1.x, rand()),
+	vec3 randPointOnLight = vec3( mix(quads[5].v0.x, quads[5].v2.x, rng()),
 				      quads[5].v0.y,
-				      mix(quads[5].v0.z, quads[5].v3.z, rand()) );
+				      mix(quads[5].v0.z, quads[5].v2.z, rng()) );
 	vec3 lightHitPos = randPointOnLight;
 	vec3 lightHitEmission = quads[5].emission;
         
@@ -126,8 +130,10 @@ vec3 CalculateRadiance(Ray originalRay)
 	float t = INFINITY;
 	float t2 = INFINITY;
 	float weight = 0.0;
+	float intersectedObjectID;
 	
 	int diffuseCount = 0;
+	int previousIntersecType = -100;
 
 	bool bounceIsSpecular = true;
 	bool sampleLight = false;
@@ -137,7 +143,7 @@ vec3 CalculateRadiance(Ray originalRay)
 	// first light trace
 	Ray r = Ray(randPointOnLight, quads[5].normal);
 	r.origin += quads[5].normal * uEPS_intersect;
-	t = SceneIntersect(r, intersec);
+	t = SceneIntersect(r, intersec, intersectedObjectID);
 
 	if (t < INFINITY && intersec.type == DIFF)
 	{
@@ -151,8 +157,8 @@ vec3 CalculateRadiance(Ray originalRay)
 		r = Ray(lightHitPos, randomCosWeightedDirectionInHemisphere(intersec.normal));
 		r.origin += intersec.normal * uEPS_intersect;
 		
-		t2 = SceneIntersect(r, intersec);
-		if (t2 < INFINITY && intersec.type == DIFF && rand() < 0.5)
+		t2 = SceneIntersect(r, intersec, intersectedObjectID);
+		if (t2 < INFINITY && intersec.type == DIFF && rng() < 0.5)
 		{
 			lightHitPos = r.origin + r.direction * t2;
 			weight = max(0.0, dot(-r.direction, normalize(intersec.normal)));
@@ -161,7 +167,7 @@ vec3 CalculateRadiance(Ray originalRay)
 	}
 
 	// this allows the original light to be the lightsource once in a while
-	if ( !diffuseFound || rand() < 0.5 )
+	if ( !diffuseFound || rng() < 0.5 )
 	{
 		lightHitPos = randPointOnLight;
 		lightHitEmission = quads[5].emission;
@@ -171,21 +177,46 @@ vec3 CalculateRadiance(Ray originalRay)
 	// regular path tracing from camera
 	r = originalRay;
 
+	intersectedObjectID = -INFINITY;
+
 	for (int bounces = 0; bounces < 5; bounces++)
 	{
 
-		t = SceneIntersect(r, intersec);
+		t = SceneIntersect(r, intersec, intersectedObjectID);
 		
 		if (t == INFINITY)
 			break;
+
+		// useful data 
+		n = normalize(intersec.normal);
+                nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
+		x = r.origin + r.direction * t;
+
+		if (bounces == 0)
+		{
+			objectNormal = nl;
+			objectColor = intersec.color;
+			objectID = intersectedObjectID;
+		}
+		if (bounces == 1 && previousIntersecType == SPEC)
+		{
+			objectNormal = nl;
+		}
 		
 		
 		if (intersec.type == LIGHT)
 		{	
-			accumCol = mask * intersec.emission;
+			if (diffuseCount == 0)
+			{
+				objectNormal = nl;
+				pixelSharpness = 1.0;
+			}
 
 			if (sampleLight)
-				accumCol = mask * intersec.emission * max(0.0, dot(-r.direction, normalize(intersec.normal)));
+				accumCol = mask * intersec.emission * max(0.0, dot(-r.direction, nl));
+
+			else
+				accumCol = mask * intersec.emission;
 			// reached a light, so we can exit
 			break;
 		}
@@ -197,7 +228,7 @@ vec3 CalculateRadiance(Ray originalRay)
 
 			if (ableToJoinPaths)
 			{
-				weight = max(0.0, dot(normalize(intersec.normal), -r.direction));
+				weight = max(0.0, dot(nl, -r.direction));
 				accumCol = mask * lightHitEmission * weight;
 			}
 			
@@ -209,21 +240,18 @@ vec3 CalculateRadiance(Ray originalRay)
 		if (sampleLight)
 			break;
 
-		// useful data 
-		n = normalize(intersec.normal);
-                nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
-		x = r.origin + r.direction * t;
-
 
                 if (intersec.type == DIFF) // Ideal DIFFUSE reflection
 		{
 			diffuseCount++;
 
+			previousIntersecType = DIFF;
+
 			mask *= intersec.color;
 
 			bounceIsSpecular = false;
 
-			if (diffuseCount < 3 && rand() < 0.8)
+			if (diffuseCount < 3 && rng() < 0.5)
 			{	
 				// choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
@@ -246,6 +274,8 @@ vec3 CalculateRadiance(Ray originalRay)
 		
 		if (intersec.type == SPEC)  // Ideal SPECULAR reflection
 		{
+			previousIntersecType = SPEC;
+
 			mask *= intersec.color;
 
 			r = Ray( x, reflect(r.direction, nl) );
