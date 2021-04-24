@@ -38,9 +38,9 @@ Box boxes[N_BOXES];
 #include <pathtracing_box_intersect>
 
 
-//-----------------------------------------------------------------------
-float SceneIntersect( Ray r, inout Intersection intersec )
-//-----------------------------------------------------------------------
+//---------------------------------------------------------------------------------------
+float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedObjectID )
+//---------------------------------------------------------------------------------------
 {
 	vec3 n;
 	float d;
@@ -58,6 +58,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.emission = spheres[i].emission;
 			intersec.color = spheres[i].color;
 			intersec.type = spheres[i].type;
+			intersectedObjectID = 0.0;
 		}
         }
 	
@@ -71,6 +72,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.emission = ellipsoids[i].emission;
 			intersec.color = ellipsoids[i].color;
 			intersec.type = ellipsoids[i].type;
+			intersectedObjectID = 1.0;
 		}
 	}
 	
@@ -85,6 +87,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.emission = boxes[i].emission;
 			intersec.color = boxes[i].color;
 			intersec.type = boxes[i].type;
+			intersectedObjectID = 2.0;
 		}
 	}
 	
@@ -98,6 +101,7 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 			intersec.emission = rectangles[i].emission;
 			intersec.color = rectangles[i].color;
 			intersec.type = rectangles[i].type;
+			intersectedObjectID = 3.0;
 		}
         }
 	
@@ -112,8 +116,8 @@ vec3 sampleRectangleLight(vec3 x, vec3 nl, Rectangle light, out float weight)
 	vec3 v = cross(light.normal, u);
 	vec3 randPointOnLight = light.position;
 
-	randPointOnLight += mix(u * -light.radiusU * 0.9, u * light.radiusU * 0.9, rand());
-	randPointOnLight += mix(v * -light.radiusV * 0.9, v * light.radiusV * 0.9, rand());
+	randPointOnLight += mix(u * -light.radiusU * 0.9, u * light.radiusU * 0.9, rng());
+	randPointOnLight += mix(v * -light.radiusV * 0.9, v * light.radiusV * 0.9, rng());
 	
 	vec3 dirToLight = randPointOnLight - x;
 	float r2 = (light.radiusU * 2.0) * (light.radiusV * 2.0);
@@ -129,9 +133,9 @@ vec3 sampleRectangleLight(vec3 x, vec3 nl, Rectangle light, out float weight)
 }
 
 
-//-----------------------------------------------------------------------
-vec3 CalculateRadiance(Ray r)
-//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------------------------------
+vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
+//-----------------------------------------------------------------------------------------------------------------------------
 {
 	Intersection intersec;
 	Rectangle lightChoice;
@@ -147,26 +151,28 @@ vec3 CalculateRadiance(Ray r)
 	float weight;
 	float nc, nt, ratioIoR, Re, Tr;
 	float P, RP, TP;
-	float randChoose;
 	float thickness = 0.1;
+	float intersectedObjectID;
 
 	int diffuseCount = 0;
+	int previousIntersecType = -100;
 
 	bool bounceIsSpecular = true;
 	bool sampleLight = false;
 
-	randChoose = rand() * N_LIGHTS; // 3 lights to choose from
-	lightChoice = rectangles[int(randChoose)];
+	lightChoice = rectangles[int(rand() * N_LIGHTS)];
 
 	
         for (int bounces = 0; bounces < 6; bounces++)
 	{
 
-		t = SceneIntersect(r, intersec);
+		t = SceneIntersect(r, intersec, intersectedObjectID);
 
 		
 		if (t == INFINITY)
 		{
+			pixelSharpness = diffuseCount == 0 ? 1.0 : 0.0;
+
 			skyColor = mix(vec3(0), vec3(0.004, 0.0, 0.04), clamp(exp(r.direction.y * -15.0), 0.0, 1.0));
 			
 			if (bounceIsSpecular || sampleLight)
@@ -175,9 +181,28 @@ vec3 CalculateRadiance(Ray r)
 			// reached a sky light, so we can exit
                         break;
 		}
+
+		// useful data 
+		n = normalize(intersec.normal);
+                nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
+		x = r.origin + r.direction * t;
+
+		if (bounces == 0)
+		{
+			objectNormal = nl;
+			objectColor = intersec.color;
+			objectID = intersectedObjectID;
+		}
+
 		
 		if (intersec.type == LIGHT)
 		{	
+			if (diffuseCount == 0)
+			{
+				objectNormal = nl;
+				pixelSharpness = 1.0;
+			}
+
 			if (bounceIsSpecular || sampleLight)
 				accumCol = mask * intersec.emission; // looking at light through a reflection
 			// reached a light, so we can exit
@@ -189,14 +214,11 @@ vec3 CalculateRadiance(Ray r)
 			break;
 		
 		
-		// useful data 
-		n = normalize(intersec.normal);
-                nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
-		x = r.origin + r.direction * t;
-
 		    
                 if (intersec.type == DIFF ) // Ideal DIFFUSE reflection
 		{
+			previousIntersecType = DIFF;
+
 			diffuseCount++;
 
 			mask *= intersec.color;
@@ -204,7 +226,7 @@ vec3 CalculateRadiance(Ray r)
 			bounceIsSpecular = false;
 
 			
-			if (diffuseCount == 1 && rand() < 0.5)
+			if (diffuseCount == 1 && rng() < 0.5)
 			{
 				// choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
@@ -224,6 +246,8 @@ vec3 CalculateRadiance(Ray r)
 		
 		if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
+			previousIntersecType = REFR;
+
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
@@ -232,7 +256,7 @@ vec3 CalculateRadiance(Ray r)
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 			
-			if (rand() < P)
+			if (rng() < P)
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
