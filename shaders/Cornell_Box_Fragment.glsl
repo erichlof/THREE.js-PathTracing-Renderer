@@ -181,7 +181,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 				break;
 
 			// create caustic ray
-                        if (diffuseCount == 1 && rng() < 0.25)// && uSampleCounter > 20.0)
+                        if (diffuseCount == 1 && rand() < 0.25)// && uSampleCounter > 20.0)
                         {
 				createCausticRay = true;
 
@@ -199,7 +199,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && rng() < 0.5)
+			if (diffuseCount == 1 && rand() < 0.5)
 			{	
 				// choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
