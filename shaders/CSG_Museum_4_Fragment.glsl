@@ -999,14 +999,17 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			objectColor = intersec.color;
 			objectID = intersectedObjectID;
 		}
-		
+		if (bounces == 1 && previousIntersecType == SPEC)
+		{
+			objectColor = intersec.color;
+		}
 
 		
 		if (intersec.type == LIGHT)
 		{	
 			if (diffuseCount == 0)
 			{
-				objectNormal = nl;
+				//objectNormal = nl;
 				pixelSharpness = 1.0;
 			}
 
@@ -1032,7 +1035,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			bounceIsSpecular = false;
 
 			
-			if (diffuseCount == 1 && rng() < 0.5)
+			if (diffuseCount == 1 && rand() < 0.5)
 			{
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
 				r.origin += nl * uEPS_intersect;
@@ -1074,7 +1077,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 			
-			if (rng() < P)
+			if (rand() < P)
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
@@ -1129,7 +1132,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 			
-			if (rng() < P)
+			if (rand() < P)
 			{
 				mask *= RP;
 				mask *= maskFactor;
@@ -1146,7 +1149,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && rng() < 0.5)
+			if (diffuseCount == 1 && rand() < 0.5)
 			{
 				// choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
@@ -1171,7 +1174,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			previousIntersecType = DIFF;
 
 			float translucentDensity = 0.05;
-			float scatteringDistance = -log(rng()) / translucentDensity;
+			float scatteringDistance = -log(rand()) / translucentDensity;
 			vec3 absorptionCoefficient = vec3(0.01);
 
 			// transmission?
@@ -1192,7 +1195,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && rng() < 0.5)
+			if (diffuseCount == 1 && rand() < 0.5)
                         {
                                 // choose random scattering direction vector
 				r = Ray( x, randomSphereDirection() );
