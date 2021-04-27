@@ -254,21 +254,18 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 
 		if (bounces == 0)
 		{
+			if (intersec.type != LIGHT)
+				objectID = intersectedObjectID;
+			
 			objectNormal = nl;
 			objectColor = intersec.color;
-			objectID = intersectedObjectID;
 		}
 		
 			
 		
 		if (intersec.type == LIGHT)
 		{	
-			if (diffuseCount == 0)
-			{
-				objectNormal = nl;
-				pixelSharpness = 1.0;
-			}
-
+			
 			if (bounceIsSpecular || sampleLight)
 				accumCol = mask * intersec.emission;
 			// reached a light, so we can exit
@@ -302,7 +299,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && rng() < 0.2)
+			if (diffuseCount == 1 && rand() < 0.2)
 			{
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
 				r.origin += nl * uEPS_intersect;
@@ -346,7 +343,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 
-			if (rng() < P)
+			if (rand() < P)
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
@@ -395,7 +392,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 			
-			if (rng() < P)
+			if (rand() < P)
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
@@ -410,7 +407,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && rng() < 0.1)
+			if (diffuseCount == 1 && rand() < 0.2)
 			{
 				// choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
@@ -507,7 +504,8 @@ void main( void )
 	randVec4 = vec4(0); // samples and holds the RGBA blueNoise texture value for this pixel
 	randVec4 = texelFetch(tBlueNoiseTexture, ivec2(mod(gl_FragCoord.xy + floor(uRandomVec2 * 256.0), 256.0)), 0);
 	
-	vec2 pixelOffset = vec2( tentFilter(rng()), tentFilter(rng()) ) * 0.5;
+	//vec2 pixelOffset = vec2( tentFilter(rng()), tentFilter(rng()) ) * 0.5;
+	vec2 pixelOffset = vec2(0);
 	// we must map pixelPos into the range -1.0 to +1.0
 	vec2 pixelPos = ((gl_FragCoord.xy + pixelOffset) / uResolution) * 2.0 - 1.0;
 
