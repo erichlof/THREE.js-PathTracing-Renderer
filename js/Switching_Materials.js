@@ -13,7 +13,8 @@ var changeLeftSphereMaterialColor = false;
 var changeRightSphereMaterialColor = false;
 
 
-function init_GUI() {
+function init_GUI() 
+{
 
         material_TypeObject = {
                 LSphereMaterial: 4,
@@ -24,16 +25,20 @@ function init_GUI() {
                 RSphereColor: [255, 255, 255]
         };
 
-        function leftMatTypeChanger() {
+        function leftMatTypeChanger() 
+        {
                 changeLeftSphereMaterialType = true;
         }
-        function rightMatTypeChanger() {
+        function rightMatTypeChanger() 
+        {
                 changeRightSphereMaterialType = true;
         }
-        function leftMatColorChanger() {
+        function leftMatColorChanger() 
+        {
 		changeLeftSphereMaterialColor = true;
         }
-        function rightMatColorChanger() {
+        function rightMatColorChanger() 
+        {
                 changeRightSphereMaterialColor = true;
         }
 
@@ -54,7 +59,8 @@ function init_GUI() {
         
         window.addEventListener('resize', onWindowResize, false);
 
-        if ( 'ontouchstart' in window ) {
+        if ( 'ontouchstart' in window ) 
+        {
                 mouseControl = false;
                 // if on mobile device, unpause the app because there is no ESC key and no mouse capture to do
                 isPaused = false;
@@ -66,18 +72,22 @@ function init_GUI() {
                 });	
         }
 
-        if (mouseControl) {
+        if (mouseControl) 
+        {
 
                 window.addEventListener( 'wheel', onMouseWheel, false );
 
-                window.addEventListener("click", function(event) {
+                window.addEventListener("click", function(event) 
+                {
                         event.preventDefault();	
                 }, false);
-                window.addEventListener("dblclick", function(event) {
+                window.addEventListener("dblclick", function(event) 
+                {
                         event.preventDefault();	
                 }, false);
                 
-                document.body.addEventListener("click", function(event) {
+                document.body.addEventListener("click", function(event) 
+                {
                         if (!ableToEngagePointerLock)
                                 return;
                         this.requestPointerLock = this.requestPointerLock || this.mozRequestPointerLock;
@@ -109,11 +119,14 @@ function init_GUI() {
 
         }
 
-        if (mouseControl) {
-                gui.domElement.addEventListener("mouseenter", function(event) {
+        if (mouseControl) 
+        {
+                gui.domElement.addEventListener("mouseenter", function(event) 
+                {
                                 ableToEngagePointerLock = false;	
                 }, false);
-                gui.domElement.addEventListener("mouseleave", function(event) {
+                gui.domElement.addEventListener("mouseleave", function(event) 
+                {
                                 ableToEngagePointerLock = true;
                 }, false);
         }
@@ -146,8 +159,10 @@ function init_GUI() {
 
 
 // called automatically from within initTHREEjs() function
-function initSceneData() {
-        
+function initSceneData() 
+{
+        //pixelRatio = 1; // for computers with the latest GPUs!
+
         // scene/demo-specific three.js objects setup goes here
         EPS_intersect = mouseControl ? 0.01 : 1.0; // less precision on mobile
 
@@ -166,7 +181,8 @@ function initSceneData() {
 
 
 // called automatically from within initTHREEjs() function
-function initPathTracingShaders() {
+function initPathTracingShaders() 
+{
  
         // scene/demo-specific uniforms go here
         pathTracingUniforms.uLeftSphereMaterialType = { type: "f", value: 0.0 };
@@ -175,14 +191,15 @@ function initPathTracingShaders() {
         pathTracingUniforms.uRightSphereColor = { type: "v3", value: new THREE.Color() };
         pathTracingUniforms.uColorEdgeSharpeningRate = { type: "f", value: 1.0 };
         pathTracingUniforms.uNormalEdgeSharpeningRate = { type: "f", value: 1.0 };
-        pathTracingUniforms.uObjectEdgeSharpeningRate = { type: "f", value: 1.0 };
+        pathTracingUniforms.uObjectEdgeSharpeningRate = { type: "f", value: 0.1 };
                 
         pathTracingDefines = {
         	//NUMBER_OF_TRIANGLES: total_number_of_triangles
         };
 
         // load vertex and fragment shader files that are used in the pathTracing material, mesh and scene
-        fileLoader.load('shaders/common_PathTracing_Vertex.glsl', function (shaderText) {
+        fileLoader.load('shaders/common_PathTracing_Vertex.glsl', function (shaderText) 
+        {
                 pathTracingVertexShader = shaderText;
 
                 createPathTracingMaterial();
@@ -192,9 +209,11 @@ function initPathTracingShaders() {
 
 
 // called automatically from within initPathTracingShaders() function above
-function createPathTracingMaterial() {
+function createPathTracingMaterial() 
+{
 
-        fileLoader.load('shaders/Switching_Materials_Fragment.glsl', function (shaderText) {
+        fileLoader.load('shaders/Switching_Materials_Fragment.glsl', function (shaderText) 
+        {
                 
                 pathTracingFragmentShader = shaderText;
 
@@ -222,9 +241,11 @@ function createPathTracingMaterial() {
 
 
 // called automatically from within the animate() function
-function updateVariablesAndUniforms() {
+function updateVariablesAndUniforms() 
+{
         
-        if (changeLeftSphereMaterialType) {
+        if (changeLeftSphereMaterialType) 
+        {
                                         
                 matType = Math.floor(material_LTypeController.getValue());
                 pathTracingUniforms.uLeftSphereMaterialType.value = matType;
@@ -233,27 +254,34 @@ function updateVariablesAndUniforms() {
                 //        pathTracingUniforms.uLeftSphereColor.value.setRGB(0.0, 0.0, 0.0);
                 //        pathTracingUniforms.uLeftSphereEmissive.value.setRGB(1.0, 0.0, 1.0);
                 //}
-                if (matType == 1) { // DIFF
+                if (matType == 1) 
+                { // DIFF
                         pathTracingUniforms.uLeftSphereColor.value.setRGB(1.0, 1.0, 1.0);   
                 }
-                else if (matType == 2) { // REFR
+                else if (matType == 2) 
+                { // REFR
                         pathTracingUniforms.uLeftSphereColor.value.setRGB(0.6, 1.0, 0.9); 
                 }
-                else if (matType == 3) { // SPEC
+                else if (matType == 3) 
+                { // SPEC
                         pathTracingUniforms.uLeftSphereColor.value.setRGB(1.000000, 0.765557, 0.336057); // Gold
                         // other metals
                         // Aluminum: (0.913183, 0.921494, 0.924524) / Copper: (0.955008, 0.637427, 0.538163) / Silver: (0.971519, 0.959915, 0.915324)   
                 }
-                else if (matType == 4) { // COAT
+                else if (matType == 4) 
+                { // COAT
                         pathTracingUniforms.uLeftSphereColor.value.setRGB(1.0, 1.0, 1.0);   
                 }
-                else if (matType == 5) { // CARCOAT
+                else if (matType == 5) 
+                { // CARCOAT
                         pathTracingUniforms.uLeftSphereColor.value.setRGB(1.0, 0.001, 0.001);   
                 }
-                else if (matType == 6) { // TRANSLUCENT
+                else if (matType == 6) 
+                { // TRANSLUCENT
                         pathTracingUniforms.uLeftSphereColor.value.setRGB(0.5, 0.9, 1.0);
                 }
-                else if (matType == 7) { // SPECSUB
+                else if (matType == 7) 
+                { // SPECSUB
                         pathTracingUniforms.uLeftSphereColor.value.setRGB(0.99, 0.99, 0.9);  
                 }
 
@@ -266,7 +294,8 @@ function updateVariablesAndUniforms() {
                 changeLeftSphereMaterialType = false;
         }
 
-        if (changeRightSphereMaterialType) {
+        if (changeRightSphereMaterialType) 
+        {
 
                 matType = Math.floor(material_RTypeController.getValue());
                 pathTracingUniforms.uRightSphereMaterialType.value = matType;
@@ -275,27 +304,34 @@ function updateVariablesAndUniforms() {
                 //        pathTracingUniforms.uRightSphereColor.value.setRGB(0.0, 0.0, 0.0);
                 //        pathTracingUniforms.uRightSphereEmissive.value.setRGB(1.0, 0.0, 1.0);    
                 //}
-                if (matType == 1) { // DIFF
+                if (matType == 1) 
+                { // DIFF
                         pathTracingUniforms.uRightSphereColor.value.setRGB(1.0, 1.0, 1.0);   
                 }
-                else if (matType == 2) { // REFR
+                else if (matType == 2) 
+                { // REFR
                         pathTracingUniforms.uRightSphereColor.value.setRGB(1.0, 1.0, 1.0);
                 }
-                else if (matType == 3) { // SPEC
+                else if (matType == 3) 
+                { // SPEC
                         pathTracingUniforms.uRightSphereColor.value.setRGB(0.913183, 0.921494, 0.924524); // Aluminum
                         // other metals
                         // Gold: (1.000000, 0.765557, 0.336057) / Copper: (0.955008, 0.637427, 0.538163) / Silver: (0.971519, 0.959915, 0.915324)   
                 }
-                else if (matType == 4) { // COAT
+                else if (matType == 4) 
+                { // COAT
                         pathTracingUniforms.uRightSphereColor.value.setRGB(1.0, 1.0, 0.0);   
                 }
-                else if (matType == 5) { // CARCOAT
+                else if (matType == 5) 
+                { // CARCOAT
                         pathTracingUniforms.uRightSphereColor.value.setRGB(0.2, 0.3, 0.6);
                 }
-                else if (matType == 6) { // TRANSLUCENT
+                else if (matType == 6) 
+                { // TRANSLUCENT
                         pathTracingUniforms.uRightSphereColor.value.setRGB(1.0, 0.82, 0.8);
                 }
-                else if (matType == 7) { // SPECSUB
+                else if (matType == 7) 
+                { // SPECSUB
                         pathTracingUniforms.uRightSphereColor.value.setRGB(0.0, 0.99, 0.4); 
                 }
 
@@ -308,7 +344,8 @@ function updateVariablesAndUniforms() {
                 changeRightSphereMaterialType = false;
         }
 
-        if (changeLeftSphereMaterialColor) {
+        if (changeLeftSphereMaterialColor) 
+        {
 		matType = Math.floor(material_LTypeController.getValue());
 
 		
@@ -320,7 +357,8 @@ function updateVariablesAndUniforms() {
                 changeLeftSphereMaterialColor = false;
 	}
 	
-	if (changeRightSphereMaterialColor) {
+	if (changeRightSphereMaterialColor) 
+        {
 		matType = Math.floor(material_RTypeController.getValue());
 
                 
