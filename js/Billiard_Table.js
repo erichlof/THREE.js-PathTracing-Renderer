@@ -6,8 +6,10 @@ var sceneIsDynamic = false;
 var camFlightSpeed = 100;
 
 // called automatically from within initTHREEjs() function
-function initSceneData() {
-        
+function initSceneData() 
+{ 
+        //pixelRatio = 1; // for computers with the latest GPUs!
+
         // scene/demo-specific three.js objects setup goes here
         EPS_intersect = mouseControl ? 0.01 : 1.0; // less precision on mobile
 
@@ -52,8 +54,8 @@ function initSceneData() {
 
 
 // called automatically from within initTHREEjs() function
-function initPathTracingShaders() {
- 
+function initPathTracingShaders() 
+{
         // scene/demo-specific uniforms go here   
         pathTracingUniforms.tClothTexture = { type: "t", value: clothTexture };
         pathTracingUniforms.tDarkWoodTexture = { type: "t", value: darkWoodTexture };
@@ -67,7 +69,8 @@ function initPathTracingShaders() {
         };
 
         // load vertex and fragment shader files that are used in the pathTracing material, mesh and scene
-        fileLoader.load('shaders/common_PathTracing_Vertex.glsl', function (shaderText) {
+        fileLoader.load('shaders/common_PathTracing_Vertex.glsl', function (shaderText) 
+        {
                 pathTracingVertexShader = shaderText;
 
                 createPathTracingMaterial();
@@ -77,7 +80,8 @@ function initPathTracingShaders() {
 
 
 // called automatically from within initPathTracingShaders() function above
-function createPathTracingMaterial() {
+function createPathTracingMaterial() 
+{
 
         fileLoader.load('shaders/Billiard_Table_Fragment.glsl', function (shaderText) {
                 
@@ -107,8 +111,8 @@ function createPathTracingMaterial() {
 
 
 // called automatically from within the animate() function
-function updateVariablesAndUniforms() {
-
+function updateVariablesAndUniforms() 
+{
         // INFO
         cameraInfoElement.innerHTML = "FOV: " + worldCamera.fov + " / Aperture: " + apertureSize.toFixed(2) + " / FocusDistance: " + focusDistance + "<br>" + "Samples: " + sampleCounter;
 				
