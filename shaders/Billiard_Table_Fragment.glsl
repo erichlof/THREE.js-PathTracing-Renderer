@@ -176,7 +176,6 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 	float intersectedObjectID;
 
 	int diffuseCount = 0;
-	int previousIntersecType = -100;
 
 	bool bounceIsSpecular = true;
 	bool sampleLight = false;
@@ -228,8 +227,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		
                 if (intersec.type == DIFF || intersec.type == CLOTH ) // Ideal DIFFUSE reflection
 		{
-			previousIntersecType = DIFF;
-
+			
 			if (intersec.type == CLOTH)
 				intersec.color *= pow(clamp(texture(tClothTexture, (10.0 * x.xz) / 512.0).rgb, 0.0, 1.0), vec3(2.2));
 
@@ -242,7 +240,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && rng() < 0.5)
+			if (diffuseCount == 1 && rand() < 0.5)
 			{	
 				// choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
@@ -263,8 +261,6 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		
 		if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top
 		{
-			previousIntersecType = COAT;
-
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of Clear Coat
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
@@ -273,7 +269,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 
-			if (bounces == 0 && rng() < P)
+			if (bounces == 0 && rand() < P)
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
@@ -290,7 +286,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && rng() < 0.5)
+			if (diffuseCount == 1 && rand() < 0.5)
 			{	
 				// choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
@@ -311,8 +307,6 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		
 		if (intersec.type == LIGHTWOOD || intersec.type == DARKWOOD)  // Diffuse object underneath with thin ClearCoat on top
 		{
-			previousIntersecType = COAT;
-
 			nc = 1.0; // IOR of Air
 			nt = 1.1; // IOR of Clear Coat
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
@@ -321,7 +315,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 
-			if (bounces == 0 && rng() < P)
+			if (bounces == 0 && rand() < P)
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
@@ -394,7 +388,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && rng() < 0.5)
+			if (diffuseCount == 1 && rand() < 0.5)
                         {
 				// choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
