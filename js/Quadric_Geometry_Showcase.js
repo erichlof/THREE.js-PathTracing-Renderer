@@ -4,7 +4,9 @@ var camFlightSpeed = 60;
 var torusObject;
 
 // called automatically from within initTHREEjs() function
-function initSceneData() {
+function initSceneData() 
+{
+        //pixelRatio = 1; // for computers with the latest GPUs!
         
         // scene/demo-specific three.js objects setup goes here
         EPS_intersect = mouseControl ? 0.01 : 1.0; // less precision on mobile
@@ -31,20 +33,22 @@ function initSceneData() {
 
 
 // called automatically from within initTHREEjs() function
-function initPathTracingShaders() {
+function initPathTracingShaders() 
+{
  
         // scene/demo-specific uniforms go here
         pathTracingUniforms.uTorusInvMatrix = { type: "m4", value: new THREE.Matrix4() };
-        pathTracingUniforms.uColorEdgeSharpeningRate = { type: "f", value: 0.08 };
-        pathTracingUniforms.uNormalEdgeSharpeningRate = { type: "f", value: 1.0 };
-        pathTracingUniforms.uObjectEdgeSharpeningRate = { type: "f", value: 0.05 };
+        pathTracingUniforms.uColorEdgeSharpeningRate = { type: "f", value: 0.1 };
+        pathTracingUniforms.uNormalEdgeSharpeningRate = { type: "f", value: 0.1 };
+        pathTracingUniforms.uObjectEdgeSharpeningRate = { type: "f", value: 1.0 };
 
         pathTracingDefines = {
         	//NUMBER_OF_TRIANGLES: total_number_of_triangles
         };
 
         // load vertex and fragment shader files that are used in the pathTracing material, mesh and scene
-        fileLoader.load('shaders/common_PathTracing_Vertex.glsl', function (shaderText) {
+        fileLoader.load('shaders/common_PathTracing_Vertex.glsl', function (shaderText) 
+        {
                 pathTracingVertexShader = shaderText;
 
                 createPathTracingMaterial();
@@ -54,10 +58,11 @@ function initPathTracingShaders() {
 
 
 // called automatically from within initPathTracingShaders() function above
-function createPathTracingMaterial() {
+function createPathTracingMaterial() 
+{
 
-        fileLoader.load('shaders/Quadric_Geometry_Showcase_Fragment.glsl', function (shaderText) {
-                
+        fileLoader.load('shaders/Quadric_Geometry_Showcase_Fragment.glsl', function (shaderText) 
+        { 
                 pathTracingFragmentShader = shaderText;
 
                 pathTracingMaterial = new THREE.ShaderMaterial({
@@ -75,8 +80,7 @@ function createPathTracingMaterial() {
                 // the following keeps the large scene ShaderMaterial quad right in front 
                 //   of the camera at all times. This is necessary because without it, the scene 
                 //   quad will fall out of view and get clipped when the camera rotates past 180 degrees.
-                worldCamera.add(pathTracingMesh);
-                
+                worldCamera.add(pathTracingMesh);      
         });
 
 } // end function createPathTracingMaterial()
@@ -84,8 +88,8 @@ function createPathTracingMaterial() {
 
 
 // called automatically from within the animate() function
-function updateVariablesAndUniforms() {
-        
+function updateVariablesAndUniforms() 
+{
         // TORUS
         torusObject.updateMatrixWorld(true); // 'true' forces immediate matrix update
         pathTracingUniforms.uTorusInvMatrix.value.copy(torusObject.matrixWorld).invert();
