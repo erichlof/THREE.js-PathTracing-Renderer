@@ -77,10 +77,11 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 	float weight;
 	float thickness = 0.05;
 	float intersectedObjectID;
+	float previousIntersectionRoughness = 0.0;
 
 	int diffuseCount = 0;
-	int previousIntersecType = -100;
 
+	bool coatTypeIntersected = false;
 	bool bounceIsSpecular = true;
 	bool sampleLight = false;
 
@@ -110,14 +111,12 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			objectNormal = nl;
 			objectColor = intersec.color;
 			objectID = intersectedObjectID;
-			if (intersec.roughness > 0.4)
-				pixelSharpness = 0.5;
 		}
 		
 		
 		if (intersec.type == LIGHT)
 		{	
-			pixelSharpness = diffuseCount == 0 && pixelSharpness != 0.5 ? 1.0 : 0.0;
+			pixelSharpness = diffuseCount == 0 && previousIntersectionRoughness < 0.5 ? 1.0 : 0.0;
 
 			if (bounceIsSpecular || sampleLight)
 				accumCol = mask * intersec.emission;
@@ -140,20 +139,16 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 				intersec.color = checkCol0 * q + checkCol1 * (1.0 - q);	
 			}
 
-			//if (diffuseCount == 0 && previousIntersecType != COAT && intersec.roughness < 0.3)
-			//	objectColor = intersec.color;
-			if (bounces == 0)
+			if (diffuseCount == 0 && !coatTypeIntersected && previousIntersectionRoughness < 0.3)	
 				objectColor = intersec.color;
 
 			diffuseCount++;
-
-			previousIntersecType = DIFF;
 
 			mask *= intersec.color;
 
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && rng() < 0.5)
+			if (diffuseCount == 1 && rand() < 0.5)
 			{
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
 				r.origin += nl * uEPS_intersect;
@@ -173,7 +168,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		
 		if (intersec.type == SPEC)  // Ideal SPECULAR reflection
 		{
-			previousIntersecType = SPEC;
+			previousIntersectionRoughness = intersec.roughness;
 
 			mask *= intersec.color;
 			r = Ray( x, reflect(r.direction, nl) );
@@ -186,7 +181,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		
 		if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
-			previousIntersecType = REFR;
+			previousIntersectionRoughness = intersec.roughness;
 
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
@@ -196,7 +191,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 			
-			if (rng() < P)
+			if (rand() < P)
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
@@ -229,7 +224,8 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		
 		if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top
 		{
-			previousIntersecType = COAT;
+			previousIntersectionRoughness = intersec.roughness;
+			coatTypeIntersected = true;
 
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of Clear Coat
@@ -239,7 +235,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 			
-			if (rng() < P)
+			if (rand() < P)
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
@@ -255,7 +251,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && rng() < 0.5)
+			if (diffuseCount == 1 && rand() < 0.5)
 			{
 				// choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
@@ -276,7 +272,8 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 
 		if (intersec.type == METALCOAT)  // Metal object underneath with ClearCoat on top
 		{
-			previousIntersecType = COAT;
+			previousIntersectionRoughness = intersec.roughness;
+			coatTypeIntersected = true;
 
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of Clear Coat
@@ -286,7 +283,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 			
-			if (rng() < P)
+			if (rand() < P)
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
