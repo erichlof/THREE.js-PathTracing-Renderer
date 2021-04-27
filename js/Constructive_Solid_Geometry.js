@@ -481,7 +481,8 @@ function init_GUI()
 // called automatically from within initTHREEjs() function
 function initSceneData()
 {
-	//pixelRatio = 1;
+	//pixelRatio = 1; // for computers with the latest GPUs!
+	
 	// scene/demo-specific three.js objects setup goes here
 	EPS_intersect = mouseControl ? 0.01 : 1.0; // less precision on mobile
 
