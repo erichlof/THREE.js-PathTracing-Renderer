@@ -31,12 +31,14 @@ var ableToEngagePointerLock = true;
 var BVH_LevelController;
 var changeBVH_Level = false;
 
-function init_GUI() {
+function init_GUI() 
+{
 
         BVH_LevelController = {
                 BVH_NodeDepth: 2
         };
-        function BVH_LevelChanger() {
+        function BVH_LevelChanger() 
+        {
                 changeBVH_Level = true;
         }
         gui = new dat.GUI();
@@ -50,7 +52,8 @@ function init_GUI() {
         
         window.addEventListener('resize', onWindowResize, false);
 
-        if ( 'ontouchstart' in window ) {
+        if ( 'ontouchstart' in window ) 
+        {
                 mouseControl = false;
                 // if on mobile device, unpause the app because there is no ESC key and no mouse capture to do
                 isPaused = false;
@@ -62,18 +65,22 @@ function init_GUI() {
                 });	
         }
 
-        if (mouseControl) {
+        if (mouseControl) 
+        {
 
                 window.addEventListener( 'wheel', onMouseWheel, false );
 
-                window.addEventListener("click", function(event) {
+                window.addEventListener("click", function(event) 
+                {
                         event.preventDefault();	
                 }, false);
-                window.addEventListener("dblclick", function(event) {
+                window.addEventListener("dblclick", function(event) 
+                {
                         event.preventDefault();	
                 }, false);
                 
-                document.body.addEventListener("click", function(event) {
+                document.body.addEventListener("click", function(event) 
+                {
                         if (!ableToEngagePointerLock)
                                 return;
                         this.requestPointerLock = this.requestPointerLock || this.mozRequestPointerLock;
@@ -105,11 +112,14 @@ function init_GUI() {
 
         }
 
-        if (mouseControl) {
-                gui.domElement.addEventListener("mouseenter", function(event) {
+        if (mouseControl) 
+        {
+                gui.domElement.addEventListener("mouseenter", function(event) 
+                {
                                 ableToEngagePointerLock = false;	
                 }, false);
-                gui.domElement.addEventListener("mouseleave", function(event) {
+                gui.domElement.addEventListener("mouseleave", function(event) 
+                {
                                 ableToEngagePointerLock = true;
                 }, false);
         }
@@ -140,8 +150,9 @@ function init_GUI() {
 } // end function init_GUI()
 
 
-function MaterialObject() {
-// a list of material types and their corresponding numbers are found in the 'pathTracingCommon.js' file
+function MaterialObject() 
+{
+        // a list of material types and their corresponding numbers are found in the 'pathTracingCommon.js' file
         this.type = 1; // default is '1': diffuse type 		
         this.albedoTextureID = -1; // which diffuse map to use for model's color / '-1' = no textures are used
         this.color = new THREE.Color(1.0, 1.0, 1.0); // takes on different meanings, depending on 'type' above
@@ -152,19 +163,21 @@ function MaterialObject() {
 }
 
 
-function load_GLTF_Model() {
+function load_GLTF_Model() 
+{
 
         var gltfLoader = new THREE.GLTFLoader();
 
-        //gltfLoader.load("models/StanfordBunny.glb", function( meshGroup ) { // Triangles: 30,338
-        gltfLoader.load("models/StanfordDragon.glb", function( meshGroup ) { // Triangles: 100,000
-
+        //gltfLoader.load("models/StanfordBunny.glb", function( meshGroup ) // Triangles: 30,338
+        gltfLoader.load("models/StanfordDragon.glb", function( meshGroup ) // Triangles: 100,000
+        {
                 if (meshGroup.scene) 
                         meshGroup = meshGroup.scene;
 
-                meshGroup.traverse( function ( child ) {
-
-                        if ( child.isMesh ) {
+                meshGroup.traverse( function ( child ) 
+                {
+                        if ( child.isMesh ) 
+                        {
                                 
                                 let mat = new MaterialObject();
                                 mat.type = 1;
@@ -182,7 +195,8 @@ function load_GLTF_Model() {
 
                 modelMesh = meshList[0].clone();
 
-                for (let i = 0; i < meshList.length; i++) {
+                for (let i = 0; i < meshList.length; i++) 
+                {
                         geoList.push(meshList[i].geometry);
                 }
 
@@ -193,28 +207,37 @@ function load_GLTF_Model() {
 
                 modelMesh.geometry.center();
 
-                for (let i = 1; i < triangleMaterialMarkers.length; i++) {
+                for (let i = 1; i < triangleMaterialMarkers.length; i++) 
+                {
                         triangleMaterialMarkers[i] += triangleMaterialMarkers[i-1];
                 }
                      
-                for (let i = 0; i < meshList.length; i++) {
+                for (let i = 0; i < meshList.length; i++) 
+                {
                         if (meshList[i].material.map != undefined)
                                 uniqueMaterialTextures.push(meshList[i].material.map);		
                 }
                 
-                for (let i = 0; i < uniqueMaterialTextures.length; i++) {
-                        for (let j = i + 1; j < uniqueMaterialTextures.length; j++) {
-                                if (uniqueMaterialTextures[i].image.src == uniqueMaterialTextures[j].image.src) {
+                for (let i = 0; i < uniqueMaterialTextures.length; i++) 
+                {
+                        for (let j = i + 1; j < uniqueMaterialTextures.length; j++) 
+                        {
+                                if (uniqueMaterialTextures[i].image.src == uniqueMaterialTextures[j].image.src) 
+                                {
                                         uniqueMaterialTextures.splice(j, 1);
                                         j -= 1;
                                 }
                         }	
                 }
                 
-                for (let i = 0; i < meshList.length; i++) {
-                        if (meshList[i].material.map != undefined) {
-                                for (let j = 0; j < uniqueMaterialTextures.length; j++) {
-                                        if (meshList[i].material.map.image.src == uniqueMaterialTextures[j].image.src) {
+                for (let i = 0; i < meshList.length; i++) 
+                {
+                        if (meshList[i].material.map != undefined) 
+                        {
+                                for (let j = 0; j < uniqueMaterialTextures.length; j++) 
+                                {
+                                        if (meshList[i].material.map.image.src == uniqueMaterialTextures[j].image.src) 
+                                        {
                                                 pathTracingMaterialList[i].albedoTextureID = j;
                                         }
                                 }
@@ -222,10 +245,6 @@ function load_GLTF_Model() {
                 }
 
                 // ********* different GLTF Model Settings **********
-
-                // settings for Duck model
-                //modelScale = 0.1;
-                //modelPositionOffset.set(0, 20, -30);
 
                 // settings for StanfordBunny model
 		//modelScale = 0.04;
@@ -245,8 +264,10 @@ function load_GLTF_Model() {
 
 
 // called automatically from within initTHREEjs() function
-function initSceneData() {
-        
+function initSceneData() 
+{
+        //pixelRatio = 1; // for computers with the latest GPUs!
+
         // scene/demo-specific three.js objects setup goes here
         EPS_intersect = mouseControl ? 0.01 : 1.0; // less precision on mobile
 
@@ -280,32 +301,38 @@ function initSceneData() {
         var vna = new Float32Array(modelMesh.geometry.attributes.normal.array);
         var vta = null;
         var modelHasUVs = false;
-        if (modelMesh.geometry.attributes.uv !== undefined) {
+        if (modelMesh.geometry.attributes.uv !== undefined) 
+        {
                 vta = new Float32Array(modelMesh.geometry.attributes.uv.array);
                 modelHasUVs = true;
         }
                 
         var materialNumber = 0;
 
-        for (let i = 0; i < total_number_of_triangles; i++) {
+        for (let i = 0; i < total_number_of_triangles; i++) 
+        {
         
                 triangle_b_box_min.set(Infinity, Infinity, Infinity);
                 triangle_b_box_max.set(-Infinity, -Infinity, -Infinity);
 
-                for (let j = 0; j < pathTracingMaterialList.length; j++) {
-                        if (i < triangleMaterialMarkers[j]) {
+                for (let j = 0; j < pathTracingMaterialList.length; j++) 
+                {
+                        if (i < triangleMaterialMarkers[j]) 
+                        {
                                 materialNumber = j;
                                 break;
                         }
                 }
 
                 // record vertex texture coordinates (UVs)
-                if (modelHasUVs) {
+                if (modelHasUVs) 
+                {
                         vt0.set( vta[6 * i + 0], vta[6 * i + 1] );
                         vt1.set( vta[6 * i + 2], vta[6 * i + 3] );
                         vt2.set( vta[6 * i + 4], vta[6 * i + 5] );
                 }
-                else {
+                else 
+                {
                         vt0.set( -1, -1 );
                         vt1.set( -1, -1 );
                         vt2.set( -1, -1 );
@@ -449,7 +476,8 @@ function initSceneData() {
 
 
 // called automatically from within initTHREEjs() function
-function initPathTracingShaders() {
+function initPathTracingShaders() 
+{
  
         // scene/demo-specific uniforms go here
         pathTracingUniforms.tTriangleTexture = { type: "t", value: triangleDataTexture };
@@ -464,7 +492,8 @@ function initPathTracingShaders() {
         };
 
         // load vertex and fragment shader files that are used in the pathTracing material, mesh and scene
-        fileLoader.load('shaders/common_PathTracing_Vertex.glsl', function (shaderText) {
+        fileLoader.load('shaders/common_PathTracing_Vertex.glsl', function (shaderText) 
+        {
                 pathTracingVertexShader = shaderText;
 
                 createPathTracingMaterial();
@@ -474,9 +503,11 @@ function initPathTracingShaders() {
 
 
 // called automatically from within initPathTracingShaders() function above
-function createPathTracingMaterial() {
+function createPathTracingMaterial() 
+{
 
-        fileLoader.load('shaders/BVH_Visualizer_Fragment.glsl', function (shaderText) {
+        fileLoader.load('shaders/BVH_Visualizer_Fragment.glsl', function (shaderText) 
+        {
                 
                 pathTracingFragmentShader = shaderText;
 
@@ -504,9 +535,11 @@ function createPathTracingMaterial() {
 
 
 // called automatically from within the animate() function
-function updateVariablesAndUniforms() {
+function updateVariablesAndUniforms() 
+{
         
-        if (changeBVH_Level) {
+        if (changeBVH_Level) 
+        {
                 pathTracingUniforms.uBVH_NodeLevel.value = BVH_LevelController.BVH_NodeDepth;
                 cameraIsMoving = true;
                 changeBVH_Level = false;
