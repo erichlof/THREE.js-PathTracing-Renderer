@@ -161,7 +161,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && rng() < 0.5)
+			if (diffuseCount == 1 && rand() < 0.5)
 			{
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
 				r.origin += nl * uEPS_intersect;
@@ -203,7 +203,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 			
-			if (rng() < P)
+			if (rand() < P)
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
@@ -246,7 +246,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 
-			if (rng() < P)
+			if (rand() < P)
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
@@ -260,7 +260,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 
 			bounceIsSpecular = false;
 			
-			if (diffuseCount == 1 && rng() < 0.5)
+			if (diffuseCount == 1 && rand() < 0.5)
 			{
 				// choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
@@ -292,7 +292,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
                 	TP = Tr / (1.0 - P);
 
 			// choose either specular reflection, metallic, or diffuse
-			if (rng() < P)
+			if (rand() < P)
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
@@ -305,7 +305,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			// metallic component
 			mask *= intersec.color;
 			
-			if (rng() > 0.8)
+			if (rand() > 0.8)
 			{
 				r = Ray( x, reflect(r.direction, nl) );
 				r.origin += nl * uEPS_intersect;
@@ -316,7 +316,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && rng() < 0.5)
+			if (diffuseCount == 1 && rand() < 0.5)
                         {
                                 // choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
@@ -341,7 +341,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			previousIntersecType = DIFF;
 
 			thickness = 0.25;
-			scatteringDistance = -log(rng()) / thickness;
+			scatteringDistance = -log(rand()) / thickness;
 			absorptionCoefficient = clamp(vec3(1) - intersec.color, 0.0, 1.0);
 
 			// transmission?
@@ -362,7 +362,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 
 			bounceIsSpecular = false;
 			
-			if (diffuseCount == 1 && rng() < 0.5)
+			if (diffuseCount == 1 && rand() < 0.5)
                         {
                                 // choose random Diffuse sample vector
 				//r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
@@ -396,7 +396,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
                 	TP = Tr / (1.0 - P);
 
 			
-			if (rng() < P)
+			if (rand() < P)
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
@@ -407,7 +407,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			mask *= TP;
 
 			thickness = 0.1;
-			scatteringDistance = -log(rng()) / thickness;
+			scatteringDistance = -log(rand()) / thickness;
 			absorptionCoefficient = clamp(vec3(1) - intersec.color, 0.0, 1.0);
 			
 			// transmission?
@@ -428,7 +428,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			// else scattering
 			mask *= exp(-absorptionCoefficient * scatteringDistance);
 
-			if (rng() < 0.5)
+			if (rand() < 0.5)
 			{
                                 // choose random scattering direction vector
 				r = Ray( x, randomSphereDirection() );
