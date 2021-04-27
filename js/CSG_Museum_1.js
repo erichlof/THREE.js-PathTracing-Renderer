@@ -3,8 +3,10 @@ var sceneIsDynamic = false;
 var camFlightSpeed = 70;
 
 // called automatically from within initTHREEjs() function
-function initSceneData() {
-        
+function initSceneData() 
+{
+        //pixelRatio = 1; // for computers with the latest GPUs!
+
         // scene/demo-specific three.js objects setup goes here
         EPS_intersect = mouseControl ? 0.1 : 1.0; // less precision on mobile
 
@@ -23,8 +25,8 @@ function initSceneData() {
 
 
 // called automatically from within initTHREEjs() function
-function initPathTracingShaders() {
- 
+function initPathTracingShaders() 
+{
         // scene/demo-specific uniforms go here
         pathTracingUniforms.uColorEdgeSharpeningRate = { type: "f", value: 0.1 };
         pathTracingUniforms.uNormalEdgeSharpeningRate = { type: "f", value: 0.01 };
@@ -35,7 +37,8 @@ function initPathTracingShaders() {
         };
 
         // load vertex and fragment shader files that are used in the pathTracing material, mesh and scene
-        fileLoader.load('shaders/common_PathTracing_Vertex.glsl', function (shaderText) {
+        fileLoader.load('shaders/common_PathTracing_Vertex.glsl', function (shaderText) 
+        {
                 pathTracingVertexShader = shaderText;
 
                 createPathTracingMaterial();
@@ -45,9 +48,11 @@ function initPathTracingShaders() {
 
 
 // called automatically from within initPathTracingShaders() function above
-function createPathTracingMaterial() {
+function createPathTracingMaterial() 
+{
 
-        fileLoader.load('shaders/CSG_Museum_1_Fragment.glsl', function (shaderText) {
+        fileLoader.load('shaders/CSG_Museum_1_Fragment.glsl', function (shaderText) 
+        {
                 
                 pathTracingFragmentShader = shaderText;
 
@@ -75,8 +80,8 @@ function createPathTracingMaterial() {
 
 
 // called automatically from within the animate() function
-function updateVariablesAndUniforms() {
-
+function updateVariablesAndUniforms() 
+{
         // clamp camera height for walking on Museum floor
 	cameraControlsObject.position.y = 20;
         
