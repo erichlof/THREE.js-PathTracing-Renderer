@@ -120,7 +120,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 	float d;
 	float geomTerm;
 	float trans;
-	float intersectedObjectID;
+	float intersectedObjectID, vintersectedObjectID;
 
 	int diffuseCount = 0;
 	int prevIntersecType = -1;
@@ -132,7 +132,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
         for (int bounces = 0; bounces < 4; bounces++)
 	{
 		
-		float u = rand();
+		float u = rng();
 		
 		t = SceneIntersect(r, intersec, intersectedObjectID);
 		
@@ -155,7 +155,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		d = length(lightVec);
 		vray = Ray(particlePos, normalize(lightVec));
 
-		vt = SceneIntersect(vray, vintersec, intersectedObjectID);
+		vt = SceneIntersect(vray, vintersec, vintersectedObjectID);
 		
 		// if the particle can see the light source, apply volumetric lighting calculation
 		if (vintersec.type == LIGHT)
@@ -173,7 +173,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
                 vec3 nl = dot(n,r.direction) < 0.0 ? normalize(n) : normalize(-n);
 		vec3 x = r.origin + r.direction * t;
 
-		if (bounces == 0)
+		if (diffuseCount == 0)
 		{
 			objectNormal = nl;
 			//objectColor = intersec.color; // handled above
@@ -183,12 +183,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		// now do the normal path tracing routine with the camera ray
 		if (intersec.type == LIGHT)
 		{
-			if (diffuseCount == 0)
-			{
-				objectNormal = nl;
-				pixelSharpness = 1.0;
-			}
-
+			
 			if (bounceIsSpecular || sampleLight)
 			{
 				trans = exp( -((d + camt) * FOG_DENSITY) );
@@ -196,7 +191,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			}
 			
 			// normally we would 'break' here, but 'continue' allows more particles to be lit
-			continue; 
+			continue;
 		}
 		
 		
@@ -243,6 +238,8 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 
                 if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
+			prevIntersecType = REFR;
+
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
@@ -328,6 +325,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 	vec3 lp = spheres[0].position + (randomSphereDirection() * spheres[1].radius * 0.9);
 	r.direction = normalize(lp - r.origin);
 	mask = vec3(1.0); // reset color mask for this particle
+	prevIntersecType = -100;
 
 	// depth of 3 needed to possibly travel into glass sphere, out of it, and then find light = 3 iterations
 	for (int bounces = 0; bounces < 3; bounces++)
@@ -379,7 +377,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 
 		if (intersec.type == LIGHT)
 		{	
-			pixelSharpness = 0.0;
+			//pixelSharpness = 0.0;
 			// if we have just traveled through a refractive surface(REFR) like glass, then 
 			// allow particle to be lit, producing volumetric caustics
 			if (prevIntersecType == REFR && bounces == 2)
