@@ -183,13 +183,15 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		// now do the normal path tracing routine with the camera ray
 		if (intersec.type == LIGHT)
 		{
-			
+			// if (bounces == 0)
+			// 	pixelSharpness = 1.0;
+
 			if (bounceIsSpecular || sampleLight)
 			{
 				trans = exp( -((d + camt) * FOG_DENSITY) );
 				accumCol += mask * intersec.emission * trans;	
 			}
-			
+
 			// normally we would 'break' here, but 'continue' allows more particles to be lit
 			continue;
 		}
@@ -377,13 +379,13 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 
 		if (intersec.type == LIGHT)
 		{	
-			//pixelSharpness = 0.0;
 			// if we have just traveled through a refractive surface(REFR) like glass, then 
 			// allow particle to be lit, producing volumetric caustics
 			if (prevIntersecType == REFR && bounces == 2)
 			{
-				trans = exp( -((d + xx) * FOG_DENSITY) );
-				accumCol += FOG_COLOR * mask * intersec.emission * trans;
+				trans = exp( -log((d * 0.0002)) );
+				accumCol = accumCol * mask * intersec.emission * trans;
+				pixelSharpness = 0.0;
 			}
 			
 			break;
