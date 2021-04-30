@@ -328,7 +328,7 @@ vec3 CalculateRadiance( Ray originalRay, out vec3 objectNormal, out vec3 objectC
 			if (bounces == 0)
 				firstTypeWasDIFF = true;
 
-			if (diffuseCount == 1 && rand() < 0.5)
+			if (diffuseCount == 1 && rng() < 0.5)
 			{	
 				// choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
