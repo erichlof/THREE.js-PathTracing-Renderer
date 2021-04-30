@@ -766,7 +766,7 @@ vec3 CalculateRadiance( Ray originalRay, out vec3 objectNormal, out vec3 objectC
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 
-			if (rng() < P) // reflect ray from surface
+			if (rand() < P) // reflect ray from surface
 			{
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) );
