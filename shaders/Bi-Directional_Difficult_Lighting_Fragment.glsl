@@ -720,7 +720,7 @@ vec3 CalculateRadiance( Ray originalRay, out vec3 objectNormal, out vec3 objectC
 
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && rng() < 0.5)
+			if (diffuseCount == 1 && rand() < 0.5)
 			{
 				// choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
@@ -803,7 +803,7 @@ vec3 CalculateRadiance( Ray originalRay, out vec3 objectNormal, out vec3 objectC
                 	TP = Tr / (1.0 - P);
 
 			// choose either specular reflection or diffuse
-			if( rng() < P )
+			if( rand() < P )
 			{	
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
@@ -842,7 +842,7 @@ vec3 CalculateRadiance( Ray originalRay, out vec3 objectNormal, out vec3 objectC
 			mask *= TP;
 			mask *= intersec.color;
 			
-			if (diffuseCount == 1 && rng() < 0.5)
+			if (diffuseCount == 1 && rand() < 0.5)
 			{
 				// choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
