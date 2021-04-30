@@ -158,7 +158,7 @@ vec3 CalculateRadiance( Ray originalRay, out vec3 objectNormal, out vec3 objectC
 		r.origin += intersec.normal * uEPS_intersect;
 		
 		t2 = SceneIntersect(r, intersec, intersectedObjectID);
-		if (t2 < INFINITY && intersec.type == DIFF && rng() < 0.5)
+		if (t2 < INFINITY && intersec.type == DIFF && rand() < 0.5)
 		{
 			lightHitPos = r.origin + r.direction * t2;
 			weight = max(0.0, dot(-r.direction, normalize(intersec.normal)));
@@ -251,7 +251,7 @@ vec3 CalculateRadiance( Ray originalRay, out vec3 objectNormal, out vec3 objectC
 
 			bounceIsSpecular = false;
 
-			if (diffuseCount < 3 && rng() < 0.5)
+			if (diffuseCount < 3 && rand() < 0.5)
 			{	
 				// choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
