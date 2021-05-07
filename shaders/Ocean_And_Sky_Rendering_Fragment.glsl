@@ -268,7 +268,7 @@ float checkCloudCover( vec3 sunDirection, vec3 p )
 
 
 //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-float SceneIntersect( Ray r, inout Intersection intersec, bool checkOcean )
+float SceneIntersect( Ray r, inout Intersection intersec, bool checkOcean, out float intersectedObjectID )
 //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 {
         Ray rObj;
@@ -299,6 +299,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkOcean )
 		intersec.emission = vec3(0);
 		intersec.color = vec3(0.0, 0.07, 0.07);
 		intersec.type = SEAFLOOR;
+		intersectedObjectID = 0.0;
 	}
 	
 	d = OpenCylinderIntersect( openCylinders[0].pos1, openCylinders[0].pos2, openCylinders[0].radius, r, normal );
@@ -309,6 +310,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkOcean )
 		intersec.emission = vec3(0);
 		intersec.color = openCylinders[0].color;
 		intersec.type = WOOD;
+		intersectedObjectID = 1.0;
 	}
 
 	d = OpenCylinderIntersect( openCylinders[1].pos1, openCylinders[1].pos2, openCylinders[1].radius, r, normal );
@@ -319,6 +321,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkOcean )
 		intersec.emission = vec3(0);
 		intersec.color = openCylinders[0].color;
 		intersec.type = WOOD;
+		intersectedObjectID = 2.0;
 	}
 
 	d = OpenCylinderIntersect( openCylinders[2].pos1, openCylinders[2].pos2, openCylinders[2].radius, r, normal );
@@ -329,6 +332,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkOcean )
 		intersec.emission = vec3(0);
 		intersec.color = openCylinders[0].color;
 		intersec.type = WOOD;
+		intersectedObjectID = 3.0;
 	}
 
 	d = OpenCylinderIntersect( openCylinders[3].pos1, openCylinders[3].pos2, openCylinders[3].radius, r, normal );
@@ -339,6 +343,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkOcean )
 		intersec.emission = vec3(0);
 		intersec.color = openCylinders[0].color;
 		intersec.type = WOOD;
+		intersectedObjectID = 4.0;
 	}
 	
 
@@ -352,6 +357,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkOcean )
 			intersec.emission = quads[i].emission;
 			intersec.color = quads[i].color;
 			intersec.type = quads[i].type;
+			intersectedObjectID = 5.0;
 		}
         }
 
@@ -372,6 +378,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkOcean )
 		intersec.emission = boxes[0].emission;
 		intersec.color = boxes[0].color;
 		intersec.type = boxes[0].type;
+		intersectedObjectID = 6.0;
 	}
 	
 	
@@ -391,6 +398,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkOcean )
 		intersec.emission = boxes[1].emission;
 		intersec.color = boxes[1].color;
 		intersec.type = boxes[1].type;
+		intersectedObjectID = 7.0;
 	}
 	
 	
@@ -440,6 +448,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkOcean )
 		intersec.emission = vec3(0);
 		intersec.color = vec3(0.6, 1.0, 1.0);
 		intersec.type = REFR;
+		intersectedObjectID = 8.0; // same as sea floor above
 	}
 	
 	
@@ -447,120 +456,62 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkOcean )
 }
 
 
-//----------------------------------------------------------------------------------------------
-vec3 CalculateRadiance(Ray r, vec3 sunDirection)
-//----------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------------------------------------------
+vec3 CalculateRadiance(Ray r, vec3 sunDirection, out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness)
+//-----------------------------------------------------------------------------------------------------------------------------------------
 {
 	Intersection intersec;
-	Ray firstRay;
 
-	vec3 randVec = vec3(rand() * 2.0 - 1.0, rand() * 2.0 - 1.0, rand() * 2.0 - 1.0);
+	vec3 randVec = vec3(rng() * 2.0 - 1.0, rng() * 2.0 - 1.0, rng() * 2.0 - 1.0);
+	randVec = normalize(randVec);
 	Ray cameraRay = r;
 	vec3 initialSkyColor = Get_Sky_Color(r, sunDirection);
 	
 	Ray skyRay = Ray( r.origin * vec3(0.02), normalize(vec3(r.direction.x, abs(r.direction.y), r.direction.z)) );
-	float dc = SphereIntersect( 20000.0, vec3(skyRay.origin.x, -19900.0, skyRay.origin.z) + vec3(rand() * 2.0), skyRay );
+	float dc = SphereIntersect( 20000.0, vec3(skyRay.origin.x, -19900.0, skyRay.origin.z) + vec3(rng() * 2.0), skyRay );
 	vec3 skyPos = skyRay.origin + skyRay.direction * dc;
 	vec4 cld = render_clouds(skyRay, skyPos, sunDirection);
 	
 	Ray cloudShadowRay = Ray(r.origin * vec3(0.02), normalize(sunDirection + (randVec * 0.05)));
-	float dcs = SphereIntersect( 20000.0, vec3(skyRay.origin.x, -19900.0, skyRay.origin.z) + vec3(rand() * 2.0), cloudShadowRay );
+	float dcs = SphereIntersect( 20000.0, vec3(skyRay.origin.x, -19900.0, skyRay.origin.z) + vec3(rng() * 2.0), cloudShadowRay );
 	vec3 cloudShadowPos = cloudShadowRay.origin + cloudShadowRay.direction * dcs;
 	float cloudShadowFactor = checkCloudCover(cloudShadowRay.direction, cloudShadowPos);
 	
 	vec3 accumCol = vec3(0);
         vec3 mask = vec3(1);
-	vec3 firstMask = vec3(1);
 	vec3 n, nl, x;
 	vec3 firstX = vec3(0);
 	vec3 tdir;
 	
 	float nc, nt, ratioIoR, Re, Tr;
+	float P, RP, TP;
 	float weight;
 	float t = INFINITY;
+	float intersectedObjectID;
 	
 	int diffuseCount = 0;
+	int previousIntersecType = -100;
 
 	bool checkOcean = true;
 	bool skyHit = false;
 	bool sampleLight = false;
 	bool bounceIsSpecular = true;
-	bool firstTypeWasREFR = false;
-	bool reflectionTime = false;
-	bool firstTypeWasDIFF = false;
-	bool shadowTime = false;
+
+
+	pixelSharpness = 1.0;
 	
 	
         for (int bounces = 0; bounces < 6; bounces++)
 	{
 
-		t = SceneIntersect(r, intersec, checkOcean);
+		t = SceneIntersect(r, intersec, checkOcean, intersectedObjectID);
 		checkOcean = false;
 
 		if (t == INFINITY)
 		{
 			vec3 skyColor = Get_Sky_Color(r, sunDirection);
 
-			if (bounces == 0) // ray hits sky first	
-			{
-				skyHit = true;
-				firstX = skyPos;
-				accumCol = initialSkyColor;
-				break; // exit early	
-			}
-			
-
-			if (firstTypeWasREFR)
-			{
-				if (!reflectionTime) 
-				{
-					weight = dot(r.direction, sunDirection) < 0.99 ? 1.0 : 0.0;
-					accumCol = mask * skyColor * weight;
-					if (sampleLight || bounceIsSpecular)
-						accumCol = mask * skyColor;
-					
-					// start back at the refractive surface, but this time follow reflective branch
-					r = firstRay;
-					r.direction = normalize(r.direction);
-					mask = firstMask;
-					// set/reset variables
-					reflectionTime = true;
-					bounceIsSpecular = true;
-					sampleLight = false;
-					// continue with the reflection ray
-					continue;
-				}
-
-				if (bounceIsSpecular || sampleLight)
-					accumCol += mask * skyColor; // add reflective result to the refractive result (if any)
-				
-				break;
-			}
-
-			if (firstTypeWasDIFF)
-			{
-				if (!shadowTime) 
-				{
-					weight = dot(r.direction, sunDirection) < 0.99 ? 1.0 : 0.0;
-					accumCol = mask * skyColor * weight;// * 0.5;
-					
-					// start back at the diffuse surface, but this time follow shadow ray branch
-					r = firstRay;
-					r.direction = normalize(r.direction);
-					mask = firstMask;
-					// set/reset variables
-					shadowTime = true;
-					bounceIsSpecular = false;
-					sampleLight = true;
-					// continue with the shadow ray
-					continue;
-				}
-				
-				accumCol += mask * skyColor * 0.5; // add shadow ray result to the colorbleed result (if any)
-				break;			
-			}
-
-			if (bounceIsSpecular) // ray bounces off mirror and hits sky	
+			if (bounces == 0) // ray hits sky first
 			{
 				skyHit = true;
 				firstX = skyPos;
@@ -568,9 +519,36 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 				accumCol = initialSkyColor;
 				break; // exit early	
 			}
-
+			else if (bounces == 1 && previousIntersecType == SPEC) // ray reflects off of mirror box first, then hits sky
+			{
+				skyHit = true;
+				firstX = skyPos;
+				initialSkyColor = mask * skyColor;
+				accumCol = initialSkyColor;
+				break; // exit early	
+			}
+			else if (diffuseCount == 0 && previousIntersecType == REFR)
+			{
+				//skyHit = true;
+				firstX = skyPos;
+				initialSkyColor = mask * skyColor;
+				accumCol = initialSkyColor;
+				break; // exit early	
+			}	
+			else if (sampleLight)
+			{
+				accumCol = mask * skyColor;
+				break;
+			}
+			else if (diffuseCount > 0)
+			{
+				weight = dot(r.direction, sunDirection) < 0.99 ? 1.0 : 0.0;
+				accumCol = mask * skyColor * weight;
+				break;
+			}
+			
 			// reached the sky light, so we can exit
-			//break;
+			break;
 		} // end if (t == INFINITY)
 
 		
@@ -581,107 +559,43 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 			float waterDotSun = max(0.0, dot(vec3(0,1,0), sunDirection));
 			float waterDotCamera = max(0.4, dot(vec3(0,1,0), -cameraRay.direction));
 
-			if (bounces == 0)
-			{
-				accumCol = mask * intersec.color * waterDotSun * waterDotCamera;
-				break;
-			}
-			
-			if (firstTypeWasREFR)
-			{
-				if (!reflectionTime) 
-				{
-					accumCol = mask * intersec.color * waterDotSun * waterDotCamera;
-					
-					// start back at the refractive surface, but this time follow reflective branch
-					r = firstRay;
-					r.direction = normalize(r.direction);
-					mask = firstMask;
-					// set/reset variables
-					reflectionTime = true;
-					bounceIsSpecular = true;
-					sampleLight = false;
-					// continue with the reflection ray
-					continue;
-				}
-
-				accumCol += mask * intersec.color * waterDotSun * waterDotCamera; // add reflective result to the refractive result (if any)
-				break;
-			}
-
-			if (firstTypeWasDIFF) 
-			{
-				if (!shadowTime)
-				{
-					// start back at the diffuse surface, but this time follow shadow ray branch
-					r = firstRay;
-					r.direction = normalize(r.direction);
-					mask = firstMask;
-					// set/reset variables
-					shadowTime = true;
-					bounceIsSpecular = false;
-					sampleLight = true;
-					// continue with the shadow ray
-					continue;
-				}
-				
-				accumCol += mask * intersec.color * waterDotSun * waterDotCamera;
-				break;
-			}
-			
-			// nothing left to calculate, so exit	
+			accumCol = mask * intersec.color * waterDotSun * waterDotCamera;
 			break;
 		} // end if (intersec.type == SEAFLOOR)
 
+
 		//if we get here and sampleLight is still true, shadow ray failed to find a light source
-		
-		if (sampleLight) 
-		{
-
-			if (firstTypeWasREFR && !reflectionTime) 
-			{
-				// start back at the refractive surface, but this time follow reflective branch
-				r = firstRay;
-				r.direction = normalize(r.direction);
-				mask = firstMask;
-				// set/reset variables
-				reflectionTime = true;
-				bounceIsSpecular = true;
-				sampleLight = false;
-				// continue with the reflection ray
-				continue;
-			}
-
-			if (firstTypeWasDIFF && !shadowTime) 
-			{
-				// start back at the diffuse surface, but this time follow shadow ray branch
-				r = firstRay;
-				r.direction = normalize(r.direction);
-				mask = firstMask;
-				// set/reset variables
-				shadowTime = true;
-				bounceIsSpecular = false;
-				sampleLight = true;
-				// continue with the shadow ray
-				continue;
-			}
-
-			// nothing left to calculate, so exit	
+		if (sampleLight) 	
 			break;
-		}
+		
 		
 		
 		// useful data 
 		n = normalize(intersec.normal);
                 nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
 		x = r.origin + r.direction * t;
-		
-		if (bounces == 0) 
+			
+		if (bounces == 0)
+		{
 			firstX = x;
+
+			objectNormal = nl;
+			objectColor = intersec.color;
+			objectID = intersectedObjectID;
+		}
+		if (bounces == 1 && previousIntersecType == SPEC)
+		{
+			objectNormal = nl;
+		}
 
 		
                 if (intersec.type == DIFF) // Ideal DIFFUSE reflection
                 {	
+			if (bounces == 0 || (bounces == 1 && previousIntersecType == SPEC))
+				pixelSharpness = 0.0;
+
+			previousIntersecType = DIFF;
+
 			checkOcean = false;
 
 			diffuseCount++;
@@ -690,23 +604,7 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 
 			bounceIsSpecular = false;
 
-			if (diffuseCount == 1 && !firstTypeWasDIFF && !firstTypeWasREFR)
-			{	
-				// save intersection data for future shadowray trace
-				firstTypeWasDIFF = true;
-				firstRay = Ray( x, normalize(sunDirection) );// create shadow ray pointed towards light
-				firstRay.direction = randomDirectionInSpecularLobe(firstRay.direction, 0.1);
-				firstRay.origin += nl * uEPS_intersect;
-				
-				weight = max(0.0, dot(firstRay.direction, nl)) * 0.05; // down-weight directSunLight contribution
-				firstMask = mask * weight * cloudShadowFactor;
-
-				// choose random Diffuse sample vector
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
-				r.origin += nl * uEPS_intersect;
-				continue;
-			}
-			else if (firstTypeWasREFR && rand() < 0.5)
+			if (diffuseCount == 1 && rand() < 0.5)
 			{
 				// choose random Diffuse sample vector
 				r = Ray( x, normalize(randomCosWeightedDirectionInHemisphere(nl)) );
@@ -728,6 +626,8 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 		
                 if (intersec.type == SPEC)  // Ideal SPECULAR reflection
                 {
+			previousIntersecType = SPEC;
+
 			mask *= intersec.color;
 
 			r = Ray( x, reflect(r.direction, nl) );
@@ -742,42 +642,37 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 		
 		if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
+			
+
 			checkOcean = false;
 			
-			nc = 1.0; // IOR of air
-			nt = 1.33; // IOR of water
+			nc = 1.0; // IOR of Air
+			nt = 1.33; // IOR of Water
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
+			P  = 0.25 + (0.5 * Re);
+                	RP = Re / P;
+                	TP = Tr / (1.0 - P);
 			
-			if (!firstTypeWasREFR && diffuseCount == 0)
+			if ((bounces == 0 || (bounces == 1 && previousIntersecType == SPEC)) && rand() < P)
 			{	
-				// save intersection data for future reflection trace
-				firstTypeWasREFR = true;
-				firstMask = mask * Re;
-				firstRay = Ray( x, reflect(r.direction, nl) ); // create reflection ray from surface
-				firstRay.origin += nl * uEPS_intersect;
-				mask *= Tr;
-			}
-			else if (firstTypeWasREFR && n == nl && rand() < Re)
-			{
-				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
+				previousIntersecType = REFR;
+				mask *= RP;
+
+				r = Ray( x, reflect(r.direction, nl) ); // create reflection ray from surface
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
+
+			previousIntersecType = REFR;
+			
+			mask *= TP;
+			mask *= intersec.color;
 
 			// transmit ray through surface
 			tdir = refract(r.direction, nl, ratioIoR);
 			r = Ray(x, normalize(tdir));
 			r.origin -= nl * uEPS_intersect;	
-				
-			if (shadowTime)
-			{
-				mask = intersec.color * Tr * 0.2;
-				sampleLight = true; // turn on refracting caustics
-			}
-			else
-				mask *= intersec.color;
-			
 
 			continue;
 			
@@ -785,33 +680,34 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 		
 		if (intersec.type == WOOD)  // Diffuse object underneath with thin layer of Water on top
 		{
+			previousIntersecType = COAT;
+
 			checkOcean = false;
 			
 			nc = 1.0; // IOR of air
 			nt = 1.1; // IOR of ClearCoat 
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
+			P  = 0.25 + (0.5 * Re);
+                	RP = Re / P;
+                	TP = Tr / (1.0 - P);
 			
-			// clearCoat counts as refractive surface
-			if (bounces == 0)
-			{	
-				// save intersection data for future reflection trace
-				firstTypeWasREFR = true;
-				firstMask = mask * Re;
-				firstRay = Ray( x, reflect(r.direction, nl) );// create reflection ray from surface
-				firstRay.origin += nl * uEPS_intersect;
-				mask *= Tr;
-			}
-			else if (firstTypeWasREFR && rand() < Re)
+			if (rand() < P)
 			{
+				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.origin += nl * uEPS_intersect;
 				continue;
 			}
+
+			mask *= TP;
 			
 			float pattern = noise( vec2( x.x * 0.5 * x.z * 0.5 + sin(x.y*0.005) ) );
 			float woodPattern = 1.0 / max(1.0, pattern * 100.0);
 			intersec.color *= woodPattern;
+
+			if (bounces == 0)
+				objectColor = intersec.color;
 			
 			mask *= intersec.color;
 
@@ -820,12 +716,12 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 			bounceIsSpecular = false;
 
 			if (diffuseCount == 1 && rand() < 0.5)
-                        {
-                                // choose random Diffuse sample vector
+			{
+				// choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
 				r.origin += nl * uEPS_intersect;
 				continue;
-                        }
+			}
 			
 			r = Ray( x, sunDirection);// create shadow ray pointed towards light
 			r.direction = randomDirectionInSpecularLobe(r.direction, 0.1);
@@ -901,21 +797,28 @@ float tentFilter(float x)
 	return (x < 0.5) ? sqrt(2.0 * x) - 1.0 : 1.0 - sqrt(2.0 - (2.0 * x));
 }
 
+
 void main( void )
 {
-	// not needed, three.js has a built-in uniform named cameraPosition
+        vec3 camRight   = vec3( uCameraMatrix[0][0],  uCameraMatrix[0][1],  uCameraMatrix[0][2]);
+        vec3 camUp      = vec3( uCameraMatrix[1][0],  uCameraMatrix[1][1],  uCameraMatrix[1][2]);
+        vec3 camForward = vec3(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]);
+	// the following is not needed - three.js has a built-in uniform named cameraPosition
 	//vec3 camPos   = vec3( uCameraMatrix[3][0],  uCameraMatrix[3][1],  uCameraMatrix[3][2]);
-	
-    	vec3 camRight   = vec3( uCameraMatrix[0][0],  uCameraMatrix[0][1],  uCameraMatrix[0][2]);
-    	vec3 camUp      = vec3( uCameraMatrix[1][0],  uCameraMatrix[1][1],  uCameraMatrix[1][2]);
-	vec3 camForward = vec3(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]);
-	
-	// calculate unique seed for rng() function
-	seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord); // old way of generating random numbers
+        
+        // calculate unique seed for rng() function
+	seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord);
 
-	randVec4 = texture(tBlueNoiseTexture, (gl_FragCoord.xy + (uRandomVec2 * 255.0)) / 255.0); // new way of rand()
+	// initialize rand() variables
+	counter = -1.0; // will get incremented by 1 on each call to rand()
+	channel = 0; // the final selected color channel to use for rand() calc (range: 0 to 3, corresponds to R,G,B, or A)
+	randNumber = 0.0; // the final randomly-generated number (range: 0.0 to 1.0)
+	randVec4 = vec4(0); // samples and holds the RGBA blueNoise texture value for this pixel
+	randVec4 = texelFetch(tBlueNoiseTexture, ivec2(mod(gl_FragCoord.xy + floor(uRandomVec2 * 256.0), 256.0)), 0);
 	
 	vec2 pixelOffset = vec2( tentFilter(rng()), tentFilter(rng()) ) * 0.5;
+	//vec2 pixelOffset = vec2(0);
+
 	// we must map pixelPos into the range -1.0 to +1.0
 	vec2 pixelPos = ((gl_FragCoord.xy + pixelOffset) / uResolution) * 2.0 - 1.0;
 
@@ -928,27 +831,67 @@ void main( void )
 	vec3  randomAperturePos = ( cos(randomAngle) * camRight + sin(randomAngle) * camUp ) * sqrt(randomRadius);
 	// point on aperture to focal point
 	vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
-    
+	
 	Ray ray = Ray( cameraPosition + randomAperturePos, finalRayDir );
 
-	SetupScene(); 
+        SetupScene(); 
 
-	// perform path tracing and get resulting pixel color
-	vec3 pixelColor = CalculateRadiance(ray, uSunDirection);
+        // Edge Detection - don't want to blur edges where either surface normals change abruptly (i.e. room wall corners), objects overlap each other (i.e. edge of a foreground sphere in front of another sphere right behind it),
+	// or an abrupt color variation on the same smooth surface, even if it has similar surface normals (i.e. checkerboard pattern). Want to keep all of these cases as sharp as possible - no blur filter will be applied.
+	vec3 objectNormal, objectColor;
+	float objectID = -INFINITY;
+	float pixelSharpness = 0.0;
 	
-	vec4 previousImage = texelFetch(tPreviousTexture, ivec2(gl_FragCoord.xy), 0);
-	vec3 previousColor = previousImage.rgb;
+	// perform path tracing and get resulting pixel color
+	vec4 currentPixel = vec4( vec3(CalculateRadiance(ray, uSunDirection, objectNormal, objectColor, objectID, pixelSharpness)), 0.0 );
 
-	if (uCameraIsMoving)
+	// if difference between normals of neighboring pixels is less than the first edge0 threshold, the white edge line effect is considered off (0.0)
+	float edge0 = 0.2; // edge0 is the minimum difference required between normals of neighboring pixels to start becoming a white edge line
+	// any difference between normals of neighboring pixels that is between edge0 and edge1 smoothly ramps up the white edge line brightness (smoothstep 0.0-1.0)
+	float edge1 = 0.6; // once the difference between normals of neighboring pixels is >= this edge1 threshold, the white edge line is considered fully bright (1.0)
+	float difference_Nx = fwidth(objectNormal.x);
+	float difference_Ny = fwidth(objectNormal.y);
+	float difference_Nz = fwidth(objectNormal.z);
+	float normalDifference = smoothstep(edge0, edge1, difference_Nx) + smoothstep(edge0, edge1, difference_Ny) + smoothstep(edge0, edge1, difference_Nz);
+
+	edge0 = 0.0;
+	edge1 = 0.5;
+	float difference_obj = abs(dFdx(objectID)) > 0.0 ? 1.0 : 0.0;
+	difference_obj += abs(dFdy(objectID)) > 0.0 ? 1.0 : 0.0;
+	float objectDifference = smoothstep(edge0, edge1, difference_obj);
+
+	float difference_col = length(dFdx(objectColor)) > 0.0 ? 1.0 : 0.0;
+	difference_col += length(dFdy(objectColor)) > 0.0 ? 1.0 : 0.0;
+	float colorDifference = smoothstep(edge0, edge1, difference_col);
+	// edge detector (normal and object differences) white-line debug visualization
+	//currentPixel.rgb += 1.0 * vec3(max(normalDifference, objectDifference));
+	
+	vec4 previousPixel = texelFetch(tPreviousTexture, ivec2(gl_FragCoord.xy), 0);
+
+	
+
+	if (uCameraIsMoving) // camera is currently moving
 	{
-                previousColor *= 0.7; // motion-blur trail amount (old image)
-                pixelColor *= 0.3; // brightness of new image (noisy)
-        }
+		previousPixel.rgb *= 0.7; // motion-blur trail amount (old image)
+		currentPixel.rgb *= 0.3; // brightness of new image (noisy)
+
+		previousPixel.a = 0.0;
+	}
 	else
 	{
-                previousColor *= 0.93; // motion-blur trail amount (old image)
-                pixelColor *= 0.07; // brightness of new image (noisy)
-        }
+		previousPixel.rgb *= 0.9; // motion-blur trail amount (old image)
+		currentPixel.rgb *= 0.1; // brightness of new image (noisy)
+	}
+
+	currentPixel.a = pixelSharpness;
 	
-        pc_fragColor = vec4( pixelColor + previousColor, 1.0 );	
+	currentPixel.a = colorDifference  >= 1.0 ? min(uSampleCounter * uColorEdgeSharpeningRate , 1.01) : currentPixel.a;
+	currentPixel.a = normalDifference >= 1.0 ? min(uSampleCounter * uNormalEdgeSharpeningRate, 1.01) : currentPixel.a;
+	currentPixel.a = objectDifference >= 1.0 ? min(uSampleCounter * uObjectEdgeSharpeningRate, 1.01) : currentPixel.a;
+	
+	// Eventually, all edge-containing pixels' .a (alpha channel) values will converge to 1.01, which keeps them from getting blurred by the box-blur filter, thus retaining sharpness.
+	if (pixelSharpness == 1.0 || previousPixel.a == 1.01)
+		currentPixel.a = 1.01;
+	
+	pc_fragColor = vec4(previousPixel.rgb + currentPixel.rgb, currentPixel.a);
 }
