@@ -11,9 +11,9 @@ uniform float uApertureSize;
 uniform float uFocusDistance;
 uniform float uSamplesPerFrame;
 uniform float uFrameBlendingAmount;
-uniform float uColorEdgeSharpeningRate;
-uniform float uNormalEdgeSharpeningRate;
-uniform float uObjectEdgeSharpeningRate;
+// uniform float uColorEdgeSharpeningRate;
+// uniform float uNormalEdgeSharpeningRate;
+// uniform float uObjectEdgeSharpeningRate;
 uniform float uSunAngularDiameterCos;
 uniform vec2 uResolution;
 uniform vec2 uRandomVec2;
@@ -231,10 +231,8 @@ void Sphere_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1, out vec
 	float b = 2.0 * dot(rd, ro);
 	float c = dot(ro, ro) - 1.0;
 	solveQuadratic(a, b, c, t0, t1);
-
 	hit = ro + rd * t0;
 	n0 = vec3(2.0 * hit.x, 2.0 * hit.y, 2.0 * hit.z);
-
 	hit = ro + rd * t1;
 	n1 = vec3(2.0 * hit.x, 2.0 * hit.y, 2.0 * hit.z);
 }
@@ -255,15 +253,12 @@ void Cylinder_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1, out v
     	float b = 2.0 * (rd.x * ro.x + rd.z * ro.z);
     	float c = (ro.x * ro.x + ro.z * ro.z) - 1.0;
 	solveQuadratic(a, b, c, t0, t1);
-
 	hit = ro + rd * t0;
 	t0 = (abs(hit.y) > 1.0) ? 0.0 : t0;
 	n0 = vec3(2.0 * hit.x, 0.0, 2.0 * hit.z);
-
 	hit = ro + rd * t1;
 	t1 = (abs(hit.y) > 1.0) ? 0.0 : t1;
 	n1 = vec3(2.0 * hit.x, 0.0, 2.0 * hit.z);
-
 	// intersect top and bottom unit-radius disk caps
 	if (rd.y < 0.0)
 	{
@@ -325,14 +320,12 @@ void Cone_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out float t1, 
 	hit = ro + rd * t1;
 	t1 = (abs(hit.y) > 1.0) ? 0.0 : t1; // invalidate t1 if it's outside truncated cone's height bounds
 	n1 = vec3(2.0 * hit.x * j, 2.0 * (h - hit.y) * (k * 0.25), 2.0 * hit.z * j);
-
 	// since the infinite double-cone is artificially cut off, if t0 intersection was invalidated, try t1
 	if (t0 == 0.0)
 	{
 		t0 = t1;
 		n0 = n1;
 	}
-
 	// intersect top and bottom disk caps
 	if (rd.y < 0.0)
 	{
@@ -352,7 +345,6 @@ void Cone_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out float t1, 
 		dr0 = 1.0; // bottom cap is unit radius
 		dr1 = (1.0 - k) * (1.0 - k);// top cap's size is relative to k
 	}
-
 	hit = ro + rd * d0;
 	if (hit.x * hit.x + hit.z * hit.z <= dr0)
 	{
@@ -394,7 +386,6 @@ void ConicalPrism_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out fl
     	float b = 2.0 * (j * rd.x * ro.x - (k * 0.25) * rd.y * (ro.y - h));
     	float c = j * ro.x * ro.x - (k * 0.25) * (ro.y - h) * (ro.y - h);
 	solveQuadratic(a, b, c, t0, t1);
-
 	hit = ro + rd * t0;
 	t0 = (abs(hit.y) > 1.0 || abs(hit.z) > 1.0) ? 0.0 : t0; // invalidate t0 if it's outside unit radius bounds
 	n0 = vec3(2.0 * hit.x * j, 2.0 * (hit.y - h) * -(k * 0.25), 0.0);
@@ -410,7 +401,6 @@ void ConicalPrism_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out fl
 		t0 = t1;
 		n0 = n1;
 	}
-
 	// intersect top and bottom base rectangles
 	if (rd.y < 0.0)
 	{
@@ -430,7 +420,6 @@ void ConicalPrism_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out fl
 		dr0 = 1.0; // bottom cap is unit radius
 		dr1 = 1.0 - (k);// top cap's size is relative to k
 	}
-
 	hit = ro + rd * d0;
 	if (abs(hit.x) <= dr0 && abs(hit.z) <= 1.0)
 	{
@@ -445,7 +434,6 @@ void ConicalPrism_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out fl
 		t1 = d1;
 		n1 = dn1;
 	}
-
 	// intersect conical-shaped front and back wall pieces
 	if (rd.z < 0.0)
 	{
@@ -474,7 +462,6 @@ void ConicalPrism_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out fl
 		t0 = d0;
 		n0 = dn0;
 	}
-
 	hit = ro + rd * d1;
 	if (abs(hit.x) <= 1.0 && abs(hit.y) <= 1.0 && (j * hit.x * hit.x - k * 0.25 * (hit.y - h) * (hit.y - h)) <= 0.0) // y is a quadratic (conical) function of x
 	{
@@ -503,11 +490,9 @@ void Paraboloid_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1, out
     	float b = 2.0 * (rd.x * ro.x + rd.z * ro.z) + k * rd.y;
     	float c = ro.x * ro.x + ro.z * ro.z + k * (ro.y - 1.0);
 	solveQuadratic(a, b, c, t0, t1);
-
 	hit = ro + rd * t0;
 	t0 = (abs(hit.y) > 1.0) ? 0.0 : t0; // invalidate t0 if it's outside unit radius bounds
 	n0 = vec3(2.0 * hit.x, 1.0 * k, 2.0 * hit.z);
-
 	hit = ro + rd * t1;
 	t1 = (abs(hit.y) > 1.0) ? 0.0 : t1; // invalidate t1 if it's outside unit radius bounds
 	n1 = vec3(2.0 * hit.x, 1.0 * k, 2.0 * hit.z);
@@ -561,7 +546,6 @@ void ParabolicPrism_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1,
     	float b = 2.0 * (rd.x * ro.x) + k * rd.y;
     	float c = ro.x * ro.x + k * (ro.y - 1.0);
 	solveQuadratic(a, b, c, t0, t1);
-
 	hit = ro + rd * t0;
 	t0 = (hit.y < -1.0 || abs(hit.z) > 1.0) ? 0.0 : t0; // invalidate t0 if it's outside unit radius bounds
 	n0 = vec3(2.0 * hit.x, 1.0 * k, 0.0);
@@ -596,7 +580,6 @@ void ParabolicPrism_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1,
 			n0 = vec3(0,-1,0);
 		}
 	}
-
 	// intersect parabola-shaped front and back wall pieces
 	if (rd.z < 0.0)
 	{
@@ -619,7 +602,6 @@ void ParabolicPrism_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1,
 		t0 = d0;
 		n0 = dn0;
 	}
-
 	hit = ro + rd * d1;
 	if (hit.y >= -1.0 && (hit.x * hit.x + k * (hit.y - 1.0)) <= 0.0) // y is a parabolic function of x
 	{
@@ -651,11 +633,9 @@ void Hyperboloid1Sheet_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, o
 	float b = 2.0 * (k * rd.x * ro.x + k * rd.z * ro.z - j * rd.y * ro.y);
 	float c = (k * ro.x * ro.x + k * ro.z * ro.z - j * ro.y * ro.y) - 1.0;
 	solveQuadratic(a, b, c, t0, t1);
-
 	hit = ro + rd * t0;
 	t0 = (hit.y > 1.0 || hit.y < 0.0) ? 0.0 : t0; // invalidate t0 if it's outside unit radius bounds of top half
 	n0 = vec3(2.0 * hit.x * k, 2.0 * -hit.y * j, 2.0 * hit.z * k);
-
 	hit = ro + rd * t1;
 	t1 = (hit.y > 1.0 || hit.y < 0.0) ? 0.0 : t1; // invalidate t1 if it's outside unit radius bounds of top half
 	n1 = vec3(2.0 * hit.x * k, 2.0 * -hit.y * j, 2.0 * hit.z * k);
@@ -666,7 +646,6 @@ void Hyperboloid1Sheet_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, o
 		t0 = t1;
 		n0 = n1;
 	}
-
 	if (rd.y < 0.0)
 	{
 		d0 = (ro.y - 1.0) / -rd.y;
@@ -711,7 +690,6 @@ void Hyperboloid2Sheets_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, 
 	vec3 hit;
 	float d = 0.0;
 	vec3 dn;
-
 	// implicit equation of a hyperboloid of 2 sheets (2 rounded v shapes that are mirrored and pointing at each other)
 	// -x^2 - z^2 + y^2 - 1 = 0
 	// for CSG purposes, we artificially truncate the hyperboloid at the middle, so that only 1 sheet (the top sheet) of the 2 mirrored sheets remains...
@@ -725,11 +703,9 @@ void Hyperboloid2Sheets_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, 
 	float b = 2.0 * (-k * rd.x * ro.x - k * rd.z * ro.z + j * rd.y * ro.y);
 	float c = (-k * ro.x * ro.x - k * ro.z * ro.z + j * ro.y * ro.y) - 1.0;
 	solveQuadratic(a, b, c, t0, t1);
-
 	hit = ro + rd * t0;
 	t0 = (hit.y > 1.0 || hit.y < 0.0) ? 0.0 : t0; // invalidate t0 if it's outside unit radius bounds of top half
 	n0 = vec3(2.0 * -hit.x * k, 2.0 * hit.y * j, 2.0 * -hit.z * k);
-
 	hit = ro + rd * t1;
 	t1 = (hit.y > 1.0 || hit.y < 0.0) ? 0.0 : t1; // invalidate t1 if it's outside unit radius bounds of top half
 	n1 = vec3(2.0 * -hit.x * k, 2.0 * hit.y * j, 2.0 * -hit.z * k);
@@ -740,7 +716,6 @@ void Hyperboloid2Sheets_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, 
 		t0 = t1;
 		n0 = n1;
 	}
-
 	// intersect unit-radius disk located at top opening of unit hyperboloid shape
 	d = (ro.y - 1.0) / -rd.y;
 	hit = ro + rd * d;
@@ -787,11 +762,9 @@ void HyperbolicPrism1Sheet_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t
 	float b = 2.0 * (k * rd.x * ro.x - j * rd.y * ro.y);
 	float c = (k * ro.x * ro.x - j * ro.y * ro.y) - 1.0;
 	solveQuadratic(a, b, c, t0, t1);
-
 	hit = ro + rd * t0;
 	t0 = (hit.y > 1.0 || hit.y < 0.0 || abs(hit.z) > 1.0) ? 0.0 : t0; // invalidate t0 if it's outside unit radius bounds of top half
 	n0 = vec3(2.0 * hit.x * k, 2.0 * -hit.y * j, 0.0);
-
 	hit = ro + rd * t1;
 	t1 = (hit.y > 1.0 || hit.y < 0.0 || abs(hit.z) > 1.0) ? 0.0 : t1; // invalidate t1 if it's outside unit radius bounds of top half
 	n1 = vec3(2.0 * hit.x * k, 2.0 * -hit.y * j, 0.0);
@@ -802,7 +775,6 @@ void HyperbolicPrism1Sheet_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t
 		t0 = t1;
 		n0 = n1;
 	}
-
 	// intersect top and bottom base rectangles
 	if (rd.y < 0.0)
 	{
@@ -840,7 +812,6 @@ void HyperbolicPrism1Sheet_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t
 		t1 = d1;
 		n1 = dn1;
 	}
-
 	// intersect hyperbolic-shaped front and back wall pieces
 	if (rd.z < 0.0)
 	{
@@ -869,7 +840,6 @@ void HyperbolicPrism1Sheet_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t
 		t0 = d0;
 		n0 = dn0;
 	}
-
 	hit = ro + rd * d1;
 	if (abs(hit.x) <= 1.0 && hit.y >= 0.0 && hit.y <= 1.0 && (k * hit.x * hit.x - j * hit.y * hit.y - 1.0) <= 0.0) // y is a quadratic (hyperbolic) function of x
 	{
@@ -904,11 +874,9 @@ void HyperbolicPrism2Sheets_CSG_Intersect( float k, vec3 ro, vec3 rd, out float 
 	float b = 2.0 * (-k * rd.x * ro.x + j * rd.y * ro.y);
 	float c = (-k * ro.x * ro.x + j * ro.y * ro.y) - 1.0;
 	solveQuadratic(a, b, c, t0, t1);
-
 	hit = ro + rd * t0;
 	t0 = (hit.y > 1.0 || hit.y < 0.0 || abs(hit.z) > 1.0) ? 0.0 : t0; // invalidate t0 if it's outside unit radius bounds of top half
 	n0 = vec3(2.0 * -hit.x * k, 2.0 * hit.y * j, 0.0);
-
 	hit = ro + rd * t1;
 	t1 = (hit.y > 1.0 || hit.y < 0.0 || abs(hit.z) > 1.0) ? 0.0 : t1; // invalidate t1 if it's outside unit radius bounds of top half
 	n1 = vec3(2.0 * -hit.x * k, 2.0 * hit.y * j, 0.0);
@@ -919,7 +887,6 @@ void HyperbolicPrism2Sheets_CSG_Intersect( float k, vec3 ro, vec3 rd, out float 
 		t0 = t1;
 		n0 = n1;
 	}
-
 	// intersect unit-radius square located at top opening of hyperbolic prism shape
 	d = (ro.y - 1.0) / -rd.y;
 	hit = ro + rd * d;
@@ -938,7 +905,6 @@ void HyperbolicPrism2Sheets_CSG_Intersect( float k, vec3 ro, vec3 rd, out float 
 			n0 = vec3(0,1,0);
 		}
 	}
-
 	// intersect hyperbolic v-shaped front and back wall pieces
 	if (rd.z < 0.0)
 	{
@@ -967,7 +933,6 @@ void HyperbolicPrism2Sheets_CSG_Intersect( float k, vec3 ro, vec3 rd, out float 
 		t0 = d0;
 		n0 = dn0;
 	}
-
 	hit = ro + rd * d1;
 	if (abs(hit.x) <= 1.0 && hit.y >= 0.0 && hit.y <= 1.0 && (-k * hit.x * hit.x + j * hit.y * hit.y - 1.0) >= 0.0) // y is a quadratic (hyperbolic) function of x
 	{
@@ -991,15 +956,12 @@ void Capsule_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out float t
     	float b = 2.0 * (rd.x * ro.x + rd.z * ro.z);
     	float c = (ro.x * ro.x + ro.z * ro.z) - 1.0;
 	solveQuadratic(a, b, c, t0, t1);
-
 	hit = ro + rd * t0;
 	t0 = (abs(hit.y) > k) ? 0.0 : t0;
 	n0 = vec3(2.0 * hit.x, 0.0, 2.0 * hit.z);
-
 	hit = ro + rd * t1;
 	t1 = (abs(hit.y) > k) ? 0.0 : t1;
 	n1 = vec3(2.0 * hit.x, 0.0, 2.0 * hit.z);
-
 	// intersect unit-radius sphere located at top opening of cylinder
 	vec3 s0pos = vec3(0, k, 0);
 	vec3 L = ro - s0pos;
@@ -1007,15 +969,12 @@ void Capsule_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out float t
 	b = 2.0 * dot(rd, L);
 	c = dot(L, L) - 1.0;
 	solveQuadratic(a, b, c, s0t0, s0t1);
-
 	hit = ro + rd * s0t0;
 	s0n0 = vec3(2.0 * hit.x, 2.0 * (hit.y - s0pos.y), 2.0 * hit.z);
 	s0t0 = (hit.y < k) ? 0.0 : s0t0;
-
 	hit = ro + rd * s0t1;
 	s0n1 = vec3(2.0 * hit.x, 2.0 * (hit.y - s0pos.y), 2.0 * hit.z);
 	s0t1 = (hit.y < k) ? 0.0 : s0t1;
-
 	// now intersect unit-radius sphere located at bottom opening of cylinder
 	vec3 s1pos = vec3(0, -k, 0);
 	L = ro - s1pos;
@@ -1023,15 +982,12 @@ void Capsule_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out float t
 	b = 2.0 * dot(rd, L);
 	c = dot(L, L) - 1.0;
 	solveQuadratic(a, b, c, s1t0, s1t1);
-
 	hit = ro + rd * s1t0;
 	s1n0 = vec3(2.0 * hit.x, 2.0 * (hit.y - s1pos.y), 2.0 * hit.z);
 	s1t0 = (hit.y > -k) ? 0.0 : s1t0;
-
 	hit = ro + rd * s1t1;
 	s1n1 = vec3(2.0 * hit.x, 2.0 * (hit.y - s1pos.y), 2.0 * hit.z);
 	s1t1 = (hit.y > -k) ? 0.0 : s1t1;
-
 	if (s0t0 != 0.0)
 	{
 		t0 = s0t0;
@@ -1071,23 +1027,19 @@ void Box_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1, out vec3 n
 	t1 = min( min(tmax.x, tmax.y), tmax.z);
 	n0 = -sign(rd) * step(tmin.yzx, tmin) * step(tmin.zxy, tmin);
 	n1 = -sign(rd) * step(tmax, tmax.yzx) * step(tmax, tmax.zxy);
-
 	if (t0 > t1) // invalid intersection
 		t0 = t1 = 0.0;
 }
 `;
 
 /* THREE.ShaderChunk[ 'pathtracing_convexpolyhedron_csg_intersect' ] = `
-
 // This convexPolyhedron routine works with any number of user-defined cutting planes (a plane is defined by its unit normal (vec3) and an offset distance (float) from the shape's origin along this normal)
 // Examples of shapes that can be made from a list of pure convex cutting planes: cube, frustum, triangular pyramid (tetrahedron), rectangular pyramid, triangular bipyramid (hexahedron), rectangular bipyramid (octahedron), other Platonic/Archimedean solids, etc.)
 // Although I am proud of coming up with this ray casting / ray intersection algo for arbitrary mathematical convex polyhedra, and it does indeed give pixel-perfect sharp cut convex polygon faces (tris, quads, pentagons, hexagons, etc), 
 // I'm not currently using it because it runs too slowly on mobile, probably due to the nested for loops that have to compare each plane against all of its neighbor planes: big O(N-squared) - ouch! Hopefully I can optimize someday!
 // -Erich  erichlof on GitHub
-
 const int numPlanes = 6;
 vec4 convex_planes[numPlanes];
-
 //------------------------------------------------------------------------------------------------------------
 void ConvexPolyhedron_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1, out vec3 n0, out vec3 n1 )
 //------------------------------------------------------------------------------------------------------------
@@ -1096,7 +1048,6 @@ void ConvexPolyhedron_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t
 	float smallestT = INFINITY;
 	float largestT = -INFINITY;
 	float t = 0.0;
-
 	// triangular bipyramid (hexahedron) / set numPlanes = 6 above
 	convex_planes[0] = vec4(normalize(vec3(1, 1, -1)), 0.5);
 	convex_planes[1] = vec4(normalize(vec3(-1, 1, -1)), 0.5);
@@ -1104,7 +1055,6 @@ void ConvexPolyhedron_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t
 	convex_planes[3] = vec4(normalize(vec3(0, -1, 1)), 0.5);
 	convex_planes[4] = vec4(normalize(vec3(1, -1, -1)), 0.5);
 	convex_planes[5] = vec4(normalize(vec3(-1, -1, -1)), 0.5);
-
 	// rectangular bipyramid (octahedron) / set numPlanes = 8 above
 	// convex_planes[0] = vec4(normalize(vec3(1, 1, 0)), 0.5);
 	// convex_planes[1] = vec4(normalize(vec3(-1, 1, 0)), 0.5);
@@ -1114,8 +1064,6 @@ void ConvexPolyhedron_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t
 	// convex_planes[5] = vec4(normalize(vec3(-1, -1, 0)), 0.5);
 	// convex_planes[6] = vec4(normalize(vec3(0, -1, 1)), 0.5);
 	// convex_planes[7] = vec4(normalize(vec3(0, -1, -1)), 0.5);
-
-
 	for (int i = 0; i < numPlanes; i++)
 	{
 		t = (-dot(convex_planes[i].xyz, ro) + convex_planes[i].w) / dot(convex_planes[i].xyz, rd);
@@ -1125,7 +1073,6 @@ void ConvexPolyhedron_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t
 			if (i != j)
 				t = dot(convex_planes[j].xyz, (hit - (convex_planes[j].xyz * convex_planes[j].w))) > 0.0 ? 0.0 : t;
 		}
-
 		if (t == 0.0) 
 			continue;
 		
@@ -1155,7 +1102,6 @@ void PyramidFrustum_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out 
 	float d0, d1, dr0, dr1;
 	float xt0, xt1, zt0, zt1;
 	d0 = d1 = dr0 = dr1 = xt0 = xt1 = zt0 = zt1 = 0.0;
-
 	// first, intersect left and right sides of pyramid/frustum
 	// start with implicit equation of a double-cone extending infinitely in +Y and -Y directions
 	// x^2 + z^2 - y^2 = 0
@@ -1172,7 +1118,6 @@ void PyramidFrustum_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out 
     	float b = 2.0 * (j * rd.x * ro.x - (k * 0.25) * rd.y * (ro.y - h));
     	float c = j * ro.x * ro.x - (k * 0.25) * (ro.y - h) * (ro.y - h);
 	solveQuadratic(a, b, c, xt0, xt1);
-
 	hit = ro + rd * xt0;
 	xt0 = (abs(hit.x) > 1.0 || abs(hit.z) > 1.0 || hit.y > 1.0 || (j * hit.z * hit.z - k * 0.25 * (hit.y - h) * (hit.y - h)) > 0.0) ? 0.0 : xt0;
 	xn0 = vec3(2.0 * hit.x * j, 2.0 * (hit.y - h) * -(k * 0.25), 0.0);
@@ -1189,7 +1134,6 @@ void PyramidFrustum_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out 
 		xn0 = xn1;
 		xt1 = 0.0; // invalidate xt1 (see sorting algo below)
 	}
-
 	// now intersect front and back sides of pyramid/frustum
 	// start with implicit equation of a double-cone extending infinitely in +Y and -Y directions
 	// x^2 + z^2 - y^2 = 0
@@ -1199,7 +1143,6 @@ void PyramidFrustum_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out 
     	b = 2.0 * (j * rd.z * ro.z - (k * 0.25) * rd.y * (ro.y - h));
     	c = j * ro.z * ro.z - (k * 0.25) * (ro.y - h) * (ro.y - h);
 	solveQuadratic(a, b, c, zt0, zt1);
-
 	hit = ro + rd * zt0;
 	zt0 = (abs(hit.x) > 1.0 || abs(hit.z) > 1.0 || hit.y > 1.0 || (j * hit.x * hit.x - k * 0.25 * (hit.y - h) * (hit.y - h)) > 0.0) ? 0.0 : zt0;
 	zn0 = vec3(0.0, 2.0 * (hit.y - h) * -(k * 0.25), 2.0 * hit.z * j);
@@ -1207,7 +1150,6 @@ void PyramidFrustum_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out 
 	hit = ro + rd * zt1;
 	zt1 = (abs(hit.x) > 1.0 || abs(hit.z) > 1.0 || hit.y > 1.0 || (j * hit.x * hit.x - k * 0.25 * (hit.y - h) * (hit.y - h)) > 0.0) ? 0.0 : zt1;
 	zn1 = vec3(0.0, 2.0 * (hit.y - h) * -(k * 0.25), 2.0 * hit.z * j);
-
 	// since the infinite double-cone shape is artificially cut off at the top and bottom,
 	// if zt0 intersection was invalidated above, try zt1
 	if (zt0 == 0.0)
@@ -1216,7 +1158,6 @@ void PyramidFrustum_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out 
 		zn0 = zn1;
 		zt1 = 0.0; // invalidate zt1 (see sorting algo below)
 	}
-
 	// sort valid intersections of 4 sides of pyramid/frustum thus far
 	if (xt1 != 0.0) // the only way xt1 can be valid (not 0), is if xt0 was also valid (not 0) (see above)
 	{
@@ -1279,7 +1220,6 @@ void PyramidFrustum_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out 
 		dr0 = 1.0; // bottom square is unit radius
 		dr1 = 1.0 - k;// top square's size is relative to k
 	}
-
 	hit = ro + rd * d0;
 	if (abs(hit.x) <= dr0 && abs(hit.z) <= dr0)
 	{
@@ -1294,7 +1234,6 @@ void PyramidFrustum_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out 
 		t1 = d1;
 		n1 = dn1;
 	}
-
 }
 `;
 
@@ -2456,7 +2395,6 @@ vec4 randVec4; // samples and holds the RGBA blueNoise texture value for this pi
 float randNumber; // the final randomly generated number (range: 0.0 to 1.0)
 float counter; // will get incremented by 1 on each call to rand()
 int channel; // the final selected color channel to use for rand() calc (range: 0 to 3, corresponds to R,G,B, or A)
-
 float rand()
 {
 	counter++; // increment counter by 1 on every call to rand()
@@ -2633,7 +2571,6 @@ float tentFilter(float x)
 {
 	return (x < 0.5) ? sqrt(2.0 * x) - 1.0 : 1.0 - sqrt(2.0 - (2.0 * x));
 }
-
 void main( void )
 {
 	vec3 camRight   = vec3( uCameraMatrix[0][0],  uCameraMatrix[0][1],  uCameraMatrix[0][2]);
@@ -2669,17 +2606,18 @@ void main( void )
 	vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
 	
 	Ray ray = Ray( cameraPosition + randomAperturePos , finalRayDir );
+
 	SetupScene();
 	
 	// Edge Detection - don't want to blur edges where either surface normals change abruptly (i.e. room wall corners), objects overlap each other (i.e. edge of a foreground sphere in front of another sphere right behind it),
 	// or an abrupt color variation on the same smooth surface, even if it has similar surface normals (i.e. checkerboard pattern). Want to keep all of these cases as sharp as possible - no blur filter will be applied.
-	vec3 objectNormal, objectColor;
+	vec3 objectNormal = vec3(0);
+	vec3 objectColor = vec3(0);
 	float objectID = -INFINITY;
 	float pixelSharpness = 0.0;
 	
 	// perform path tracing and get resulting pixel color
 	vec4 currentPixel = vec4( vec3(CalculateRadiance(ray, objectNormal, objectColor, objectID, pixelSharpness)), 0.0 );
-
 	// if difference between normals of neighboring pixels is less than the first edge0 threshold, the white edge line effect is considered off (0.0)
 	float edge0 = 0.2; // edge0 is the minimum difference required between normals of neighboring pixels to start becoming a white edge line
 	// any difference between normals of neighboring pixels that is between edge0 and edge1 smoothly ramps up the white edge line brightness (smoothstep 0.0-1.0)
@@ -2688,21 +2626,20 @@ void main( void )
 	float difference_Ny = fwidth(objectNormal.y);
 	float difference_Nz = fwidth(objectNormal.z);
 	float normalDifference = smoothstep(edge0, edge1, difference_Nx) + smoothstep(edge0, edge1, difference_Ny) + smoothstep(edge0, edge1, difference_Nz);
-
 	edge0 = 0.0;
 	edge1 = 0.5;
 	float difference_obj = abs(dFdx(objectID)) > 0.0 ? 1.0 : 0.0;
 	difference_obj += abs(dFdy(objectID)) > 0.0 ? 1.0 : 0.0;
 	float objectDifference = smoothstep(edge0, edge1, difference_obj);
-
 	float difference_col = length(dFdx(objectColor)) > 0.0 ? 1.0 : 0.0;
 	difference_col += length(dFdy(objectColor)) > 0.0 ? 1.0 : 0.0;
 	float colorDifference = smoothstep(edge0, edge1, difference_col);
 	// edge detector (normal and object differences) white-line debug visualization
 	//currentPixel.rgb += 1.0 * vec3(max(normalDifference, objectDifference));
+	// edge detector (color difference) white-line debug visualization
+	//currentPixel.rgb += 1.0 * vec3(colorDifference);
 	
 	vec4 previousPixel = texelFetch(tPreviousTexture, ivec2(gl_FragCoord.xy), 0);
-
 	if (uFrameCounter == 1.0) // camera just moved after being still
 	{
 		previousPixel = vec4(0); // clear rendering accumulation buffer
@@ -2713,17 +2650,24 @@ void main( void )
 		currentPixel.rgb *= 0.5; // brightness of new image (noisy)
 		previousPixel.a = 0.0;
 	}
+	
+	currentPixel.a = 0.0;
+	if (colorDifference >= 1.0 || normalDifference >= 1.0 || objectDifference >= 1.0)
+		pixelSharpness = 1.01;
 
-	currentPixel.a = pixelSharpness;
-
-	currentPixel.a = colorDifference  >= 1.0 ? min(uSampleCounter * uColorEdgeSharpeningRate , 1.01) : currentPixel.a;
-	currentPixel.a = normalDifference >= 1.0 ? min(uSampleCounter * uNormalEdgeSharpeningRate, 1.01) : currentPixel.a;
-	currentPixel.a = objectDifference >= 1.0 ? min(uSampleCounter * uObjectEdgeSharpeningRate, 1.01) : currentPixel.a;
 	
 	// Eventually, all edge-containing pixels' .a (alpha channel) values will converge to 1.01, which keeps them from getting blurred by the box-blur filter, thus retaining sharpness.
-	if (pixelSharpness == 1.0 || previousPixel.a == 1.01)
+	if (pixelSharpness == 1.01)
 		currentPixel.a = 1.01;
-	
+	if (pixelSharpness == -1.0)
+		currentPixel.a = -1.0;
+
+	if (previousPixel.a == 1.01)
+		currentPixel.a = 1.01;
+
+	if (previousPixel.a == -1.0)
+		currentPixel.a = 0.0;
+
 	
 	pc_fragColor = vec4(previousPixel.rgb + currentPixel.rgb, currentPixel.a);
 }
