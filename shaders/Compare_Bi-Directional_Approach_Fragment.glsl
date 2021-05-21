@@ -34,6 +34,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
         float d;
 	float t = INFINITY;
 	bool isRayExiting = false;
+	int objectCount = 0;
+	
+	intersectedObjectID = -INFINITY;
 	
 	for (int i = 0; i < N_QUADS; i++)
         {
@@ -45,8 +48,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 			intersec.emission = quads[i].emission;
 			intersec.color = quads[i].color;
 			intersec.type = quads[i].type;
-			intersectedObjectID = 0.0;
+			intersectedObjectID = float(objectCount);
 		}
+		objectCount++;
         }
 	
 	// LIGHT-BLOCKER THIN BOX
@@ -58,8 +62,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		intersec.emission = boxes[2].emission;
 		intersec.color = boxes[2].color;
 		intersec.type = boxes[2].type;
-		intersectedObjectID = 1.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
 	
 	
 	// TALL MIRROR BOX
@@ -79,9 +84,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		intersec.emission = boxes[0].emission;
 		intersec.color = boxes[0].color;
 		intersec.type = boxes[0].type;
-		intersectedObjectID = 2.0;
+		intersectedObjectID = float(objectCount);
 	}
-	
+	objectCount++;
 	
 	// SHORT DIFFUSE WHITE BOX
 	// transform ray into Short Box's object space
@@ -99,7 +104,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		intersec.emission = boxes[1].emission;
 		intersec.color = boxes[1].color;
 		intersec.type = boxes[1].type;
-		intersectedObjectID = 3.0;
+		intersectedObjectID = float(objectCount);
 	}
 	
 	
@@ -207,11 +212,8 @@ vec3 CalculateRadiance( Ray originalRay, out vec3 objectNormal, out vec3 objectC
 		if (intersec.type == LIGHT)
 		{	
 			if (diffuseCount == 0)
-			{
-				objectNormal = nl;
-				pixelSharpness = 1.0;
-			}
-
+				pixelSharpness = 1.01;
+			
 			if (sampleLight)
 				accumCol = mask * intersec.emission * max(0.0, dot(-r.direction, nl));
 
