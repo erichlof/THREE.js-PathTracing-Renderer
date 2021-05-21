@@ -57,6 +57,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 	float d;
 	float t = INFINITY;
 	bool isRayExiting = false;
+	int objectCount = 0;
+	
+	intersectedObjectID = -INFINITY;
 	
 	
 	for (int i = 0; i < N_QUADS; i++)
@@ -70,8 +73,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 			intersec.color = quads[i].color;
 			intersec.roughness = quads[i].roughness;
 			intersec.type = quads[i].type;
-			intersectedObjectID = 0.0;
+			intersectedObjectID = float(objectCount);
 		}
+		objectCount++;
 	}
 	
 	for (int i = 0; i < N_SPHERES; i++)
@@ -85,8 +89,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 			intersec.color = spheres[i].color;
 			intersec.roughness = spheres[i].roughness;
 			intersec.type = spheres[i].type;
-			intersectedObjectID = 1.0;
+			intersectedObjectID = float(objectCount);
 		}
+		objectCount++;
         }
 	
 	for (int i = 0; i < N_ELLIPSOIDS; i++)
@@ -100,8 +105,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 			intersec.color = ellipsoids[i].color;
 			intersec.roughness = ellipsoids[i].roughness;
 			intersec.type = ellipsoids[i].type;
-			intersectedObjectID = 2.0;
+			intersectedObjectID = float(objectCount);
 		}
+		objectCount++;
 	}
 	
 	for (int i = 0; i < N_BOXES; i++)
@@ -116,8 +122,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 			intersec.color = boxes[i].color;
 			intersec.roughness = boxes[i].roughness;
 			intersec.type = boxes[i].type;
-			intersectedObjectID = 3.0;
+			intersectedObjectID = float(objectCount);
 		}
+		objectCount++;
         }
 	
 	for (int i = 0; i < N_PLANES; i++)
@@ -131,8 +138,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 			intersec.color = planes[i].color;
 			intersec.roughness = planes[i].roughness;
 			intersec.type = planes[i].type;
-			intersectedObjectID = 4.0;
+			intersectedObjectID = float(objectCount);
 		}
+		objectCount++;
         }
 	
 	for (int i = 0; i < N_CONES; i++)
@@ -146,8 +154,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 			intersec.color = cones[i].color;
 			intersec.roughness = cones[i].roughness;
 			intersec.type = cones[i].type;
-			intersectedObjectID = 5.0;
+			intersectedObjectID = float(objectCount);
 		}
+		objectCount++;
         }
 	
 	return t;
@@ -207,10 +216,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		if (intersec.type == LIGHT)
 		{	
 			if (diffuseCount == 0)
-			{
-				objectNormal = nl;
-				pixelSharpness = 1.0;
-			}
+				pixelSharpness = 1.01;
 
 			if (bounceIsSpecular || sampleLight)
 				accumCol = mask * intersec.emission; // looking at light through a reflection
@@ -261,6 +267,8 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		
 		if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top
 		{
+			pixelSharpness = 0.0;
+
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of Clear Coat
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
@@ -271,6 +279,9 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 
 			if (bounces == 0 && rand() < P)
 			{
+				if (diffuseCount == 0)
+					pixelSharpness = uFrameCounter > 200.0 ? 1.01 : -1.0;
+
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.origin += nl * uEPS_intersect;
@@ -307,6 +318,8 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		
 		if (intersec.type == LIGHTWOOD || intersec.type == DARKWOOD)  // Diffuse object underneath with thin ClearCoat on top
 		{
+			pixelSharpness = 0.0;
+
 			nc = 1.0; // IOR of Air
 			nt = 1.1; // IOR of Clear Coat
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
@@ -317,6 +330,9 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 
 			if (bounces == 0 && rand() < P)
 			{
+				if (diffuseCount == 0)
+					pixelSharpness = -1.0;
+
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.direction = randomDirectionInSpecularLobe(r.direction, intersec.roughness);
