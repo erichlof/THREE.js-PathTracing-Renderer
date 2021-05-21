@@ -79,6 +79,10 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExi
 	float d;
 	float t = INFINITY;
 	bool isRayExiting = false;
+	int objectCount = 0;
+	
+	intersectedObjectID = -INFINITY;
+	
 	
         for (int i = 0; i < N_SPHERES; i++)
         {
@@ -90,8 +94,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExi
 			intersec.emission = spheres[i].emission;
 			intersec.color = spheres[i].color;
 			intersec.type = spheres[i].type;
-			intersectedObjectID = 0.0;
+			intersectedObjectID = float(objectCount);
 		}
+		objectCount++;
 	}
 	
 	for (int i = 0; i < N_BOXES; i++)
@@ -105,8 +110,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExi
 			intersec.color = boxes[i].color;
 			intersec.type = boxes[i].type;
 			finalIsRayExiting = isRayExiting;
-			intersectedObjectID = 1.0;
+			intersectedObjectID = float(objectCount);
 		}
+		objectCount++;
         }
 	
 	d = EllipsoidIntersect( ellipsoids[0].radii, ellipsoids[0].position, r );
@@ -118,8 +124,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExi
 		intersec.emission = ellipsoids[0].emission;
 		intersec.color = ellipsoids[0].color;
 		intersec.type = ellipsoids[0].type;
-		intersectedObjectID = 2.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
 	
 	d = ParaboloidIntersect( paraboloids[0].rad, paraboloids[0].height, paraboloids[0].pos, r, n );
 	if (d < t)
@@ -129,8 +136,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExi
 		intersec.emission = paraboloids[0].emission;
 		intersec.color = paraboloids[0].color;
 		intersec.type = paraboloids[0].type;
-		intersectedObjectID = 3.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
 	
 	d = OpenCylinderIntersect( openCylinders[0].position, openCylinders[0].position + vec3(0,30,30), openCylinders[0].radius, r, n );
 	if (d < t)
@@ -140,8 +148,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExi
 		intersec.emission = openCylinders[0].emission;
 		intersec.color = openCylinders[0].color;
 		intersec.type = openCylinders[0].type;
-		intersectedObjectID = 4.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
         
 	d = CappedCylinderIntersect( cappedCylinders[0].cap1pos, cappedCylinders[0].cap2pos, cappedCylinders[0].radius, r, n);
 	if (d < t)
@@ -151,8 +160,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExi
 		intersec.emission = cappedCylinders[0].emission;
 		intersec.color = cappedCylinders[0].color;
 		intersec.type = cappedCylinders[0].type;
-		intersectedObjectID = 5.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
         
 	d = ConeIntersect( cones[0].pos0, cones[0].radius0, cones[0].pos1, cones[0].radius1, r, n );
 	if (d < t)
@@ -162,8 +172,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExi
 		intersec.emission = cones[0].emission;
 		intersec.color = cones[0].color;
 		intersec.type = cones[0].type;
-		intersectedObjectID = 6.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
         
 	d = CapsuleIntersect( capsules[0].pos0, capsules[0].radius0, capsules[0].pos1, capsules[0].radius1, r, n );
 	if (d < t)
@@ -173,8 +184,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExi
 		intersec.emission = capsules[0].emission;
 		intersec.color = capsules[0].color;
 		intersec.type = capsules[0].type;
-		intersectedObjectID = 7.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
         
 	Ray rObj;
 	// transform ray into Torus's object space
@@ -192,7 +204,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExi
 		intersec.emission = torii[0].emission;
 		intersec.color = torii[0].color;
 		intersec.type = torii[0].type;
-		intersectedObjectID = 8.0;
+		intersectedObjectID = float(objectCount);
 	}
         
 	return t;
@@ -223,7 +235,9 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 	float intersectedObjectID;
 
 	int diffuseCount = 0;
-
+	int previousIntersecType = -100;
+	intersec.type = -100;
+	
 	bool coatTypeIntersected = false;
 	bool bounceIsSpecular = true;
 	bool sampleLight = false;
@@ -234,6 +248,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 	
 	for (int bounces = 0; bounces < 6; bounces++)
 	{
+		previousIntersecType = intersec.type;
 
 		t = SceneIntersect(r, intersec, isRayExiting, intersectedObjectID);
 		
@@ -261,10 +276,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		if (intersec.type == LIGHT)
 		{	
 			if (diffuseCount == 0)
-			{
-				objectNormal = nl;
-				pixelSharpness = 1.0;
-			}
+				pixelSharpness = 1.01;
 
 			if (bounceIsSpecular || sampleLight)
 				accumCol = mask * intersec.emission;
@@ -285,8 +297,8 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 				float q = clamp( mod( dot( floor(x.xz * 0.04), vec2(1.0) ), 2.0 ) , 0.0, 1.0 );
 				intersec.color = checkCol0 * q + checkCol1 * (1.0 - q);	
 			}
-			
-			if (diffuseCount == 0 && !coatTypeIntersected)	
+				
+			if (bounces == 0 || (diffuseCount == 0 && !coatTypeIntersected && previousIntersecType == SPEC))	
 				objectColor = intersec.color;
 
 			diffuseCount++;
@@ -322,11 +334,19 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 
 			//if (diffuseCount == 1)
 			//	bounceIsSpecular = true; // turn on reflective mirror caustics
+
 			continue;
 		}
 		
 		if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
+			if (diffuseCount == 0 && !coatTypeIntersected && !uCameraIsMoving )
+				pixelSharpness = 1.01;
+			else if (diffuseCount > 0)
+				pixelSharpness = 0.0;
+			else
+				pixelSharpness = -1.0;
+			
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
@@ -344,7 +364,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			}
 
 			// transmit ray through surface
-			
+
 			// is ray leaving a solid object from the inside? 
 			// If so, attenuate ray color with object color by how far ray has travelled through the medium
 			if (isRayExiting)
@@ -371,6 +391,8 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top
 		{
 			coatTypeIntersected = true;
+
+			pixelSharpness = 0.0;
 			
 			nc = 1.0; // IOR of Air
 			nt = 1.4; // IOR of Clear Coat
@@ -382,6 +404,9 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			
 			if (rand() < P)
 			{
+				if (diffuseCount == 0)
+					pixelSharpness = -1.0;
+
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.origin += nl * uEPS_intersect;
