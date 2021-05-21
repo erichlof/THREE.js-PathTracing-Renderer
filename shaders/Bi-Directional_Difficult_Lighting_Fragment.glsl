@@ -125,6 +125,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkModels, out 
 	float triangleW = 0.0;
 
 	int modelID = 0;
+	int objectCount = 0;
+	
+	intersectedObjectID = -INFINITY;
 	
 	bool skip = false;
 	bool triangleLookupNeeded = false;
@@ -150,8 +153,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkModels, out 
 			intersec.color = quads[i].color;
 			intersec.type = quads[i].type;
 			intersec.isModel = false;
-			intersectedObjectID = 0.0;
+			intersectedObjectID = float(objectCount);
 		}
+		objectCount++;
         }
 	
 	for (int i = 0; i < N_BOXES - 1; i++)
@@ -165,8 +169,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkModels, out 
 			intersec.color = boxes[i].color;
 			intersec.type = boxes[i].type;
 			intersec.isModel = false;
-			intersectedObjectID = 1.0;
+			intersectedObjectID = float(objectCount);
 		}
+		objectCount++;
 	}
 	
 	// DOOR (TALL BOX)
@@ -186,8 +191,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkModels, out 
 		intersec.color = boxes[9].color;
 		intersec.type = boxes[9].type;
 		intersec.isModel = false;
-		intersectedObjectID = 2.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
 	
 	for (int i = 0; i < N_OPENCYLINDERS; i++)
         {
@@ -200,8 +206,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkModels, out 
 			intersec.color = openCylinders[i].color;
 			intersec.type = openCylinders[i].type;
 			intersec.isModel = false;
-			intersectedObjectID = 3.0;
+			intersectedObjectID = float(objectCount);
 		}
+		objectCount++;
         }
 	
 	for (int i = 0; i < N_SPHERES; i++)
@@ -217,8 +224,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkModels, out 
 			intersec.color = spheres[i].color;
 			intersec.type = spheres[i].type;
 			intersec.isModel = false;
-			intersectedObjectID = 4.0;
+			intersectedObjectID = float(objectCount);
 		}
+		objectCount++;
 	}
 
 	if (!checkModels)
@@ -538,19 +546,21 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkModels, out 
 		//intersec.albedoTextureID = int(vd7.x);
 		intersec.color = vec3(0.7);
 		intersec.type = SPEC;
-		intersectedObjectID = 5.0;
+		intersectedObjectID = float(objectCount);
+		objectCount++;
 		if (modelID == 1)
 		{
 			intersec.color = vec3(1.2); // makes white teapot a little more white
 			intersec.type = COAT;
-			intersectedObjectID = 6.0;
+			intersectedObjectID = float(objectCount);
 		}
+		objectCount++;
 		
 		if (modelID == 2)
 		{
 			intersec.color = vec3(1);
 			intersec.type = REFR;
-			intersectedObjectID = 7.0;
+			intersectedObjectID = float(objectCount);
 		}
 		
 		intersec.isModel = true;
@@ -589,6 +599,7 @@ vec3 CalculateRadiance( Ray originalRay, out vec3 objectNormal, out vec3 objectC
 	int diffuseCount = 0;
 	int previousIntersecType = -1;
 
+	bool coatTypeIntersected = false;
 	bool sampleLight = false;
 	bool bounceIsSpecular = true;
 	bool ableToJoinPaths = false;
@@ -653,11 +664,8 @@ vec3 CalculateRadiance( Ray originalRay, out vec3 objectNormal, out vec3 objectC
 		if (intersec.type == LIGHT)
 		{
 			if (diffuseCount == 0)
-			{
-				objectNormal = nl;
-				pixelSharpness = 1.0;
-			}
-
+				pixelSharpness = 1.01;
+			
 			if (bounceIsSpecular || sampleLight)
 				accumCol = mask * intersec.emission;
 			
@@ -709,7 +717,7 @@ vec3 CalculateRadiance( Ray originalRay, out vec3 objectNormal, out vec3 objectC
 				intersec.color *= GammaToLinear(texColor, 2.2).rgb;
 			}
 
-			if (bounces == 0 || (diffuseCount == 0 && bounces < 3 && previousIntersecType != COAT))
+			if (bounces == 0 || (diffuseCount == 0 && !coatTypeIntersected && previousIntersecType == SPEC))	
 				objectColor = intersec.color;
 
 			diffuseCount++;
@@ -748,6 +756,9 @@ vec3 CalculateRadiance( Ray originalRay, out vec3 objectNormal, out vec3 objectC
 			if (intersec.isModel)
 				nl = perturbNormal(nl, vec2(0.15, 0.15), intersec.uv * 2.0);
 
+			if (bounces == 0)
+				objectNormal = nl;
+
 			r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 			r.direction = randomDirectionInSpecularLobe(r.direction, intersec.roughness);
 			r.origin += nl * uEPS_intersect;
@@ -758,6 +769,13 @@ vec3 CalculateRadiance( Ray originalRay, out vec3 objectNormal, out vec3 objectC
 		
 		if (intersec.type == REFR)  // Ideal dielectric refraction
 		{	
+			if (diffuseCount == 0 && !coatTypeIntersected && !uCameraIsMoving )
+				pixelSharpness = 1.01;
+			else if (diffuseCount > 0)
+				pixelSharpness = 0.0;
+			else
+				pixelSharpness = -1.0;
+
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
@@ -794,6 +812,10 @@ vec3 CalculateRadiance( Ray originalRay, out vec3 objectNormal, out vec3 objectC
 		
 		if (intersec.type == COAT || intersec.type == CHECK)  // Diffuse object underneath with ClearCoat on top
 		{	
+			coatTypeIntersected = true;
+
+			pixelSharpness = 0.0;
+
 			nc = 1.0; // IOR of Air
 			nt = 1.4; // IOR of ClearCoat
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
@@ -805,6 +827,9 @@ vec3 CalculateRadiance( Ray originalRay, out vec3 objectNormal, out vec3 objectC
 			// choose either specular reflection or diffuse
 			if( rand() < P )
 			{	
+				if (diffuseCount == 0)
+					pixelSharpness = -1.0;
+
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.direction = randomDirectionInSpecularLobe(r.direction, intersec.roughness);
@@ -829,8 +854,7 @@ vec3 CalculateRadiance( Ray originalRay, out vec3 objectNormal, out vec3 objectC
 				intersec.color *= GammaToLinear(texColor, 2.2).rgb;		
 			}
 
-			// if light bounce is still specular, update reported objectColor after we changed it to be a checkered color pattern
-			if (bounces == 0)// || (diffuseCount == 0 && bounces < 3 && previousIntersecType != COAT))
+			if (bounces == 0)
 				objectColor = intersec.color;
 			
 			diffuseCount++;
