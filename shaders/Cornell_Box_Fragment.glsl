@@ -38,6 +38,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
         float d;
 	float t = INFINITY;
 	bool isRayExiting = false;
+	int objectCount = 0;
+	
+	intersectedObjectID = -INFINITY;
 	
 		
 	for (int i = 0; i < N_QUADS; i++)
@@ -50,8 +53,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 			intersec.emission = quads[i].emission;
 			intersec.color = quads[i].color;
 			intersec.type = quads[i].type;
-			intersectedObjectID = 0.0;
+			intersectedObjectID = float(objectCount);
 		}
+		objectCount++;
         }
 	
 	
@@ -72,8 +76,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		intersec.emission = boxes[0].emission;
 		intersec.color = boxes[0].color;
 		intersec.type = boxes[0].type;
-		intersectedObjectID = 1.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
 	
 	
 	// SHORT DIFFUSE WHITE BOX
@@ -92,7 +97,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		intersec.emission = boxes[1].emission;
 		intersec.color = boxes[1].color;
 		intersec.type = boxes[1].type;
-		intersectedObjectID = 2.0;
+		intersectedObjectID = float(objectCount);
 	}
 
 	return t;
@@ -117,6 +122,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 	
 	int diffuseCount = 0;
 	int previousIntersecType = -100;
+	intersec.type = -100;
 	
 	bool bounceIsSpecular = true;
 	bool sampleLight = false;
@@ -125,6 +131,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 
 	for (int bounces = 0; bounces < 5; bounces++)
 	{
+		previousIntersecType = intersec.type;
 
 		t = SceneIntersect(r, intersec, intersectedObjectID);
 
@@ -151,10 +158,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		if (intersec.type == LIGHT)
 		{	
 			if (diffuseCount == 0)
-			{
-				objectNormal = nl;
-				pixelSharpness = 1.0;
-			}
+				pixelSharpness = 1.01;
 
 			if (bounceIsSpecular || sampleLight || createCausticRay)
 				accumCol = mask * intersec.emission;
@@ -171,7 +175,8 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 
                 if (intersec.type == DIFF) // Ideal DIFFUSE reflection
                 {
-			previousIntersecType = DIFF;
+			if ( diffuseCount == 0 && previousIntersecType == SPEC )	
+				objectColor = intersec.color;
 
 			diffuseCount++;
 
@@ -219,8 +224,6 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		
                 if (intersec.type == SPEC)  // Ideal SPECULAR reflection
 		{
-			previousIntersecType = SPEC;
-
 			mask *= intersec.color;
 
 			r = Ray( x, reflect(r.direction, nl) );
