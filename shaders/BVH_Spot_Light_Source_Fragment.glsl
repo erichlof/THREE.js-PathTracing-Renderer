@@ -100,6 +100,10 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool isRayExiting,
 	float triangleV = 0.0;
 	float triangleW = 0.0;
 
+	int objectCount = 0;
+	
+	intersectedObjectID = -INFINITY;
+
 	bool skip = false;
 	bool triangleLookupNeeded = false;
 
@@ -115,8 +119,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool isRayExiting,
 			intersec.color = spheres[i].color;
 			intersec.type = spheres[i].type;
 			intersec.albedoTextureID = -1;
-			intersectedObjectID = 0.0;
+			intersectedObjectID = float(objectCount);
 		}
+		objectCount++;
 	}
 	
 	for (int i = 0; i < N_BOXES; i++)
@@ -130,8 +135,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool isRayExiting,
 			intersec.color = boxes[i].color;
 			intersec.type = boxes[i].type;
 			intersec.albedoTextureID = -1;
-			intersectedObjectID = 1.0;
+			intersectedObjectID = float(objectCount);
 		}
+		objectCount++;
 	}
 	
 	d = DiskIntersect( disks[0].radius, disks[0].pos, disks[0].normal, r );
@@ -154,7 +160,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool isRayExiting,
 			intersec.type = DIFF;
 		}
 		intersec.albedoTextureID = -1;
-		intersectedObjectID = 2.0;
+		intersectedObjectID = float(objectCount);
 	}
 
 	d = OpenCylinderIntersect( openCylinders[0].pos0, openCylinders[0].pos1, openCylinders[0].radius, r, normal );
@@ -177,8 +183,10 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool isRayExiting,
 			intersec.type = DIFF;
 		}
 		intersec.albedoTextureID = -1;
-		intersectedObjectID = 3.0;
+		intersectedObjectID = float(objectCount); // same as spotlight disk backing above
 	}
+
+	objectCount++;
 	
 
 	currentBoxNode = GetBoxNode(stackptr);
@@ -305,7 +313,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool isRayExiting,
 		//intersec.albedoTextureID = int(vd7.x);
 		intersec.type = COAT;
 		intersec.albedoTextureID = -1;
-		intersectedObjectID = 4.0;
+		intersectedObjectID = float(objectCount);
 	}
 
 	return t;
@@ -379,10 +387,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		if (intersec.type == SPOT_LIGHT)
 		{	
 			if (diffuseCount == 0)
-			{
-				objectNormal = nl;
-				pixelSharpness = 1.0;
-			}
+				pixelSharpness = 1.01;
 
 			if (bounceIsSpecular)
 			{
@@ -457,6 +462,13 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		
 		if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
+			if (diffuseCount == 0 && !coatTypeIntersected && !uCameraIsMoving )
+				pixelSharpness = 1.01;
+			else if (diffuseCount > 0)
+				pixelSharpness = 0.0;
+			else
+				pixelSharpness = -1.0;
+
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
@@ -497,8 +509,10 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		} // end if (intersec.type == REFR)
 		
 		if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top
-		{
+		{	
 			coatTypeIntersected = true;
+
+			pixelSharpness = 0.0;
 
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of Clear Coat
@@ -511,6 +525,9 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			
 			if (rand() < P)
 			{
+				if (diffuseCount == 0)
+					pixelSharpness = uFrameCounter > 200.0 ? 1.01 : -1.0;
+					
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.origin += nl * uEPS_intersect;
