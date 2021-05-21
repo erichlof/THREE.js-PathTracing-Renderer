@@ -151,9 +151,6 @@ function initPathTracingShaders()
         // scene/demo-specific uniforms go here
         pathTracingUniforms.uMaterialType = { type: "i", value: 4 };
         pathTracingUniforms.uMaterialColor = { type: "v3", value: new THREE.Color(0.0, 1.0, 1.0) };
-        pathTracingUniforms.uColorEdgeSharpeningRate = { type: "f", value: 0.1 };
-        pathTracingUniforms.uNormalEdgeSharpeningRate = { type: "f", value: 0.1 };
-        pathTracingUniforms.uObjectEdgeSharpeningRate = { type: "f", value: 0.1 };
 
         pathTracingDefines = {
         	//NUMBER_OF_TRIANGLES: total_number_of_triangles
