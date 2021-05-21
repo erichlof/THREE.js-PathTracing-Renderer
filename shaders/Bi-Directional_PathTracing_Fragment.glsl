@@ -60,6 +60,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
         float d;
 	float t = INFINITY;
 	bool isRayExiting = false;
+	int objectCount = 0;
+	
+	intersectedObjectID = -INFINITY;
 
 			
 	// ROOM
@@ -74,8 +77,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 			intersec.color = quads[i].color;
 			intersec.roughness = quads[i].roughness;
 			intersec.type = quads[i].type;
-			intersectedObjectID = 0.0;
+			intersectedObjectID = float(objectCount);
 		}
+		objectCount++;
         }
 	
 	// TABLETOP
@@ -88,8 +92,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		intersec.color = boxes[0].color;
 		intersec.roughness = boxes[0].roughness;
 		intersec.type = boxes[0].type;
-		intersectedObjectID = 1.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
 	
 	// TABLE LEGS, LAMP POST, and SPOTLIGHT CASING
 	for (int i = 0; i < N_OPENCYLINDERS; i++)
@@ -103,8 +108,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 			intersec.color = openCylinders[i].color;
 			intersec.roughness = openCylinders[i].roughness;
 			intersec.type = openCylinders[i].type;
-			intersectedObjectID = 2.0;
+			intersectedObjectID = float(objectCount);
 		}
+		objectCount++;
         }
 	
 	// LAMP BASE AND FLOOR LAMP BULB
@@ -119,8 +125,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 			intersec.color = spheres[i].color;
 			intersec.roughness = spheres[i].roughness;
 			intersec.type = spheres[i].type;
-			intersectedObjectID = 3.0;
+			intersectedObjectID = float(objectCount);
 		}
+		objectCount++;
         }
 	
 	// LIGHT DISK OF SPOTLIGHT AND SPOTLIGHT CASE DISK BACKING
@@ -135,8 +142,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 			intersec.color = disks[i].color;
 			intersec.roughness = disks[i].roughness;
 			intersec.type = disks[i].type;
-			intersectedObjectID = 4.0;
+			intersectedObjectID = float(objectCount);
 		}
+		objectCount++;
 	}
 	
 	// LAMP SHADE
@@ -149,8 +157,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		intersec.color = cones[0].color;
 		intersec.roughness = cones[0].roughness;
 		intersec.type = cones[0].type;
-		intersectedObjectID = 5.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
 	
 	
 	// GLASS EGG
@@ -169,7 +178,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		intersec.color = ellipsoids[0].color;
 		intersec.roughness = ellipsoids[0].roughness;
 		intersec.type = ellipsoids[0].type;
-		intersectedObjectID = 6.0;
+		intersectedObjectID = float(objectCount);
 	}
 	
 	d = SphereIntersect( spheres[3].radius, spheres[3].position, r );
@@ -185,7 +194,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		intersec.color = spheres[3].color;
 		intersec.roughness = spheres[3].roughness;
 		intersec.type = spheres[3].type;
-		intersectedObjectID = 6.0; // same as ellipsoid above - sphere and ellipsoid make up 1 object
+		intersectedObjectID = float(objectCount); // same as ellipsoid above - sphere and ellipsoid make up 1 object
 	}
 	
 	
@@ -230,6 +239,7 @@ vec3 CalculateRadiance( Ray originalRay, out vec3 objectNormal, out vec3 objectC
 	
 	int diffuseCount = 0;
 	int previousIntersecType = -100;
+	intersec.type = -100;
 
 	bool bounceIsSpecular = true;
 	bool sampleLight = false;
@@ -257,6 +267,7 @@ vec3 CalculateRadiance( Ray originalRay, out vec3 objectNormal, out vec3 objectC
 
 	for (int bounces = 0; bounces < 6; bounces++)
 	{
+		previousIntersecType = intersec.type;
 
 		t = SceneIntersect(r, intersec, intersectedObjectID);
 		
@@ -275,16 +286,18 @@ vec3 CalculateRadiance( Ray originalRay, out vec3 objectNormal, out vec3 objectC
 			objectColor = intersec.color;
 			objectID = intersectedObjectID;
 		}
-			
+		if (bounces == 1 && previousIntersecType == SPEC)
+		{
+			objectNormal = nl;
+		}
 		
+
 		
 		if (intersec.type == LIGHT)
 		{	
-			if (diffuseCount == 0)
-			{
-				objectNormal = nl;
-				pixelSharpness = 1.0;
-			}
+			if (diffuseCount == 0 || (bounceIsSpecular && previousIntersecType == REFR))
+				pixelSharpness = 1.01;
+
 
 			if (firstTypeWasDIFF && bounceIsSpecular)
 				accumCol = mask * intersec.emission * 50.0;		 
@@ -317,9 +330,10 @@ vec3 CalculateRadiance( Ray originalRay, out vec3 objectNormal, out vec3 objectC
 		    
                 if (intersec.type == DIFF) // Ideal DIFFUSE reflection
 		{
-			diffuseCount++;
+			if (diffuseCount == 0)	
+				objectColor = intersec.color;
 
-			previousIntersecType = DIFF;
+			diffuseCount++;
 
 			mask *= intersec.color;
 
@@ -328,7 +342,7 @@ vec3 CalculateRadiance( Ray originalRay, out vec3 objectNormal, out vec3 objectC
 			if (bounces == 0)
 				firstTypeWasDIFF = true;
 
-			if (diffuseCount == 1 && rng() < 0.5)
+			if (diffuseCount == 1 && rand() < 0.5)
 			{	
 				// choose random Diffuse sample vector
 				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
@@ -351,8 +365,6 @@ vec3 CalculateRadiance( Ray originalRay, out vec3 objectNormal, out vec3 objectC
 		
 		if (intersec.type == SPEC)  // Ideal SPECULAR reflection
 		{
-			previousIntersecType = SPEC;
-
 			mask *= intersec.color;
 
 			r = Ray( x, reflect(r.direction, nl) );
@@ -363,11 +375,16 @@ vec3 CalculateRadiance( Ray originalRay, out vec3 objectNormal, out vec3 objectC
 		}
 		
 		if (intersec.type == REFR)  // Ideal dielectric REFRACTION
-		{
-			previousIntersecType = REFR;
+		{	
+			if (diffuseCount == 0 && !uCameraIsMoving )
+				pixelSharpness = 1.01;
+			else if (diffuseCount > 0)
+				pixelSharpness = 0.0;
+			else
+				pixelSharpness = -1.0;
 
 			nc = 1.0; // IOR of Air
-			nt = 1.45; // IOR of heavy Glass
+			nt = 1.45; // IOR of Glass
 			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 			P  = 0.25 + (0.5 * Re);
