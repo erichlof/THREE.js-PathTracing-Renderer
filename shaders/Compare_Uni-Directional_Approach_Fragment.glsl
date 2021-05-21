@@ -125,7 +125,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 
 	bool bounceIsSpecular = true;
 
-	pixelSharpness = 1.0;
+	pixelSharpness = 1.01; // can't really use de-noiser on this demo
 
 	// hope that we get lucky enough to find the blocked light source
 	for (int bounces = 0; bounces < 5; bounces++)
@@ -141,12 +141,12 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
                 nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
 		x = r.origin + r.direction * t;
 
-		if (diffuseCount == 0)
-		{
-			objectNormal = nl;
-			objectColor = intersec.color;
-			objectID = intersectedObjectID;
-		}
+		// if (diffuseCount == 0)
+		// {
+		// 	objectNormal = nl;
+		// 	objectColor = intersec.color;
+		// 	objectID = intersectedObjectID;
+		// }
 		
 
 		// if we reached something bright, don't spawn any more rays
