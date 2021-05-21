@@ -60,9 +60,6 @@ function initPathTracingShaders()
         pathTracingUniforms.tClothTexture = { type: "t", value: clothTexture };
         pathTracingUniforms.tDarkWoodTexture = { type: "t", value: darkWoodTexture };
         pathTracingUniforms.tLightWoodTexture = { type: "t", value: lightWoodTexture };
-        pathTracingUniforms.uColorEdgeSharpeningRate = { type: "f", value: 0.5 };
-        pathTracingUniforms.uNormalEdgeSharpeningRate = { type: "f", value: 1.0 };
-        pathTracingUniforms.uObjectEdgeSharpeningRate = { type: "f", value: 1.0 };
 
         pathTracingDefines = {
         	//NUMBER_OF_TRIANGLES: total_number_of_triangles
