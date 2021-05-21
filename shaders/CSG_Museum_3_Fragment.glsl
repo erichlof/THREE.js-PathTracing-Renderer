@@ -715,6 +715,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 	float A_near, A_far;
 	float B_near, B_far;
 	float t = INFINITY;
+	int objectCount = 0;
+	
+	intersectedObjectID = -INFINITY;
 	
 	// first, intersect all regular objects in the scene
 	
@@ -728,8 +731,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 			intersec.emission = quads[i].emission;
 			intersec.color = quads[i].color;
 			intersec.type = quads[i].type;
-			intersectedObjectID = 0.0;
+			intersectedObjectID = float(objectCount);
 		}
+		objectCount++;
 	}
 	
 	d = SphereIntersect( spheres[0].radius, spheres[0].position, r );	
@@ -742,8 +746,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		intersec.emission = spheres[0].emission;
 		intersec.color = spheres[0].color;
 		intersec.type = spheres[0].type;
-		intersectedObjectID = 1.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
         
 	for (int i = 0; i < N_PLANES; i++)
         {
@@ -755,8 +760,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 			intersec.emission = planes[i].emission;
 			intersec.color = planes[i].color;
 			intersec.type = planes[i].type;
-			intersectedObjectID = 2.0;
+			intersectedObjectID = float(objectCount);
 		}
+		objectCount++;
         }
 	
 	// now intersect all CSG objects
@@ -771,9 +777,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		intersec.emission = vec3(0);
 		intersec.color = vec3(0.0,0.01,0.0);
 		intersec.type = REFR;
-		intersectedObjectID = 3.0;
+		intersectedObjectID = float(objectCount);
 	}
-	
+	objectCount++;
 	
 	// mirror ellipsoid-spheres along wall behind camera
 	A_near = CSG_EllipsoidIntersect( vec3(40, 10, 15), vec3(150, 10, 240), r, A_n1, A_n2, A_far);
@@ -786,8 +792,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		intersec.emission = vec3(0);
 		intersec.color = vec3(0.971519, 0.959915, 0.915324) * 0.8; // silver
 		intersec.type = SPEC;
-		intersectedObjectID = 4.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
 	
 	A_near = CSG_EllipsoidIntersect( vec3(40, 10, 15), vec3(0, 10, 240), r, A_n1, A_n2, A_far);
 	B_near = CSG_SphereIntersect( 18.0, vec3(0, 21, 240), r, B_n1, B_n2, B_far);
@@ -799,8 +806,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		intersec.emission = vec3(0);
 		intersec.color = vec3(0.955008, 0.637427, 0.538163); // copper
 		intersec.type = SPEC;
-		intersectedObjectID = 5.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
 	
 	A_near = CSG_EllipsoidIntersect( vec3(40, 10, 15), vec3(-130, 10, 240), r, A_n1, A_n2, A_far);
 	B_near = CSG_SphereIntersect( 20.0, vec3(-130, 20, 240), r, B_n1, B_n2, B_far);
@@ -812,8 +820,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		intersec.emission = vec3(0);
 		intersec.color = vec3(1.000000, 0.765557, 0.336057); // gold
 		intersec.type = SPEC;
-		intersectedObjectID = 6.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
 	
 	
 	// doorframe
@@ -827,8 +836,10 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		intersec.emission = vec3(0);
 		intersec.color = vec3(0.9);
 		intersec.type = COAT;
-		intersectedObjectID = 7.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
+
 	// left wall and hallway
 	Plane leftWallPlane = Plane( vec4( 1,0,0, -300.0), vec3(0), vec3(0.05,0.15,0.15), DIFF);
 	A_near = CSG_PlaneIntersect( leftWallPlane.pla, r, A_n1, A_n2, A_far );
@@ -841,8 +852,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		intersec.emission = leftWallPlane.emission;
 		intersec.color = leftWallPlane.color;
 		intersec.type = leftWallPlane.type;
-		intersectedObjectID = 8.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
 	
 	// hidden Easter Egg, literally!
 	A_near = CSG_SphereIntersect( 8.0, vec3(-330, 20, 40), r, A_n1, A_n2, A_far);
@@ -855,8 +867,10 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		intersec.emission = vec3(0);
 		intersec.color = vec3(1.0,0.5,0.8);
 		intersec.type = COAT;
-		intersectedObjectID = 9.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
+
 	A_near = CSG_EllipsoidIntersect( vec3(13, 8, 8), vec3(-324, 20, 40), r, A_n1, A_n2, A_far);
 	B_near = CSG_SphereIntersect( 10000.0, vec3(-10324, 0, 0), r, B_n1, B_n2, B_far);
 	d = operation_HollowA_Minus_SolidB( A_near, A_far, B_near, B_far, A_n1, A_n2, B_n1, B_n2, n );
@@ -867,7 +881,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		intersec.emission = vec3(0);
 		intersec.color = vec3(1.0,0.5,0.8);
 		intersec.type = COAT;
-		intersectedObjectID = 10.0;
+		intersectedObjectID = float(objectCount);
 	}
 	
 	return t;
@@ -895,8 +909,8 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 	float intersectedObjectID;
 
 	int diffuseCount = 0;
-	int previousIntersecType = -100;
 
+	bool coatTypeIntersected = false;
 	bool bounceIsSpecular = true;
 	bool sampleLight = false;
 
@@ -927,20 +941,17 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			objectColor = intersec.color;
 			objectID = intersectedObjectID;
 		}
-		if (bounces == 1 && previousIntersecType == SPEC)
+		if (bounces == 1 && diffuseCount == 0 && !coatTypeIntersected)
 		{
-			objectColor = intersec.color;
+			objectNormal = nl;
 		}
 		
 
 		
 		if (intersec.type == LIGHT)
 		{	
-			if (diffuseCount == 0)
-			{
-				//objectNormal = nl;
-				pixelSharpness = 1.0;
-			}
+			if (diffuseCount == 0 && bounces < 2)
+				pixelSharpness = 1.01;
 
 			if (bounceIsSpecular || sampleLight)
 				accumCol = mask * intersec.emission; // looking at light through a reflection
@@ -955,8 +966,6 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		    
                 if (intersec.type == DIFF ) // Ideal DIFFUSE reflection
 		{
-			previousIntersecType = DIFF;
-
 			diffuseCount++;
 
 			mask *= intersec.color;
@@ -983,8 +992,6 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		
 		if (intersec.type == SPEC)  // Ideal SPECULAR reflection
 		{
-			previousIntersecType = SPEC;
-
 			mask *= intersec.color;
 
 			r = Ray( x, reflect(r.direction, nl) );
@@ -996,7 +1003,12 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		
 		if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
-			previousIntersecType = REFR;
+			if (diffuseCount == 0 && !coatTypeIntersected && !uCameraIsMoving )
+				pixelSharpness = 1.01;
+			else if (diffuseCount > 0)
+				pixelSharpness = 0.0;
+			else
+				pixelSharpness = -1.0;
 
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
@@ -1031,8 +1043,10 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		
 		if (intersec.type == COAT || intersec.type == CHECK)  // Diffuse object underneath with ClearCoat on top
 		{	
-			previousIntersecType = COAT;
+			coatTypeIntersected = true;
 
+			pixelSharpness = 0.0;
+			
 			float roughness = 0.0;
 			float maskFactor = 1.0;
 			nt = 1.4; // IOR of Clear Coat
@@ -1063,6 +1077,9 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			
 			if (rand() < P)
 			{
+				if (diffuseCount == 0)
+					pixelSharpness = -1.0;
+
 				mask *= RP;
 				mask *= maskFactor;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
