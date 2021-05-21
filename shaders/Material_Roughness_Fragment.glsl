@@ -35,6 +35,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 	float d;
 	float t = INFINITY;
 	vec3 n;
+	int objectCount = 0;
+	
+	intersectedObjectID = -INFINITY;
 	
         for (int i = 0; i < N_SPHERES; i++)
         {
@@ -47,8 +50,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 			intersec.color = spheres[i].color;
                         intersec.roughness = spheres[i].roughness;
 			intersec.type = spheres[i].type;
-			intersectedObjectID = float(i);
+			intersectedObjectID = float(objectCount);
 		}
+		objectCount++;
 	}
         
 	return t;
@@ -116,7 +120,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		
 		if (intersec.type == LIGHT)
 		{	
-			pixelSharpness = diffuseCount == 0 && previousIntersectionRoughness < 0.5 ? 1.0 : 0.0;
+			pixelSharpness = diffuseCount == 0 && previousIntersectionRoughness < 0.5 ? 1.01 : 0.0;
 
 			if (bounceIsSpecular || sampleLight)
 				accumCol = mask * intersec.emission;
@@ -139,7 +143,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 				intersec.color = checkCol0 * q + checkCol1 * (1.0 - q);	
 			}
 
-			if (diffuseCount == 0 && !coatTypeIntersected && previousIntersectionRoughness < 0.3)	
+			if (diffuseCount == 0 && !coatTypeIntersected && previousIntersectionRoughness < 0.4)	
 				objectColor = intersec.color;
 
 			diffuseCount++;
@@ -181,6 +185,13 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		
 		if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
+			if (diffuseCount == 0 && intersec.roughness < 0.5 && !uCameraIsMoving )
+				pixelSharpness = 1.01;
+			else if (diffuseCount > 0)
+				pixelSharpness = 0.0;
+			else
+				pixelSharpness = -1.0;
+
 			previousIntersectionRoughness = intersec.roughness;
 
 			nc = 1.0; // IOR of Air
@@ -224,6 +235,8 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		
 		if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top
 		{
+			pixelSharpness = 0.0;
+
 			previousIntersectionRoughness = intersec.roughness;
 			coatTypeIntersected = true;
 
@@ -237,6 +250,9 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			
 			if (rand() < P)
 			{
+				if (diffuseCount == 0)
+					pixelSharpness = -1.0;
+
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.direction = randomDirectionInSpecularLobe(r.direction, intersec.roughness);
@@ -273,7 +289,6 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		if (intersec.type == METALCOAT)  // Metal object underneath with ClearCoat on top
 		{
 			previousIntersectionRoughness = intersec.roughness;
-			coatTypeIntersected = true;
 
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of Clear Coat
