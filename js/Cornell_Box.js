@@ -62,9 +62,6 @@ function initPathTracingShaders() {
         // scene/demo-specific uniforms go here     
         pathTracingUniforms.uTallBoxInvMatrix = { type: "m4", value: new THREE.Matrix4() };
         pathTracingUniforms.uShortBoxInvMatrix = { type: "m4", value: new THREE.Matrix4() };
-        pathTracingUniforms.uColorEdgeSharpeningRate = { type: "f", value: 1.0 };
-        pathTracingUniforms.uNormalEdgeSharpeningRate = { type: "f", value: 0.05 };
-        pathTracingUniforms.uObjectEdgeSharpeningRate = { type: "f", value: 1.0 };
         
         pathTracingDefines = {
         	//NUMBER_OF_TRIANGLES: total_number_of_triangles
