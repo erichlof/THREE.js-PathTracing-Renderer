@@ -73,6 +73,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 	float d;
 	float t = INFINITY;
 	float angleAmount = (sin(uTime) * 0.5 + 0.5);
+	int objectCount = 0;
 	vec3 n;
 	
         for (int i = 0; i < N_SPHERES; i++)
@@ -85,8 +86,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 			intersec.emission = spheres[i].emission;
 			intersec.color = spheres[i].color;
 			intersec.type = spheres[i].type;
-			intersectedObjectID = 0.0;
+			intersectedObjectID = float(objectCount);
 		}
+		objectCount++;
 	}
 	
         Ray rObj;
@@ -104,8 +106,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(0.0, 0.3, 1.0);
 		intersec.type = SPEC;
-		intersectedObjectID = 1.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
 
 	// transform ray into Ellipsoid Param's object space
 	rObj.origin = vec3( uEllipsoidRotateInvMatrix * vec4(r.origin, 1.0) );
@@ -119,8 +122,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(0.0, 0.3, 1.0);
 		intersec.type = REFR;
-		intersectedObjectID = 2.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
 
 	// transform ray into Ellipsoid Param's object space
 	rObj.origin = vec3( uEllipsoidScaleInvMatrix * vec4(r.origin, 1.0) );
@@ -134,8 +138,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(0.0, 0.3, 1.0);
 		intersec.type = DIFF;
-		intersectedObjectID = 3.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
 
 	// transform ray into Ellipsoid Param's object space
 	rObj.origin = vec3( uEllipsoidClipInvMatrix * vec4(r.origin, 1.0) );
@@ -149,8 +154,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(0.0, 0.3, 1.0);
 		intersec.type = COAT;
-		intersectedObjectID = 4.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
 
 	// transform ray into Cylinder Param's object space
 	rObj.origin = vec3( uCylinderTranslateInvMatrix * vec4(r.origin, 1.0) );
@@ -164,8 +170,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 0.0, 0.0);
 		intersec.type = SPEC;
-		intersectedObjectID = 5.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
 
 	// transform ray into Cylinder Param's object space
 	rObj.origin = vec3( uCylinderRotateInvMatrix * vec4(r.origin, 1.0) );
@@ -179,8 +186,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 0.0, 0.0);
 		intersec.type = REFR;
-		intersectedObjectID = 6.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
 
 	// transform ray into Cylinder Param's object space
 	rObj.origin = vec3( uCylinderScaleInvMatrix * vec4(r.origin, 1.0) );
@@ -194,8 +202,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 0.0, 0.0);
 		intersec.type = DIFF;
-		intersectedObjectID = 7.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
 
 	// transform ray into Cylinder Param's object space
 	rObj.origin = vec3( uCylinderClipInvMatrix * vec4(r.origin, 1.0) );
@@ -209,8 +218,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 0.0, 0.0);
 		intersec.type = COAT;
-		intersectedObjectID = 8.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
 
 	// transform ray into Cone Param's object space
 	rObj.origin = vec3( uConeTranslateInvMatrix * vec4(r.origin, 1.0) );
@@ -224,8 +234,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 0.2, 0.0);
 		intersec.type = SPEC;
-		intersectedObjectID = 9.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
 
 	// transform ray into Cone Param's object space
 	rObj.origin = vec3( uConeRotateInvMatrix * vec4(r.origin, 1.0) );
@@ -239,8 +250,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 0.2, 0.0);
 		intersec.type = REFR;
-		intersectedObjectID = 10.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
 
 	// transform ray into Cone Param's object space
 	rObj.origin = vec3( uConeScaleInvMatrix * vec4(r.origin, 1.0) );
@@ -254,8 +266,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 0.2, 0.0);
 		intersec.type = DIFF;
-		intersectedObjectID = 11.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
 
 	// transform ray into Cone Param's object space
 	rObj.origin = vec3( uConeClipInvMatrix * vec4(r.origin, 1.0) );
@@ -269,8 +282,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 0.2, 0.0);
 		intersec.type = COAT;
-		intersectedObjectID = 12.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
 
 	// transform ray into Paraboloid Param's object space
 	rObj.origin = vec3( uParaboloidTranslateInvMatrix * vec4(r.origin, 1.0) );
@@ -284,8 +298,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 0.0, 1.0);
 		intersec.type = SPEC;
-		intersectedObjectID = 13.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
 
 	// transform ray into Paraboloid Param's object space
 	rObj.origin = vec3( uParaboloidRotateInvMatrix * vec4(r.origin, 1.0) );
@@ -299,8 +314,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 0.0, 1.0);
 		intersec.type = REFR;
-		intersectedObjectID = 14.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
 
 	// transform ray into Paraboloid Param's object space
 	rObj.origin = vec3( uParaboloidScaleInvMatrix * vec4(r.origin, 1.0) );
@@ -314,8 +330,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 0.0, 1.0);
 		intersec.type = DIFF;
-		intersectedObjectID = 15.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
 
 	// transform ray into Paraboloid Param's object space
 	rObj.origin = vec3( uParaboloidClipInvMatrix * vec4(r.origin, 1.0) );
@@ -329,8 +346,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 0.0, 1.0);
 		intersec.type = COAT;
-		intersectedObjectID = 16.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
 
 	// transform ray into Hyperboloid Param's object space
 	rObj.origin = vec3( uHyperboloidTranslateInvMatrix * vec4(r.origin, 1.0) );
@@ -344,8 +362,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 1.0, 0.0);
 		intersec.type = SPEC;
-		intersectedObjectID = 17.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
 
 	// transform ray into Hyperboloid Param's object space
 	rObj.origin = vec3( uHyperboloidRotateInvMatrix * vec4(r.origin, 1.0) );
@@ -359,8 +378,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 1.0, 0.0);
 		intersec.type = REFR;
-		intersectedObjectID = 18.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
 
 	// transform ray into Hyperboloid Param's object space
 	rObj.origin = vec3( uHyperboloidScaleInvMatrix * vec4(r.origin, 1.0) );
@@ -374,8 +394,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 1.0, 0.0);
 		intersec.type = DIFF;
-		intersectedObjectID = 19.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
 
 	// transform ray into Hyperboloid Param's object space
 	rObj.origin = vec3( uHyperboloidClipInvMatrix * vec4(r.origin, 1.0) );
@@ -389,8 +410,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(1.0, 1.0, 0.0);
 		intersec.type = COAT;
-		intersectedObjectID = 20.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
 
 	// transform ray into HyperbolicParaboloid Param's object space
 	rObj.origin = vec3( uHyperbolicParaboloidTranslateInvMatrix * vec4(r.origin, 1.0) );
@@ -404,8 +426,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(0.0, 1.0, 0.0);
 		intersec.type = SPEC;
-		intersectedObjectID = 21.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
 
 	// transform ray into HyperbolicParaboloid Param's object space
 	rObj.origin = vec3( uHyperbolicParaboloidRotateInvMatrix * vec4(r.origin, 1.0) );
@@ -419,8 +442,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(0.0, 1.0, 0.0);
 		intersec.type = REFR;
-		intersectedObjectID = 22.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
 
 	// transform ray into HyperbolicParaboloid Param's object space
 	rObj.origin = vec3( uHyperbolicParaboloidScaleInvMatrix * vec4(r.origin, 1.0) );
@@ -434,8 +458,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(0.0, 1.0, 0.0);
 		intersec.type = DIFF;
-		intersectedObjectID = 23.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
 
 	// transform ray into HyperbolicParaboloid Param's object space
 	rObj.origin = vec3( uHyperbolicParaboloidClipInvMatrix * vec4(r.origin, 1.0) );
@@ -449,7 +474,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		//intersec.emission = vec3(0);
 		intersec.color = vec3(0.0, 1.0, 0.0);
 		intersec.type = COAT;
-		intersectedObjectID = 24.0;
+		intersectedObjectID = float(objectCount);
 	}
 	
         
@@ -481,8 +506,8 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 	float intersectedObjectID;
 
 	int diffuseCount = 0;
-	int previousIntersecType = -100;
 
+	bool coatTypeIntersected = false;
 	bool bounceIsSpecular = true;
 	bool sampleLight = false;
 	bool isRayExiting;
@@ -510,9 +535,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 
 		if (bounces == 0)
 		{
-			if (intersec.type != LIGHT)
-				objectID = intersectedObjectID;
-			
+			objectID = intersectedObjectID;
 			objectNormal = nl;
 			objectColor = intersec.color;
 		}
@@ -521,6 +544,9 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		
 		if (intersec.type == LIGHT)
 		{	
+			if (diffuseCount == 0)
+				pixelSharpness = 1.01;
+			
 			if (bounceIsSpecular || sampleLight)
 				accumCol = mask * intersec.emission;
 			// reached a light, so we can exit
@@ -543,12 +569,10 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 				intersec.color = checkCol0 * q + checkCol1 * (1.0 - q);	
 			}
 			
-			if (bounces == 0)// || diffuseCount == 0 && bounces < 3 && previousIntersecType != COAT)	
+			if (diffuseCount == 0 && !coatTypeIntersected)	
 				objectColor = intersec.color;
 
 			diffuseCount++;
-			
-			previousIntersecType = DIFF;
 
 			mask *= intersec.color;
 
@@ -574,8 +598,6 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		
 		if (intersec.type == SPEC)  // Ideal SPECULAR reflection
 		{
-			previousIntersecType = SPEC;
-
 			mask *= intersec.color;
 
 			r = Ray( x, reflect(r.direction, nl) );
@@ -588,7 +610,8 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		
 		if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
-			previousIntersecType = REFR;
+			if (diffuseCount == 0)
+				pixelSharpness = -1.0;
 
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
@@ -637,7 +660,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		
 		if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top
 		{
-			previousIntersecType = COAT;
+			coatTypeIntersected = true;
 
 			nc = 1.0; // IOR of Air
 			nt = 1.4; // IOR of Clear Coat
@@ -649,6 +672,9 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			
 			if (rand() < P)
 			{
+				if (diffuseCount == 0)
+					pixelSharpness = -1.0;
+
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.origin += nl * uEPS_intersect;
@@ -739,8 +765,8 @@ void main( void )
 	randVec4 = vec4(0); // samples and holds the RGBA blueNoise texture value for this pixel
 	randVec4 = texelFetch(tBlueNoiseTexture, ivec2(mod(gl_FragCoord.xy + floor(uRandomVec2 * 256.0), 256.0)), 0);
 	
-	//vec2 pixelOffset = vec2( tentFilter(rng()), tentFilter(rng()) ) * 0.5;
-	vec2 pixelOffset = vec2(0);
+	vec2 pixelOffset = vec2( tentFilter(rng()), tentFilter(rng()) ) * 0.5;
+	//vec2 pixelOffset = vec2(0);
 	// we must map pixelPos into the range -1.0 to +1.0
 	vec2 pixelPos = ((gl_FragCoord.xy + pixelOffset) / uResolution) * 2.0 - 1.0;
 
@@ -790,8 +816,6 @@ void main( void )
 	
 	vec4 previousPixel = texelFetch(tPreviousTexture, ivec2(gl_FragCoord.xy), 0);
 
-	
-
 	if (uCameraIsMoving) // camera is currently moving
 	{
 		previousPixel.rgb *= 0.5; // motion-blur trail amount (old image)
@@ -805,16 +829,26 @@ void main( void )
 		currentPixel.rgb *= 0.1; // brightness of new image (noisy)
 	}
 
-	currentPixel.a = pixelSharpness;
-	
-	currentPixel.a = colorDifference  >= 1.0 ? min(uSampleCounter * uColorEdgeSharpeningRate , 1.01) : currentPixel.a;
-	currentPixel.a = normalDifference >= 1.0 ? min(uSampleCounter * uNormalEdgeSharpeningRate, 1.01) : currentPixel.a;
-	currentPixel.a = objectDifference >= 1.0 ? min(uSampleCounter * uObjectEdgeSharpeningRate, 1.01) : currentPixel.a;
+	currentPixel.a = 0.0;
+	if (colorDifference >= 1.0 || normalDifference >= 1.0 || objectDifference >= 1.0)
+		pixelSharpness = 1.01;
+
 	
 	// Eventually, all edge-containing pixels' .a (alpha channel) values will converge to 1.01, which keeps them from getting blurred by the box-blur filter, thus retaining sharpness.
-	if (pixelSharpness == 1.0 || previousPixel.a == 1.01)
+	if (previousPixel.a == 1.01)
 		currentPixel.a = 1.01;
-	
+	// for dynamic scenes
+	if (previousPixel.a == 1.01 && rng() < 0.1)
+		currentPixel.a = 1.0;
 
+	if (previousPixel.a == -1.0)
+		currentPixel.a = 0.0;
+
+	if (pixelSharpness == 1.01)
+		currentPixel.a = 1.01;
+	if (pixelSharpness == -1.0)
+		currentPixel.a = -1.0;
+
+	
 	pc_fragColor = vec4(previousPixel.rgb + currentPixel.rgb, currentPixel.a);
 }
