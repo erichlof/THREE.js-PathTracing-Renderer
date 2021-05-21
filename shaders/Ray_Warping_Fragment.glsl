@@ -91,6 +91,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 	float width = 0.0;
 	float d = INFINITY;
 	float t = INFINITY;
+	int objectCount = 0;
+	
+	intersectedObjectID = -INFINITY;
 	
 	bool isRayExiting = false;
 	
@@ -105,8 +108,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 			intersec.emission = quads[i].emission;
 			intersec.color = quads[i].color;
 			intersec.type = quads[i].type;
-			intersectedObjectID = 0.0;
+			intersectedObjectID = float(objectCount);
 		}
+		objectCount++;
         }
 
 	
@@ -127,8 +131,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		intersec.emission = spheres[0].emission;
 		intersec.color = spheres[0].color;
 		intersec.type = spheres[0].type;
-		intersectedObjectID = 1.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
 
 	// Twisted Glass Sphere Right
 	d = SphereIntersect( spheres[1].radius, spheres[1].position, r );
@@ -147,8 +152,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		intersec.emission = spheres[1].emission;
 		intersec.color = spheres[1].color;
 		intersec.type = spheres[1].type;
-		intersectedObjectID = 2.0;
-	}	
+		intersectedObjectID = float(objectCount);
+	}
+	objectCount++;
 			
 	// Purple Cloud Sphere
 	width = 2.0 * rng();
@@ -163,9 +169,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		intersec.emission = spheres[2].emission;
 		intersec.color = spheres[2].color;
 		intersec.type = spheres[2].type;
-		intersectedObjectID = 3.0;
+		intersectedObjectID = float(objectCount);
 	}
-	
+	objectCount++;
 
 	// Twisted Tall Mirror Box
 	warpedRay = r;
@@ -193,7 +199,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		intersec.emission = boxes[0].emission;
 		intersec.color = boxes[0].color;
 		intersec.type = boxes[0].type;
-		intersectedObjectID = 4.0;
+		intersectedObjectID = float(objectCount);
 	}
 
 	return t;
@@ -221,13 +227,16 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 
 	int diffuseCount = 0;
 	int previousIntersecType = -100;
+	intersec.type = -100;
 
+	bool coatTypeIntersected = false;
 	bool bounceIsSpecular = true;
 	bool sampleLight = false;
 
 	
 	for (int bounces = 0; bounces < 5; bounces++)
 	{
+		previousIntersecType = intersec.type;
 
 		t = SceneIntersect(r, intersec, intersectedObjectID);
 		
@@ -248,17 +257,14 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		}
 		if (bounces == 1 && previousIntersecType == SPEC)
 		{
-			objectColor = intersec.color;
+			objectNormal = nl;
 		}
 		
 		
 		if (intersec.type == LIGHT)
 		{	
 			if (diffuseCount == 0)
-			{
-				objectNormal = nl;
-				pixelSharpness = 1.0;
-			}
+				pixelSharpness = 1.01;
 
 			if (bounceIsSpecular || sampleLight)
 				accumCol = mask * intersec.emission;
@@ -276,8 +282,6 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		    
                 if (intersec.type == DIFF) // Ideal DIFFUSE reflection
 		{
-			previousIntersecType = DIFF;
-
 			diffuseCount++;
 
 			mask *= intersec.color;
@@ -304,8 +308,6 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		
 		if (intersec.type == SPEC)  // Ideal SPECULAR reflection
 		{
-			previousIntersecType = SPEC;
-
 			mask *= intersec.color;
 
 			r = Ray( x, reflect(r.direction, nl) );
@@ -316,7 +318,12 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		
 		if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
-			previousIntersecType = REFR;
+			if (diffuseCount == 0 && !coatTypeIntersected && !uCameraIsMoving )
+				pixelSharpness = 1.01;
+			else if (diffuseCount > 0)
+				pixelSharpness = 0.0;
+			else
+				pixelSharpness = -1.0;
 
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
@@ -360,7 +367,9 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		
 		if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top
 		{
-			previousIntersecType = COAT;
+			coatTypeIntersected = true;
+
+			pixelSharpness = 0.0;
 
 			nc = 1.0; // IOR of Air
 			nt = 1.4; // IOR of Clear Coat
@@ -372,6 +381,9 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 
 			if (rand() < P)
 			{
+				if (diffuseCount == 0)
+					pixelSharpness = uFrameCounter > 200.0 ? 1.01 : -1.0;
+					
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.origin += nl * uEPS_intersect;
