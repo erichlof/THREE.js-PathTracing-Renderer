@@ -36,6 +36,10 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 {
 	float d;
 	float t = INFINITY;
+	int objectCount = 0;
+	
+	intersectedObjectID = -INFINITY;
+
 	
         for (int i = 0; i < N_SPHERES; i++)
         {
@@ -47,8 +51,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 			intersec.emission = spheres[i].emission;
 			intersec.color = spheres[i].color;
 			intersec.type = spheres[i].type;
-			intersectedObjectID = 0.0;
+			intersectedObjectID = float(objectCount);
 		}
+		objectCount++;
         }
 	
 	for (int i = 0; i < N_QUADS; i++)
@@ -61,8 +66,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 			intersec.emission = quads[i].emission;
 			intersec.color = quads[i].color;
 			intersec.type = quads[i].type;
-			intersectedObjectID = 1.0;
+			intersectedObjectID = float(objectCount);
 		}
+		objectCount++;
         }
 	
 	return t;
@@ -123,10 +129,12 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 	float intersectedObjectID, vintersectedObjectID;
 
 	int diffuseCount = 0;
-	int prevIntersecType = -1;
+	int previousIntersecType = -100;
 	
+	bool rayWasRefracted = false;
 	bool bounceIsSpecular = true;
 	bool sampleLight = false;
+
 	
 	// depth of 4 is required for higher quality glass refraction
         for (int bounces = 0; bounces < 4; bounces++)
@@ -183,8 +191,6 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		// now do the normal path tracing routine with the camera ray
 		if (intersec.type == LIGHT)
 		{
-			// if (bounces == 0)
-			// 	pixelSharpness = 1.0;
 
 			if (bounceIsSpecular || sampleLight)
 			{
@@ -240,7 +246,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 
                 if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
-			prevIntersecType = REFR;
+			previousIntersecType = REFR;
 
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
@@ -284,7 +290,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
                 	TP = Tr / (1.0 - P);
 			
 			// choose either specular reflection or diffuse
-			if(rand() < P)
+			if (rand() < P)
 			{	
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) );
@@ -327,7 +333,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 	vec3 lp = spheres[0].position + (randomSphereDirection() * spheres[1].radius * 0.9);
 	r.direction = normalize(lp - r.origin);
 	mask = vec3(1.0); // reset color mask for this particle
-	prevIntersecType = -100;
+	previousIntersecType = -100;
 
 	// depth of 3 needed to possibly travel into glass sphere, out of it, and then find light = 3 iterations
 	for (int bounces = 0; bounces < 3; bounces++)
@@ -359,8 +365,8 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) );
 			    	r.origin += nl;
-				
-				prevIntersecType = SPEC;
+				// the following 'incorrect' assignment turns off noisy caustics that we are not interested in
+				previousIntersecType = SPEC; 
 			    	continue;	
 			}
 			// transmit ray through surface
@@ -372,7 +378,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			r = Ray(x, tdir);
 			r.origin -= nl;
 			
-			prevIntersecType = REFR;
+			previousIntersecType = REFR; // will be used to create volumetric refracted caustics 
 			continue;
 			
 		} // end if (intersec.type == REFR)
@@ -381,11 +387,10 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		{	
 			// if we have just traveled through a refractive surface(REFR) like glass, then 
 			// allow particle to be lit, producing volumetric caustics
-			if (prevIntersecType == REFR && bounces == 2)
+			if (previousIntersecType == REFR && bounces == 2)
 			{
-				trans = exp( -log((d * 0.0002)) );
-				accumCol = accumCol * mask * intersec.emission * trans;
-				pixelSharpness = 0.0;
+				trans = exp( -((d + xx) * FOG_DENSITY) );
+				accumCol *= mask * FOG_COLOR * intersec.emission * 50.0 * trans;
 			}
 			
 			break;
