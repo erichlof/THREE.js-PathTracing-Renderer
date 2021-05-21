@@ -63,6 +63,8 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkWater, out f
         float d = INFINITY;
 	float t = INFINITY;
 	float waterWaveDepth;
+
+	int objectCount = 0;
 	
 	bool isRayExiting = false;
 	
@@ -77,8 +79,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkWater, out f
 			intersec.emission = quads[i].emission;
 			intersec.color = quads[i].color;
 			intersec.type = quads[i].type;
-			intersectedObjectID = 0.0;
+			intersectedObjectID = float(objectCount);
 		}
+		objectCount++;
         }
 	
 	// TALL MIRROR BOX
@@ -96,8 +99,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkWater, out f
 		intersec.emission = boxes[0].emission;
 		intersec.color = boxes[0].color;
 		intersec.type = boxes[0].type;
-		intersectedObjectID = 1.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
 	
 	// SHORT DIFFUSE BOX
 	// transform ray into Short Box's object space
@@ -114,8 +118,9 @@ float SceneIntersect( Ray r, inout Intersection intersec, bool checkWater, out f
 		intersec.emission = boxes[1].emission;
 		intersec.color = boxes[1].color;
 		intersec.type = boxes[1].type;
-		intersectedObjectID = 2.0;
+		intersectedObjectID = float(objectCount);
 	}
+	objectCount++;
 	
 	
 	// color surfaces beneath the water
@@ -190,6 +195,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 
 	int diffuseCount = 0;
 	int previousIntersecType = -100;
+	intersec.type = -100;
 
 	bool bounceIsSpecular = true;
 	bool sampleLight = false;
@@ -199,6 +205,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 
 	for (int bounces = 0; bounces < 5; bounces++)
 	{
+		previousIntersecType = intersec.type;
 
 		t = SceneIntersect(r, intersec, checkWater, intersectedObjectID);
 		checkWater = false;
@@ -218,7 +225,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			objectColor = intersec.color;
 			objectID = intersectedObjectID;
 		}
-		if (bounces == 1 && diffuseCount == 0)
+		if (bounces == 1 && previousIntersecType == SPEC)
 		{
 			objectNormal = nl;
 		}
@@ -226,7 +233,8 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		
 		if (intersec.type == LIGHT)
 		{	
-			pixelSharpness = diffuseCount == 0 && previousIntersecType != REFR ? 1.0 : 0.0;
+			if (diffuseCount == 0)
+				pixelSharpness = 1.01;
 
 			if (sampleLight || bounceIsSpecular)
 				accumCol = mask * intersec.emission;
@@ -241,11 +249,9 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		
 
 		
-
 		    
                 if (intersec.type == DIFF) // Ideal DIFFUSE reflection
 		{
-			
 
 			if (!rayEnteredWater)
 				mask *= intersec.color;
@@ -254,8 +260,6 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 				rayEnteredWater = false;
 				mask *= exp(log(WATER_COLOR) * thickness * t); 
 			}
-
-			previousIntersecType = DIFF;
 
 			diffuseCount++;
 
@@ -289,8 +293,6 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 				mask *= exp(log(WATER_COLOR) * thickness * t);
 			}
 
-			previousIntersecType = SPEC;
-
 			r = Ray( x, reflect(r.direction, nl) );
 			r.origin += nl * uEPS_intersect;
 
@@ -302,7 +304,8 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 
 		if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
-			previousIntersecType = REFR;
+			if (diffuseCount == 0)
+				pixelSharpness = -1.0;
 
 			nc = 1.0; // IOR of Air
 			nt = 1.33; // IOR of Water
@@ -447,12 +450,11 @@ void main( void )
 	
 	vec4 previousPixel = texelFetch(tPreviousTexture, ivec2(gl_FragCoord.xy), 0);
 
-	
 
 	if (uCameraIsMoving) // camera is currently moving
 	{
-		previousPixel.rgb *= 0.5; // motion-blur trail amount (old image)
-		currentPixel.rgb *= 0.5; // brightness of new image (noisy)
+		previousPixel.rgb *= 0.6; // motion-blur trail amount (old image)
+		currentPixel.rgb *= 0.4; // brightness of new image (noisy)
 
 		previousPixel.a = 0.0;
 	}
@@ -462,16 +464,26 @@ void main( void )
 		currentPixel.rgb *= 0.1; // brightness of new image (noisy)
 	}
 
-	currentPixel.a = pixelSharpness;
-	
-	currentPixel.a = colorDifference  >= 1.0 ? min(uSampleCounter * uColorEdgeSharpeningRate , 1.01) : currentPixel.a;
-	currentPixel.a = normalDifference >= 1.0 ? min(uSampleCounter * uNormalEdgeSharpeningRate, 1.01) : currentPixel.a;
-	currentPixel.a = objectDifference >= 1.0 ? min(uSampleCounter * uObjectEdgeSharpeningRate, 1.01) : currentPixel.a;
-	
+	currentPixel.a = 0.0;
+	if (colorDifference >= 1.0 || normalDifference >= 1.0 || objectDifference >= 1.0)
+		pixelSharpness = 1.01;
+
+
 	// Eventually, all edge-containing pixels' .a (alpha channel) values will converge to 1.01, which keeps them from getting blurred by the box-blur filter, thus retaining sharpness.
-	if (pixelSharpness == 1.0 || previousPixel.a == 1.01)
+	if (previousPixel.a == 1.01)
 		currentPixel.a = 1.01;
-	
+	// for dynamic scenes
+	if (previousPixel.a == 1.01 && rng() < 0.01)
+		currentPixel.a = 1.0;
+
+	if (previousPixel.a == -1.0)
+		currentPixel.a = 0.0;
+
+	if (pixelSharpness == 1.01)
+		currentPixel.a = 1.01;
+	if (pixelSharpness == -1.0)
+		currentPixel.a = -1.0;
+
 	
 	pc_fragColor = vec4(previousPixel.rgb + currentPixel.rgb, currentPixel.a);
 }
