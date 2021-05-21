@@ -527,10 +527,7 @@ function initPathTracingShaders()
         pathTracingUniforms.uHDRI_Exposure = { type: "f", value: 1.0 };
         pathTracingUniforms.uRoughness = { type: "f", value: 0.0 };
         pathTracingUniforms.uMaterialColor = { type: "v3", value: new THREE.Color() };
-        pathTracingUniforms.uColorEdgeSharpeningRate = { type: "f", value: 0.1 };
-        pathTracingUniforms.uNormalEdgeSharpeningRate = { type: "f", value: 1.0 };
-        pathTracingUniforms.uObjectEdgeSharpeningRate = { type: "f", value: 1.0 };
-
+        
         pathTracingDefines = {
         	//NUMBER_OF_TRIANGLES: total_number_of_triangles
         };
