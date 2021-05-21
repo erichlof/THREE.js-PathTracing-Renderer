@@ -77,9 +77,6 @@ function initPathTracingShaders() {
         pathTracingUniforms.uSunDirection = { type: "v3", value: new THREE.Vector3() };   
         pathTracingUniforms.uTallBoxInvMatrix = { type: "m4", value: new THREE.Matrix4() };
         pathTracingUniforms.uShortBoxInvMatrix = { type: "m4", value: new THREE.Matrix4() };
-        pathTracingUniforms.uColorEdgeSharpeningRate = { type: "f", value: 0.0 };
-        pathTracingUniforms.uNormalEdgeSharpeningRate = { type: "f", value: 1.01 }; // must be 1.0 for distant ocean waves
-        pathTracingUniforms.uObjectEdgeSharpeningRate = { type: "f", value: 1.01 };
 
         pathTracingDefines = {
         	//NUMBER_OF_TRIANGLES: total_number_of_triangles
