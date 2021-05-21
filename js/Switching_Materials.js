@@ -189,9 +189,6 @@ function initPathTracingShaders()
         pathTracingUniforms.uRightSphereMaterialType = { type: "f", value: 0.0 };
         pathTracingUniforms.uLeftSphereColor = { type: "v3", value: new THREE.Color() };
         pathTracingUniforms.uRightSphereColor = { type: "v3", value: new THREE.Color() };
-        pathTracingUniforms.uColorEdgeSharpeningRate = { type: "f", value: 1.0 };
-        pathTracingUniforms.uNormalEdgeSharpeningRate = { type: "f", value: 1.0 };
-        pathTracingUniforms.uObjectEdgeSharpeningRate = { type: "f", value: 0.1 };
                 
         pathTracingDefines = {
         	//NUMBER_OF_TRIANGLES: total_number_of_triangles
