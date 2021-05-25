@@ -311,7 +311,9 @@ function initSceneData()
 
         // TODO: write function to find HDRI sun light source by quickly searching over the image pixels
         // temp: the following sun location (u,v) texture image coordinates found by eyedroppper info tool in PS
-        /*  HDRI image: symmetrical_garden_2K.hdr   dimensions: (2048 x 1024)
+        
+	/*  
+	HDRI image: symmetrical_garden_2K.hdr   dimensions: (2048 x 1024)
         center of Sun texture pixel location: (396, 174) = (396 / 2048, 174 / 1024) = (0.193359375, 0.169921875) in float (u,v) coords.
         
         Must map brightest-light center texture location(u, v) coordinates to Spherical Coordinates(phi, theta):
@@ -319,9 +321,7 @@ function initSceneData()
 
         convert Spherical Coordinates into 3D Cartesian coordinates(x, y, z):
         sunDirectionVector.setFromSphericalCoords(1, phi, theta);
-
-        just for reference: resulting 3D light(sun) direction vector in world space. (also, x must be negated, I believe because of three.js' R-handed coord system)
-        x: -0.4744684887213628, y: 0.8624239569061567, z: 0.1763648824590474  */
+        */
 
 
         // HDRI image Sun-center pixel location (396, 174). Must divide by HDRI image dimensions to normalize, range: 0.0 - 1.0
