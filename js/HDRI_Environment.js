@@ -34,6 +34,11 @@ var changeHDRI_Exposure = false;
 var changeMaterialType = false;
 var changeMaterialColor = false;
 var changeMaterialRoughness = false;
+var sunDirectionVector = new THREE.Vector3();
+var theta = 0;
+var phi = 0;
+var HDRI_u = 0;
+var HDRI_v = 0;
 
 
 function init_GUI() 
@@ -301,6 +306,41 @@ function initSceneData()
         cameraControlsObject.position.set(0, 30, 40);
         // look slightly downward
         //cameraControlsPitchObject.rotation.x = -0.2;
+
+
+
+        // TODO: write function to find HDRI sun light source by quickly searching over the image pixels
+        // temp: the following sun location (u,v) texture image coordinates found by eyedroppper info tool in PS
+        /*  HDRI image: symmetrical_garden_2K.hdr   dimensions: (2048 x 1024)
+        center of Sun texture pixel location: (396, 174) = (396 / 2048, 174 / 1024) = (0.193359375, 0.169921875) in float (u,v) coords.
+        
+        Must map brightest-light center texture location(u, v) coordinates to Spherical Coordinates(phi, theta):
+        (phi, theta) = (v * PI, u * 2PI) = (0.169921875 * PI, 0.193359375 * 2 * PI)
+
+        convert Spherical Coordinates into 3D Cartesian coordinates(x, y, z):
+        sunDirectionVector.setFromSphericalCoords(1, phi, theta);
+
+        just for reference: resulting 3D light(sun) direction vector in world space. (also, x must be negated, I believe because of three.js' R-handed coord system)
+        x: -0.4744684887213628, y: 0.8624239569061567, z: 0.1763648824590474  */
+
+
+        // HDRI image Sun-center pixel location (396, 174). Must divide by HDRI image dimensions to normalize, range: 0.0 - 1.0
+        HDRI_bright_u = 396 / 2048; // divide by width of HDRI image
+        HDRI_bright_v = 174 / 1024; // divide by height of HDRI image
+        // (phi, theta) = (v * PI, u * 2PI)
+        phi   = HDRI_bright_v * Math.PI;
+        theta = HDRI_bright_u * 2 * Math.PI;
+
+        //convert Spherical Coordinates(phi, theta) into 3D Cartesian coordinates(x, y, z):
+        sunDirectionVector.setFromSphericalCoords(1, phi, theta); // 1 = radius of 1, or unit sphere
+        // finally, x must be negated, I believe because of three.js' R-handed coordinate system
+        sunDirectionVector.x *= -1;
+        // when the above calculations are finished, the resultant normalized 3D vector pointing towards the center of the sun light source when the HDRI image is wrapped around the scene:
+        // sunDirectionVector =  (x: -0.47694634304269057, y: 0.8608669386377673, z: 0.17728592673600096)
+
+
+
+
         
         total_number_of_triangles = modelMesh.geometry.attributes.position.array.length / 9;
         console.log("Triangle count:" + total_number_of_triangles);
@@ -527,7 +567,9 @@ function initPathTracingShaders()
         pathTracingUniforms.uHDRI_Exposure = { type: "f", value: 1.0 };
         pathTracingUniforms.uRoughness = { type: "f", value: 0.0 };
         pathTracingUniforms.uMaterialColor = { type: "v3", value: new THREE.Color() };
+        pathTracingUniforms.uSunDirectionVector = { type: "v3", value: sunDirectionVector };
         
+
         pathTracingDefines = {
         	//NUMBER_OF_TRIANGLES: total_number_of_triangles
         };
