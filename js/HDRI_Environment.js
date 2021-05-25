@@ -37,8 +37,8 @@ var changeMaterialRoughness = false;
 var sunDirectionVector = new THREE.Vector3();
 var theta = 0;
 var phi = 0;
-var HDRI_u = 0;
-var HDRI_v = 0;
+var HDRI_bright_u = 0;
+var HDRI_bright_v = 0;
 
 
 function init_GUI() 
