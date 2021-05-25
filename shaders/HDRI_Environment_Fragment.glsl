@@ -10,6 +10,7 @@ uniform sampler2D tHDRTexture;
 #include <pathtracing_uniforms_and_defines>
 
 uniform vec3 uMaterialColor;
+uniform vec3 uSunDirectionVector;
 uniform float uHDRI_Exposure;
 uniform float uRoughness;
 uniform int uMaterialType;
@@ -20,8 +21,8 @@ uniform int uMaterialType;
 
 #define INV_TEXTURE_WIDTH 0.00048828125
 
-// the following directions pointing at the sun were found by trial and error using the large red metal cylinder as a guide
-#define SUN_DIRECTION normalize(vec3(-0.555, 1.0, 0.205)) // use this vec3 for the symmetrical_garden_2k.hdr environment
+// the following directions pointing at the sun were found by trial and error: left here just for reference
+//#define SUN_DIRECTION normalize(vec3(-0.555, 1.0, 0.205)) // use this vec3 for the symmetrical_garden_2k.hdr environment
 //#define SUN_DIRECTION normalize(vec3(0.54, 1.0, -0.595)) // use this vec3 for the kiara_5_noon_2k.hdr environment
 
 #define N_SPHERES 4
@@ -31,12 +32,10 @@ uniform int uMaterialType;
 
 struct Ray { vec3 origin; vec3 direction; };
 struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; int type; };
-struct OpenCylinder { vec3 p0; vec3 p1; float radius; vec3 emission; vec3 color; int type; };
 struct Box { vec3 minCorner; vec3 maxCorner; vec3 emission; vec3 color; int type; };
 struct Intersection { vec3 normal; vec3 emission; vec3 color; vec2 uv; int type; bool isModel; };
 
 Sphere spheres[N_SPHERES];
-OpenCylinder openCylinders[1];
 Box boxes[N_BOXES];
 
 
@@ -54,7 +53,6 @@ Box boxes[N_BOXES];
 
 //#include <pathtracing_bvhDoubleSidedTriangle_intersect>
 
-#include <pathtracing_opencylinder_intersect>
 	
 
 vec2 stackLevels[28];
@@ -129,19 +127,7 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExi
 		objectCount++;
         }
 
-	/* // this long cylinder helps to show the direction that points to the sun in this particular HDR image
-	d = OpenCylinderIntersect( openCylinders[0].p0, openCylinders[0].p1, openCylinders[0].radius, r, normal );
-	if (d < t)
-	{
-		t = d;
-		intersec.normal = normalize(normal);
-		intersec.emission = openCylinders[0].emission;
-		intersec.color = openCylinders[0].color;
-		intersec.type = openCylinders[0].type;
-		intersectedObjectID = float(objectCount);
-	} */
-	
-	
+		
 	for (int i = 0; i < N_BOXES; i++)
         {
 		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, r, normal, isRayExiting );
@@ -372,7 +358,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			// if (bounceIsSpecular)
 			// {
 			// 	// try to get rid of fireflies on rougher surfaces
-			// 	if (dot(r.direction, SUN_DIRECTION) > 0.98)
+			// 	if (dot(r.direction, uSunDirectionVector) > 0.98)
 			// 		environmentCol = vec3(1);
 			// 		//environmentCol = mix( vec3(1), environmentCol, clamp(pow(roughness, 0.0), 0.0, 1.0) );
 				
@@ -383,7 +369,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			// random diffuse bounce hits sky
 			if ( !bounceIsSpecular )
 			{
-				weight = dot(r.direction, SUN_DIRECTION) < 0.98 ? 1.0 : 0.0;
+				weight = dot(r.direction, uSunDirectionVector) < 0.98 ? 1.0 : 0.0;
 				accumCol = mask * environmentCol * weight;
 
 				if (bounces == 3)
@@ -396,7 +382,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			{
 				pixelSharpness = 1.01;
 				
-				if (dot(r.direction, SUN_DIRECTION) > 0.8)
+				if (dot(r.direction, uSunDirectionVector) > 0.8)
 				{
 					environmentCol = mix(vec3(1), environmentCol, clamp(pow(1.0-roughness, 20.0), 0.0, 1.0));
 				}
@@ -456,7 +442,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 				continue;
 			}
 
-			r = Ray( x, SUN_DIRECTION );
+			r = Ray( x, normalize(uSunDirectionVector) );
 			r.direction = randomDirectionInSpecularLobe(r.direction, 0.01);
 			r.origin += nl * uEPS_intersect;
 			weight = max(0.0, dot(r.direction, nl)) * 0.00002; // down-weight directSunLight contribution
@@ -566,7 +552,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 				continue;
 			}
 
-			r = Ray( x, SUN_DIRECTION );
+			r = Ray( x, normalize(uSunDirectionVector) );
 			r.direction = randomDirectionInSpecularLobe(r.direction, 0.01);
 			r.origin += nl * uEPS_intersect;
 			weight = max(0.0, dot(r.direction, nl)) * 0.00002; // down-weight directSunLight contribution
@@ -596,10 +582,6 @@ void SetupScene(void)
 	spheres[1] = Sphere(     6.0, vec3(55, 36, -45),  z,         vec3(0.9),  SPEC);//small mirror ball
 	spheres[2] = Sphere(     6.0, vec3(55, 24, -45),  z, vec3(0.5,1.0,1.0),  REFR);//small glass ball
 	spheres[3] = Sphere(     6.0, vec3(60, 24, -30),  z,         vec3(1.0),  COAT);//small plastic ball
-	
-	// this long red metal cylinder points to the sun in an HDR image.  Unfortunately for a random image, the SUN_DIRECTION
-	// vector pointing directly to the sun has to be found by trial and error. To see this helper, uncomment cylinder intersection code above 
-	openCylinders[0] = OpenCylinder(vec3(0, 0, 0), SUN_DIRECTION * 100000.0, 10.0, z, vec3(1, 0, 0), SPEC);
 
 	boxes[0] = Box( vec3(-20.0,11.0,-110.0), vec3(70.0,18.0,-20.0), z, vec3(0.2,0.9,0.7), REFR);//Glass Box
 	boxes[1] = Box( vec3(-14.0,13.0,-104.0), vec3(64.0,16.0,-26.0), z, vec3(0),           DIFF);//Inner Box
