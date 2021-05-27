@@ -1,44 +1,47 @@
 // scene/demo-specific variables go here
-var sceneIsDynamic = false;
-var camFlightSpeed = 60;
-var hdrPath, hdrTexture, hdrLoader;
-var modelMesh;
-var modelScale = 1.0;
-var modelPositionOffset = new THREE.Vector3();
-var albedoTexture;
-var total_number_of_triangles = 0;
-var triangle_array;
-var triangleMaterialMarkers = [];
-var pathTracingMaterialList = [];
-var uniqueMaterialTextures = [];
-var meshList = [];
-var geoList = [];
-var triangleDataTexture;
-var aabb_array;
-var aabbDataTexture;
-var totalWork;
-var vp0 = new THREE.Vector3();
-var vp1 = new THREE.Vector3();
-var vp2 = new THREE.Vector3();
-var vn0 = new THREE.Vector3();
-var vn1 = new THREE.Vector3();
-var vn2 = new THREE.Vector3();
-var vt0 = new THREE.Vector2();
-var vt1 = new THREE.Vector2();
-var vt2 = new THREE.Vector2();
+let sceneIsDynamic = false;
+let camFlightSpeed = 60;
+let hdrPath, hdrTexture, hdrLoader, hdrImgData;
+let hdrImgWidth = 0;
+let hdrImgHeight = 0;
+let highestExponent, highestIndex, brightestPixelX, brightestPixelY; 
+let modelMesh;
+let modelScale = 1.0;
+let modelPositionOffset = new THREE.Vector3();
+let albedoTexture;
+let total_number_of_triangles = 0;
+let triangle_array;
+let triangleMaterialMarkers = [];
+let pathTracingMaterialList = [];
+let uniqueMaterialTextures = [];
+let meshList = [];
+let geoList = [];
+let triangleDataTexture;
+let aabb_array;
+let aabbDataTexture;
+let totalWork;
+let vp0 = new THREE.Vector3();
+let vp1 = new THREE.Vector3();
+let vp2 = new THREE.Vector3();
+let vn0 = new THREE.Vector3();
+let vn1 = new THREE.Vector3();
+let vn2 = new THREE.Vector3();
+let vt0 = new THREE.Vector2();
+let vt1 = new THREE.Vector2();
+let vt2 = new THREE.Vector2();
 
-var gui;
-var ableToEngagePointerLock = true;
-var HDRI_ExposureController, material_TypeController, material_ColorController, material_RoughnessController;
-var changeHDRI_Exposure = false;
-var changeMaterialType = false;
-var changeMaterialColor = false;
-var changeMaterialRoughness = false;
-var sunDirectionVector = new THREE.Vector3();
-var theta = 0;
-var phi = 0;
-var HDRI_bright_u = 0;
-var HDRI_bright_v = 0;
+let gui;
+let ableToEngagePointerLock = true;
+let HDRI_ExposureController, material_TypeController, material_ColorController, material_RoughnessController;
+let changeHDRI_Exposure = false;
+let changeMaterialType = false;
+let changeMaterialColor = false;
+let changeMaterialRoughness = false;
+let sunDirectionVector = new THREE.Vector3();
+let theta = 0;
+let phi = 0;
+let HDRI_bright_u = 0;
+let HDRI_bright_v = 0;
 
 
 function init_GUI() 
@@ -183,7 +186,7 @@ function MaterialObject()
 function load_GLTF_Model() 
 {
 
-        var gltfLoader = new THREE.GLTFLoader();
+        let gltfLoader = new THREE.GLTFLoader();
 
         gltfLoader.load("models/StanfordDragon.glb", function( meshGroup ) // Triangles: 100,000
         // if you choose to load in the different models below, scroll down and change the *GLTF model settings* for this particular model
@@ -309,38 +312,6 @@ function initSceneData()
 
 
 
-        // TODO: write function to find HDRI sun light source by quickly searching over the image pixels
-        // temp: the following sun location (u,v) texture image coordinates found by eyedroppper info tool in PS
-        
-	/*  
-	HDRI image: symmetrical_garden_2K.hdr   dimensions: (2048 x 1024)
-        center of Sun texture pixel location: (396, 174) = (396 / 2048, 174 / 1024) = (0.193359375, 0.169921875) in float (u,v) coords.
-        
-        Must map brightest-light center texture location(u, v) coordinates to Spherical Coordinates(phi, theta):
-        (phi, theta) = (v * PI, u * 2PI) = (0.169921875 * PI, 0.193359375 * 2 * PI)
-
-        convert Spherical Coordinates into 3D Cartesian coordinates(x, y, z):
-        sunDirectionVector.setFromSphericalCoords(1, phi, theta);
-        */
-
-
-        // HDRI image Sun-center pixel location (396, 174). Must divide by HDRI image dimensions to normalize, range: 0.0 - 1.0
-        HDRI_bright_u = 396 / 2048; // divide by width of HDRI image
-        HDRI_bright_v = 174 / 1024; // divide by height of HDRI image
-        // (phi, theta) = (v * PI, u * 2PI)
-        phi   = HDRI_bright_v * Math.PI;
-        theta = HDRI_bright_u * 2 * Math.PI;
-
-        //convert Spherical Coordinates(phi, theta) into 3D Cartesian coordinates(x, y, z):
-        sunDirectionVector.setFromSphericalCoords(1, phi, theta); // 1 = radius of 1, or unit sphere
-        // finally, x must be negated, I believe because of three.js' R-handed coordinate system
-        sunDirectionVector.x *= -1;
-        // when the above calculations are finished, the resultant normalized 3D vector pointing towards the center of the sun light source when the HDRI image is wrapped around the scene:
-        // sunDirectionVector =  (x: -0.47694634304269057, y: 0.8608669386377673, z: 0.17728592673600096)
-
-
-
-
         
         total_number_of_triangles = modelMesh.geometry.attributes.position.array.length / 9;
         console.log("Triangle count:" + total_number_of_triangles);
@@ -354,22 +325,22 @@ function initSceneData()
         // 2048 = width of texture, 2048 = height of texture, 4 = r,g,b, and a components
 
         
-        var triangle_b_box_min = new THREE.Vector3();
-        var triangle_b_box_max = new THREE.Vector3();
-        var triangle_b_box_centroid = new THREE.Vector3();
+        let triangle_b_box_min = new THREE.Vector3();
+        let triangle_b_box_max = new THREE.Vector3();
+        let triangle_b_box_centroid = new THREE.Vector3();
         
 
-        var vpa = new Float32Array(modelMesh.geometry.attributes.position.array);
-        var vna = new Float32Array(modelMesh.geometry.attributes.normal.array);
-        var vta = null;
-        var modelHasUVs = false;
+        let vpa = new Float32Array(modelMesh.geometry.attributes.position.array);
+        let vna = new Float32Array(modelMesh.geometry.attributes.normal.array);
+        let vta = null;
+        let modelHasUVs = false;
         if (modelMesh.geometry.attributes.uv !== undefined) 
         {
                 vta = new Float32Array(modelMesh.geometry.attributes.uv.array);
                 modelHasUVs = true;
         }
                 
-        var materialNumber = 0;
+        let materialNumber = 0;
 
         for (let i = 0; i < total_number_of_triangles; i++) 
         {
@@ -548,7 +519,72 @@ function initSceneData()
                 texture.minFilter = THREE.LinearFilter;
                 texture.magFilter = THREE.LinearFilter;
                 texture.generateMipmaps = false;
-                texture.flipY = true;
+                texture.flipY = false;
+
+                hdrImgWidth = texture.image.width;
+                hdrImgHeight = texture.image.height;
+                hdrImgData = texture.image.data;
+
+                // hdr's (RGBE) data looks like: 0th pixel->[0]:r,[1]:g,[2]:b,and[3]:e, 1st pixel->[4][5][6][7]..2nd pixel->, and so on. [pixelNumber*4+3] or the E channel of each pixel is all we are concerned with at this point.
+                // loop through every 4th data array element, which is each pixel's E (exponent) channel, which is [3] (zero-based).  If index's exponent is highest, taking winning 'highestIndex' and...
+                // subtract 3 from 'highestIndex' to get back to the [0] array element position (instead of [3] which we were checking during the loop)
+                // now 'highestIndex' is guaranteed to be divisible by 4, because we are back at the [0] boundary of each original pixel
+                // divide this result by 4 to get new correct-range 'highestIndex', this is necessary..
+                //     because WebGL flat textureImgData had created 4 individual array elements for just 1 pixel's R,G,B,A channels (el[0],el[1],el[2],el[3]), which is 4 times too much
+                // 'highestIndex' is still a big flat number, but at least now in the correct range of the original hdr image, range: 0 to (width * height) 
+                // take that division result ('highestIndex') and modulo it with textureWidth to get brightest pixel's X coordinate (x range: 0 to hdrImageWidth-1) (zero-based)
+                // take that earlier same division result ('highestIndex') and now instead divide it by textureWidth and Floor it to get brightest pixel's Y coordinate (y range: 0 to hdrImageHeight-1) (zero-based)
+                
+                highestExponent = -Infinity;
+                highestIndex = 0;
+
+                for (let i = 3; i < hdrImgData.length; i += 4) // every 4th element, starting at [3]
+                {
+                        if (hdrImgData[i] >= highestExponent)
+                        {
+                                // record the new winner
+                                highestExponent = hdrImgData[i];
+                                highestIndex = i;
+                                //console.log("hdrImgData[" + i + "] = " + hdrImgData[i]); // <-- warning, slow!
+                        }
+                        
+                }
+                console.log("highestIndex: " + highestIndex); // for debug
+
+                highestIndex -= 3; // now is guaranteed to be divisible by 4
+                highestIndex /= 4;
+                // at this point, highestIndex is back in the range of the original hdr dimensions, range: 0 to (hdrImgWidth * hdrImgHeight)
+                // now we just have to locate the brightest pixel's hdr pixel coordinates (x,y) by converting its large flat pixel array number to meaningful x and y image coordinates
+                brightestPixelX = highestIndex % hdrImgWidth;
+                brightestPixelY = Math.floor(highestIndex / hdrImgWidth);
+
+                console.log("brightestPixelX: " + brightestPixelX + " brightestPixelY: " + brightestPixelY); // for debug
+
+                /*  
+                HDRI image dimensions: (hdrImgWidth x hdrImgHeight)
+                center of brightest pixel location: (brightestPixelX, brightestPixelY) 
+
+                now normalize into float (u,v) texture coords, range: (0.0-1.0, 0.0-1.0)
+                HDRI_bright_u = brightestPixelX / hdrImgWidth
+                HDRI_bright_v = brightestPixelY / hdrImgHeight
+                
+                Must map these brightest-light texture location(u, v) coordinates to Spherical coordinates(phi, theta):
+                phi   = HDRI_bright_v * PI   note: V is used for phi
+                theta = HDRI_bright_u * 2PI  note: U is used for theta
+
+                lastly, convert Spherical coordinates into 3D Cartesian coordinates(x, y, z):
+                sunDirectionVector.setFromSphericalCoords(1, phi, theta);
+                */
+
+                HDRI_bright_u = brightestPixelX / hdrImgWidth;
+                HDRI_bright_v = brightestPixelY / hdrImgHeight;
+                
+                phi = HDRI_bright_v * Math.PI; // use 'v'
+                theta = HDRI_bright_u * 2 * Math.PI; // use 'u'
+
+                sunDirectionVector.setFromSphericalCoords(1, phi, theta); // 1 = radius of 1, or unit sphere
+                // finally, x must be negated, I believe because of three.js' R-handed coordinate system
+                sunDirectionVector.x *= -1;
         } );
 
 } // end function initSceneData()
