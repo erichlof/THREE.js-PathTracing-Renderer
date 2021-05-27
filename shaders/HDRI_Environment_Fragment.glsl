@@ -281,13 +281,15 @@ float SceneIntersect( Ray r, inout Intersection intersec, out bool finalIsRayExi
 vec3 Get_HDR_Color(Ray r)
 {
 	vec2 sampleUV;
-	//sampleUV.x = atan(r.direction.x, -r.direction.z) * ONE_OVER_TWO_PI + 0.5;
 	//sampleUV.y = asin(clamp(r.direction.y, -1.0, 1.0)) * ONE_OVER_PI + 0.5;
-	sampleUV.x = (1.0 + atan(r.direction.x, -r.direction.z) * ONE_OVER_PI) * 0.5;
-  	sampleUV.y = acos(-r.direction.y) * ONE_OVER_PI;
-	vec4 texData = texture( tHDRTexture, sampleUV );
-	vec3 texColor = vec3(RGBEToLinear(texData));
+	///sampleUV.x = (1.0 + atan(r.direction.x, -r.direction.z) * ONE_OVER_PI) * 0.5;
+	sampleUV.x = atan(r.direction.x, -r.direction.z) * ONE_OVER_TWO_PI + 0.5;
+  	sampleUV.y = acos(r.direction.y) * ONE_OVER_PI;
+	vec4 texData = texture(tHDRTexture, sampleUV);
 
+	vec3 texColor = vec3(RGBEToLinear(texData));
+	// texColor = texData.a > 0.57 ? vec3(100) : vec3(0);
+	// return texColor;
 	return texColor * uHDRI_Exposure;
 }
 
@@ -443,7 +445,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			}
 
 			r = Ray( x, normalize(uSunDirectionVector) );
-			r.direction = randomDirectionInSpecularLobe(r.direction, 0.01);
+			r.direction = randomDirectionInSpecularLobe(r.direction, 0.03);
 			r.origin += nl * uEPS_intersect;
 			weight = max(0.0, dot(r.direction, nl)) * 0.00002; // down-weight directSunLight contribution
 			mask *= weight;
@@ -515,7 +517,9 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		{
 			coatTypeIntersected = true;
 
-			pixelSharpness = 0.0;
+			//pixelSharpness = 0.0;
+			if (diffuseCount == 0)
+				pixelSharpness = uFrameCounter > 200.0 ? -1.0 : 0.0;
 
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of Clear Coat
@@ -553,7 +557,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			}
 
 			r = Ray( x, normalize(uSunDirectionVector) );
-			r.direction = randomDirectionInSpecularLobe(r.direction, 0.01);
+			r.direction = randomDirectionInSpecularLobe(r.direction, 0.03);
 			r.origin += nl * uEPS_intersect;
 			weight = max(0.0, dot(r.direction, nl)) * 0.00002; // down-weight directSunLight contribution
 			mask *= weight;
