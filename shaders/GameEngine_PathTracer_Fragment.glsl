@@ -273,6 +273,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		{	
 			if (diffuseCount == 0)
 				pixelSharpness = 1.01;
+			else pixelSharpness = 0.0;
 			
 			if (bounceIsSpecular || sampleLight)
 				accumCol = mask * intersec.emission;
@@ -337,7 +338,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		
 		if (intersec.type == REFR)  // Ideal dielectric REFRACTION
 		{
-			if (diffuseCount == 0)
+			if (bounces == 0)
 				pixelSharpness = -1.0;
 
 			nc = 1.0; // IOR of Air
@@ -399,9 +400,6 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			
 			if (rand() < P)
 			{
-				if (diffuseCount == 0)
-					pixelSharpness = -1.0;
-
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.origin += nl * uEPS_intersect;
@@ -577,7 +575,13 @@ void main( void )
 	}
 
 	currentPixel.a = 0.0;
-	if (colorDifference >= 1.0 || normalDifference >= 1.0 || objectDifference >= 1.0)
+	// if (colorDifference >= 1.0 || normalDifference >= 1.0 || objectDifference >= 1.0)
+	// 	pixelSharpness = 1.01;
+	if (colorDifference >= 1.0 && normalDifference == 0.0 && objectDifference == 0.0)
+		pixelSharpness = 1.01;
+	if (normalDifference >= 1.0 && colorDifference == 0.0 && objectDifference == 0.0)
+		pixelSharpness = 1.01;
+	if (objectDifference >= 1.0)
 		pixelSharpness = 1.01;
 
 	
@@ -585,9 +589,8 @@ void main( void )
 	if (previousPixel.a == 1.01)
 		currentPixel.a = 1.01;
 	// for dynamic scenes
-	if (previousPixel.a == 1.01 && rng() < 0.1)
+	if (previousPixel.a == 1.01 && rng() < 0.05)
 		currentPixel.a = 1.0;
-
 	if (previousPixel.a == -1.0)
 		currentPixel.a = 0.0;
 
