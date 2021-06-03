@@ -30,8 +30,8 @@ let decreaseFocusDist = false;
 let pixelRatio = 0.5;
 let windowIsBeingResized = false;
 let TWO_PI = Math.PI * 2;
-let sampleCounter = 1.0;
-let frameCounter = 1.0;
+let sampleCounter = 0.0; // will get increased by 1 in animation loop before rendering
+let frameCounter = 1.0; // 1 instead of 0 because it is used as a rng() seed in pathtracing shader
 let cameraIsMoving = false;
 let cameraRecentlyMoving = false;
 let isPaused = true;
@@ -52,6 +52,7 @@ let useGenericInput = true;
 let sunAngularDiameterCos;
 let EPS_intersect;
 let blueNoiseTexture;
+let cameraRotationSpeed = 1;
 
 // the following variables will be used to calculate rotations and directions from the camera
 let cameraDirectionVector = new THREE.Vector3(); //for moving where the camera is looking
@@ -431,7 +432,7 @@ function initTHREEjs()
 	screenCopyGeometry = new THREE.PlaneBufferGeometry(2, 2);
 
 	screenCopyUniforms = {
-		tPathTracedImageTexture: { type: "t", value: null }
+		tPathTracedImageTexture: { type: "t", value: pathTracingRenderTarget.texture }
 	};
 
 	fileLoader.load('shaders/ScreenCopy_Fragment.glsl', function (shaderText) {
@@ -446,8 +447,6 @@ function initTHREEjs()
 			depthTest: false
 		});
 
-		screenCopyMaterial.uniforms.tPathTracedImageTexture.value = pathTracingRenderTarget.texture;
-
 		screenCopyMesh = new THREE.Mesh(screenCopyGeometry, screenCopyMaterial);
 		screenCopyScene.add(screenCopyMesh);
 	});
@@ -459,7 +458,7 @@ function initTHREEjs()
 
 	screenOutputUniforms = {
 		uOneOverSampleCounter: { type: "f", value: 0.0 },
-		tPathTracedImageTexture: { type: "t", value: null }
+		tPathTracedImageTexture: { type: "t", value: pathTracingRenderTarget.texture }
 	};
 
 	fileLoader.load('shaders/ScreenOutput_Fragment.glsl', function (shaderText) {
@@ -473,8 +472,6 @@ function initTHREEjs()
 			depthWrite: false,
 			depthTest: false
 		});
-
-		screenOutputMaterial.uniforms.tPathTracedImageTexture.value = pathTracingRenderTarget.texture;
 
 		screenOutputMesh = new THREE.Mesh(screenOutputGeometry, screenOutputMaterial);
 		screenOutputScene.add(screenOutputMesh);
@@ -528,7 +525,7 @@ function animate()
 	if (!mouseControl)
 	{
 
-		newDeltaX = joystickDeltaX;
+		newDeltaX = joystickDeltaX * cameraRotationSpeed;
 
 		if (newDeltaX)
 		{
@@ -538,7 +535,7 @@ function animate()
 			cameraControlsYawObject.rotation.y += (mobileControlsMoveX) * 0.01;
 		}
 
-		newDeltaY = joystickDeltaY;
+		newDeltaY = joystickDeltaY * cameraRotationSpeed;
 
 		if (newDeltaY)
 		{
