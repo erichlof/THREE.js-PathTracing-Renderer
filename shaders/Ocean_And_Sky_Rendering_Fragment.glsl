@@ -563,6 +563,8 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection, out vec3 objectNormal, out vec3
 		
 		if (intersec.type == SEAFLOOR)
 		{
+			pixelSharpness = -1.0;
+
 			checkOcean = false;
 
 			float waterDotSun = max(0.0, dot(vec3(0,1,0), sunDirection));
@@ -902,7 +904,6 @@ void main( void )
 	// for dynamic scenes
 	if (previousPixel.a == 1.01 && rng() < 0.05)
 		currentPixel.a = 1.0;
-
 	if (previousPixel.a == -1.0)
 		currentPixel.a = 0.0;
 
