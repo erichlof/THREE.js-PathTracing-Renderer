@@ -17,6 +17,7 @@ var cameraControlsObject; //for positioning and moving the camera itself
 var cameraControlsYawObject; //allows access to control camera's left/right movements through mobile input
 var cameraControlsPitchObject; //allows access to control camera's up/down movements through mobile input
 // Camera setting variables
+let cameraRotationSpeed = 1;
 var apertureSize = 0.0, focusDistance = 100.0, speed = 60, camFlightSpeed;
 var fovScale;
 // Rendering variables
