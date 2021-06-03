@@ -25,12 +25,11 @@ var FirstPersonCameraControls = function ( camera ) {
 
 		if (isPaused)
 			return;
-		
 		movementX = event.movementX || event.mozMovementX || 0;
 		movementY = event.movementY || event.mozMovementY || 0;
 
-		yawObject.rotation.y -= movementX * 0.002;
-		pitchObject.rotation.x -= movementY * 0.002;
+		yawObject.rotation.y -= movementX * 0.0012 * cameraRotationSpeed;
+		pitchObject.rotation.x -= movementY * 0.001 * cameraRotationSpeed;
 		// clamp the camera's vertical movement (around the x-axis) to the scene's 'ceiling' and 'floor'
 		pitchObject.rotation.x = Math.max( - PI_2, Math.min( PI_2, pitchObject.rotation.x ) );
 			
