@@ -235,6 +235,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		{	
 			if (diffuseCount == 0)
 				pixelSharpness = 1.01;
+			else pixelSharpness = 0.0;
 
 			if (sampleLight || bounceIsSpecular)
 				accumCol = mask * intersec.emission;
@@ -401,6 +402,7 @@ void main( void )
 	randVec4 = texelFetch(tBlueNoiseTexture, ivec2(mod(gl_FragCoord.xy + floor(uRandomVec2 * 256.0), 256.0)), 0);
 	
 	vec2 pixelOffset = vec2( tentFilter(rng()), tentFilter(rng()) ) * 0.5;
+
 	// we must map pixelPos into the range -1.0 to +1.0
 	vec2 pixelPos = ((gl_FragCoord.xy + pixelOffset) / uResolution) * 2.0 - 1.0;
 
@@ -467,7 +469,7 @@ void main( void )
 	currentPixel.a = 0.0;
 	if (colorDifference >= 1.0 || normalDifference >= 1.0 || objectDifference >= 1.0)
 		pixelSharpness = 1.01;
-
+	
 
 	// Eventually, all edge-containing pixels' .a (alpha channel) values will converge to 1.01, which keeps them from getting blurred by the box-blur filter, thus retaining sharpness.
 	if (previousPixel.a == 1.01)
@@ -475,7 +477,6 @@ void main( void )
 	// for dynamic scenes
 	if (previousPixel.a == 1.01 && rng() < 0.01)
 		currentPixel.a = 1.0;
-
 	if (previousPixel.a == -1.0)
 		currentPixel.a = 0.0;
 
