@@ -408,6 +408,9 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		*/
 		if (intersec.type == LIGHT)
 		{	
+			if (bounces == 0)
+				pixelSharpness = 1.01;
+
 			accumCol = mask * intersec.emission;
 			// reached a light, so we can exit
 			break;
@@ -430,6 +433,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		{	
 			if (diffuseCount == 0)
 				pixelSharpness = 1.01;
+			else pixelSharpness = 0.0;
 			
 			if (bounceIsSpecular)
 			{
@@ -588,15 +592,9 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			P  = 0.25 + (0.5 * Re);
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
-
-			// if (bounces == 0)
-			// 	pixelSharpness = 1.0;
 			
 			if (bounceIsSpecular && rand() < P)
 			{
-				if (diffuseCount == 0)
-					pixelSharpness = -1.0;
-
 				mask *= RP;
 				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
 				r.origin += nl * uEPS_intersect;
@@ -764,7 +762,6 @@ void main( void )
 	// for dynamic scenes
 	if (previousPixel.a == 1.01 && rng() < 0.1)
 		currentPixel.a = 1.0;
-
 	if (previousPixel.a == -1.0)
 		currentPixel.a = 0.0;
 
