@@ -396,7 +396,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			
 			nc = 1.0; // IOR of Air
 			nt = 1.4; // IOR of Clear Coat
-			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
+			Re = calcFresnelReflectance(r.direction, nl, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 			P  = 0.25 + (0.5 * Re);
                 	RP = Re / P;
