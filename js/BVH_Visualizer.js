@@ -266,9 +266,11 @@ function load_GLTF_Model()
 // called automatically from within initTHREEjs() function
 function initSceneData() 
 {
-        //pixelRatio = 1; // for computers with the latest GPUs!
-
         // scene/demo-specific three.js objects setup goes here
+
+        // pixelRatio is resolution - range: 0.5(half resolution) to 1.0(full resolution)
+        pixelRatio = mouseControl ? 0.75 : 0.75; // less demanding on battery-powered mobile devices
+
         EPS_intersect = mouseControl ? 0.01 : 1.0; // less precision on mobile
 
         // set camera's field of view
@@ -483,6 +485,7 @@ function initPathTracingShaders()
         pathTracingUniforms.tTriangleTexture = { type: "t", value: triangleDataTexture };
         pathTracingUniforms.tAABBTexture = { type: "t", value: aabbDataTexture };
         pathTracingUniforms.uBVH_NodeLevel = { type: "f", value: 0.0 };
+        
 
         pathTracingDefines = {
         	//NUMBER_OF_TRIANGLES: total_number_of_triangles
