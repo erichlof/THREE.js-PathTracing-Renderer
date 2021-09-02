@@ -48,8 +48,10 @@ function load_GLTF_Model() {
         var gltfLoader = new THREE.GLTFLoader();
 
         modelScale = 10.0; // good scale size for DamagedHelmet model
+        //modelScale = 0.1; // good scale size for Duck model
         
-        gltfLoader.load("models/DamagedHelmet.gltf", function( meshGroup ) { // Triangles: 15,452
+        //gltfLoader.load("models/Duck.gltf", function (meshGroup) { // Triangles:  4,212
+        gltfLoader.load("models/DamagedHelmet.gltf", function (meshGroup) { // Triangles: 15,452
                 
                 if (meshGroup.scene)
                         meshGroup = meshGroup.scene;
@@ -126,6 +128,10 @@ function load_GLTF_Model() {
 function initSceneData() {
         
         // scene/demo-specific three.js objects setup goes here
+
+        // pixelRatio is resolution - range: 0.5(half resolution) to 1.0(full resolution)
+        pixelRatio = mouseControl ? 0.75 : 0.75; // less demanding on battery-powered mobile devices
+
         EPS_intersect = mouseControl ? 0.01 : 1.0; // less precision on mobile
 
         GLTF_Model_Geometry = new THREE.BoxGeometry(1,1,1);
@@ -345,7 +351,7 @@ function initSceneData() {
 function initPathTracingShaders() {
  
         // scene/demo-specific uniforms go here
-        pathTracingUniforms.tPreviousTexture = { type: "t", value: screenCopyRenderTarget.texture };
+        //pathTracingUniforms.tPreviousTexture = { type: "t", value: screenCopyRenderTarget.texture };
 	pathTracingUniforms.tTriangleTexture = { type: "t", value: triangleDataTexture };
 	pathTracingUniforms.tAABBTexture = { type: "t", value: aabbDataTexture };
 	pathTracingUniforms.tAlbedoMap = { type: "t", value: albedoMap };
@@ -354,6 +360,7 @@ function initPathTracingShaders() {
 	pathTracingUniforms.tNormalMap = { type: "t", value: normalMap };
 	pathTracingUniforms.uGLTF_Model_Position = { type: "v3", value: new THREE.Vector3() };
 	pathTracingUniforms.uGLTF_Model_InvMatrix = { type: "m4", value: new THREE.Matrix4() };
+        
 
         pathTracingDefines = {
         	//NUMBER_OF_TRIANGLES: total_number_of_triangles
@@ -407,6 +414,7 @@ function updateVariablesAndUniforms() {
         GLTF_Model_Mesh.rotateOnWorldAxis(animationAxis, 0.1 * frameTime);
         GLTF_Model_Mesh.position.set(100 * Math.cos(animationTimer * 0.05), 20 * (Math.sin(animationTimer * 0.2) + 1.5), 120 * Math.sin(animationTimer * 0.05) - 50 );
         ///GLTF_Model_Mesh.position.set(0,40,80);
+        //GLTF_Model_Mesh.scale.set(1.5 + Math.sin(animationTimer), 1, 1);
 
         GLTF_Model_Mesh.updateMatrixWorld(true); // 'true' forces immediate matrix update
         pathTracingUniforms.uGLTF_Model_Position.value.copy(GLTF_Model_Mesh.position);
