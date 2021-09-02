@@ -8,6 +8,10 @@ var shortBoxGeometry, shortBoxMaterial, shortBoxMesh;
 function initSceneData() {
         
         // scene/demo-specific three.js objects setup goes here
+
+        // pixelRatio is resolution - range: 0.5(half resolution) to 1.0(full resolution)
+        pixelRatio = mouseControl ? 1.0 : 0.75; // less demanding on battery-powered mobile devices
+
         EPS_intersect = mouseControl ? 0.01 : 0.5; // less precision on mobile
         
         // Boxes
@@ -63,6 +67,7 @@ function initPathTracingShaders() {
         pathTracingUniforms.uTallBoxInvMatrix = { type: "m4", value: new THREE.Matrix4() };
         pathTracingUniforms.uShortBoxInvMatrix = { type: "m4", value: new THREE.Matrix4() };
         
+
         pathTracingDefines = {
         	//NUMBER_OF_TRIANGLES: total_number_of_triangles
         };
