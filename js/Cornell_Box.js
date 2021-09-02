@@ -5,9 +5,13 @@ var tallBoxGeometry, tallBoxMaterial, tallBoxMesh;
 var shortBoxGeometry, shortBoxMaterial, shortBoxMesh;
 
 // called automatically from within initTHREEjs() function
-function initSceneData() {
-        //pixelRatio = 1;
+function initSceneData() 
+{
         // scene/demo-specific three.js objects setup goes here
+
+        // pixelRatio is resolution - range: 0.5(half resolution) to 1.0(full resolution)
+        pixelRatio = mouseControl ? 1.0 : 0.75; // less demanding on battery-powered mobile devices
+
         EPS_intersect = mouseControl ? 0.1 : 1.0; // less precision on mobile
 
         // Boxes
@@ -57,11 +61,12 @@ function initSceneData() {
 
 
 // called automatically from within initTHREEjs() function
-function initPathTracingShaders() {
- 
+function initPathTracingShaders() 
+{
         // scene/demo-specific uniforms go here     
         pathTracingUniforms.uTallBoxInvMatrix = { type: "m4", value: new THREE.Matrix4() };
         pathTracingUniforms.uShortBoxInvMatrix = { type: "m4", value: new THREE.Matrix4() };
+        
         
         pathTracingDefines = {
         	//NUMBER_OF_TRIANGLES: total_number_of_triangles
@@ -78,8 +83,8 @@ function initPathTracingShaders() {
 
 
 // called automatically from within initPathTracingShaders() function above
-function createPathTracingMaterial() {
-
+function createPathTracingMaterial() 
+{
         fileLoader.load('shaders/Cornell_Box_Fragment.glsl', function (shaderText) {
                 
                 pathTracingFragmentShader = shaderText;
@@ -108,8 +113,8 @@ function createPathTracingMaterial() {
 
 
 // called automatically from within the animate() function
-function updateVariablesAndUniforms() {
-        
+function updateVariablesAndUniforms() 
+{   
         // BOXES
         pathTracingUniforms.uTallBoxInvMatrix.value.copy(tallBoxMesh.matrixWorld).invert();
         pathTracingUniforms.uShortBoxInvMatrix.value.copy(shortBoxMesh.matrixWorld).invert();
