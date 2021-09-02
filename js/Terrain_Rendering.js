@@ -8,9 +8,13 @@ var cameraUnderWater = 0.0;
 var PerlinNoiseTexture;
 
 // called automatically from within initTHREEjs() function
-function initSceneData() {
-        
+function initSceneData()
+{
         // scene/demo-specific three.js objects setup goes here
+
+        // pixelRatio is resolution - range: 0.5(half resolution) to 1.0(full resolution)
+        pixelRatio = mouseControl ? 0.75 : 0.75; // less demanding on battery-powered mobile devices
+
         EPS_intersect = mouseControl ? 0.2 : 4.0; // less precision on mobile
 
         // set camera's field of view
@@ -19,10 +23,10 @@ function initSceneData() {
 
         // position and orient camera
         cameraControlsObject.position.set(-837, 1350, 2156);
-	cameraControlsYawObject.rotation.y = 0.0;
-	cameraControlsPitchObject.rotation.x = 0.0;
-        
-        PerlinNoiseTexture = new THREE.TextureLoader().load( 'textures/perlin256.png' );
+        cameraControlsYawObject.rotation.y = 0.0;
+        cameraControlsPitchObject.rotation.x = 0.0;
+
+        PerlinNoiseTexture = new THREE.TextureLoader().load('textures/perlin256.png');
         PerlinNoiseTexture.wrapS = THREE.RepeatWrapping;
         PerlinNoiseTexture.wrapT = THREE.RepeatWrapping;
         PerlinNoiseTexture.flipY = false;
@@ -35,20 +39,23 @@ function initSceneData() {
 
 
 // called automatically from within initTHREEjs() function
-function initPathTracingShaders() {
- 
+function initPathTracingShaders()
+{
+
         // scene/demo-specific uniforms go here
-        pathTracingUniforms.t_PerlinNoise = { type: "t", value: PerlinNoiseTexture };      
-	pathTracingUniforms.uCameraUnderWater = { type: "f", value: 0.0 };
-	pathTracingUniforms.uWaterLevel = { type: "f", value: 0.0 };  
-	pathTracingUniforms.uSunDirection = { type: "v3", value: new THREE.Vector3() };
+        pathTracingUniforms.t_PerlinNoise = { type: "t", value: PerlinNoiseTexture };
+        pathTracingUniforms.uCameraUnderWater = { type: "f", value: 0.0 };
+        pathTracingUniforms.uWaterLevel = { type: "f", value: 0.0 };
+        pathTracingUniforms.uSunDirection = { type: "v3", value: new THREE.Vector3() };
+
 
         pathTracingDefines = {
-        	//NUMBER_OF_TRIANGLES: total_number_of_triangles
+                //NUMBER_OF_TRIANGLES: total_number_of_triangles
         };
 
         // load vertex and fragment shader files that are used in the pathTracing material, mesh and scene
-        fileLoader.load('shaders/common_PathTracing_Vertex.glsl', function (shaderText) {
+        fileLoader.load('shaders/common_PathTracing_Vertex.glsl', function (shaderText)
+        {
                 pathTracingVertexShader = shaderText;
 
                 createPathTracingMaterial();
@@ -58,10 +65,12 @@ function initPathTracingShaders() {
 
 
 // called automatically from within initPathTracingShaders() function above
-function createPathTracingMaterial() {
+function createPathTracingMaterial()
+{
 
-        fileLoader.load('shaders/Terrain_Rendering_Fragment.glsl', function (shaderText) {
-                
+        fileLoader.load('shaders/Terrain_Rendering_Fragment.glsl', function (shaderText)
+        {
+
                 pathTracingFragmentShader = shaderText;
 
                 pathTracingMaterial = new THREE.ShaderMaterial({
@@ -80,7 +89,7 @@ function createPathTracingMaterial() {
                 //   of the camera at all times. This is necessary because without it, the scene 
                 //   quad will fall out of view and get clipped when the camera rotates past 180 degrees.
                 worldCamera.add(pathTracingMesh);
-                
+
         });
 
 } // end function createPathTracingMaterial()
@@ -88,13 +97,14 @@ function createPathTracingMaterial() {
 
 
 // called automatically from within the animate() function
-function updateVariablesAndUniforms() {
-        
+function updateVariablesAndUniforms()
+{
+
         // scene/demo-specific variables
         sunAngle = (elapsedTime * 0.035) % (Math.PI + 0.2) - 0.11;
         sunDirection.set(Math.cos(sunAngle), Math.sin(sunAngle), -Math.cos(sunAngle) * 2.0);
         sunDirection.normalize();
-        
+
         // scene/demo-specific uniforms
         if (cameraControlsObject.position.y < waterLevel)
                 cameraUnderWater = 1.0;
@@ -103,10 +113,10 @@ function updateVariablesAndUniforms() {
         pathTracingUniforms.uCameraUnderWater.value = cameraUnderWater;
         pathTracingUniforms.uWaterLevel.value = waterLevel;
         pathTracingUniforms.uSunDirection.value.copy(sunDirection);
-        
+
         // INFO
         cameraInfoElement.innerHTML = "FOV: " + worldCamera.fov + " / Aperture: " + apertureSize.toFixed(2) + " / FocusDistance: " + focusDistance + "<br>" + "Samples: " + sampleCounter;
-				
+
 } // end function updateUniforms()
 
 
