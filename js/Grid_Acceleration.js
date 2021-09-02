@@ -7,6 +7,10 @@ var PerlinNoiseTexture;
 function initSceneData() {
         
         // scene/demo-specific three.js objects setup goes here
+
+        // pixelRatio is resolution - range: 0.5(half resolution) to 1.0(full resolution)
+        pixelRatio = mouseControl ? 0.5 : 0.5; // less demanding on battery-powered mobile devices
+
         EPS_intersect = mouseControl ? 0.01 : 1.0; // less precision on mobile
 
         // set camera's field of view
