@@ -9,8 +9,11 @@ var cameraUnderWater = false;
 // called automatically from within initTHREEjs() function
 function initSceneData()
 {
-
         // scene/demo-specific three.js objects setup goes here
+
+        // pixelRatio is resolution - range: 0.5(half resolution) to 1.0(full resolution)
+        pixelRatio = mouseControl ? 0.75 : 0.75; // less demanding on battery-powered mobile devices
+
         EPS_intersect = mouseControl ? 1.0 : 5.0; // less precision on mobile
 
         // set camera's field of view
@@ -40,7 +43,7 @@ function initPathTracingShaders()
 
         // scene/demo-specific uniforms go here
         pathTracingUniforms.t_PerlinNoise = { type: "t", value: PerlinNoiseTexture };       
-        pathTracingUniforms.uWaterLevel = { type: "f", value: 0.0 };     
+        pathTracingUniforms.uWaterLevel = { type: "f", value: 0.0 };
         pathTracingUniforms.uSunDirection = { type: "v3", value: new THREE.Vector3() };
 
         pathTracingDefines = {
