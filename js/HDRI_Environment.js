@@ -48,7 +48,7 @@ function init_GUI()
 {
 
         HDRI_ExposureController = {
-                HDRI_Exposure: 1.5
+                HDRI_Exposure: 1.2
 	};
 	material_TypeController = {
                 Material_Type: 3
@@ -525,39 +525,44 @@ function initSceneData()
                 hdrImgWidth = texture.image.width;
                 hdrImgHeight = texture.image.height;
                 hdrImgData = texture.image.data;
+                let dataLength = hdrImgData.length;
+                let red, green, blue, exponent;
 
-                // hdr's (RGBE) data looks like: 0th pixel->[0]:r,[1]:g,[2]:b,and[3]:e, 1st pixel->[4][5][6][7]..2nd pixel->, and so on. [pixelNumber*4+3] or the E channel of each pixel is all we are concerned with at this point.
-                // loop through every 4th data array element, which is each pixel's E (exponent) channel, which is [3] (zero-based).  If index's exponent is highest, taking winning 'highestIndex' and...
-                // subtract 3 from 'highestIndex' to get back to the [0] array element position (instead of [3] which we were checking during the loop)
-                // now 'highestIndex' is guaranteed to be divisible by 4, because we are back at the [0] boundary of each original pixel
-                // divide this result by 4 to get new correct-range 'highestIndex', this is necessary..
-                //     because WebGL flat textureImgData had created 4 individual array elements for just 1 pixel's R,G,B,A channels (el[0],el[1],el[2],el[3]), which is 4 times too much
-                // 'highestIndex' is still a big flat number, but at least now in the correct range of the original hdr image, range: 0 to (width * height) 
-                // take that division result ('highestIndex') and modulo it with textureWidth to get brightest pixel's X coordinate (x range: 0 to hdrImageWidth-1) (zero-based)
-                // take that earlier same division result ('highestIndex') and now instead divide it by textureWidth and Floor it to get brightest pixel's Y coordinate (y range: 0 to hdrImageHeight-1) (zero-based)
-                
-                highestExponent = -Infinity;
-                highestIndex = 0;
-
-                for (let i = 3; i < hdrImgData.length; i += 4) // every 4th element, starting at [3]
+                let texel = 0;
+                let max = 0;
+                for (let i = 0; i < dataLength; i += 4)
                 {
-                        if (hdrImgData[i] >= highestExponent)
-                        {
-                                // record the new winner
-                                highestExponent = hdrImgData[i];
-                                highestIndex = i;
-                                //console.log("hdrImgData[" + i + "] = " + hdrImgData[i]); // <-- warning, slow!
-                        }
-                        
-                }
-                console.log("highestIndex: " + highestIndex); // for debug
+                        // convert RGBE to float linear RGB
+                        exponent = Math.pow(2, hdrImgData[i + 3] - (128 + 8));
+                        red = hdrImgData[i + 0] * exponent;
+                        green = hdrImgData[i + 1] * exponent;
+                        blue = hdrImgData[i + 2] * exponent;
 
-                highestIndex -= 3; // now is guaranteed to be divisible by 4
-                highestIndex /= 4;
-                // at this point, highestIndex is back in the range of the original hdr dimensions, range: 0 to (hdrImgWidth * hdrImgHeight)
-                // now we just have to locate the brightest pixel's hdr pixel coordinates (x,y) by converting its large flat pixel array number to meaningful x and y image coordinates
-                brightestPixelX = highestIndex % hdrImgWidth;
-                brightestPixelY = Math.floor(highestIndex / hdrImgWidth);
+                        if (max < red)
+                        {
+                                texel = i;
+                                max = red;
+                        }
+                        if (max < green)
+                        {
+                                texel = i;
+                                max = green;
+                        }
+                        if (max < blue)
+                        {
+                                texel = i;
+                                max = blue;
+                        }
+                }
+
+                console.log("brightest texel index: " + texel + " | max luminance value: " + max);
+                // the raw flat array has 4 elements (R,G,B,and E) for every single pixel, but we just want the index of the brightest pixel
+                // so divide the brightest pixel array index by 4, in order to get back to the '0 to hdrImgWidth*hdrImgHeight' range
+                texel /= 4; 
+
+                // map this texel's 1D array index into 2D (x and y) coordinates
+                brightestPixelX = texel % hdrImgWidth;
+                brightestPixelY = Math.floor(texel / hdrImgWidth);
 
                 console.log("brightestPixelX: " + brightestPixelX + " brightestPixelY: " + brightestPixelY); // for debug
 
