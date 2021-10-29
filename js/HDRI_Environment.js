@@ -190,8 +190,8 @@ function load_GLTF_Model()
 
         gltfLoader.load("models/StanfordDragon.glb", function( meshGroup ) // Triangles: 100,000
         // if you choose to load in the different models below, scroll down and change the *GLTF model settings* for this particular model
-        //gltfLoader.load("models/TronTank.gltf", function( meshGroup ) { // Triangles: 17,533
-        //gltfLoader.load("models/StanfordBunny.glb", function( meshGroup ) { // Triangles: 30,338
+        //gltfLoader.load("models/TronTank.gltf", function( meshGroup ) // Triangles: 17,533
+        //gltfLoader.load("models/StanfordBunny.glb", function( meshGroup ) // Triangles: 30,338
         {
         
                 if (meshGroup.scene) 
@@ -274,9 +274,9 @@ function load_GLTF_Model()
                 modelPositionOffset.set(0, 28, -40);
                 
                 // settings for TronTank model
-                //modelScale = 3.0;
-                //modelMesh.geometry.rotateX(-Math.PI * 0.5);
-                //modelPositionOffset.set(-60, 20, -30);
+                // modelScale = 3.0;
+                // modelMesh.geometry.rotateX(-Math.PI * 0.5);
+                // modelPositionOffset.set(-60, 20, -30);
 
                 // settings for StanfordBunny model
 		//modelScale = 0.04;
@@ -298,9 +298,9 @@ function initSceneData()
         // scene/demo-specific three.js objects setup goes here
 
         // pixelRatio is resolution - range: 0.5(half resolution) to 1.0(full resolution)
-        pixelRatio = mouseControl ? 0.75 : 0.75; // less demanding on battery-powered mobile devices
+        pixelRatio = mouseControl ? 0.75 : 0.7; // less demanding on battery-powered mobile devices
 
-        EPS_intersect = mouseControl ? 0.01 : 1.0; // less precision on mobile
+        EPS_intersect = 0.001;
 
         // set camera's field of view
         worldCamera.fov = 60;
