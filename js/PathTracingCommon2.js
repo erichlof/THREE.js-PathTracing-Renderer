@@ -2208,26 +2208,27 @@ float TorusIntersect( float rad0, float rad1, vec3 pos, Ray ray )
 `;
 
 THREE.ShaderChunk[ 'pathtracing_quad_intersect' ] = `
-float TriangleIntersect( vec3 v0, vec3 v1, vec3 v2, Ray r, bool isDoubleSided )
+float TriangleIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 rayOrigin, vec3 rayDirection, bool isDoubleSided )
 {
 	vec3 edge1 = v1 - v0;
 	vec3 edge2 = v2 - v0;
-	vec3 pvec = cross(r.direction, edge2);
+	vec3 pvec = cross(rayDirection, edge2);
 	float det = 1.0 / dot(edge1, pvec);
 	if ( !isDoubleSided && det < 0.0 ) 
 		return INFINITY;
-	vec3 tvec = r.origin - v0;
+	vec3 tvec = rayOrigin - v0;
 	float u = dot(tvec, pvec) * det;
 	vec3 qvec = cross(tvec, edge1);
-	float v = dot(r.direction, qvec) * det;
+	float v = dot(rayDirection, qvec) * det;
 	float t = dot(edge2, qvec) * det;
 	return (u < 0.0 || u > 1.0 || v < 0.0 || u + v > 1.0 || t <= 0.0) ? INFINITY : t;
 }
-//----------------------------------------------------------------------------------
-float QuadIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 v3, Ray r, bool isDoubleSided )
-//----------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------------
+float QuadIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 v3, vec3 rayOrigin, vec3 rayDirection, bool isDoubleSided )
+//--------------------------------------------------------------------------------------------------------------
 {
-	return min(TriangleIntersect(v0, v1, v2, r, isDoubleSided), TriangleIntersect(v0, v2, v3, r, isDoubleSided));
+	return min(TriangleIntersect(v0, v1, v2, rayOrigin, rayDirection, isDoubleSided), 
+		   TriangleIntersect(v0, v2, v3, rayOrigin, rayDirection, isDoubleSided));
 }
 `;
 
@@ -2303,18 +2304,18 @@ float BVH_TriangleIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 rayOrigin, vec3 ray
 `;
 
 THREE.ShaderChunk[ 'pathtracing_bvhDoubleSidedTriangle_intersect' ] = `
-//-------------------------------------------------------------------------------------------
-float BVH_DoubleSidedTriangleIntersect( vec3 v0, vec3 v1, vec3 v2, Ray r, out float u, out float v )
-//-------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------------------------
+float BVH_DoubleSidedTriangleIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 rayOrigin, vec3 rayDirection, out float u, out float v )
+//------------------------------------------------------------------------------------------------------------------------------
 {
 	vec3 edge1 = v1 - v0;
 	vec3 edge2 = v2 - v0;
-	vec3 pvec = cross(r.direction, edge2);
+	vec3 pvec = cross(rayDirection, edge2);
 	float det = 1.0 / dot(edge1, pvec);
-	vec3 tvec = r.origin - v0;
+	vec3 tvec = rayOrigin - v0;
 	u = dot(tvec, pvec) * det;
 	vec3 qvec = cross(tvec, edge1);
-	v = dot(r.direction, qvec) * det; 
+	v = dot(rayDirection, qvec) * det; 
 	float t = dot(edge2, qvec) * det;
 	return (u < 0.0 || u > 1.0 || v < 0.0 || u + v > 1.0 || t <= 0.0) ? INFINITY : t;
 }
