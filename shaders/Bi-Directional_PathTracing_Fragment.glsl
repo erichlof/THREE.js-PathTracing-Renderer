@@ -12,7 +12,14 @@ precision highp sampler2D;
 #define N_QUADS 5
 #define N_BOXES 1
 
-struct Ray { vec3 origin; vec3 direction; };
+
+vec3 rayOrigin, rayDirection;
+// recorded intersection data:
+vec3 hitNormal, hitEmission, hitColor;
+vec2 hitUV;
+float hitRoughness;
+int hitType;
+
 struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; float roughness; int type; };
 struct Ellipsoid { vec3 radii; vec3 position; vec3 emission; vec3 color; float roughness; int type; };
 struct OpenCylinder { float radius; vec3 pos1; vec3 pos2; vec3 emission; vec3 color; float roughness; int type; };
@@ -20,7 +27,6 @@ struct Cone { vec3 pos0; float radius0; vec3 pos1; float radius1; vec3 emission;
 struct Disk { float radius; vec3 pos; vec3 normal; vec3 emission; vec3 color; float roughness; int type; };
 struct Quad { vec3 normal; vec3 v0; vec3 v1; vec3 v2; vec3 v3; vec3 emission; vec3 color; float roughness; int type; };
 struct Box { vec3 minCorner; vec3 maxCorner; vec3 emission; vec3 color; float roughness; int type; };
-struct Intersection { vec3 normal; vec3 emission; vec3 color; float roughness; int type; };
 
 Sphere spheres[N_SPHERES];
 Ellipsoid ellipsoids[N_ELLIPSOIDS];
@@ -52,9 +58,9 @@ Box boxes[N_BOXES];
 
 
 
-//---------------------------------------------------------------------------------------
-float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedObjectID )
-//---------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------
+float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out float intersectedObjectID )
+//--------------------------------------------------------------------------------------
 {
 	vec3 normal;
         float d;
@@ -68,30 +74,30 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 	// ROOM
 	for (int i = 0; i < N_QUADS; i++)
         {
-		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, r, false );
+		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, rayOrigin, rayDirection, true );
 		if (d < t)
 		{
 			t = d;
-			intersec.normal = normalize(quads[i].normal);
-			intersec.emission = quads[i].emission;
-			intersec.color = quads[i].color;
-			intersec.roughness = quads[i].roughness;
-			intersec.type = quads[i].type;
+			hitNormal = normalize( quads[i].normal );
+			hitEmission = quads[i].emission;
+			hitColor = quads[i].color;
+			hitRoughness = quads[i].roughness;
+			hitType = quads[i].type;
 			intersectedObjectID = float(objectCount);
 		}
 		objectCount++;
         }
 	
 	// TABLETOP
-	d = BoxIntersect( boxes[0].minCorner, boxes[0].maxCorner, r, normal, isRayExiting );
+	d = BoxIntersect( boxes[0].minCorner, boxes[0].maxCorner, rayOrigin, rayDirection, normal, isRayExiting );
 	if (d < t)
 	{
 		t = d;
-		intersec.normal = normalize(normal);
-		intersec.emission = boxes[0].emission;
-		intersec.color = boxes[0].color;
-		intersec.roughness = boxes[0].roughness;
-		intersec.type = boxes[0].type;
+		hitNormal = normalize(normal);
+		hitEmission = boxes[0].emission;
+		hitColor = boxes[0].color;
+		hitRoughness = boxes[0].roughness;
+		hitType = boxes[0].type;
 		intersectedObjectID = float(objectCount);
 	}
 	objectCount++;
@@ -99,15 +105,15 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 	// TABLE LEGS, LAMP POST, and SPOTLIGHT CASING
 	for (int i = 0; i < N_OPENCYLINDERS; i++)
         {
-		d = OpenCylinderIntersect( openCylinders[i].pos1, openCylinders[i].pos2, openCylinders[i].radius, r, normal );
+		d = OpenCylinderIntersect( openCylinders[i].pos1, openCylinders[i].pos2, openCylinders[i].radius, rayOrigin, rayDirection, normal );
 		if (d < t)
 		{
 			t = d;
-			intersec.normal = normalize(normal);
-			intersec.emission = openCylinders[i].emission;
-			intersec.color = openCylinders[i].color;
-			intersec.roughness = openCylinders[i].roughness;
-			intersec.type = openCylinders[i].type;
+			hitNormal = normalize(normal);
+			hitEmission = openCylinders[i].emission;
+			hitColor = openCylinders[i].color;
+			hitRoughness = openCylinders[i].roughness;
+			hitType = openCylinders[i].type;
 			intersectedObjectID = float(objectCount);
 		}
 		objectCount++;
@@ -116,15 +122,15 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 	// LAMP BASE AND FLOOR LAMP BULB
 	for (int i = 0; i < N_SPHERES - 1; i++)
         {
-		d = SphereIntersect( spheres[i].radius, spheres[i].position, r );
+		d = SphereIntersect( spheres[i].radius, spheres[i].position, rayOrigin, rayDirection );
 		if (d < t)
 		{
 			t = d;
-			intersec.normal = normalize((r.origin + r.direction * t) - spheres[i].position);
-			intersec.emission = spheres[i].emission;
-			intersec.color = spheres[i].color;
-			intersec.roughness = spheres[i].roughness;
-			intersec.type = spheres[i].type;
+			hitNormal = normalize((rayOrigin + rayDirection * t) - spheres[i].position);
+			hitEmission = spheres[i].emission;
+			hitColor = spheres[i].color;
+			hitRoughness = spheres[i].roughness;
+			hitType = spheres[i].type;
 			intersectedObjectID = float(objectCount);
 		}
 		objectCount++;
@@ -133,30 +139,30 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 	// LIGHT DISK OF SPOTLIGHT AND SPOTLIGHT CASE DISK BACKING
 	for (int i = 0; i < N_DISKS; i++)
         {
-		d = DiskIntersect( disks[i].radius, disks[i].pos, disks[i].normal, r );
+		d = DiskIntersect( disks[i].radius, disks[i].pos, disks[i].normal, rayOrigin, rayDirection );
 		if (d < t)
 		{
 			t = d;
-			intersec.normal = normalize(disks[i].normal);
-			intersec.emission = disks[i].emission;
-			intersec.color = disks[i].color;
-			intersec.roughness = disks[i].roughness;
-			intersec.type = disks[i].type;
+			hitNormal = normalize(disks[i].normal);
+			hitEmission = disks[i].emission;
+			hitColor = disks[i].color;
+			hitRoughness = disks[i].roughness;
+			hitType = disks[i].type;
 			intersectedObjectID = float(objectCount);
 		}
 		objectCount++;
 	}
 	
 	// LAMP SHADE
-	d = ConeIntersect( cones[0].pos0, cones[0].radius0, cones[0].pos1, cones[0].radius1, r, normal );
+	d = ConeIntersect( cones[0].pos0, cones[0].radius0, cones[0].pos1, cones[0].radius1, rayOrigin, rayDirection, normal );
 	if (d < t)
 	{
 		t = d;
-		intersec.normal = normalize(normal);
-		intersec.emission = cones[0].emission;
-		intersec.color = cones[0].color;
-		intersec.roughness = cones[0].roughness;
-		intersec.type = cones[0].type;
+		hitNormal = normalize(normal);
+		hitEmission = cones[0].emission;
+		hitColor = cones[0].color;
+		hitRoughness = cones[0].roughness;
+		hitType = cones[0].type;
 		intersectedObjectID = float(objectCount);
 	}
 	objectCount++;
@@ -165,49 +171,48 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 	// GLASS EGG
 	vec3 hitPos;
 	
-	d = EllipsoidIntersect( ellipsoids[0].radii, ellipsoids[0].position, r );
-	hitPos = r.origin + r.direction * d;
+	d = EllipsoidIntersect( ellipsoids[0].radii, ellipsoids[0].position, rayOrigin, rayDirection );
+	hitPos = rayOrigin + rayDirection * d;
 	if (hitPos.y < ellipsoids[0].position.y) 
 		d = INFINITY;
 	
 	if (d < t)
 	{
 		t = d;
-		intersec.normal = normalize( ((r.origin + r.direction * t) - ellipsoids[0].position) / (ellipsoids[0].radii * ellipsoids[0].radii) );
-		intersec.emission = ellipsoids[0].emission;
-		intersec.color = ellipsoids[0].color;
-		intersec.roughness = ellipsoids[0].roughness;
-		intersec.type = ellipsoids[0].type;
+		hitNormal = normalize( ((rayOrigin + rayDirection * t) - ellipsoids[0].position) / (ellipsoids[0].radii * ellipsoids[0].radii) );
+		hitEmission = ellipsoids[0].emission;
+		hitColor = ellipsoids[0].color;
+		hitRoughness = ellipsoids[0].roughness;
+		hitType = ellipsoids[0].type;
 		intersectedObjectID = float(objectCount);
 	}
 	
-	d = SphereIntersect( spheres[3].radius, spheres[3].position, r );
-	hitPos = r.origin + r.direction * d;
+	d = SphereIntersect( spheres[3].radius, spheres[3].position, rayOrigin, rayDirection );
+	hitPos = rayOrigin + rayDirection * d;
 	if (hitPos.y >= spheres[3].position.y) 
 		d = INFINITY;
 	
 	if (d < t)
 	{
 		t = d;
-		intersec.normal = normalize((r.origin + r.direction * t) - spheres[3].position);
-		intersec.emission = spheres[3].emission;
-		intersec.color = spheres[3].color;
-		intersec.roughness = spheres[3].roughness;
-		intersec.type = spheres[3].type;
+		hitNormal = normalize((rayOrigin + rayDirection * t) - spheres[3].position);
+		hitEmission = spheres[3].emission;
+		hitColor = spheres[3].color;
+		hitRoughness = spheres[3].roughness;
+		hitType = spheres[3].type;
 		intersectedObjectID = float(objectCount); // same as ellipsoid above - sphere and ellipsoid make up 1 object
 	}
 	
 	
 	return t;
-} // end float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedObjectID )
+} // end float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out float intersectedObjectID )
 
 
 
-//---------------------------------------------------------------------------------------------------------------------------------------
-vec3 CalculateRadiance( Ray originalRay, out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
-//---------------------------------------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+vec3 CalculateRadiance( vec3 originalRayOrigin, vec3 originalRayDirection, out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------
 {
-	Intersection intersec;
 	float randChoose = rand() * 2.0; // 2 lights to choose from
 	Sphere lightChoice = spheres[int(randChoose)]; 
 	
@@ -239,7 +244,7 @@ vec3 CalculateRadiance( Ray originalRay, out vec3 objectNormal, out vec3 objectC
 	
 	int diffuseCount = 0;
 	int previousIntersecType = -100;
-	intersec.type = -100;
+	hitType = -100;
 
 	bool bounceIsSpecular = true;
 	bool sampleLight = false;
@@ -247,43 +252,43 @@ vec3 CalculateRadiance( Ray originalRay, out vec3 objectNormal, out vec3 objectC
 	bool ableToJoinPaths = false;
 
 	// light trace
-	
-	Ray r = Ray(lightChoice.position, lightDir);
-	r.direction = normalize(r.direction);
-	r.origin += r.direction * (lightChoice.radius * 1.1);
-	t = SceneIntersect(r, intersec, intersectedObjectID);
-	if (intersec.type == DIFF)
+	rayOrigin = lightChoice.position;
+	rayDirection = normalize(lightDir);
+	rayOrigin += rayDirection * lightChoice.radius;
+	t = SceneIntersect(rayOrigin, rayDirection, intersectedObjectID);
+	if (hitType == DIFF)
 	{
-		lightHitPos = r.origin + r.direction * t;
-		lightHitEmission *= intersec.color;
+		lightHitPos = rayOrigin + rayDirection * t;
+		lightHitEmission *= hitColor;
 	}
 
 	
 	// regular path tracing from camera
-	r = originalRay;
+	rayOrigin = originalRayOrigin;
+	rayDirection = originalRayDirection;
 
+	previousIntersecType = -100;
 	intersectedObjectID = -100.0;
 
 
 	for (int bounces = 0; bounces < 6; bounces++)
 	{
-		previousIntersecType = intersec.type;
 
-		t = SceneIntersect(r, intersec, intersectedObjectID);
+		t = SceneIntersect(rayOrigin, rayDirection, intersectedObjectID);
 		
 		if (t == INFINITY)
 			break;
 		
 
 		// useful data 
-		n = normalize(intersec.normal);
-                nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
-		x = r.origin + r.direction * t;
+		n = normalize(hitNormal);
+                nl = dot(n, rayDirection) < 0.0 ? normalize(n) : normalize(-n);
+		x = rayOrigin + rayDirection * t;
 
 		if (bounces == 0)
 		{
 			objectNormal = nl;
-			objectColor = intersec.color;
+			objectColor = hitColor;
 			objectID = intersectedObjectID;
 		}
 		if (bounces == 1 && previousIntersecType == SPEC)
@@ -293,29 +298,31 @@ vec3 CalculateRadiance( Ray originalRay, out vec3 objectNormal, out vec3 objectC
 		
 
 		
-		if (intersec.type == LIGHT)
+		if (hitType == LIGHT)
 		{	
 			if (diffuseCount == 0 || (bounceIsSpecular && previousIntersecType == REFR))
 				pixelSharpness = 1.01;
 
 
 			if (firstTypeWasDIFF && bounceIsSpecular)
-				accumCol = mask * intersec.emission * 50.0;		 
+				accumCol = mask * hitEmission * 50.0;		 
 			else if (bounceIsSpecular || sampleLight)
-				accumCol = mask * intersec.emission;
+				accumCol = mask * hitEmission;
 
 			// reached a light, so we can exit
 			break;
-		} // end if (intersec.type == LIGHT)
+		} // end if (hitType == LIGHT)
 
 
-		if (intersec.type == DIFF && sampleLight)
+		if (hitType == DIFF && sampleLight)
 		{
-			ableToJoinPaths = abs(lightHitDistance - t) < 0.5;
+			ableToJoinPaths = abs(lightHitDistance - t) < 0.01;
+
+			pixelSharpness = 0.0;
 			
 			if (ableToJoinPaths)
 			{
-				weight = max(0.0, dot(normalize(intersec.normal), -r.direction));
+				weight = max(0.0, dot(normalize(hitNormal), -rayDirection));
 				accumCol = mask * lightHitEmission * weight;
 			}
 
@@ -328,26 +335,34 @@ vec3 CalculateRadiance( Ray originalRay, out vec3 objectNormal, out vec3 objectC
 			break;
 
 		    
-                if (intersec.type == DIFF) // Ideal DIFFUSE reflection
+                if (hitType == DIFF) // Ideal DIFFUSE reflection
 		{
-			if (diffuseCount == 0)	
-				objectColor = intersec.color;
+			previousIntersecType = DIFF;
+
+			if (bounces == 0)
+				pixelSharpness = 0.0;
+
+			if (bounces == 0 || diffuseCount == 0)	
+				objectColor = hitColor;
 
 			diffuseCount++;
 
-			mask *= intersec.color;
+			mask *= hitColor;
 
 			bounceIsSpecular = false;
 
 			if (bounces == 0)
+			{
 				firstTypeWasDIFF = true;
+				
+			}
+				
 
 			if (diffuseCount == 1 && rand() < 0.5)
-			{	
+			{
 				// choose random Diffuse sample vector
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
-				//r = Ray(x, nl); // interesting effect for tracing heightfields/holographic projections?
-				r.origin += nl * uEPS_intersect;
+				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
+				rayOrigin = x + nl * uEPS_intersect;
 				continue;
 			}
 			
@@ -356,26 +371,31 @@ vec3 CalculateRadiance( Ray originalRay, out vec3 objectNormal, out vec3 objectC
 			weight = max(0.0, dot(nl, dirToLight));
 			mask *= weight;
 			
-			r = Ray( x, dirToLight );
-			r.origin += nl * uEPS_intersect;
+			rayDirection = dirToLight;
+			rayOrigin = x + nl * uEPS_intersect;
+
 			sampleLight = true;
 			continue;
 			
-		} // end if (intersec.type == DIFF)
+		} // end if (hitType == DIFF)
 		
-		if (intersec.type == SPEC)  // Ideal SPECULAR reflection
+		if (hitType == SPEC)  // Ideal SPECULAR reflection
 		{
-			mask *= intersec.color;
+			previousIntersecType = SPEC;
 
-			r = Ray( x, reflect(r.direction, nl) );
-			r.origin += nl * uEPS_intersect;
+			mask *= hitColor;
+
+			rayDirection = reflect(rayDirection, nl);
+			rayOrigin = x + nl * uEPS_intersect;
 
 			//bounceIsSpecular = true; // turn on mirror caustics
 			continue;
 		}
 		
-		if (intersec.type == REFR)  // Ideal dielectric REFRACTION
+		if (hitType == REFR)  // Ideal dielectric REFRACTION
 		{	
+			previousIntersecType = REFR;
+
 			if (diffuseCount == 0 && !uCameraIsMoving )
 				pixelSharpness = 1.01;
 			else if (diffuseCount > 0)
@@ -385,35 +405,35 @@ vec3 CalculateRadiance( Ray originalRay, out vec3 objectNormal, out vec3 objectC
 
 			nc = 1.0; // IOR of Air
 			nt = 1.45; // IOR of Glass
-			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
+			Re = calcFresnelReflectance(rayDirection, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 			P  = 0.25 + (0.5 * Re);
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 			
-			if (rng() < P)
+			if (rand() < P)
 			{
 				mask *= RP;
-				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
-				r.origin += nl * uEPS_intersect;
-				continue;
+				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
+				rayOrigin = x + nl * uEPS_intersect;
+				continue;	
 			}
 
 			// transmit ray through surface
 
 			mask *= TP;
-			mask *= intersec.color;
+			mask *= hitColor;
 			
-			tdir = refract(r.direction, nl, ratioIoR);
-			r = Ray(x, tdir);
-			r.origin -= nl * uEPS_intersect;
+			tdir = refract(rayDirection, nl, ratioIoR);
+			rayDirection = tdir;
+			rayOrigin = x - nl * uEPS_intersect;
 
 			if (bounces == 1)
 				bounceIsSpecular = true; // turn on refracting caustics
 
 			continue;
 			
-		} // end if (intersec.type == REFR)
+		} // end if (hitType == REFR)
 		
 		
 	} // end for (int bounces = 0; bounces < 6; bounces++)
@@ -421,7 +441,7 @@ vec3 CalculateRadiance( Ray originalRay, out vec3 objectNormal, out vec3 objectC
 
 	return max(vec3(0), accumCol);
 
-} // end vec3 CalculateRadiance( Ray originalRay, out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
+} // end vec3 CalculateRadiance( vec3 originalRayOrigin, vec3 originalRayDirection, out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
 
 
 
@@ -463,8 +483,8 @@ void SetupScene(void)
 	spheres[0] = Sphere( spotlightRadius * 0.5, spotlightPos2 + spotlightDir * 20.0, L2, z, 0.0, LIGHT);// Spot Light Bulb
 	spheres[1] = Sphere( 6.0, vec3(80.0, 378.0, -430.0), L1, z, 0.0, LIGHT);// Floor Lamp Bulb
 	spheres[2] = Sphere( 80.0, vec3(80.0, -60.0, -430.0), z, lampColor, 0.4, SPEC);// Floor Lamp Base
-	spheres[3] = Sphere( 33.0, vec3(290.0, 189.0, -435.0), z, vec3(1), 0.0, REFR);// Glass Egg Bottom
-	ellipsoids[0] = Ellipsoid( vec3(33, 62, 33), vec3(290.0, 189.0, -435.0), z, vec3(1), 0.0, REFR);// Glass Egg Top
+	spheres[3] = Sphere( 33.0, vec3(290.0, 188.0, -435.0), z, vec3(1), 0.0, REFR);// Glass Egg Bottom
+	ellipsoids[0] = Ellipsoid( vec3(33, 62, 33), vec3(290.0, 188.0, -435.0), z, vec3(1), 0.0, REFR);// Glass Egg Top
 }
 
 
