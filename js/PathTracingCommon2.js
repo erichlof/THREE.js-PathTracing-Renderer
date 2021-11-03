@@ -1632,24 +1632,24 @@ float HyperbolicParaboloidParamIntersect( float yMinPercent, float yMaxPercent, 
 `;
 
 THREE.ShaderChunk[ 'pathtracing_ellipsoid_intersect' ] = `
-//-----------------------------------------------------------------------
-float EllipsoidIntersect( vec3 radii, vec3 pos, Ray r )
-//-----------------------------------------------------------------------
+//---------------------------------------------------------------------------------
+float EllipsoidIntersect( vec3 radii, vec3 pos, vec3 rayOrigin, vec3 rayDirection )
+//---------------------------------------------------------------------------------
 {
 	float t0, t1;
-	vec3 oc = r.origin - pos;
+	vec3 oc = rayOrigin - pos;
 	vec3 oc2 = oc*oc;
-	vec3 ocrd = oc*r.direction;
-	vec3 rd2 = r.direction*r.direction;
+	vec3 ocrd = oc*rayDirection;
+	vec3 rd2 = rayDirection*rayDirection;
 	vec3 invRad = 1.0/radii;
 	vec3 invRad2 = invRad*invRad;
-	
+
 	// quadratic equation coefficients
 	float a = dot(rd2, invRad2);
 	float b = 2.0*dot(ocrd, invRad2);
 	float c = dot(oc2, invRad2) - 1.0;
 	solveQuadratic(a, b, c, t0, t1);
-	
+
 	return t0 > 0.0 ? t0 : t1 > 0.0 ? t1 : INFINITY;
 }
 `;
@@ -1812,17 +1812,16 @@ float CappedCylinderIntersect( vec3 p0, vec3 p1, float rad, Ray r, out vec3 n )
 `;
 
 THREE.ShaderChunk[ 'pathtracing_cone_intersect' ] = `
-//----------------------------------------------------------------------------
-float ConeIntersect( vec3 p0, float r0, vec3 p1, float r1, Ray r, out vec3 n )
-//----------------------------------------------------------------------------   
+//--------------------------------------------------------------------------------------------------------
+float ConeIntersect( vec3 p0, float r0, vec3 p1, float r1, vec3 rayOrigin, vec3 rayDirection, out vec3 n )
+//-------------------------------------------------------------------------------------------------------- 
 {
 	r0 += 0.1;
 	vec3 locX;
 	vec3 locY;
 	vec3 locZ=-(p1-p0)/(1.0 - r1/r0);
 	
-	Ray ray = r;
-	ray.origin-=p0-locZ;
+	rayOrigin-=p0-locZ;
 	
 	if(abs(locZ.x)<abs(locZ.y))
 		locX=vec3(1,0,0);
@@ -1839,16 +1838,16 @@ float ConeIntersect( vec3 p0, float r0, vec3 p1, float r1, Ray r, out vec3 n )
 	tm[1]=locY;
 	tm[2]=locZ;
 	
-	ray.direction*=tm;
-	ray.origin*=tm;
+	rayDirection*=tm;
+	rayOrigin*=tm;
 	
-	float dx=ray.direction.x;
-	float dy=ray.direction.y;
-	float dz=ray.direction.z;
+	float dx=rayDirection.x;
+	float dy=rayDirection.y;
+	float dz=rayDirection.z;
 	
-	float x0=ray.origin.x;
-	float y0=ray.origin.y;
-	float z0=ray.origin.z;
+	float x0=rayOrigin.x;
+	float y0=rayOrigin.y;
+	float z0=rayOrigin.z;
 	
 	float x02=x0*x0;
 	float y02=y0*y0;
@@ -1875,8 +1874,8 @@ float ConeIntersect( vec3 p0, float r0, vec3 p1, float r1, Ray r, out vec3 n )
 		
 	float t0=(-x0*dx+z0*dz-y0*dy-sqrt(abs(det)))/(dx2-dz2+dy2);
 	float t1=(-x0*dx+z0*dz-y0*dy+sqrt(abs(det)))/(dx2-dz2+dy2);
-	vec3 pt0=ray.origin+t0*ray.direction;
-	vec3 pt1=ray.origin+t1*ray.direction;
+	vec3 pt0=rayOrigin+t0*rayDirection;
+	vec3 pt1=rayOrigin+t1*rayDirection;
 	
 	if(t0>0.0 && pt0.z>r1/r0 && pt0.z<1.0)
 	{
