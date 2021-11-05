@@ -14,7 +14,7 @@ function initSceneData()
         // pixelRatio is resolution - range: 0.5(half resolution) to 1.0(full resolution)
         pixelRatio = mouseControl ? 0.75 : 0.75; // less demanding on battery-powered mobile devices
 
-        EPS_intersect = mouseControl ? 0.01 : 1.0; // less precision on mobile
+        EPS_intersect = 0.01;
 
         // Boxes
         tallBoxGeometry = new THREE.BoxGeometry(1, 1, 1);
