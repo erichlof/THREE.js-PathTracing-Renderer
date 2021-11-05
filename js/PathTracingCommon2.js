@@ -80,13 +80,13 @@ THREE.ShaderChunk[ 'pathtracing_skymodel_defines' ] = `
 
 THREE.ShaderChunk[ 'pathtracing_plane_intersect' ] = `
 //-----------------------------------------------------------------------
-float PlaneIntersect( vec4 pla, Ray r )
+float PlaneIntersect( vec4 pla, vec3 rayOrigin, vec3 rayDirection )
 //-----------------------------------------------------------------------
 {
 	vec3 n = pla.xyz;
-	float denom = dot(n, r.direction);
+	float denom = dot(n, rayDirection);
 	
-        vec3 pOrO = (pla.w * n) - r.origin; 
+        vec3 pOrO = (pla.w * n) - rayOrigin; 
         float result = dot(pOrO, n) / denom;
 	return (result > 0.0) ? result : INFINITY;
 }
