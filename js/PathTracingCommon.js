@@ -11,7 +11,6 @@ uniform float uApertureSize;
 uniform float uFocusDistance;
 uniform float uSamplesPerFrame;
 uniform float uFrameBlendingAmount;
-uniform float uSunAngularDiameterCos;
 uniform vec2 uResolution;
 uniform vec2 uRandomVec2;
 uniform mat4 uCameraMatrix;
@@ -73,7 +72,7 @@ THREE.ShaderChunk[ 'pathtracing_skymodel_defines' ] = `
 #define UP_VECTOR vec3(0.0, 1.0, 0.0)
 #define SUN_POWER 1000.0
 // 66 arc seconds -> degrees, and the cosine of that
-//#define SUN_ANGULAR_DIAMETER_COS 0.9998 //0.9999566769
+#define SUN_ANGULAR_DIAMETER_COS 0.9998 //0.9999566769
 #define CUTOFF_ANGLE 1.6110731556870734
 #define STEEPNESS 1.5
 `;
@@ -2377,7 +2376,7 @@ vec3 Get_Sky_Color(Ray r, vec3 sunDirection)
 	vec2 uv = vec2( phi, theta ) / vec2( 2.0 * PI, PI ) + vec2( 0.5, 0.0 );
 	vec3 L0 = vec3( 0.1 ) * Fex;
 	// composition + solar disc
-	float sundisk = smoothstep( uSunAngularDiameterCos, uSunAngularDiameterCos + 0.00002, cosViewSunAngle );
+	float sundisk = smoothstep( SUN_ANGULAR_DIAMETER_COS, SUN_ANGULAR_DIAMETER_COS + 0.00002, cosViewSunAngle );
 	L0 += ( sunE * 19000.0 * Fex ) * sundisk;
 	vec3 texColor = ( Lin + L0 ) * 0.04 + vec3( 0.0, 0.0003, 0.00075 );
 	float sunfade = 1.0 - clamp( 1.0 - exp( ( sunDirection.y / 450000.0 ) ), 0.0, 1.0 );
@@ -2645,10 +2644,12 @@ void main( void )
 	{
 		previousPixel.rgb *= 0.5; // motion-blur trail amount (old image)
 		currentPixel.rgb *= 0.5; // brightness of new image (noisy)
+		
 		previousPixel.a = 0.0;
 	}
 	
 	currentPixel.a = 0.0;
+
 	if (colorDifference >= 1.0 || normalDifference >= 1.0 || objectDifference >= 1.0)
 		pixelSharpness = 1.01;
 
