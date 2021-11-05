@@ -11,10 +11,6 @@ uniform float uApertureSize;
 uniform float uFocusDistance;
 uniform float uSamplesPerFrame;
 uniform float uFrameBlendingAmount;
-// uniform float uColorEdgeSharpeningRate;
-// uniform float uNormalEdgeSharpeningRate;
-// uniform float uObjectEdgeSharpeningRate;
-uniform float uSunAngularDiameterCos;
 uniform vec2 uResolution;
 uniform vec2 uRandomVec2;
 uniform mat4 uCameraMatrix;
@@ -76,7 +72,7 @@ THREE.ShaderChunk[ 'pathtracing_skymodel_defines' ] = `
 #define UP_VECTOR vec3(0.0, 1.0, 0.0)
 #define SUN_POWER 1000.0
 // 66 arc seconds -> degrees, and the cosine of that
-//#define SUN_ANGULAR_DIAMETER_COS 0.9998 //0.9999566769
+#define SUN_ANGULAR_DIAMETER_COS 0.9998 //0.9999566769
 #define CUTOFF_ANGLE 1.6110731556870734
 #define STEEPNESS 1.5
 `;
@@ -97,15 +93,15 @@ float PlaneIntersect( vec4 pla, Ray r )
 `;
 
 THREE.ShaderChunk[ 'pathtracing_single_sided_plane_intersect' ] = `
-//-----------------------------------------------------------------------
-float SingleSidedPlaneIntersect( vec4 pla, Ray r )
-//-----------------------------------------------------------------------
+//----------------------------------------------------------------------------
+float SingleSidedPlaneIntersect( vec4 pla, vec3 rayOrigin, vec3 rayDirection )
+//----------------------------------------------------------------------------
 {
 	vec3 n = pla.xyz;
-	float denom = dot(n, r.direction);
+	float denom = dot(n, rayDirection);
 	if (denom > 0.0) return INFINITY;
 	
-        vec3 pOrO = (pla.w * n) - r.origin; 
+        vec3 pOrO = (pla.w * n) - rayOrigin; 
         float result = dot(pOrO, n) / denom;
 	return (result > 0.0) ? result : INFINITY;
 }
@@ -2341,14 +2337,14 @@ float SunIntensity(float zenithAngleCos)
 	zenithAngleCos = clamp( zenithAngleCos, -1.0, 1.0 );
 	return SUN_POWER * max( 0.0, 1.0 - pow( E, -( ( CUTOFF_ANGLE - acos( zenithAngleCos ) ) / STEEPNESS ) ) );
 }
-vec3 Get_Sky_Color(Ray r, vec3 sunDirection)
+vec3 Get_Sky_Color(vec3 rayDir)
 {
-	vec3 viewDirection = normalize(r.direction);
+	vec3 viewDirection = normalize(rayDir);
 	
 	/* most of the following code is borrowed from the three.js shader file: SkyShader.js */
     	// Cosine angles
-	float cosViewSunAngle = dot(viewDirection, normalize(sunDirection));
-    	float cosSunUpAngle = dot(UP_VECTOR, normalize(sunDirection)); // allowed to be negative: + is daytime, - is nighttime
+	float cosViewSunAngle = dot(viewDirection, uSunDirection);
+    	float cosSunUpAngle = dot(UP_VECTOR, uSunDirection); // allowed to be negative: + is daytime, - is nighttime
     	float cosUpViewAngle = dot(UP_VECTOR, viewDirection);
 	
         // Get sun intensity based on how high in the sky it is
@@ -2380,10 +2376,10 @@ vec3 Get_Sky_Color(Ray r, vec3 sunDirection)
 	vec2 uv = vec2( phi, theta ) / vec2( 2.0 * PI, PI ) + vec2( 0.5, 0.0 );
 	vec3 L0 = vec3( 0.1 ) * Fex;
 	// composition + solar disc
-	float sundisk = smoothstep( uSunAngularDiameterCos, uSunAngularDiameterCos + 0.00002, cosViewSunAngle );
+	float sundisk = smoothstep( SUN_ANGULAR_DIAMETER_COS, SUN_ANGULAR_DIAMETER_COS + 0.00002, cosViewSunAngle );
 	L0 += ( sunE * 19000.0 * Fex ) * sundisk;
 	vec3 texColor = ( Lin + L0 ) * 0.04 + vec3( 0.0, 0.0003, 0.00075 );
-	float sunfade = 1.0 - clamp( 1.0 - exp( ( sunDirection.y / 450000.0 ) ), 0.0, 1.0 );
+	float sunfade = 1.0 - clamp( 1.0 - exp( ( uSunDirection.y / 450000.0 ) ), 0.0, 1.0 );
 	vec3 retColor = pow( texColor, vec3( 1.0 / ( 1.2 + ( 1.2 * sunfade ) ) ) );
 	return retColor;
 }
