@@ -17,37 +17,28 @@ precision highp sampler2D;
 uniform sampler2D t_PerlinNoise;
 float displacementMultiplier;
 
-struct Ray 
-{
-	vec3 origin;
-	vec3 direction;
-};
-struct AABB 
-{
-	vec3 min_;
-	vec3 max_;
-};
-struct Triangle 
-{
-	vec3 v0;
-	vec3 v1;
-	vec3 v2;
-};
+vec3 rayOrigin, rayDirection;
+// recorded intersection data:
+vec3 hitNormal, hitEmission, hitColor;
+vec2 hitUV;
+float hitObjectID;
+int hitType;
 
 
-AABB displacementVolume = AABB(vec3(-DISP_MAP_SEGMENTS * 0.5, 0.0, -DISP_MAP_SEGMENTS * 0.5), 
-			       vec3( DISP_MAP_SEGMENTS * 0.5, MAX_DISPLACEMENT, DISP_MAP_SEGMENTS * 0.5));
+vec3 displacementVolumeMin = vec3(-DISP_MAP_SEGMENTS * 0.5, 0.0, -DISP_MAP_SEGMENTS * 0.5);
+vec3 displacementVolumeMax = vec3( DISP_MAP_SEGMENTS * 0.5, MAX_DISPLACEMENT, DISP_MAP_SEGMENTS * 0.5);
 
-bool rayAABBIntersection( in Ray ray, AABB aabb, out float t_enter, out float t_exit) 
+
+bool rayAABBIntersection( vec3 rayOrigin, vec3 rayDirection, vec3 aabbMin, vec3 aabbMax, out float t_enter, out float t_exit) 
 {
-	vec3 OMIN = (aabb.min_ - ray.origin) / ray.direction;
-	vec3 OMAX = (aabb.max_ - ray.origin) / ray.direction;
+	vec3 OMIN = (aabbMin - rayOrigin) / rayDirection;
+	vec3 OMAX = (aabbMax - rayOrigin) / rayDirection;
 	vec3 MAX = max(OMAX, OMIN);
 	vec3 MIN = min(OMAX, OMIN);
 	t_exit = min(MAX.x, min(MAX.y, MAX.z));
 	t_enter = max(MIN.x, max(MIN.y, MIN.z));
 
-	if (t_enter < 0.0) t_enter = 0.0;
+	t_enter = (t_enter < 0.0) ? 0.0 : t_enter;
 
 	return (t_exit > t_enter && t_exit > 0.0);
 }
@@ -90,20 +81,20 @@ bool rayIntersectsTriangle(vec3 p, vec3 d, vec3 v0, vec3 v1, vec3 v2, out float 
 }
 
 
-bool rayQuadIntersect( in Ray ray, vec3 v0, vec3 v1, vec3 v2, vec3 v3, out float t, out vec3 n) 
+bool rayQuadIntersect( vec3 rayOrigin, vec3 rayDirection, vec3 v0, vec3 v1, vec3 v2, vec3 v3, out float t, out vec3 n) 
 {
 	float tcurrent;
 	t = 10e+10;
 
 	//first triangle
-	if (rayIntersectsTriangle(ray.origin, ray.direction, v0, v1, v2, tcurrent)) 
+	if (rayIntersectsTriangle(rayOrigin, rayDirection, v0, v1, v2, tcurrent)) 
 	{
 		t = tcurrent;
 		n = getTriangleNormal(v0, v1, v2);
 	}
 
 	//second triangle
-	if (rayIntersectsTriangle(ray.origin, ray.direction, v0, v2, v3, tcurrent)) 
+	if (rayIntersectsTriangle(rayOrigin, rayDirection, v0, v2, v3, tcurrent)) 
 	{
 		if (tcurrent < t) 
 		{
@@ -122,7 +113,7 @@ float getDisplacement(vec2 uv)
 	//return 0.9 * sin(uTime - length(vec2(0.5) - uv) * 20.0) * 0.5 + 0.5;
 
 	// landscape with animated lowering and raising
-	return (sin(uTime * 0.5) * 0.5 + 0.5) * texture(t_PerlinNoise, uv).x;
+	return (sin(uTime * 0.4) * 0.5 + 0.5) * texture(t_PerlinNoise, uv).x;
 
 	// stationary landscape
 	//return texture(t_PerlinNoise, uv).x;
@@ -140,10 +131,10 @@ void getPixelDisplacements(vec2 uv, out float d1, out float d2, out float d3, ou
 }
 
 
-#define UVH2POS(aabb, uvd, pos) {vec3 aabbDim = aabb.max_ - aabb.min_; pos = aabb.min_ + uvd * aabbDim;}
-#define POS2UVH(aabb, pos, uvd) {vec3 aabbDim = aabb.max_ - aabb.min_; uvd = (pos - aabb.min_) / aabbDim;}
+#define UVH2POS(aabbMin, aabbMax, uvd, pos) {vec3 aabbDim = aabbMax - aabbMin; pos = aabbMin + uvd * aabbDim;}
+#define POS2UVH(aabbMin, aabbMax, pos, uvd) {vec3 aabbDim = aabbMax - aabbMin; uvd = (pos - aabbMin) / aabbDim;}
 
-bool processVoxel(Ray ray, vec3 p, out float t, out vec3 normal) 
+bool processVoxel(vec3 rayOrigin, vec3 rayDirection, vec3 p, out float t, out vec3 normal) 
 {
 	//Lookup displacement values
 	vec2 uv = floor(p.xz) / vec2(DISP_MAP_SEGMENTS, DISP_MAP_SEGMENTS);
@@ -161,14 +152,14 @@ bool processVoxel(Ray ray, vec3 p, out float t, out vec3 normal)
 	corner_uv[3] = vec3(uv.x,                   disp[3], uv.y + inverseSegments);
 
 	vec3 vertices[4];
-	UVH2POS(displacementVolume, corner_uv[0], vertices[0]);
-	UVH2POS(displacementVolume, corner_uv[1], vertices[1]);
-	UVH2POS(displacementVolume, corner_uv[2], vertices[2]);
-	UVH2POS(displacementVolume, corner_uv[3], vertices[3]);
+	UVH2POS(displacementVolumeMin, displacementVolumeMax, corner_uv[0], vertices[0]);
+	UVH2POS(displacementVolumeMin, displacementVolumeMax, corner_uv[1], vertices[1]);
+	UVH2POS(displacementVolumeMin, displacementVolumeMax, corner_uv[2], vertices[2]);
+	UVH2POS(displacementVolumeMin, displacementVolumeMax, corner_uv[3], vertices[3]);
 
 	float hitDist;
 	vec3 hitN;
-	if (rayQuadIntersect(ray, vertices[0], vertices[1], vertices[2], vertices[3], hitDist, hitN)) 
+	if (rayQuadIntersect(rayOrigin, rayDirection, vertices[0], vertices[1], vertices[2], vertices[3], hitDist, hitN)) 
 	{
 		t = hitDist;
 		normal = hitN;
@@ -182,9 +173,9 @@ bool processVoxel(Ray ray, vec3 p, out float t, out vec3 normal)
 #define FRAC0(x) (x - floor(x))
 #define FRAC1(x) (1.0 - x + floor(x))
 
-bool processVoxelsOnLine(Ray r, vec3 p0, vec3 p1, out float t, out vec3 normal) 
+bool processVoxelsOnLine(vec3 rayOrigin, vec3 rayDirection, vec3 p0, vec3 p1, out float t, out vec3 normal) 
 {
-	r.direction = normalize(r.direction);
+	rayDirection = normalize(rayDirection);
 
 	float tMaxX, tMaxY, tMaxZ, tDeltaX, tDeltaY, tDeltaZ;
 	ivec3 voxel;  
@@ -240,32 +231,32 @@ bool processVoxelsOnLine(Ray r, vec3 p0, vec3 p1, out float t, out vec3 normal)
 		if (tMaxX > 1.0 && tMaxY > 1.0 && tMaxZ > 1.0) 
 			return false;
 		// process voxel here
-		if (processVoxel(r, vec3(voxel), t, normal))
+		if (processVoxel(rayOrigin, rayDirection, vec3(voxel), t, normal))
 			return true;
 	}
 }
 
 
-bool rayIntersectsDisplacement( in Ray ray, out float t, out vec3 normal) 
+bool rayIntersectsDisplacement( vec3 rayOrigin, vec3 rayDirection, out float t, out vec3 normal) 
 {
 	float t1, t2;
 	
-	if (!rayAABBIntersection(ray, displacementVolume, t1, t2))
+	if (!rayAABBIntersection(rayOrigin, rayDirection, displacementVolumeMin, displacementVolumeMax, t1, t2))
 		return false;
 	//{
-		vec3 hitpos1 = ray.origin + ray.direction * (t1 + 2.0); //volume entry point
-		vec3 hitpos2 = ray.origin + ray.direction * (t2 + 2.0); //volume exit point
+		vec3 hitpos1 = rayOrigin + rayDirection * (t1 + 2.0); //volume entry point
+		vec3 hitpos2 = rayOrigin + rayDirection * (t2 + 2.0); //volume exit point
 
 		//Convert position to parametric coordinates
 		vec3 uvd1, uvd2;
-		POS2UVH(displacementVolume, hitpos1, uvd1);
-		POS2UVH(displacementVolume, hitpos2, uvd2);
+		POS2UVH(displacementVolumeMin, displacementVolumeMax, hitpos1, uvd1);
+		POS2UVH(displacementVolumeMin, displacementVolumeMax, hitpos2, uvd2);
 
 		//pixel coordinates of projected entry and exit point
 		vec3 p0 = uvd1 * vec3(DISP_MAP_SEGMENTS, 1.0, DISP_MAP_SEGMENTS);
 		vec3 p1 = uvd2 * vec3(DISP_MAP_SEGMENTS, 1.0, DISP_MAP_SEGMENTS);
 
-		if (processVoxelsOnLine(ray, p0, p1, t, normal)) 
+		if (processVoxelsOnLine(rayOrigin, rayDirection, p0, p1, t, normal)) 
 			return true;	
 	//}
 
@@ -273,26 +264,26 @@ bool rayIntersectsDisplacement( in Ray ray, out float t, out vec3 normal)
 }
 
 
-vec3 getColor(Ray ray) 
+vec3 getColor(vec3 rayOrigin, vec3 rayDirection) 
 {
 	float t;
 	vec3 n;
 	
-	if (!rayIntersectsDisplacement(ray, t, n)) 
+	if (!rayIntersectsDisplacement(rayOrigin, rayDirection, t, n)) 
 		return vec3(0); 
 	
-	vec3 p = ray.origin + ray.direction * t;
-	vec3 normal = dot(ray.direction, n) < 0.0 ? normalize(n) : normalize(-n);
+	vec3 p = rayOrigin + rayDirection * t;
+	vec3 normal = dot(rayDirection, n) < 0.0 ? normalize(n) : normalize(-n);
 
 	vec3 lc = normalize(vec3(1.0, 1.0, 1.0));
 
 	float dotNL = dot(normal, lc);
 	if (dotNL < 0.0) 
 		return vec3(0.01); //fake indirect
-	
-	Ray shadowRay = Ray(p + (normal * 1.0), normalize(lc));
+	vec3 shadowRayDirection = normalize(lc);
+	vec3 shadowRayOrigin = p + normal * 0.01;
 
-	if (!rayIntersectsDisplacement(shadowRay, t, n)) 
+	if (!rayIntersectsDisplacement(shadowRayOrigin, shadowRayDirection, t, n)) 
 		return max(0.0, dotNL) * vec3(1);
 	
 	return vec3(0.01); //fake indirect
@@ -338,10 +329,11 @@ void main(void)
 	// point on aperture to focal point
 	vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
 
-	Ray ray = Ray(cameraPosition + randomAperturePos, finalRayDir);
+	rayOrigin = cameraPosition + randomAperturePos; 
+	rayDirection = finalRayDir;
 
 	// perform path tracing and get resulting pixel color
-	vec3 pixelColor = getColor(ray);
+	vec3 pixelColor = getColor(rayOrigin, rayDirection);
 
 	vec3 previousColor = texelFetch(tPreviousTexture, ivec2(gl_FragCoord.xy), 0).rgb;
 
