@@ -37,9 +37,15 @@ uniform mat4 uHyperbolicParaboloidClipInvMatrix;
 #define N_LIGHTS 3.0
 #define N_SPHERES 4
 
-struct Ray { vec3 origin; vec3 direction; };
+
+vec3 rayOrigin, rayDirection;
+// recorded intersection data:
+vec3 hitNormal, hitEmission, hitColor;
+vec2 hitUV;
+float hitObjectID;
+int hitType;
+
 struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; int type; };
-struct Intersection { vec3 normal; vec3 emission; vec3 color; int type; };
 
 Sphere spheres[N_SPHERES];
 
@@ -67,7 +73,7 @@ Sphere spheres[N_SPHERES];
 
 
 //---------------------------------------------------------------------------------------
-float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedObjectID )
+float SceneIntersect()
 //---------------------------------------------------------------------------------------
 {
 	float d;
@@ -75,419 +81,418 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 	float angleAmount = (sin(uTime) * 0.5 + 0.5);
 	int objectCount = 0;
 	vec3 n;
+	vec3 rObjOrigin, rObjDirection;
 	
         for (int i = 0; i < N_SPHERES; i++)
         {
-		d = SphereIntersect( spheres[i].radius, spheres[i].position, r );
+		d = SphereIntersect( spheres[i].radius, spheres[i].position, rayOrigin, rayDirection );
 		if (d < t)
 		{
 			t = d;
-			intersec.normal = normalize((r.origin + r.direction * t) - spheres[i].position);
-			intersec.emission = spheres[i].emission;
-			intersec.color = spheres[i].color;
-			intersec.type = spheres[i].type;
-			intersectedObjectID = float(objectCount);
+			hitNormal = normalize((rayOrigin + rayDirection * t) - spheres[i].position);
+			hitEmission = spheres[i].emission;
+			hitColor = spheres[i].color;
+			hitType = spheres[i].type;
+			hitObjectID = float(objectCount);
 		}
 		objectCount++;
 	}
 	
-        Ray rObj;
 	
 	// transform ray into Ellipsoid Param's object space
-	rObj.origin = vec3( uEllipsoidTranslateInvMatrix * vec4(r.origin, 1.0) );
-	rObj.direction = vec3( uEllipsoidTranslateInvMatrix * vec4(r.direction, 0.0) );
-	d = EllipsoidParamIntersect(-1.0, 1.0, TWO_PI, rObj.origin, rObj.direction, n);
+	rObjOrigin = vec3( uEllipsoidTranslateInvMatrix * vec4(rayOrigin, 1.0) );
+	rObjDirection = vec3( uEllipsoidTranslateInvMatrix * vec4(rayDirection, 0.0) );
+	d = EllipsoidParamIntersect(-1.0, 1.0, TWO_PI, rObjOrigin, rObjDirection, n);
 
 	if (d < t)
 	{
 		t = d;
 		//vec3 ellipsoidPos = vec3(-uEllipsoidTranslateInvMatrix[3][0], -uEllipsoidTranslateInvMatrix[3][1], -uEllipsoidTranslateInvMatrix[3][2]);
-		intersec.normal = normalize(transpose(mat3(uEllipsoidTranslateInvMatrix)) * n);
-		//intersec.emission = vec3(0);
-		intersec.color = vec3(0.0, 0.3, 1.0);
-		intersec.type = SPEC;
-		intersectedObjectID = float(objectCount);
+		hitNormal = normalize(transpose(mat3(uEllipsoidTranslateInvMatrix)) * n);
+		//hitEmission = vec3(0);
+		hitColor = vec3(0.0, 0.3, 1.0);
+		hitType = SPEC;
+		hitObjectID = float(objectCount);
 	}
 	objectCount++;
 
 	// transform ray into Ellipsoid Param's object space
-	rObj.origin = vec3( uEllipsoidRotateInvMatrix * vec4(r.origin, 1.0) );
-	rObj.direction = vec3( uEllipsoidRotateInvMatrix * vec4(r.direction, 0.0) );
-	d = EllipsoidParamIntersect(-1.0, 1.0, TWO_PI, rObj.origin, rObj.direction, n);
+	rObjOrigin = vec3( uEllipsoidRotateInvMatrix * vec4(rayOrigin, 1.0) );
+	rObjDirection = vec3( uEllipsoidRotateInvMatrix * vec4(rayDirection, 0.0) );
+	d = EllipsoidParamIntersect(-1.0, 1.0, TWO_PI, rObjOrigin, rObjDirection, n);
 
 	if (d < t)
 	{
 		t = d;
-		intersec.normal = normalize(transpose(mat3(uEllipsoidRotateInvMatrix)) * n);
-		//intersec.emission = vec3(0);
-		intersec.color = vec3(0.0, 0.3, 1.0);
-		intersec.type = REFR;
-		intersectedObjectID = float(objectCount);
+		hitNormal = normalize(transpose(mat3(uEllipsoidRotateInvMatrix)) * n);
+		//hitEmission = vec3(0);
+		hitColor = vec3(0.0, 0.3, 1.0);
+		hitType = REFR;
+		hitObjectID = float(objectCount);
 	}
 	objectCount++;
 
 	// transform ray into Ellipsoid Param's object space
-	rObj.origin = vec3( uEllipsoidScaleInvMatrix * vec4(r.origin, 1.0) );
-	rObj.direction = vec3( uEllipsoidScaleInvMatrix * vec4(r.direction, 0.0) );
-	d = EllipsoidParamIntersect(-1.0, 1.0, TWO_PI, rObj.origin, rObj.direction, n);
+	rObjOrigin = vec3( uEllipsoidScaleInvMatrix * vec4(rayOrigin, 1.0) );
+	rObjDirection = vec3( uEllipsoidScaleInvMatrix * vec4(rayDirection, 0.0) );
+	d = EllipsoidParamIntersect(-1.0, 1.0, TWO_PI, rObjOrigin, rObjDirection, n);
 
 	if (d < t)
 	{
 		t = d;
-		intersec.normal = normalize(transpose(mat3(uEllipsoidScaleInvMatrix)) * n);
-		//intersec.emission = vec3(0);
-		intersec.color = vec3(0.0, 0.3, 1.0);
-		intersec.type = DIFF;
-		intersectedObjectID = float(objectCount);
+		hitNormal = normalize(transpose(mat3(uEllipsoidScaleInvMatrix)) * n);
+		//hitEmission = vec3(0);
+		hitColor = vec3(0.0, 0.3, 1.0);
+		hitType = DIFF;
+		hitObjectID = float(objectCount);
 	}
 	objectCount++;
 
 	// transform ray into Ellipsoid Param's object space
-	rObj.origin = vec3( uEllipsoidClipInvMatrix * vec4(r.origin, 1.0) );
-	rObj.direction = vec3( uEllipsoidClipInvMatrix * vec4(r.direction, 0.0) );
-	d = EllipsoidParamIntersect(-0.8, angleAmount, TWO_PI, rObj.origin, rObj.direction, n);
+	rObjOrigin = vec3( uEllipsoidClipInvMatrix * vec4(rayOrigin, 1.0) );
+	rObjDirection = vec3( uEllipsoidClipInvMatrix * vec4(rayDirection, 0.0) );
+	d = EllipsoidParamIntersect(-0.8, angleAmount, TWO_PI, rObjOrigin, rObjDirection, n);
 
 	if (d < t)
 	{
 		t = d;
-		intersec.normal = normalize(transpose(mat3(uEllipsoidClipInvMatrix)) * n);
-		//intersec.emission = vec3(0);
-		intersec.color = vec3(0.0, 0.3, 1.0);
-		intersec.type = COAT;
-		intersectedObjectID = float(objectCount);
+		hitNormal = normalize(transpose(mat3(uEllipsoidClipInvMatrix)) * n);
+		//hitEmission = vec3(0);
+		hitColor = vec3(0.0, 0.3, 1.0);
+		hitType = COAT;
+		hitObjectID = float(objectCount);
 	}
 	objectCount++;
 
 	// transform ray into Cylinder Param's object space
-	rObj.origin = vec3( uCylinderTranslateInvMatrix * vec4(r.origin, 1.0) );
-	rObj.direction = vec3( uCylinderTranslateInvMatrix * vec4(r.direction, 0.0) );
-	d = CylinderParamIntersect(-1.0, 1.0, TWO_PI, rObj.origin, rObj.direction, n);
+	rObjOrigin = vec3( uCylinderTranslateInvMatrix * vec4(rayOrigin, 1.0) );
+	rObjDirection = vec3( uCylinderTranslateInvMatrix * vec4(rayDirection, 0.0) );
+	d = CylinderParamIntersect(-1.0, 1.0, TWO_PI, rObjOrigin, rObjDirection, n);
 
 	if (d < t)
 	{
 		t = d;
-		intersec.normal = normalize(transpose(mat3(uCylinderTranslateInvMatrix)) * n);
-		//intersec.emission = vec3(0);
-		intersec.color = vec3(1.0, 0.0, 0.0);
-		intersec.type = SPEC;
-		intersectedObjectID = float(objectCount);
+		hitNormal = normalize(transpose(mat3(uCylinderTranslateInvMatrix)) * n);
+		//hitEmission = vec3(0);
+		hitColor = vec3(1.0, 0.0, 0.0);
+		hitType = SPEC;
+		hitObjectID = float(objectCount);
 	}
 	objectCount++;
 
 	// transform ray into Cylinder Param's object space
-	rObj.origin = vec3( uCylinderRotateInvMatrix * vec4(r.origin, 1.0) );
-	rObj.direction = vec3( uCylinderRotateInvMatrix * vec4(r.direction, 0.0) );
-	d = CylinderParamIntersect(-1.0, 1.0, TWO_PI, rObj.origin, rObj.direction, n);
+	rObjOrigin = vec3( uCylinderRotateInvMatrix * vec4(rayOrigin, 1.0) );
+	rObjDirection = vec3( uCylinderRotateInvMatrix * vec4(rayDirection, 0.0) );
+	d = CylinderParamIntersect(-1.0, 1.0, TWO_PI, rObjOrigin, rObjDirection, n);
 
 	if (d < t)
 	{
 		t = d;
-		intersec.normal = normalize(transpose(mat3(uCylinderRotateInvMatrix)) * n);
-		//intersec.emission = vec3(0);
-		intersec.color = vec3(1.0, 0.0, 0.0);
-		intersec.type = REFR;
-		intersectedObjectID = float(objectCount);
+		hitNormal = normalize(transpose(mat3(uCylinderRotateInvMatrix)) * n);
+		//hitEmission = vec3(0);
+		hitColor = vec3(1.0, 0.0, 0.0);
+		hitType = REFR;
+		hitObjectID = float(objectCount);
 	}
 	objectCount++;
 
 	// transform ray into Cylinder Param's object space
-	rObj.origin = vec3( uCylinderScaleInvMatrix * vec4(r.origin, 1.0) );
-	rObj.direction = vec3( uCylinderScaleInvMatrix * vec4(r.direction, 0.0) );
-	d = CylinderParamIntersect(-1.0, 1.0, TWO_PI, rObj.origin, rObj.direction, n);
+	rObjOrigin = vec3( uCylinderScaleInvMatrix * vec4(rayOrigin, 1.0) );
+	rObjDirection = vec3( uCylinderScaleInvMatrix * vec4(rayDirection, 0.0) );
+	d = CylinderParamIntersect(-1.0, 1.0, TWO_PI, rObjOrigin, rObjDirection, n);
 
 	if (d < t)
 	{
 		t = d;
-		intersec.normal = normalize(transpose(mat3(uCylinderScaleInvMatrix)) * n);
-		//intersec.emission = vec3(0);
-		intersec.color = vec3(1.0, 0.0, 0.0);
-		intersec.type = DIFF;
-		intersectedObjectID = float(objectCount);
+		hitNormal = normalize(transpose(mat3(uCylinderScaleInvMatrix)) * n);
+		//hitEmission = vec3(0);
+		hitColor = vec3(1.0, 0.0, 0.0);
+		hitType = DIFF;
+		hitObjectID = float(objectCount);
 	}
 	objectCount++;
 
 	// transform ray into Cylinder Param's object space
-	rObj.origin = vec3( uCylinderClipInvMatrix * vec4(r.origin, 1.0) );
-	rObj.direction = vec3( uCylinderClipInvMatrix * vec4(r.direction, 0.0) );
-	d = CylinderParamIntersect(-angleAmount, angleAmount, TWO_PI * 0.6, rObj.origin, rObj.direction, n);
+	rObjOrigin = vec3( uCylinderClipInvMatrix * vec4(rayOrigin, 1.0) );
+	rObjDirection = vec3( uCylinderClipInvMatrix * vec4(rayDirection, 0.0) );
+	d = CylinderParamIntersect(-angleAmount, angleAmount, TWO_PI * 0.6, rObjOrigin, rObjDirection, n);
 
 	if (d < t)
 	{
 		t = d;
-		intersec.normal = normalize(transpose(mat3(uCylinderClipInvMatrix)) * n);
-		//intersec.emission = vec3(0);
-		intersec.color = vec3(1.0, 0.0, 0.0);
-		intersec.type = COAT;
-		intersectedObjectID = float(objectCount);
+		hitNormal = normalize(transpose(mat3(uCylinderClipInvMatrix)) * n);
+		//hitEmission = vec3(0);
+		hitColor = vec3(1.0, 0.0, 0.0);
+		hitType = COAT;
+		hitObjectID = float(objectCount);
 	}
 	objectCount++;
 
 	// transform ray into Cone Param's object space
-	rObj.origin = vec3( uConeTranslateInvMatrix * vec4(r.origin, 1.0) );
-	rObj.direction = vec3( uConeTranslateInvMatrix * vec4(r.direction, 0.0) );
-	d = ConeParamIntersect(-1.0, 1.0, TWO_PI, rObj.origin, rObj.direction, n);
+	rObjOrigin = vec3( uConeTranslateInvMatrix * vec4(rayOrigin, 1.0) );
+	rObjDirection = vec3( uConeTranslateInvMatrix * vec4(rayDirection, 0.0) );
+	d = ConeParamIntersect(-1.0, 1.0, TWO_PI, rObjOrigin, rObjDirection, n);
 
 	if (d < t)
 	{
 		t = d;
-		intersec.normal = normalize(transpose(mat3(uConeTranslateInvMatrix)) * n);
-		//intersec.emission = vec3(0);
-		intersec.color = vec3(1.0, 0.2, 0.0);
-		intersec.type = SPEC;
-		intersectedObjectID = float(objectCount);
+		hitNormal = normalize(transpose(mat3(uConeTranslateInvMatrix)) * n);
+		//hitEmission = vec3(0);
+		hitColor = vec3(1.0, 0.2, 0.0);
+		hitType = SPEC;
+		hitObjectID = float(objectCount);
 	}
 	objectCount++;
 
 	// transform ray into Cone Param's object space
-	rObj.origin = vec3( uConeRotateInvMatrix * vec4(r.origin, 1.0) );
-	rObj.direction = vec3( uConeRotateInvMatrix * vec4(r.direction, 0.0) );
-	d = ConeParamIntersect(-1.0, 1.0, TWO_PI, rObj.origin, rObj.direction, n);
+	rObjOrigin = vec3( uConeRotateInvMatrix * vec4(rayOrigin, 1.0) );
+	rObjDirection = vec3( uConeRotateInvMatrix * vec4(rayDirection, 0.0) );
+	d = ConeParamIntersect(-1.0, 1.0, TWO_PI, rObjOrigin, rObjDirection, n);
 
 	if (d < t)
 	{
 		t = d;
-		intersec.normal = normalize(transpose(mat3(uConeRotateInvMatrix)) * n);
-		//intersec.emission = vec3(0);
-		intersec.color = vec3(1.0, 0.2, 0.0);
-		intersec.type = REFR;
-		intersectedObjectID = float(objectCount);
+		hitNormal = normalize(transpose(mat3(uConeRotateInvMatrix)) * n);
+		//hitEmission = vec3(0);
+		hitColor = vec3(1.0, 0.2, 0.0);
+		hitType = REFR;
+		hitObjectID = float(objectCount);
 	}
 	objectCount++;
 
 	// transform ray into Cone Param's object space
-	rObj.origin = vec3( uConeScaleInvMatrix * vec4(r.origin, 1.0) );
-	rObj.direction = vec3( uConeScaleInvMatrix * vec4(r.direction, 0.0) );
-	d = ConeParamIntersect(-1.0, 1.0, TWO_PI, rObj.origin, rObj.direction, n);
+	rObjOrigin = vec3( uConeScaleInvMatrix * vec4(rayOrigin, 1.0) );
+	rObjDirection = vec3( uConeScaleInvMatrix * vec4(rayDirection, 0.0) );
+	d = ConeParamIntersect(-1.0, 1.0, TWO_PI, rObjOrigin, rObjDirection, n);
 
 	if (d < t)
 	{
 		t = d;
-		intersec.normal = normalize(transpose(mat3(uConeScaleInvMatrix)) * n);
-		//intersec.emission = vec3(0);
-		intersec.color = vec3(1.0, 0.2, 0.0);
-		intersec.type = DIFF;
-		intersectedObjectID = float(objectCount);
+		hitNormal = normalize(transpose(mat3(uConeScaleInvMatrix)) * n);
+		//hitEmission = vec3(0);
+		hitColor = vec3(1.0, 0.2, 0.0);
+		hitType = DIFF;
+		hitObjectID = float(objectCount);
 	}
 	objectCount++;
 
 	// transform ray into Cone Param's object space
-	rObj.origin = vec3( uConeClipInvMatrix * vec4(r.origin, 1.0) );
-	rObj.direction = vec3( uConeClipInvMatrix * vec4(r.direction, 0.0) );
-	d = ConeParamIntersect(-1.0, 1.0, TWO_PI * angleAmount, rObj.origin, rObj.direction, n);
+	rObjOrigin = vec3( uConeClipInvMatrix * vec4(rayOrigin, 1.0) );
+	rObjDirection = vec3( uConeClipInvMatrix * vec4(rayDirection, 0.0) );
+	d = ConeParamIntersect(-1.0, 1.0, TWO_PI * angleAmount, rObjOrigin, rObjDirection, n);
 
 	if (d < t)
 	{
 		t = d;
-		intersec.normal = normalize(transpose(mat3(uConeClipInvMatrix)) * n);
-		//intersec.emission = vec3(0);
-		intersec.color = vec3(1.0, 0.2, 0.0);
-		intersec.type = COAT;
-		intersectedObjectID = float(objectCount);
+		hitNormal = normalize(transpose(mat3(uConeClipInvMatrix)) * n);
+		//hitEmission = vec3(0);
+		hitColor = vec3(1.0, 0.2, 0.0);
+		hitType = COAT;
+		hitObjectID = float(objectCount);
 	}
 	objectCount++;
 
 	// transform ray into Paraboloid Param's object space
-	rObj.origin = vec3( uParaboloidTranslateInvMatrix * vec4(r.origin, 1.0) );
-	rObj.direction = vec3( uParaboloidTranslateInvMatrix * vec4(r.direction, 0.0) );
-	d = ParaboloidParamIntersect(-1.0, 1.0, TWO_PI, rObj.origin, rObj.direction, n);
+	rObjOrigin = vec3( uParaboloidTranslateInvMatrix * vec4(rayOrigin, 1.0) );
+	rObjDirection = vec3( uParaboloidTranslateInvMatrix * vec4(rayDirection, 0.0) );
+	d = ParaboloidParamIntersect(-1.0, 1.0, TWO_PI, rObjOrigin, rObjDirection, n);
 
 	if (d < t)
 	{
 		t = d;
-		intersec.normal = normalize(transpose(mat3(uParaboloidTranslateInvMatrix)) * n);
-		//intersec.emission = vec3(0);
-		intersec.color = vec3(1.0, 0.0, 1.0);
-		intersec.type = SPEC;
-		intersectedObjectID = float(objectCount);
+		hitNormal = normalize(transpose(mat3(uParaboloidTranslateInvMatrix)) * n);
+		//hitEmission = vec3(0);
+		hitColor = vec3(1.0, 0.0, 1.0);
+		hitType = SPEC;
+		hitObjectID = float(objectCount);
 	}
 	objectCount++;
 
 	// transform ray into Paraboloid Param's object space
-	rObj.origin = vec3( uParaboloidRotateInvMatrix * vec4(r.origin, 1.0) );
-	rObj.direction = vec3( uParaboloidRotateInvMatrix * vec4(r.direction, 0.0) );
-	d = ParaboloidParamIntersect(-1.0, 1.0, TWO_PI, rObj.origin, rObj.direction, n);
+	rObjOrigin = vec3( uParaboloidRotateInvMatrix * vec4(rayOrigin, 1.0) );
+	rObjDirection = vec3( uParaboloidRotateInvMatrix * vec4(rayDirection, 0.0) );
+	d = ParaboloidParamIntersect(-1.0, 1.0, TWO_PI, rObjOrigin, rObjDirection, n);
 
 	if (d < t)
 	{
 		t = d;
-		intersec.normal = normalize(transpose(mat3(uParaboloidRotateInvMatrix)) * n);
-		//intersec.emission = vec3(0);
-		intersec.color = vec3(1.0, 0.0, 1.0);
-		intersec.type = REFR;
-		intersectedObjectID = float(objectCount);
+		hitNormal = normalize(transpose(mat3(uParaboloidRotateInvMatrix)) * n);
+		//hitEmission = vec3(0);
+		hitColor = vec3(1.0, 0.0, 1.0);
+		hitType = REFR;
+		hitObjectID = float(objectCount);
 	}
 	objectCount++;
 
 	// transform ray into Paraboloid Param's object space
-	rObj.origin = vec3( uParaboloidScaleInvMatrix * vec4(r.origin, 1.0) );
-	rObj.direction = vec3( uParaboloidScaleInvMatrix * vec4(r.direction, 0.0) );
-	d = ParaboloidParamIntersect(-1.0, 1.0, TWO_PI, rObj.origin, rObj.direction, n);
+	rObjOrigin = vec3( uParaboloidScaleInvMatrix * vec4(rayOrigin, 1.0) );
+	rObjDirection = vec3( uParaboloidScaleInvMatrix * vec4(rayDirection, 0.0) );
+	d = ParaboloidParamIntersect(-1.0, 1.0, TWO_PI, rObjOrigin, rObjDirection, n);
 
 	if (d < t)
 	{
 		t = d;
-		intersec.normal = normalize(transpose(mat3(uParaboloidScaleInvMatrix)) * n);
-		//intersec.emission = vec3(0);
-		intersec.color = vec3(1.0, 0.0, 1.0);
-		intersec.type = DIFF;
-		intersectedObjectID = float(objectCount);
+		hitNormal = normalize(transpose(mat3(uParaboloidScaleInvMatrix)) * n);
+		//hitEmission = vec3(0);
+		hitColor = vec3(1.0, 0.0, 1.0);
+		hitType = DIFF;
+		hitObjectID = float(objectCount);
 	}
 	objectCount++;
 
 	// transform ray into Paraboloid Param's object space
-	rObj.origin = vec3( uParaboloidClipInvMatrix * vec4(r.origin, 1.0) );
-	rObj.direction = vec3( uParaboloidClipInvMatrix * vec4(r.direction, 0.0) );
-	d = ParaboloidParamIntersect(-angleAmount, 1.0 - angleAmount, TWO_PI, rObj.origin, rObj.direction, n);
+	rObjOrigin = vec3( uParaboloidClipInvMatrix * vec4(rayOrigin, 1.0) );
+	rObjDirection = vec3( uParaboloidClipInvMatrix * vec4(rayDirection, 0.0) );
+	d = ParaboloidParamIntersect(-angleAmount, 1.0 - angleAmount, TWO_PI, rObjOrigin, rObjDirection, n);
 
 	if (d < t)
 	{
 		t = d;
-		intersec.normal = normalize(transpose(mat3(uParaboloidClipInvMatrix)) * n);
-		//intersec.emission = vec3(0);
-		intersec.color = vec3(1.0, 0.0, 1.0);
-		intersec.type = COAT;
-		intersectedObjectID = float(objectCount);
+		hitNormal = normalize(transpose(mat3(uParaboloidClipInvMatrix)) * n);
+		//hitEmission = vec3(0);
+		hitColor = vec3(1.0, 0.0, 1.0);
+		hitType = COAT;
+		hitObjectID = float(objectCount);
 	}
 	objectCount++;
 
 	// transform ray into Hyperboloid Param's object space
-	rObj.origin = vec3( uHyperboloidTranslateInvMatrix * vec4(r.origin, 1.0) );
-	rObj.direction = vec3( uHyperboloidTranslateInvMatrix * vec4(r.direction, 0.0) );
-	d = HyperboloidParamIntersect(8.0, -1.0, 1.0, TWO_PI, rObj.origin, rObj.direction, n);
+	rObjOrigin = vec3( uHyperboloidTranslateInvMatrix * vec4(rayOrigin, 1.0) );
+	rObjDirection = vec3( uHyperboloidTranslateInvMatrix * vec4(rayDirection, 0.0) );
+	d = HyperboloidParamIntersect(8.0, -1.0, 1.0, TWO_PI, rObjOrigin, rObjDirection, n);
 
 	if (d < t)
 	{
 		t = d;
-		intersec.normal = normalize(transpose(mat3(uHyperboloidTranslateInvMatrix)) * n);
-		//intersec.emission = vec3(0);
-		intersec.color = vec3(1.0, 1.0, 0.0);
-		intersec.type = SPEC;
-		intersectedObjectID = float(objectCount);
+		hitNormal = normalize(transpose(mat3(uHyperboloidTranslateInvMatrix)) * n);
+		//hitEmission = vec3(0);
+		hitColor = vec3(1.0, 1.0, 0.0);
+		hitType = SPEC;
+		hitObjectID = float(objectCount);
 	}
 	objectCount++;
 
 	// transform ray into Hyperboloid Param's object space
-	rObj.origin = vec3( uHyperboloidRotateInvMatrix * vec4(r.origin, 1.0) );
-	rObj.direction = vec3( uHyperboloidRotateInvMatrix * vec4(r.direction, 0.0) );
-	d = HyperboloidParamIntersect(8.0, -1.0, 1.0, TWO_PI, rObj.origin, rObj.direction, n);
+	rObjOrigin = vec3( uHyperboloidRotateInvMatrix * vec4(rayOrigin, 1.0) );
+	rObjDirection = vec3( uHyperboloidRotateInvMatrix * vec4(rayDirection, 0.0) );
+	d = HyperboloidParamIntersect(8.0, -1.0, 1.0, TWO_PI, rObjOrigin, rObjDirection, n);
 
 	if (d < t)
 	{
 		t = d;
-		intersec.normal = normalize(transpose(mat3(uHyperboloidRotateInvMatrix)) * n);
-		//intersec.emission = vec3(0);
-		intersec.color = vec3(1.0, 1.0, 0.0);
-		intersec.type = REFR;
-		intersectedObjectID = float(objectCount);
+		hitNormal = normalize(transpose(mat3(uHyperboloidRotateInvMatrix)) * n);
+		//hitEmission = vec3(0);
+		hitColor = vec3(1.0, 1.0, 0.0);
+		hitType = REFR;
+		hitObjectID = float(objectCount);
 	}
 	objectCount++;
 
 	// transform ray into Hyperboloid Param's object space
-	rObj.origin = vec3( uHyperboloidScaleInvMatrix * vec4(r.origin, 1.0) );
-	rObj.direction = vec3( uHyperboloidScaleInvMatrix * vec4(r.direction, 0.0) );
-	d = HyperboloidParamIntersect(8.0, -1.0, 1.0, TWO_PI, rObj.origin, rObj.direction, n);
+	rObjOrigin = vec3( uHyperboloidScaleInvMatrix * vec4(rayOrigin, 1.0) );
+	rObjDirection = vec3( uHyperboloidScaleInvMatrix * vec4(rayDirection, 0.0) );
+	d = HyperboloidParamIntersect(8.0, -1.0, 1.0, TWO_PI, rObjOrigin, rObjDirection, n);
 
 	if (d < t)
 	{
 		t = d;
-		intersec.normal = normalize(transpose(mat3(uHyperboloidScaleInvMatrix)) * n);
-		//intersec.emission = vec3(0);
-		intersec.color = vec3(1.0, 1.0, 0.0);
-		intersec.type = DIFF;
-		intersectedObjectID = float(objectCount);
+		hitNormal = normalize(transpose(mat3(uHyperboloidScaleInvMatrix)) * n);
+		//hitEmission = vec3(0);
+		hitColor = vec3(1.0, 1.0, 0.0);
+		hitType = DIFF;
+		hitObjectID = float(objectCount);
 	}
 	objectCount++;
 
 	// transform ray into Hyperboloid Param's object space
-	rObj.origin = vec3( uHyperboloidClipInvMatrix * vec4(r.origin, 1.0) );
-	rObj.direction = vec3( uHyperboloidClipInvMatrix * vec4(r.direction, 0.0) );
-	d = HyperboloidParamIntersect(floor(mix(-40.0, 40.0, angleAmount)) - 0.5, -1.0, 1.0, TWO_PI, rObj.origin, rObj.direction, n);
+	rObjOrigin = vec3( uHyperboloidClipInvMatrix * vec4(rayOrigin, 1.0) );
+	rObjDirection = vec3( uHyperboloidClipInvMatrix * vec4(rayDirection, 0.0) );
+	d = HyperboloidParamIntersect(floor(mix(-40.0, 40.0, angleAmount)) - 0.5, -1.0, 1.0, TWO_PI, rObjOrigin, rObjDirection, n);
 
 	if (d < t)
 	{
 		t = d;
-		intersec.normal = normalize(transpose(mat3(uHyperboloidClipInvMatrix)) * n);
-		//intersec.emission = vec3(0);
-		intersec.color = vec3(1.0, 1.0, 0.0);
-		intersec.type = COAT;
-		intersectedObjectID = float(objectCount);
+		hitNormal = normalize(transpose(mat3(uHyperboloidClipInvMatrix)) * n);
+		//hitEmission = vec3(0);
+		hitColor = vec3(1.0, 1.0, 0.0);
+		hitType = COAT;
+		hitObjectID = float(objectCount);
 	}
 	objectCount++;
 
 	// transform ray into HyperbolicParaboloid Param's object space
-	rObj.origin = vec3( uHyperbolicParaboloidTranslateInvMatrix * vec4(r.origin, 1.0) );
-	rObj.direction = vec3( uHyperbolicParaboloidTranslateInvMatrix * vec4(r.direction, 0.0) );
-	d = HyperbolicParaboloidParamIntersect(-1.0, 1.0, TWO_PI, rObj.origin, rObj.direction, n);
+	rObjOrigin = vec3( uHyperbolicParaboloidTranslateInvMatrix * vec4(rayOrigin, 1.0) );
+	rObjDirection = vec3( uHyperbolicParaboloidTranslateInvMatrix * vec4(rayDirection, 0.0) );
+	d = HyperbolicParaboloidParamIntersect(-1.0, 1.0, TWO_PI, rObjOrigin, rObjDirection, n);
 
 	if (d < t)
 	{
 		t = d;
-		intersec.normal = normalize(transpose(mat3(uHyperbolicParaboloidTranslateInvMatrix)) * n);
-		//intersec.emission = vec3(0);
-		intersec.color = vec3(0.0, 1.0, 0.0);
-		intersec.type = SPEC;
-		intersectedObjectID = float(objectCount);
+		hitNormal = normalize(transpose(mat3(uHyperbolicParaboloidTranslateInvMatrix)) * n);
+		//hitEmission = vec3(0);
+		hitColor = vec3(0.0, 1.0, 0.0);
+		hitType = SPEC;
+		hitObjectID = float(objectCount);
 	}
 	objectCount++;
 
 	// transform ray into HyperbolicParaboloid Param's object space
-	rObj.origin = vec3( uHyperbolicParaboloidRotateInvMatrix * vec4(r.origin, 1.0) );
-	rObj.direction = vec3( uHyperbolicParaboloidRotateInvMatrix * vec4(r.direction, 0.0) );
-	d = HyperbolicParaboloidParamIntersect(-1.0, 1.0, TWO_PI, rObj.origin, rObj.direction, n);
+	rObjOrigin = vec3( uHyperbolicParaboloidRotateInvMatrix * vec4(rayOrigin, 1.0) );
+	rObjDirection = vec3( uHyperbolicParaboloidRotateInvMatrix * vec4(rayDirection, 0.0) );
+	d = HyperbolicParaboloidParamIntersect(-1.0, 1.0, TWO_PI, rObjOrigin, rObjDirection, n);
 
 	if (d < t)
 	{
 		t = d;
-		intersec.normal = normalize(transpose(mat3(uHyperbolicParaboloidRotateInvMatrix)) * n);
-		//intersec.emission = vec3(0);
-		intersec.color = vec3(0.0, 1.0, 0.0);
-		intersec.type = REFR;
-		intersectedObjectID = float(objectCount);
+		hitNormal = normalize(transpose(mat3(uHyperbolicParaboloidRotateInvMatrix)) * n);
+		//hitEmission = vec3(0);
+		hitColor = vec3(0.0, 1.0, 0.0);
+		hitType = REFR;
+		hitObjectID = float(objectCount);
 	}
 	objectCount++;
 
 	// transform ray into HyperbolicParaboloid Param's object space
-	rObj.origin = vec3( uHyperbolicParaboloidScaleInvMatrix * vec4(r.origin, 1.0) );
-	rObj.direction = vec3( uHyperbolicParaboloidScaleInvMatrix * vec4(r.direction, 0.0) );
-	d = HyperbolicParaboloidParamIntersect(-1.0, 1.0, TWO_PI, rObj.origin, rObj.direction, n);
+	rObjOrigin = vec3( uHyperbolicParaboloidScaleInvMatrix * vec4(rayOrigin, 1.0) );
+	rObjDirection = vec3( uHyperbolicParaboloidScaleInvMatrix * vec4(rayDirection, 0.0) );
+	d = HyperbolicParaboloidParamIntersect(-1.0, 1.0, TWO_PI, rObjOrigin, rObjDirection, n);
 
 	if (d < t)
 	{
 		t = d;
-		intersec.normal = normalize(transpose(mat3(uHyperbolicParaboloidScaleInvMatrix)) * n);
-		//intersec.emission = vec3(0);
-		intersec.color = vec3(0.0, 1.0, 0.0);
-		intersec.type = DIFF;
-		intersectedObjectID = float(objectCount);
+		hitNormal = normalize(transpose(mat3(uHyperbolicParaboloidScaleInvMatrix)) * n);
+		//hitEmission = vec3(0);
+		hitColor = vec3(0.0, 1.0, 0.0);
+		hitType = DIFF;
+		hitObjectID = float(objectCount);
 	}
 	objectCount++;
 
 	// transform ray into HyperbolicParaboloid Param's object space
-	rObj.origin = vec3( uHyperbolicParaboloidClipInvMatrix * vec4(r.origin, 1.0) );
-	rObj.direction = vec3( uHyperbolicParaboloidClipInvMatrix * vec4(r.direction, 0.0) );
-	d = HyperbolicParaboloidParamIntersect(-1.0, (1.0 - angleAmount) * 1.9 + 0.1, TWO_PI * (1.0 - angleAmount) + 0.1, rObj.origin, rObj.direction, n);
+	rObjOrigin = vec3( uHyperbolicParaboloidClipInvMatrix * vec4(rayOrigin, 1.0) );
+	rObjDirection = vec3( uHyperbolicParaboloidClipInvMatrix * vec4(rayDirection, 0.0) );
+	d = HyperbolicParaboloidParamIntersect(-1.0, (1.0 - angleAmount) * 1.9 + 0.1, TWO_PI * (1.0 - angleAmount) + 0.1, rObjOrigin, rObjDirection, n);
 
 	if (d < t)
 	{
 		t = d;
-		intersec.normal = normalize(transpose(mat3(uHyperbolicParaboloidClipInvMatrix)) * n);
-		//intersec.emission = vec3(0);
-		intersec.color = vec3(0.0, 1.0, 0.0);
-		intersec.type = COAT;
-		intersectedObjectID = float(objectCount);
+		hitNormal = normalize(transpose(mat3(uHyperbolicParaboloidClipInvMatrix)) * n);
+		//hitEmission = vec3(0);
+		hitColor = vec3(0.0, 1.0, 0.0);
+		hitType = COAT;
+		hitObjectID = float(objectCount);
 	}
 	
         
 	return t;
 	
-} // end float SceneIntersect( Ray r, inout Intersection intersec )
+} // end float SceneIntersect()
 
 
 //-----------------------------------------------------------------------------------------------------------------------------
-vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
+vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
 //-----------------------------------------------------------------------------------------------------------------------------
 {
-	Intersection intersec;
 	Sphere lightChoice;
 
 	vec3 accumCol = vec3(0);
@@ -503,7 +508,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 	float P, RP, TP;
 	float weight;
 	float thickness = 0.1;
-	float intersectedObjectID;
+	float hitObjectID;
 
 	int diffuseCount = 0;
 
@@ -518,7 +523,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 	for (int bounces = 0; bounces < 6; bounces++)
 	{
 
-		t = SceneIntersect(r, intersec, intersectedObjectID);
+		t = SceneIntersect();
 		
 		/*
 		//not used in this scene because we are inside a huge sphere - no rays can escape
@@ -529,94 +534,95 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		*/
 
 		// useful data 
-		n = normalize(intersec.normal);
-                nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
-		x = r.origin + r.direction * t;
+		n = normalize(hitNormal);
+                nl = dot(n, rayDirection) < 0.0 ? normalize(n) : normalize(-n);
+		x = rayOrigin + rayDirection * t;
 
 		if (bounces == 0)
 		{
-			objectID = intersectedObjectID;
+			objectID = hitObjectID;
 			objectNormal = nl;
-			objectColor = intersec.color;
+			objectColor = hitColor;
 		}
 		
 			
 		
-		if (intersec.type == LIGHT)
+		if (hitType == LIGHT)
 		{	
 			if (diffuseCount == 0)
 				pixelSharpness = 1.01;
 			else pixelSharpness = 0.0;
 			
 			if (bounceIsSpecular || sampleLight)
-				accumCol = mask * intersec.emission;
+				accumCol = mask * hitEmission;
 			// reached a light, so we can exit
 			break;
-		} // end if (intersec.type == LIGHT)
+		} // end if (hitType == LIGHT)
 
 
-		if (sampleLight && intersec.type != REFR) // (!= REFR) related to caustic trick below :)	
+		if (sampleLight && hitType != REFR) // (!= REFR) related to caustic trick below :)	
 		{
 			break;	
 		}
 
 
 		    
-                if (intersec.type == DIFF || intersec.type == CHECK) // Ideal DIFFUSE reflection
+                if (hitType == DIFF || hitType == CHECK) // Ideal DIFFUSE reflection
 		{
-			if( intersec.type == CHECK )
+			if( hitType == CHECK )
 			{
 				float q = clamp( mod( dot( floor(x.xz * 0.04), vec2(1.0) ), 2.0 ) , 0.0, 1.0 );
-				intersec.color = checkCol0 * q + checkCol1 * (1.0 - q);	
+				hitColor = checkCol0 * q + checkCol1 * (1.0 - q);	
 			}
 			
 			if (diffuseCount == 0 && !coatTypeIntersected)	
-				objectColor = intersec.color;
+				objectColor = hitColor;
 
 			diffuseCount++;
 
-			mask *= intersec.color;
+			mask *= hitColor;
 
 			bounceIsSpecular = false;
 
 			if (diffuseCount == 1 && rand() < 0.3)
 			{
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
-				r.origin += nl * uEPS_intersect;
+				// choose random Diffuse sample vector
+				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
+				rayOrigin = x + nl * uEPS_intersect;
 				continue;
 			}
 
 			dirToLight = sampleSphereLight(x, nl, lightChoice, weight);
 			mask *= weight * N_LIGHTS;
 
-			r = Ray( x, dirToLight );
-			r.origin += nl * uEPS_intersect;
+			rayDirection = dirToLight;
+			rayOrigin = x + nl * uEPS_intersect;
 
 			sampleLight = true;
 			continue;
                         
-		} // end if (intersec.type == DIFF)
+		} // end if (hitType == DIFF)
 		
-		if (intersec.type == SPEC)  // Ideal SPECULAR reflection
+		if (hitType == SPEC)  // Ideal SPECULAR reflection
 		{
-			mask *= intersec.color;
+			mask *= hitColor;
 
-			r = Ray( x, reflect(r.direction, nl) );
-			r.origin += nl * uEPS_intersect;
+			rayDirection = reflect(rayDirection, nl);
+			rayOrigin = x + nl * uEPS_intersect;
 
 			//if (diffuseCount == 1)
 			//	bounceIsSpecular = true; // turn on reflective mirror caustics
 			continue;
 		}
 		
-		if (intersec.type == REFR)  // Ideal dielectric REFRACTION
+		if (hitType == REFR)  // Ideal dielectric REFRACTION
 		{
 			if (bounces == 0)
 				pixelSharpness = -1.0;
 
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
-			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
+			Re = calcFresnelReflectance(rayDirection, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 			P  = 0.25 + (0.5 * Re);
                 	RP = Re / P;
@@ -625,8 +631,8 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			if (rand() < P)
 			{
 				mask *= RP;
-				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
-				r.origin += nl * uEPS_intersect;
+				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
+				rayOrigin = x + nl * uEPS_intersect;
 				continue;
 			}
 
@@ -637,16 +643,16 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			if (isRayExiting)
 			{
 				isRayExiting = false;
-				mask *= exp(log(intersec.color) * thickness * t);
+				mask *= exp(log(hitColor) * thickness * t);
 			}
 			else 
-				mask *= intersec.color;
+				mask *= hitColor;
 
 			mask *= TP;
 			
-			tdir = refract(r.direction, nl, ratioIoR);
-			r = Ray(x, tdir);
-			r.origin -= nl * uEPS_intersect;
+			tdir = refract(rayDirection, nl, ratioIoR);
+			rayDirection = tdir;
+			rayOrigin = x - nl * uEPS_intersect;
 
 			// if (diffuseCount == 1)
 			// 	bounceIsSpecular = true; // turn on refracting caustics
@@ -657,15 +663,15 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 
 			continue;
 			
-		} // end if (intersec.type == REFR)
+		} // end if (hitType == REFR)
 		
-		if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top
+		if (hitType == COAT)  // Diffuse object underneath with ClearCoat on top
 		{
 			coatTypeIntersected = true;
 
 			nc = 1.0; // IOR of Air
 			nt = 1.4; // IOR of Clear Coat
-			Re = calcFresnelReflectance(r.direction, nl, nc, nt, ratioIoR);
+			Re = calcFresnelReflectance(rayDirection, nl, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 			P  = 0.25 + (0.5 * Re);
                 	RP = Re / P;
@@ -674,23 +680,23 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			if (rand() < P)
 			{
 				mask *= RP;
-				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
-				r.origin += nl * uEPS_intersect;
+				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
+				rayOrigin = x + nl * uEPS_intersect;
 				continue;
 			}
 
 			diffuseCount++;
 
 			mask *= TP;
-			mask *= intersec.color;
+			mask *= hitColor;
 
 			bounceIsSpecular = false;
 
 			if (diffuseCount == 1 && rand() < 0.2)
 			{
 				// choose random Diffuse sample vector
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
-				r.origin += nl * uEPS_intersect;
+				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
+				rayOrigin = x + nl * uEPS_intersect;
 				continue;
 			}
 			
@@ -698,13 +704,13 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			
 			mask *= weight * N_LIGHTS;
 
-			r = Ray( x, dirToLight );
-			r.origin += nl * uEPS_intersect;
+			rayDirection = dirToLight;
+			rayOrigin = x + nl * uEPS_intersect;
 
 			sampleLight = true;
 			continue;
 			
-		} //end if (intersec.type == COAT)
+		} //end if (hitType == COAT)
 
 		
 	} // end for (int bounces = 0; bounces < 6; bounces++)
@@ -712,7 +718,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 	
 	return max(vec3(0), accumCol);
 
-} // end vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
+} // end vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
 
 
 
@@ -778,7 +784,8 @@ void main( void )
         // point on aperture to focal point
         vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
         
-        Ray ray = Ray( cameraPosition + randomAperturePos, finalRayDir );
+        rayOrigin = cameraPosition + randomAperturePos; 
+	rayDirection = finalRayDir;
 
         SetupScene(); 
 
@@ -789,7 +796,7 @@ void main( void )
 	float pixelSharpness = 0.0;
 	
 	// perform path tracing and get resulting pixel color
-	vec4 currentPixel = vec4( vec3(CalculateRadiance(ray, objectNormal, objectColor, objectID, pixelSharpness)), 0.0 );
+	vec4 currentPixel = vec4( vec3(CalculateRadiance(objectNormal, objectColor, objectID, pixelSharpness)), 0.0 );
 
 	// if difference between normals of neighboring pixels is less than the first edge0 threshold, the white edge line effect is considered off (0.0)
 	float edge0 = 0.2; // edge0 is the minimum difference required between normals of neighboring pixels to start becoming a white edge line
