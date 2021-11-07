@@ -131,17 +131,17 @@ float DiskIntersect( float radius, vec3 pos, vec3 normal, vec3 rayOrigin, vec3 r
 `;
 
 THREE.ShaderChunk[ 'pathtracing_rectangle_intersect' ] = `
-//------------------------------------------------------------------------------------
-float RectangleIntersect( vec3 pos, vec3 normal, float radiusU, float radiusV, Ray r )
-//------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------------------------------
+float RectangleIntersect( vec3 pos, vec3 normal, float radiusU, float radiusV, vec3 rayOrigin, vec3 rayDirection )
+//----------------------------------------------------------------------------------------------------------------
 {
-	float dt = dot(-normal, r.direction);
+	float dt = dot(-normal, rayDirection);
 	// use the following for one-sided rectangle
 	if (dt < 0.0) return INFINITY;
-	float t = dot(-normal, pos - r.origin) / dt;
+	float t = dot(-normal, pos - rayOrigin) / dt;
 	if (t < 0.0) return INFINITY;
 	
-	vec3 hit = r.origin + r.direction * t;
+	vec3 hit = rayOrigin + rayDirection * t;
 	vec3 vi = hit - pos;
 	// from "Building an Orthonormal Basis, Revisited" http://jcgt.org/published/0006/01/01/
 	// float signf = normal.z >= 0.0 ? 1.0 : -1.0;
@@ -156,14 +156,14 @@ float RectangleIntersect( vec3 pos, vec3 normal, float radiusU, float radiusV, R
 `;
 
 THREE.ShaderChunk[ 'pathtracing_slab_intersect' ] = `
-//--------------------------------------------------------------------------------------
-float SlabIntersect( float radius, vec3 normal, Ray r, out vec3 n )
-//--------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------
+float SlabIntersect( float radius, vec3 normal, vec3 rayOrigin, vec3 rayDirection, out vec3 n )
+//---------------------------------------------------------------------------------------------
 {
-	n = dot(normal, r.direction) < 0.0 ? normal : -normal;
-	float rad = dot(r.origin, n) > radius ? radius : -radius; 
-	float denom = dot(n, r.direction);
-	vec3 pOrO = (rad * n) - r.origin; 
+	n = dot(normal, rayDirection) < 0.0 ? normal : -normal;
+	float rad = dot(rayOrigin, n) > radius ? radius : -radius; 
+	float denom = dot(n, rayDirection);
+	vec3 pOrO = (rad * n) - rayOrigin; 
 	float t = dot(pOrO, n) / denom;
 	return t > 0.0 ? t : INFINITY;
 }
@@ -1711,18 +1711,18 @@ float OpenCylinderIntersect( vec3 p0, vec3 p1, float rad, vec3 rayOrigin, vec3 r
 `;
 
 THREE.ShaderChunk[ 'pathtracing_cappedcylinder_intersect' ] = `
-//-----------------------------------------------------------------------------
-float CappedCylinderIntersect( vec3 p0, vec3 p1, float rad, Ray r, out vec3 n )
-//-----------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------
+float CappedCylinderIntersect( vec3 p0, vec3 p1, float rad, vec3 rayOrigin, vec3 rayDirection, out vec3 n )
+//---------------------------------------------------------------------------------------------------------
 {
 	float r2=rad*rad;
 	
 	vec3 dp=p1-p0;
 	vec3 dpt=dp/dot(dp,dp);
 	
-	vec3 ao=r.origin-p0;
+	vec3 ao=rayOrigin-p0;
 	vec3 aoxab=cross(ao,dpt);
-	vec3 vxab=cross(r.direction,dpt);
+	vec3 vxab=cross(rayDirection,dpt);
 	float ab2=dot(dpt,dpt);
 	float a=2.0*dot(vxab,vxab);
 	float ra=1.0/a;
@@ -1747,12 +1747,12 @@ float CappedCylinderIntersect( vec3 p0, vec3 p1, float rad, Ray r, out vec3 n )
 	// Cylinder caps
 	// disk0
 	vec3 diskNormal = normalize(dp);
-	float denom = dot(diskNormal, r.direction);
-	vec3 pOrO = p0 - r.origin;
+	float denom = dot(diskNormal, rayDirection);
+	vec3 pOrO = p0 - rayOrigin;
 	float tDisk0 = dot(pOrO, diskNormal) / denom;
 	if (tDisk0 > 0.0)
 	{
-		vec3 intersectPos = r.origin + r.direction * tDisk0;
+		vec3 intersectPos = rayOrigin + rayDirection * tDisk0;
 		vec3 v = intersectPos - p0;
 		float d2 = dot(v,v);
 		if (d2 <= r2)
@@ -1763,12 +1763,12 @@ float CappedCylinderIntersect( vec3 p0, vec3 p1, float rad, Ray r, out vec3 n )
 	}
 	
 	// disk1
-	denom = dot(diskNormal, r.direction);
-	pOrO = p1 - r.origin;
+	denom = dot(diskNormal, rayDirection);
+	pOrO = p1 - rayOrigin;
 	float tDisk1 = dot(pOrO, diskNormal) / denom;
 	if (tDisk1 > 0.0)
 	{
-		vec3 intersectPos = r.origin + r.direction * tDisk1;
+		vec3 intersectPos = rayOrigin + rayDirection * tDisk1;
 		vec3 v = intersectPos - p1;
 		float d2 = dot(v,v);
 		if (d2 <= r2 && tDisk1 < result)
@@ -1781,7 +1781,7 @@ float CappedCylinderIntersect( vec3 p0, vec3 p1, float rad, Ray r, out vec3 n )
 	// Cylinder body
 	if (t1 > 0.0)
 	{
-		ip=r.origin+r.direction*t1;
+		ip=rayOrigin+rayDirection*t1;
 		lp=ip-p0;
 		ct=dot(lp,dpt);
 		if(ct>0.0 && ct<1.0 && t1<result)
@@ -1793,7 +1793,7 @@ float CappedCylinderIntersect( vec3 p0, vec3 p1, float rad, Ray r, out vec3 n )
 	
 	if (t0 > 0.0)
 	{
-		ip=r.origin+r.direction*t0;
+		ip=rayOrigin+rayDirection*t0;
 		lp=ip-p0;
 		ct=dot(lp,dpt);
 		if(ct>0.0 && ct<1.0 && t0<result)
@@ -1900,9 +1900,9 @@ float ConeIntersect( vec3 p0, float r0, vec3 p1, float r1, vec3 rayOrigin, vec3 
 
 
 THREE.ShaderChunk[ 'pathtracing_capsule_intersect' ] = `
-//-------------------------------------------------------------------------------
-float CapsuleIntersect( vec3 p0, float r0, vec3 p1, float r1, Ray r, out vec3 n )
-//-------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------------
+float CapsuleIntersect( vec3 p0, float r0, vec3 p1, float r1, vec3 rayOrigin, vec3 rayDirection, out vec3 n )
+//-----------------------------------------------------------------------------------------------------------
 {
 	/*
 	// used for ConeIntersect below, if different radius sphere end-caps are desired
@@ -1924,24 +1924,24 @@ float CapsuleIntersect( vec3 p0, float r0, vec3 p1, float r1, Ray r, out vec3 n 
 	float t1;
 	vec3 uv1;
 	vec3 n1;
-	//t1 = ConeIntersect(coneP0,cr0,coneP1,cr1,r,n1);
-	t1 = OpenCylinderIntersect(p0,p1,r0,r,n1);
+	//t1 = ConeIntersect(coneP0,cr0,coneP1,cr1,rayOrigin, rayDirection,n1);
+	t1 = OpenCylinderIntersect(p0,p1,r0,rayOrigin, rayDirection,n1);
 	if(t1<t0)
 	{
 		t0=t1;
 		n=n1;
 	}
-	t1 = SphereIntersect(r0,p0,r);
+	t1 = SphereIntersect(r0,p0,rayOrigin, rayDirection);
 	if(t1<t0)
 	{
 		t0=t1;
-		n=(r.origin + r.direction * t1) - p0;
+		n=(rayOrigin + rayDirection * t1) - p0;
 	}
-	t1 = SphereIntersect(r1,p1,r);
+	t1 = SphereIntersect(r1,p1,rayOrigin, rayDirection);
 	if(t1<t0)
 	{
 		t0=t1;
-		n=(r.origin + r.direction * t1) - p1;
+		n=(rayOrigin + rayDirection * t1) - p1;
 	}
 	    
 	return t0;
@@ -1949,12 +1949,12 @@ float CapsuleIntersect( vec3 p0, float r0, vec3 p1, float r1, Ray r, out vec3 n 
 `;
 
 THREE.ShaderChunk[ 'pathtracing_paraboloid_intersect' ] = `
-//------------------------------------------------------------------------------
-float ParaboloidIntersect( float rad, float height, vec3 pos, Ray r, out vec3 n )
-//------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------------
+float ParaboloidIntersect( float rad, float height, vec3 pos, vec3 rayOrigin, vec3 rayDirection, out vec3 n )
+//-----------------------------------------------------------------------------------------------------------
 {
-	vec3 rd = r.direction;
-	vec3 ro = r.origin - pos;
+	vec3 rd = rayDirection;
+	vec3 ro = rayOrigin - pos;
 	float k = height / (rad * rad);
 	
 	// quadratic equation coefficients
@@ -1993,12 +1993,12 @@ float ParaboloidIntersect( float rad, float height, vec3 pos, Ray r, out vec3 n 
 `;
 
 THREE.ShaderChunk[ 'pathtracing_hyperboloid_intersect' ] = `
-//-------------------------------------------------------------------------------
-float HyperboloidIntersect( float rad, float height, vec3 pos, Ray r, out vec3 n )
-//-------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------
+float HyperboloidIntersect( float rad, float height, vec3 pos, vec3 rayOrigin, vec3 rayDirection, out vec3 n )
+//------------------------------------------------------------------------------------------------------------
 {
-	vec3 rd = r.direction;
-	vec3 ro = r.origin - pos;
+	vec3 rd = rayDirection;
+	vec3 ro = rayOrigin - pos;
 	float k = height / (rad * rad);
 	
 	// quadratic equation coefficients
@@ -2037,12 +2037,12 @@ float HyperboloidIntersect( float rad, float height, vec3 pos, Ray r, out vec3 n
 `;
 
 THREE.ShaderChunk[ 'pathtracing_hyperbolic_paraboloid_intersect' ] = `
-//-----------------------------------------------------------------------------------------
-float HyperbolicParaboloidIntersect( float rad, float height, vec3 pos, Ray r, out vec3 n )
-//-----------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
+float HyperbolicParaboloidIntersect( float rad, float height, vec3 pos, vec3 rayOrigin, vec3 rayDirection, out vec3 n )
+//---------------------------------------------------------------------------------------------------------------------
 {
-	vec3 rd = r.direction;
-	vec3 ro = r.origin - pos;
+	vec3 rd = rayDirection;
+	vec3 ro = rayOrigin - pos;
 	float k = height / (rad * rad);
 	
 	// quadratic equation coefficients
@@ -2096,21 +2096,21 @@ vec3 calcNormal_Torus( in vec3 pos )
 /* 
 Thanks to koiava for the ray marching strategy! https://www.shadertoy.com/user/koiava 
 */
-float TorusIntersect( float rad0, float rad1, Ray r )
+float TorusIntersect( float rad0, float rad1, vec3 rayOrigin, vec3 rayDirection )
 {	
 	vec3 n;
-	float d = CappedCylinderIntersect( vec3(0,rad1,0), vec3(0,-rad1,0), rad0+rad1, r, n );
+	float d = CappedCylinderIntersect( vec3(0,rad1,0), vec3(0,-rad1,0), rad0+rad1, rayOrigin, rayDirection, n );
 	if (d == INFINITY)
 		return INFINITY;
 	
-	vec3 pos = r.origin;
+	vec3 pos = rayOrigin;
 	float t = 0.0;
 	float torusFar = d + (rad0 * 2.0) + (rad1 * 2.0);
 	for (int i = 0; i < 200; i++)
 	{
 		d = map_Torus(pos);
 		if (d < 0.001 || t > torusFar) break;
-		pos += r.direction * d;
+		pos += rayDirection * d;
 		t += d;
 	}
 	
@@ -2118,12 +2118,12 @@ float TorusIntersect( float rad0, float rad1, Ray r )
 }
 /*
 // borrowed from iq: https://www.shadertoy.com/view/4sBGDy
-//-----------------------------------------------------------------------
-float TorusIntersect( float rad0, float rad1, vec3 pos, Ray ray )
-//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
+float TorusIntersect( float rad0, float rad1, vec3 pos, vec3 rayOrigin, vec3 rayDirection )
+//-----------------------------------------------------------------------------------------
 {
-	vec3 rO = ray.origin - pos;
-	vec3 rD = ray.direction;
+	vec3 rO = rayOrigin - pos;
+	vec3 rD = rayDirection;
 	
 	float Ra2 = rad0*rad0;
 	float ra2 = rad1*rad1;
