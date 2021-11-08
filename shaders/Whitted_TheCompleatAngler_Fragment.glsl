@@ -6,16 +6,21 @@ precision highp sampler2D;
 
 uniform sampler2D tTileNormalMapTexture;
 
-#define N_SPHERES 2
+#define N_SPHERES 3
 #define N_RECTANGLES 1
 
 
 //-----------------------------------------------------------------------
 
-struct Ray { vec3 origin; vec3 direction; };
+vec3 rayOrigin, rayDirection;
+// recorded intersection data:
+vec3 hitNormal, hitEmission, hitColor;
+vec2 hitUV;
+float hitObjectID;
+int hitType;
+
 struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; int type; };
 struct Rectangle { vec3 position; vec3 normal; float radiusU; float radiusV; vec3 emission; vec3 color; int type; };
-struct Intersection { vec3 normal; vec3 emission; vec3 color; int type; };
 
 Sphere spheres[N_SPHERES];
 Rectangle rectangles[N_RECTANGLES];
@@ -55,7 +60,7 @@ vec3 perturbNormal(vec3 nl, vec2 normalScale, vec2 uv)
 
 
 //-----------------------------------------------------------------------
-float SceneIntersect( Ray r, inout Intersection intersec )
+float SceneIntersect()
 //-----------------------------------------------------------------------
 {
 	float d;
@@ -64,43 +69,39 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	
         for (int i = 0; i < N_SPHERES; i++)
         {
-		d = SphereIntersect( spheres[i].radius, spheres[i].position, r );
+		d = SphereIntersect( spheres[i].radius, spheres[i].position, rayOrigin, rayDirection );
 		if (d < t)
 		{
 			t = d;
-			intersec.normal = normalize((r.origin + r.direction * t) - spheres[i].position);
-			intersec.emission = spheres[i].emission;
-			intersec.color = spheres[i].color;
-			intersec.type = spheres[i].type;
+			hitNormal = normalize((rayOrigin + rayDirection * t) - spheres[i].position);
+			hitEmission = spheres[i].emission;
+			hitColor = spheres[i].color;
+			hitType = spheres[i].type;
 		}
         }
 	
-	d = RectangleIntersect( rectangles[0].position, rectangles[0].normal, rectangles[0].radiusU, rectangles[0].radiusV, r );
+	d = RectangleIntersect( rectangles[0].position, rectangles[0].normal, rectangles[0].radiusU, rectangles[0].radiusV, rayOrigin, rayDirection );
 	if (d < t)
 	{
                 t = d;
-                intersec.normal = normalize(rectangles[0].normal);
-                intersec.emission = rectangles[0].emission;
-                intersec.color = rectangles[0].color;
-                intersec.type = rectangles[0].type;
+                hitNormal = normalize(rectangles[0].normal);
+                hitEmission = rectangles[0].emission;
+                hitColor = rectangles[0].color;
+                hitType = rectangles[0].type;
 	}
         
 	return t;
 	
-} // end float SceneIntersect( Ray r, inout Intersection intersec )
+} // end float SceneIntersect()
 
 
 
 //-----------------------------------------------------------------------
-vec3 CalculateRadiance( Ray r )
+vec3 CalculateRadiance()
 //-----------------------------------------------------------------------
 {
-	Intersection intersec;
-        Ray firstRay;
-
 	vec3 accumCol = vec3(0);
 	vec3 mask = vec3(1);
-        vec3 firstMask = vec3(1);
 	vec3 checkCol0 = vec3(1,1,0) * 0.6;
         vec3 checkCol1 = vec3(1,0,0) * 0.6;
 	vec3 tdir;
@@ -111,244 +112,146 @@ vec3 CalculateRadiance( Ray r )
 
 	float t;
 	float nc, nt, ratioIoR, Re, Tr;
-	float firstRe;
+	float P, RP, TP;
 
         int previousIntersecType = -100;
 
         bool firstTypeWasREFR = false;
-	bool reflectionTime = false;
         bool sampleLight = false;
 	
 
         for (int bounces = 0; bounces < 8; bounces++)
 	{
 		
-		t = SceneIntersect(r, intersec);
+		float sun = max(0.0, dot(rayDirection, dirToLight));
+                vec3 skyColor = vec3(0.0, 0.11, 0.5) + (pow(sun, 50.0) * vec3(5));
+
+		t = SceneIntersect();
 		
 		if (t == INFINITY)
 		{
-                        float sun = max(0.0, dot(r.direction, dirToLight));
-                        vec3 skyColor = vec3(0.0, 0.11, 0.5) + (pow(sun, 40.0) * vec3(5));
-                        
 			if (bounces == 0)
                         {
-                                accumCol = skyColor;
+                                accumCol += mask * skyColor;
                                 break;
                         }
-                                
-                        if (firstTypeWasREFR)
-			{
-				if (!reflectionTime) 
-				{
-					if (previousIntersecType == REFR)
-					{
-						accumCol = mask * skyColor;
-					}
-					else if (previousIntersecType == SPEC)
-					{
-						accumCol = mask + (skyColor * 0.2);
-					}
-					else if (previousIntersecType == CHECK)
-					{
-						accumCol = mask;
-					}
-					
-					// start back at the refractive surface, but this time follow reflective branch
-					r = firstRay;
-					r.direction = normalize(r.direction);
-					mask = firstMask;
-					// set/reset variables
-					reflectionTime = true;
-					sampleLight = false;
-
-                                        previousIntersecType = REFR;
-					continue;
-				}
-                                else if (reflectionTime)
-				{
-					// add reflective result to the refractive result (if any)
-					if (previousIntersecType == REFR)
-						accumCol += mask * skyColor * firstRe;
-					else accumCol += mask * firstRe;
-				}
-			} // end if (firstTypeWasREFR)
-
 			else if (previousIntersecType == REFR)
-			{
-				accumCol = mask + (skyColor * 0.2);
-			}
+				accumCol += mask * skyColor * 0.51;
 			else if (previousIntersecType == SPEC)
-			{
-				accumCol = mask + (skyColor * 0.2);
-			}
-			else if (previousIntersecType == CHECK)
-			{
-				accumCol = mask;
-			}
+				accumCol += mask * skyColor * 0.2;
 
                         break;
 		}
 
                 
                 // if we got here and sampleLight is still true, the shadow rays failed to find a light source or sky,
-                // so make shadows on checkerboard or yellow sphere and continue/exit
+                // so make shadows on checkerboard or yellow sphere and exit
                 if (sampleLight)
                 {
 			if (previousIntersecType == CHECK)
 			{
-				if (intersec.type == REFR) // glass sphere, lighter shadow
-                                	mask *= 0.7;
-				else // yellow spec sphere, darker shadow
-					mask *= 0.3;
+				if (hitType == REFR) // glass sphere, lighter shadow
+                                	accumCol *= 0.8;
+				else if (hitType == SPEC) // yellow spec sphere, darker shadow
+					accumCol *= 0.5;
 			}
                         
-                        if (firstTypeWasREFR)
-			{
-				if (!reflectionTime)
-				{
-					accumCol = mask;
-
-					// start back at the refractive surface, but this time follow reflective branch
-					r = firstRay;
-					r.direction = normalize(r.direction);
-					mask = firstMask;
-					// set/reset variables
-					reflectionTime = true;
-					sampleLight = false;
-
-					previousIntersecType = REFR;
-					continue;
-				}
-				else if (reflectionTime)
-				{
-					accumCol += mask * firstRe;
-					break;
-				}
-				
-			}
-			else 
-				accumCol = mask;
+                        //accumCol = mask;
 
                         break;
                 }
 
-		if (intersec.type == REFR && previousIntersecType == SPEC)
-		{
-			float sun = max(0.0, dot(r.direction, dirToLight));
-                        vec3 skyColor = vec3(0.0, 0.11, 0.5) + (pow(sun, 40.0) * vec3(5));
 
-			if (firstTypeWasREFR)
-			{
-				if (!reflectionTime) 
-				{
-					accumCol = mask + (skyColor * 0.2);
-					
-					// start back at the refractive surface, but this time follow reflective branch
-					r = firstRay;
-					r.direction = normalize(r.direction);
-					mask = firstMask;
-					// set/reset variables
-					reflectionTime = true;
-					sampleLight = false;
-
-                                        previousIntersecType = REFR;
-					continue;
-				}
-				else if (reflectionTime)
-				{
-					accumCol += mask * firstRe;
-					break;
-				}
-			}
-			else
-			{
-				accumCol = mask + (skyColor * 0.2);
-				break;
-			}
-			
-		}
-		
-                
 		// useful data 
-		n = normalize(intersec.normal);
-                nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
-		x = r.origin + r.direction * t;
+		n = normalize(hitNormal);
+                nl = dot(n, rayDirection) < 0.0 ? normalize(n) : normalize(-n);
+		x = rayOrigin + rayDirection * t;
 
 		    
-                if (intersec.type == CHECK ) // Ideal DIFFUSE reflection
+                if (hitType == CHECK ) // Ideal DIFFUSE reflection
 		{
 			float q = clamp( mod( dot( floor(x.xz * 0.04), vec2(1.0) ), 2.0 ) , 0.0, 1.0 );
-			intersec.color = checkCol0 * q + checkCol1 * (1.0 - q);	
+			hitColor = checkCol0 * q + checkCol1 * (1.0 - q);	
 
 			if (previousIntersecType == SPEC)
-				mask += intersec.color * 0.3;     
-			else mask = intersec.color;// * max(0., dot(nl, dirToLight));
+				accumCol += hitColor * 0.3;
+			else if (previousIntersecType == REFR)
+				accumCol += hitColor * 0.8;
+			else accumCol += hitColor;
 
-                        r = Ray( x, normalize(dirToLight) ); // shadow ray
-			r.origin += nl * uEPS_intersect;
+                        rayDirection = normalize(dirToLight); // shadow ray
+			rayOrigin = x + nl * uEPS_intersect;
 
                         sampleLight = true;
 			previousIntersecType = CHECK;
                         continue;
 		}
 
-                if (intersec.type == SPEC)  // special case SPEC/DIFF/COAT material for this classic scene
+                if (hitType == SPEC)  // special case SPEC/DIFF/COAT material for this classic scene
 		{
                         sphereUV.x = atan(nl.z, nl.x) * ONE_OVER_TWO_PI + 0.5;
 			sphereUV.y = asin(clamp(nl.y, -1.0, 1.0)) * ONE_OVER_PI + 0.5;
                         sphereUV *= 2.0;
 
 			nl = perturbNormal(nl, vec2(-0.5, 0.5), sphereUV);
+			nl = normalize(nl);
 
                         // temporarily treat as diffuse, apply typical NdotL lighting 
-                        mask = intersec.color * max(0.15, dot(nl, dirToLight));
+                        accumCol += hitColor * max(0.05, dot(nl, dirToLight));
 
-                        nl = normalize(nl); // normalize() to avoid strange artifacts on certain mobile devices
-			r = Ray( x, reflect(r.direction, nl) ); // same as above
-			r.origin += nl * uEPS_intersect;
+			
+			rayDirection = reflect(rayDirection, nl);
+			rayOrigin = x + nl * uEPS_intersect;
 
-			//sampleLight = true;
 			previousIntersecType = SPEC;
                         continue;
 		}
 		
-		if (intersec.type == REFR)  // Ideal dielectric REFRACTION
+		if (hitType == REFR)  // Ideal dielectric REFRACTION
 		{
-			nc = 1.0; // IOR of Air
-			nt = 1.03; // IOR of this classic demo's Glass
-			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
-			Tr = 1.0 - Re;
-			
-                        if (bounces == 0)
-			{	
-				Re += 0.1;
+			if (previousIntersecType == SPEC)
+			{
+				accumCol += skyColor * 0.2;
+				break;
+			}
 
-				firstTypeWasREFR = true;
-				firstMask = mask;
-				firstRe = Re;
-				firstRay = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
-				firstRay.origin += nl * uEPS_intersect;
-				
-				mask *= Tr;
-				mask *= intersec.color;
+			previousIntersecType = REFR;
+
+			nc = 1.0; // IOR of Air
+			nt = hitColor == vec3(1) ? 1.001 : 1.01; // IOR of this classic demo's Glass
+			Re = calcFresnelReflectance(rayDirection, n, nc, nt, ratioIoR);
+                        Tr = 1.0 - Re;
+			P  = 0.25 + (0.5 * Re);
+                	RP = Re / P;
+                	TP = Tr / (1.0 - P);
+
+			if (rand() < P && hitColor != vec3(1))
+			{
+				//mask *= RP;
+				mask *= 0.4;
+				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
+				rayOrigin = x + nl * uEPS_intersect;
+				continue;
 			}
 
 			// transmit ray through surface
-			tdir = refract(r.direction, nl, ratioIoR);
-			r = Ray(x, normalize(tdir));
-			r.origin -= nl * uEPS_intersect;
-
-			previousIntersecType = REFR;
+			//mask *= hitColor;
+			mask *= TP;
+			
+			tdir = refract(rayDirection, nl, ratioIoR);
+			rayDirection = tdir;
+			rayOrigin = x - nl * uEPS_intersect;
+			
 			continue;
 			
-		} // end if (intersec.type == REFR)
+		} // end if (hitType == REFR)
 		
-	} // end for (int bounces = 0; bounces < 6; bounces++)
+	} // end for (int bounces = 0; bounces < 8; bounces++)
 	
 	
 	return max(vec3(0), accumCol);
 
-}
+} // end vec3 CalculateRadiance()
 
 
 //-----------------------------------------------------------------------
@@ -360,13 +263,14 @@ void SetupScene(void)
         vec3 yellowSpherePos = glassSpherePos + vec3(0,-19, 5);
 	//vec3 yellowSpherePos = glassSpherePos + vec3(50,-25, 70);
         float orbitRadius = 70.0;
-        spheres[0] = Sphere( 27.0, glassSpherePos, z, vec3(0.9), REFR);//glass sphere
-	spheres[1] = Sphere( 27.0, yellowSpherePos + vec3(-cos(mod(uTime * 1.1, TWO_PI)) * orbitRadius, 0, sin(mod(uTime * 1.1, TWO_PI)) * orbitRadius),
+        spheres[0] = Sphere( 28.0, glassSpherePos, z, vec3(1), REFR);//glass sphere
+	spheres[1] = Sphere( 26.5, glassSpherePos, z, vec3(0.95), REFR);//glass sphere
+	spheres[2] = Sphere( 27.0, yellowSpherePos + vec3(-cos(mod(uTime * 1.1, TWO_PI)) * orbitRadius, 0, sin(mod(uTime * 1.1, TWO_PI)) * orbitRadius),
                         z, vec3(1.0, 0.85, 0.0), SPEC);//yellow reflective sphere
 
 	//spheres[1] = Sphere( 27.0, yellowSpherePos, z, vec3(1.0, 0.8, 0.0), SPEC);//yellow reflective sphere
 	
-	rectangles[0] = Rectangle( vec3(100, 0, -100), vec3(0, 1, 0), 200.0, 400.0, z, vec3(1), CHECK);// Checkerboard Ground plane 
+	rectangles[0] = Rectangle( vec3(100, 0, -100), vec3(0, 1, 0), 400.0, 200.0, z, vec3(1), CHECK);// Checkerboard Ground plane 
 }
 
 //#include <pathtracing_main>
@@ -390,12 +294,12 @@ void main( void )
         // calculate unique seed for rng() function
 	seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord);
 
-	/* // initialize rand() variables
+	// initialize rand() variables
 	counter = -1.0; // will get incremented by 1 on each call to rand()
 	channel = 0; // the final selected color channel to use for rand() calc (range: 0 to 3, corresponds to R,G,B, or A)
 	randNumber = 0.0; // the final randomly-generated number (range: 0.0 to 1.0)
 	randVec4 = vec4(0); // samples and holds the RGBA blueNoise texture value for this pixel
-	randVec4 = texelFetch(tBlueNoiseTexture, ivec2(mod(gl_FragCoord.xy + floor(uRandomVec2 * 256.0), 256.0)), 0); */
+	randVec4 = texelFetch(tBlueNoiseTexture, ivec2(mod(gl_FragCoord.xy + floor(uRandomVec2 * 256.0), 256.0)), 0);
 	
 	vec2 pixelOffset = vec2( tentFilter(rng()), tentFilter(rng()) ) * 0.5;
 	// we must map pixelPos into the range -1.0 to +1.0
@@ -411,12 +315,13 @@ void main( void )
         // point on aperture to focal point
         vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
         
-        Ray ray = Ray( cameraPosition + randomAperturePos, finalRayDir );
+        rayOrigin = cameraPosition + randomAperturePos; 
+	rayDirection = finalRayDir;
 
         SetupScene(); 
 
         // perform path tracing and get resulting pixel color
-        vec3 pixelColor = CalculateRadiance(ray);
+        vec3 pixelColor = CalculateRadiance();
         
 	vec4 previousImage = texelFetch(tPreviousTexture, ivec2(gl_FragCoord.xy), 0);
 	vec3 previousColor = previousImage.rgb;
