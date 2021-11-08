@@ -143,15 +143,9 @@ float RectangleIntersect( vec3 pos, vec3 normal, float radiusU, float radiusV, v
 	
 	vec3 hit = rayOrigin + rayDirection * t;
 	vec3 vi = hit - pos;
-	// from "Building an Orthonormal Basis, Revisited" http://jcgt.org/published/0006/01/01/
-	// float signf = normal.z >= 0.0 ? 1.0 : -1.0;
-	// float a = -1.0 / (signf + normal.z);
-	// float b = normal.x * normal.y * a;
-	// vec3 T = vec3( 1.0 + signf * normal.x * normal.x * a, signf * b, -signf * normal.x );
-	// vec3 B = vec3( b, signf + normal.y * normal.y * a, -normal.y );
 	vec3 U = normalize( cross(vec3(0.7071067811865475, 0.7071067811865475, 0), normal ) );
 	vec3 V = cross(normal, U);
-	return (abs(dot(V, vi)) > radiusU || abs(dot(U, vi)) > radiusV) ? INFINITY : t;
+	return (abs(dot(U, vi)) > radiusU || abs(dot(V, vi)) > radiusV) ? INFINITY : t;
 }
 `;
 
