@@ -264,7 +264,7 @@ bool rayIntersectsDisplacement( vec3 rayOrigin, vec3 rayDirection, out float t, 
 }
 
 
-vec3 getColor(vec3 rayOrigin, vec3 rayDirection) 
+vec3 getColor() 
 {
 	float t;
 	vec3 n;
@@ -333,7 +333,7 @@ void main(void)
 	rayDirection = finalRayDir;
 
 	// perform path tracing and get resulting pixel color
-	vec3 pixelColor = getColor(rayOrigin, rayDirection);
+	vec3 pixelColor = getColor();
 
 	vec3 previousColor = texelFetch(tPreviousTexture, ivec2(gl_FragCoord.xy), 0).rgb;
 
