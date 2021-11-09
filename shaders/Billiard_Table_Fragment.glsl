@@ -22,14 +22,21 @@ uniform sampler2D tLightWoodTexture;
 #define N_CONES 5
 
 //-----------------------------------------------------------------------
-struct Ray { vec3 origin; vec3 direction; };
+
+vec3 rayOrigin, rayDirection;
+// recorded intersection data:
+vec3 hitNormal, hitEmission, hitColor;
+vec2 hitUV;
+float hitRoughness;
+float hitObjectID;
+int hitType;
+
 struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; float roughness; int type; };
 struct Ellipsoid { vec3 radii; vec3 position; vec3 emission; vec3 color; float roughness; int type; };
 struct Plane { vec4 pla; vec3 emission; vec3 color; float roughness; int type; };
 struct Quad { vec3 normal; vec3 v0; vec3 v1; vec3 v2; vec3 v3; vec3 emission; vec3 color; float roughness; int type; };
 struct Box { vec3 minCorner; vec3 maxCorner; vec3 emission; vec3 color; float roughness; int type; };
 struct Cone { vec3 pos0; float radius0; vec3 pos1; float radius1; vec3 emission; vec3 color; float roughness; int type; };
-struct Intersection { vec3 normal; vec3 emission; vec3 color; float roughness; int type; };
 
 Sphere spheres[N_SPHERES];
 Ellipsoid ellipsoids[N_ELLIPSOIDS];
@@ -50,7 +57,7 @@ Cone cones[N_CONES];
 
 
 //---------------------------------------------------------------------------------------
-float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedObjectID )
+float SceneIntersect()
 //---------------------------------------------------------------------------------------
 {
 	vec3 n;
@@ -59,53 +66,53 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 	bool isRayExiting = false;
 	int objectCount = 0;
 	
-	intersectedObjectID = -INFINITY;
+	hitObjectID = -INFINITY;
 	
 	
 	for (int i = 0; i < N_QUADS; i++)
         {
-		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, r, false);
+		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, rayOrigin, rayDirection, false);
 		if (d < t)
 		{
 			t = d;
-			intersec.normal = normalize(quads[i].normal);
-			intersec.emission = quads[i].emission;
-			intersec.color = quads[i].color;
-			intersec.roughness = quads[i].roughness;
-			intersec.type = quads[i].type;
-			intersectedObjectID = float(objectCount);
+			hitNormal = (quads[i].normal);
+			hitEmission = quads[i].emission;
+			hitColor = quads[i].color;
+			hitRoughness = quads[i].roughness;
+			hitType = quads[i].type;
+			hitObjectID = float(objectCount);
 		}
 		objectCount++;
 	}
 	
 	for (int i = 0; i < N_SPHERES; i++)
         {
-		d = SphereIntersect( spheres[i].radius, spheres[i].position, r );
+		d = SphereIntersect( spheres[i].radius, spheres[i].position, rayOrigin, rayDirection );
 		if (d < t)
 		{
 			t = d;
-			intersec.normal = normalize((r.origin + r.direction * t) - spheres[i].position);
-			intersec.emission = spheres[i].emission;
-			intersec.color = spheres[i].color;
-			intersec.roughness = spheres[i].roughness;
-			intersec.type = spheres[i].type;
-			intersectedObjectID = float(objectCount);
+			hitNormal = normalize((rayOrigin + rayDirection * t) - spheres[i].position);
+			hitEmission = spheres[i].emission;
+			hitColor = spheres[i].color;
+			hitRoughness = spheres[i].roughness;
+			hitType = spheres[i].type;
+			hitObjectID = float(objectCount);
 		}
 		objectCount++;
         }
 	
 	for (int i = 0; i < N_ELLIPSOIDS; i++)
         {
-		d = EllipsoidIntersect( ellipsoids[i].radii, ellipsoids[i].position, r );
+		d = EllipsoidIntersect( ellipsoids[i].radii, ellipsoids[i].position, rayOrigin, rayDirection );
 		if (d < t)
 		{
 			t = d;
-			intersec.normal = normalize( ((r.origin + r.direction * t) - ellipsoids[i].position) / (ellipsoids[i].radii * ellipsoids[i].radii) );
-			intersec.emission = ellipsoids[i].emission;
-			intersec.color = ellipsoids[i].color;
-			intersec.roughness = ellipsoids[i].roughness;
-			intersec.type = ellipsoids[i].type;
-			intersectedObjectID = float(objectCount);
+			hitNormal = normalize( ((rayOrigin + rayDirection * t) - ellipsoids[i].position) / (ellipsoids[i].radii * ellipsoids[i].radii) );
+			hitEmission = ellipsoids[i].emission;
+			hitColor = ellipsoids[i].color;
+			hitRoughness = ellipsoids[i].roughness;
+			hitType = ellipsoids[i].type;
+			hitObjectID = float(objectCount);
 		}
 		objectCount++;
 	}
@@ -113,62 +120,61 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 	for (int i = 0; i < N_BOXES; i++)
         {
 	
-		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, r, n, isRayExiting );
+		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, rayOrigin, rayDirection, n, isRayExiting );
 		if (d < t)
 		{
 			t = d;
-			intersec.normal = normalize(n);
-			intersec.emission = boxes[i].emission;
-			intersec.color = boxes[i].color;
-			intersec.roughness = boxes[i].roughness;
-			intersec.type = boxes[i].type;
-			intersectedObjectID = float(objectCount);
+			hitNormal = normalize(n);
+			hitEmission = boxes[i].emission;
+			hitColor = boxes[i].color;
+			hitRoughness = boxes[i].roughness;
+			hitType = boxes[i].type;
+			hitObjectID = float(objectCount);
 		}
 		objectCount++;
         }
 	
 	for (int i = 0; i < N_PLANES; i++)
         {
-		d = PlaneIntersect( planes[i].pla, r );
+		d = PlaneIntersect( planes[i].pla, rayOrigin, rayDirection );
 		if (d < t)
 		{
 			t = d;
-			intersec.normal = normalize(planes[i].pla.xyz);
-			intersec.emission = planes[i].emission;
-			intersec.color = planes[i].color;
-			intersec.roughness = planes[i].roughness;
-			intersec.type = planes[i].type;
-			intersectedObjectID = float(objectCount);
+			hitNormal = (planes[i].pla.xyz);
+			hitEmission = planes[i].emission;
+			hitColor = planes[i].color;
+			hitRoughness = planes[i].roughness;
+			hitType = planes[i].type;
+			hitObjectID = float(objectCount);
 		}
 		objectCount++;
         }
 	
 	for (int i = 0; i < N_CONES; i++)
         {
-		d = ConeIntersect( cones[i].pos0, cones[i].radius0, cones[i].pos1, cones[i].radius1, r, n );
+		d = ConeIntersect( cones[i].pos0, cones[i].radius0, cones[i].pos1, cones[i].radius1, rayOrigin, rayDirection, n );
 		if (d < t)
 		{
 			t = d;
-			intersec.normal = normalize(n);
-			intersec.emission = cones[i].emission;
-			intersec.color = cones[i].color;
-			intersec.roughness = cones[i].roughness;
-			intersec.type = cones[i].type;
-			intersectedObjectID = float(objectCount);
+			hitNormal = normalize(n);
+			hitEmission = cones[i].emission;
+			hitColor = cones[i].color;
+			hitRoughness = cones[i].roughness;
+			hitType = cones[i].type;
+			hitObjectID = float(objectCount);
 		}
 		objectCount++;
         }
 	
 	return t;
 	
-} // end float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedObjectID )
+} // end float SceneIntersect(vec3 rayOrigin, vec3 rayDirection)
 
 
 //-----------------------------------------------------------------------------------------------------------------------------
-vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
+vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
 //-----------------------------------------------------------------------------------------------------------------------------
 {
-	Intersection intersec;
 	Quad lightChoice;
 
 	vec3 accumCol = vec3(0);
@@ -182,7 +188,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
         float weight;
 	float nc, nt, ratioIoR, Re, Tr;
 	float P, RP, TP;
-	float intersectedObjectID;
+	float hitObjectID;
 
 	int diffuseCount = 0;
 
@@ -192,34 +198,34 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 	lightChoice = quads[int(rand() * N_LIGHTS)];
 
 	
-        for (int bounces = 0; bounces < 3; bounces++)
+        for (int bounces = 0; bounces < 4; bounces++)
 	{
 		
-		t = SceneIntersect(r, intersec, intersectedObjectID);
+		t = SceneIntersect();
 		
 		if (t == INFINITY)
 			break;
 		
 		// useful data 
-		n = normalize(intersec.normal);
-                nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
-		x = r.origin + r.direction * t;
+		n = normalize(hitNormal);
+                nl = dot(n, rayDirection) < 0.0 ? normalize(n) : normalize(-n);
+		x = rayOrigin + rayDirection * t;
 
 		if (bounces == 0)
 		{
 			objectNormal = nl;
-			objectColor = intersec.color;
-			objectID = intersectedObjectID;
+			objectColor = hitColor;
+			objectID = hitObjectID;
 		}
 
 
-		if (intersec.type == LIGHT)
+		if (hitType == LIGHT)
 		{	
 			if (diffuseCount == 0)
 				pixelSharpness = 1.01;
 
 			if (bounceIsSpecular || sampleLight)
-				accumCol = mask * intersec.emission; // looking at light through a reflection
+				accumCol = mask * hitEmission; // looking at light through a reflection
 			
 			// reached a light, so we can exit
 			break;
@@ -231,47 +237,47 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		
 
 		
-                if (intersec.type == DIFF || intersec.type == CLOTH ) // Ideal DIFFUSE reflection
+                if (hitType == DIFF || hitType == CLOTH ) // Ideal DIFFUSE reflection
 		{
 			
-			if (intersec.type == CLOTH)
-				intersec.color *= pow(clamp(texture(tClothTexture, (10.0 * x.xz) / 512.0).rgb, 0.0, 1.0), vec3(2.2));
+			if (hitType == CLOTH)
+				hitColor *= pow(clamp(texture(tClothTexture, (10.0 * x.xz) / 512.0).rgb, 0.0, 1.0), vec3(2.2));
 
 			if (bounces == 0)
-				objectColor = intersec.color;
+				objectColor = hitColor;
 				
 			diffuseCount++;
 
-			mask *= intersec.color;
+			mask *= hitColor;
 
 			bounceIsSpecular = false;
 
 			if (diffuseCount == 1 && rand() < 0.5)
 			{	
 				// choose random Diffuse sample vector
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
-				r.origin += nl * uEPS_intersect;
+				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
+				rayOrigin = x + nl * uEPS_intersect;
 				continue;
 			}
                         
 			dirToLight = sampleQuadLight(x, nl, lightChoice, weight);
 			mask *= weight * N_LIGHTS;
 
-			r = Ray( x, dirToLight );
-			r.origin += nl * uEPS_intersect;
+			rayDirection = dirToLight;
+			rayOrigin = x + nl * uEPS_intersect;
 			
 			sampleLight = true;
 			continue;
 
-		} // end if (intersec.type == DIFF)
+		} // end if (hitType == DIFF)
 		
-		if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top
+		if (hitType == COAT)  // Diffuse object underneath with ClearCoat on top
 		{
 			pixelSharpness = 0.0;
 
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of Clear Coat
-			Re = calcFresnelReflectance(r.direction, nl, nc, nt, ratioIoR);
+			Re = calcFresnelReflectance(rayDirection, nl, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 			P  = 0.25 + (0.5 * Re);
                 	RP = Re / P;
@@ -283,8 +289,8 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 					pixelSharpness = uFrameCounter > 200.0 ? 1.01 : -1.0;
 
 				mask *= RP;
-				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
-				r.origin += nl * uEPS_intersect;
+				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
+				rayOrigin = x + nl * uEPS_intersect;
 				continue;
 			}
 
@@ -293,36 +299,36 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			diffuseCount++;
 
 			mask *= TP;
-			mask *= intersec.color;
+			mask *= hitColor;
 			
 			bounceIsSpecular = false;
 
 			if (diffuseCount == 1 && rand() < 0.5)
 			{	
 				// choose random Diffuse sample vector
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
-				r.origin += nl * uEPS_intersect;
+				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
+				rayOrigin = x + nl * uEPS_intersect;
 				continue;
 			}
                         
 			dirToLight = sampleQuadLight(x, nl, lightChoice, weight);
 			mask *= weight * N_LIGHTS;
 			
-			r = Ray( x, dirToLight );
-			r.origin += nl * uEPS_intersect;
+			rayDirection = dirToLight;
+			rayOrigin = x + nl * uEPS_intersect;
 
 			sampleLight = true;
 			continue;
                         
-		} //end if (intersec.type == COAT)
+		} //end if (hitType == COAT)
 		
-		if (intersec.type == LIGHTWOOD || intersec.type == DARKWOOD)  // Diffuse object underneath with thin ClearCoat on top
+		if (hitType == LIGHTWOOD || hitType == DARKWOOD)  // Diffuse object underneath with thin ClearCoat on top
 		{
 			pixelSharpness = 0.0;
 
 			nc = 1.0; // IOR of Air
 			nt = 1.1; // IOR of Clear Coat
-			Re = calcFresnelReflectance(r.direction, nl, nc, nt, ratioIoR);
+			Re = calcFresnelReflectance(rayDirection, nl, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 			P  = 0.25 + (0.5 * Re);
                 	RP = Re / P;
@@ -334,9 +340,9 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 					pixelSharpness = -1.0;
 
 				mask *= RP;
-				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
-				r.direction = randomDirectionInSpecularLobe(r.direction, intersec.roughness);
-				r.origin += nl * uEPS_intersect;
+				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
+				rayDirection = randomDirectionInSpecularLobe(rayDirection, hitRoughness);
+				rayOrigin = x + nl * uEPS_intersect;
 				continue;
 			}
 			
@@ -383,53 +389,53 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 				spotp1 || spotp2 || spotp0 || spotp3 || spotp4 ) 
 				isSpot = true;
 			
-			if (intersec.type == DARKWOOD)
-				intersec.color *= pow(clamp(texture(tDarkWoodTexture, 3.5 * x.xz / 512.0).rgb, 0.0, 1.0), vec3(2.2));
+			if (hitType == DARKWOOD)
+				hitColor *= pow(clamp(texture(tDarkWoodTexture, 3.5 * x.xz / 512.0).rgb, 0.0, 1.0), vec3(2.2));
 			if (isSpot)
-				intersec.color = clamp(intersec.color + 0.5, 0.0, 1.0);
+				hitColor = clamp(hitColor + 0.5, 0.0, 1.0);
 				
-			if (intersec.type == LIGHTWOOD)	
-				intersec.color *= pow(clamp(texture(tLightWoodTexture, 6.0 * x.xz / 512.0).rgb, 0.0, 1.0), vec3(2.2));
+			if (hitType == LIGHTWOOD)	
+				hitColor *= pow(clamp(texture(tLightWoodTexture, 6.0 * x.xz / 512.0).rgb, 0.0, 1.0), vec3(2.2));
 		
 			
 			if (bounces == 0)
-				objectColor = intersec.color;
+				objectColor = hitColor;
 
 			// handle diffuse surface underneath
 
 			diffuseCount++;
 
 			mask *= TP;
-			mask *= intersec.color;
+			mask *= hitColor;
 			
 			bounceIsSpecular = false;
 
 			if (diffuseCount == 1 && rand() < 0.5)
                         {
 				// choose random Diffuse sample vector
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
-				r.origin += nl * uEPS_intersect;
+				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
+				rayOrigin = x + nl * uEPS_intersect;
 				continue;
                         }
 
 			dirToLight = sampleQuadLight(x, nl, lightChoice, weight);
 			mask *= weight * N_LIGHTS;
 			
-			r = Ray( x, dirToLight );
-			r.origin += nl * uEPS_intersect;
+			rayDirection = dirToLight;
+			rayOrigin = x + nl * uEPS_intersect;
 
 			sampleLight = true;
 			continue;
                         
-		} //end if (intersec.type == LIGHTWOOD || intersec.type == DARKWOOD)
+		} //end if (hitType == LIGHTWOOD || hitType == DARKWOOD)
 		
 		
-	} // end for (int bounces = 0; bounces < 3; bounces++)
+	} // end for (int bounces = 0; bounces < 4; bounces++)
 	
 
 	return max(vec3(0), accumCol);
 
-} // end vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
+} // end vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
 
 
 //-----------------------------------------------------------------------
@@ -442,12 +448,12 @@ void SetupScene(void)
 	vec3 railWoodColor = vec3(0.05,0.0,0.0);
 	float ceilingHeight = 300.0;
 	
-	quads[0] = Quad( normalize(vec3(0,-1, 0)), vec3(-150, ceilingHeight,-300), vec3(-50, ceilingHeight,-300), vec3(-50, ceilingHeight,300), vec3(-150, ceilingHeight,300), L1, z, 0.0, LIGHT);// rectangular Area Light in ceiling
-	quads[1] = Quad( normalize(vec3(0,-1, 0)), vec3(50, ceilingHeight,-300), vec3(150, ceilingHeight,-300), vec3(150, ceilingHeight,300), vec3(50, ceilingHeight,300), L1, z, 0.0, LIGHT);// rectangular Area Light in ceiling
-	quads[2] = Quad( normalize(vec3(1,-1, 0)), vec3(-200,0,-400), vec3(-190,10,-400), vec3(-190,10,400), vec3(-200,0,400), z, clothColor, 0.0, CLOTH);// Cloth left Rail bottom portion
-	quads[3] = Quad( normalize(vec3(-1,-1, 0)), vec3(190,10,-400), vec3(200,0,-400),  vec3(200,0,400), vec3(190,10,400), z, clothColor, 0.0, CLOTH);// Cloth right Rail bottom portion
-	quads[4] = Quad( normalize(vec3(0,-1, 1)), vec3(-200,0,-400), vec3(200,0,-400), vec3(200,10,-390), vec3(-200,10,-390), z, clothColor, 0.0, CLOTH);// Cloth back Rail bottom portion
-	quads[5] = Quad( normalize(vec3(0,-1, -1)), vec3(200,0,400), vec3(-200,0,400),  vec3(-200,10,390), vec3(200,10,390), z, clothColor, 0.0, CLOTH);// Cloth front Rail bottom portion
+	quads[0] = Quad( vec3(0,-1, 0), vec3(-150, ceilingHeight,-300), vec3(-50, ceilingHeight,-300), vec3(-50, ceilingHeight,300), vec3(-150, ceilingHeight,300), L1, z, 0.0, LIGHT);// rectangular Area Light in ceiling
+	quads[1] = Quad( vec3(0,-1, 0), vec3(50, ceilingHeight,-300), vec3(150, ceilingHeight,-300), vec3(150, ceilingHeight,300), vec3(50, ceilingHeight,300), L1, z, 0.0, LIGHT);// rectangular Area Light in ceiling
+	quads[2] = Quad( vec3(1,-1, 0), vec3(-200,0,-400), vec3(-190,10,-400), vec3(-190,10,400), vec3(-200,0,400), z, clothColor, 0.0, CLOTH);// Cloth left Rail bottom portion
+	quads[3] = Quad( vec3(-1,-1, 0), vec3(190,10,-400), vec3(200,0,-400),  vec3(200,0,400), vec3(190,10,400), z, clothColor, 0.0, CLOTH);// Cloth right Rail bottom portion
+	quads[4] = Quad( vec3(0,-1, 1), vec3(-200,0,-400), vec3(200,0,-400), vec3(200,10,-390), vec3(-200,10,-390), z, clothColor, 0.0, CLOTH);// Cloth back Rail bottom portion
+	quads[5] = Quad( vec3(0,-1,-1), vec3(200,0,400), vec3(-200,0,400),  vec3(-200,10,390), vec3(200,10,390), z, clothColor, 0.0, CLOTH);// Cloth front Rail bottom portion
 	
 	spheres[0] = Sphere(9.0, vec3( 25, 9, 25), z, vec3(0.8, 0.7, 0.4), 0.0, COAT);// White Ball
 	spheres[1] = Sphere(9.0, vec3(-50, 9, 0),   z, vec3(0.9, 0.4, 0.0), 0.0, COAT);// Yellow Ball
