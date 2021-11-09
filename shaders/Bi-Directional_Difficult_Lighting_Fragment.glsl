@@ -688,7 +688,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 		if (hitType == DIFF && sampleLight)
 		{
-			ableToJoinPaths = abs(t - lightHitDistance) < 0.01;
+			ableToJoinPaths = abs(t - lightHitDistance) < 0.5;
 
 			pixelSharpness = 0.0;
 			
@@ -755,12 +755,12 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			}
 
 			dirToLight = normalize(lightHitPos - x);
-			lightHitDistance = distance(lightHitPos, x);
 			weight = max(0.0, dot(nl, dirToLight));
 			mask *= weight;
 			
 			rayDirection = dirToLight;
 			rayOrigin = x + nl * uEPS_intersect;
+			lightHitDistance = distance(rayOrigin, lightHitPos);
 
 			sampleLight = true;
 			continue;
@@ -897,12 +897,12 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			}
 
 			dirToLight = normalize(lightHitPos - x);
-			lightHitDistance = distance(lightHitPos, x);
 			weight = max(0.0, dot(nl, dirToLight));
 			mask *= weight;
 			
 			rayDirection = dirToLight;
 			rayOrigin = x + nl * uEPS_intersect;
+			lightHitDistance = distance(rayOrigin, lightHitPos);
 
 			sampleLight = true;
 			continue;	
