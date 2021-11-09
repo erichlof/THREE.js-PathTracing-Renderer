@@ -138,7 +138,6 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
         
 	float lightHitDistance = INFINITY;
 	float t = INFINITY;
-	float t2 = INFINITY;
 	float weight = 0.0;
 	
 	int diffuseCount = 0;
@@ -166,13 +165,26 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		rayDirection = randomCosWeightedDirectionInHemisphere(hitNormal);
 		rayOrigin = lightHitPos + hitNormal * uEPS_intersect;
 		
-		t2 = SceneIntersect();
-		if (t2 < INFINITY && hitType == DIFF && rand() < 0.5)
+		t = SceneIntersect();
+		if (t < INFINITY && hitType == DIFF && rand() < 0.5)
 		{
-			lightHitPos = rayOrigin + rayDirection * t2;
+			lightHitPos = rayOrigin + rayDirection * t;
 			weight = max(0.0, dot(-rayDirection, normalize(hitNormal)));
 			lightHitEmission *= hitColor * weight;
+
+			/* // third light trace
+			hitNormal = normalize(hitNormal);
+			rayDirection = randomCosWeightedDirectionInHemisphere(hitNormal);
+			rayOrigin = lightHitPos + hitNormal * uEPS_intersect;
+			t = SceneIntersect();
+			if (t < INFINITY && hitType == DIFF && rand() < 0.2)
+			{
+				lightHitPos = rayOrigin + rayDirection * t;
+				weight = max(0.0, dot(-rayDirection, normalize(hitNormal)));
+				lightHitEmission *= hitColor * weight;
+			} */
 		}
+
 	}
 
 	// this allows the original light to be the lightsource once in a while
@@ -267,12 +279,13 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			}
 			
 			dirToLight = normalize(lightHitPos - x);
-			lightHitDistance = distance(lightHitPos, x);
+			
 			weight = max(0.0, dot(nl, dirToLight));
 			mask *= weight;
 			
 			rayDirection = dirToLight;
 			rayOrigin = x + nl * uEPS_intersect;
+			lightHitDistance = distance(rayOrigin, lightHitPos);
 
 			sampleLight = true;
 			continue;
