@@ -21,6 +21,7 @@ vec3 rayOrigin, rayDirection;
 // recorded intersection data:
 vec3 hitNormal, hitEmission, hitColor;
 vec2 hitUV;
+float hitObjectID;
 int hitType;
 
 struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; int type; };
@@ -63,7 +64,7 @@ void GetBoxNodeData(const in float i, inout vec4 boxNodeData0, inout vec4 boxNod
 
 
 //---------------------------------------------------------------------------------------
-float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out float intersectedObjectID )
+float SceneIntersect( )
 //---------------------------------------------------------------------------------------
 {
 	vec4 currentBoxNodeData0, nodeAData0, nodeBData0, tmpNodeData0;
@@ -89,7 +90,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out float intersectedOb
 
 	int objectCount = 0;
 
-	intersectedObjectID = -INFINITY;
+	hitObjectID = -INFINITY;
 	
 	bool skip = false;
 	bool triangleLookupNeeded = false;
@@ -105,7 +106,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out float intersectedOb
 			hitEmission = spheres[i].emission;
 			hitColor = spheres[i].color;
 			hitType = spheres[i].type;
-			intersectedObjectID = 0.0;//float(objectCount);
+			hitObjectID = 0.0;//float(objectCount);
 		}
 		objectCount++;
 	}
@@ -167,7 +168,8 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out float intersectedOb
 							// also, increase pointer by 1
 				
 				currentStackData = stackDataA;
-				currentBoxNodeData0 = nodeAData0; currentBoxNodeData1 = nodeAData1;
+				currentBoxNodeData0 = nodeAData0; 
+				currentBoxNodeData1 = nodeAData1;
 				skip = true; // this will prevent the stackptr from decreasing by 1
 			}
 
@@ -179,8 +181,6 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out float intersectedOb
 
 		// each triangle's data is encoded in 8 rgba(or xyzw) texture slots
 		id = 8.0 * currentBoxNodeData0.x;
-		
-		//  IMPORTANT NOTE: value below Must be 4096.0 and not 2048.0!
 
 		uv0 = ivec2( mod(id + 0.0, 4096.0), (id + 0.0) * INV_TEXTURE_WIDTH );
 		uv1 = ivec2( mod(id + 1.0, 4096.0), (id + 1.0) * INV_TEXTURE_WIDTH );
@@ -239,16 +239,16 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out float intersectedOb
 		//hitType = int(vd6.x);
 		//hitAlbedoTextureID = int(vd7.x);
 		hitType = CHECK;
-		intersectedObjectID = 1.0;//float(objectCount);
+		hitObjectID = 1.0;//float(objectCount);
 	}
 
 	return t;
 
-} // end float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out float intersectedObjectID )
+} // end float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out float hitObjectID )
 
 
 //----------------------------------------------------------------------------------------------------------------------------------------------------
-vec3 CalculateRadiance( vec3 rayOrigin, vec3 rayDirection, out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
+vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
 //----------------------------------------------------------------------------------------------------------------------------------------------------
 {
         vec4 texColor;
@@ -266,7 +266,6 @@ vec3 CalculateRadiance( vec3 rayOrigin, vec3 rayDirection, out vec3 objectNormal
 	float nc, nt, ratioIoR, Re, Tr;
 	float P, RP, TP;
 	float weight;
-	float intersectedObjectID;
 	
 	int diffuseCount = 0;
 
@@ -277,7 +276,7 @@ vec3 CalculateRadiance( vec3 rayOrigin, vec3 rayDirection, out vec3 objectNormal
         for (int bounces = 0; bounces < 2; bounces++)
 	{
 
-		t = SceneIntersect(rayOrigin, rayDirection, intersectedObjectID);
+		t = SceneIntersect();
 		
 		if (t == INFINITY)
 			break;
@@ -298,7 +297,7 @@ vec3 CalculateRadiance( vec3 rayOrigin, vec3 rayDirection, out vec3 objectNormal
 		{
 			objectNormal = nl;
 			objectColor = hitColor;
-			objectID = intersectedObjectID;
+			objectID = hitObjectID;
 		}
 		
 		    
