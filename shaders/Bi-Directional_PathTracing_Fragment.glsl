@@ -18,6 +18,7 @@ vec3 rayOrigin, rayDirection;
 vec3 hitNormal, hitEmission, hitColor;
 vec2 hitUV;
 float hitRoughness;
+float hitObjectID;
 int hitType;
 
 struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; float roughness; int type; };
@@ -59,7 +60,7 @@ Box boxes[N_BOXES];
 
 
 //--------------------------------------------------------------------------------------
-float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out float intersectedObjectID )
+float SceneIntersect()
 //--------------------------------------------------------------------------------------
 {
 	vec3 normal;
@@ -68,7 +69,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out float intersectedOb
 	bool isRayExiting = false;
 	int objectCount = 0;
 	
-	intersectedObjectID = -INFINITY;
+	hitObjectID = -INFINITY;
 
 			
 	// ROOM
@@ -83,7 +84,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out float intersectedOb
 			hitColor = quads[i].color;
 			hitRoughness = quads[i].roughness;
 			hitType = quads[i].type;
-			intersectedObjectID = float(objectCount);
+			hitObjectID = float(objectCount);
 		}
 		objectCount++;
         }
@@ -98,7 +99,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out float intersectedOb
 		hitColor = boxes[0].color;
 		hitRoughness = boxes[0].roughness;
 		hitType = boxes[0].type;
-		intersectedObjectID = float(objectCount);
+		hitObjectID = float(objectCount);
 	}
 	objectCount++;
 	
@@ -114,7 +115,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out float intersectedOb
 			hitColor = openCylinders[i].color;
 			hitRoughness = openCylinders[i].roughness;
 			hitType = openCylinders[i].type;
-			intersectedObjectID = float(objectCount);
+			hitObjectID = float(objectCount);
 		}
 		objectCount++;
         }
@@ -131,7 +132,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out float intersectedOb
 			hitColor = spheres[i].color;
 			hitRoughness = spheres[i].roughness;
 			hitType = spheres[i].type;
-			intersectedObjectID = float(objectCount);
+			hitObjectID = float(objectCount);
 		}
 		objectCount++;
         }
@@ -148,7 +149,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out float intersectedOb
 			hitColor = disks[i].color;
 			hitRoughness = disks[i].roughness;
 			hitType = disks[i].type;
-			intersectedObjectID = float(objectCount);
+			hitObjectID = float(objectCount);
 		}
 		objectCount++;
 	}
@@ -163,7 +164,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out float intersectedOb
 		hitColor = cones[0].color;
 		hitRoughness = cones[0].roughness;
 		hitType = cones[0].type;
-		intersectedObjectID = float(objectCount);
+		hitObjectID = float(objectCount);
 	}
 	objectCount++;
 	
@@ -184,7 +185,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out float intersectedOb
 		hitColor = ellipsoids[0].color;
 		hitRoughness = ellipsoids[0].roughness;
 		hitType = ellipsoids[0].type;
-		intersectedObjectID = float(objectCount);
+		hitObjectID = float(objectCount);
 	}
 	
 	d = SphereIntersect( spheres[3].radius, spheres[3].position, rayOrigin, rayDirection );
@@ -200,22 +201,24 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out float intersectedOb
 		hitColor = spheres[3].color;
 		hitRoughness = spheres[3].roughness;
 		hitType = spheres[3].type;
-		intersectedObjectID = float(objectCount); // same as ellipsoid above - sphere and ellipsoid make up 1 object
+		hitObjectID = float(objectCount); // same as ellipsoid above - sphere and ellipsoid make up 1 object
 	}
 	
 	
 	return t;
-} // end float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out float intersectedObjectID )
+} // end float SceneIntersect()
 
 
 
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------
-vec3 CalculateRadiance( vec3 originalRayOrigin, vec3 originalRayDirection, out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
+vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------
 {
 	float randChoose = rand() * 2.0; // 2 lights to choose from
 	Sphere lightChoice = spheres[int(randChoose)]; 
 	
+	vec3 originalRayOrigin = rayOrigin;
+	vec3 originalRayDirection = rayDirection;
 	vec3 accumCol = vec3(0);
         vec3 mask = vec3(1);
 	vec3 dirToLight;
@@ -240,7 +243,7 @@ vec3 CalculateRadiance( vec3 originalRayOrigin, vec3 originalRayDirection, out v
 	float nc, nt, ratioIoR, Re, Tr;
 	float P, RP, TP;
 	float weight;
-	float intersectedObjectID;
+	float hitObjectID;
 	
 	int diffuseCount = 0;
 	int previousIntersecType = -100;
@@ -255,7 +258,7 @@ vec3 CalculateRadiance( vec3 originalRayOrigin, vec3 originalRayDirection, out v
 	rayOrigin = lightChoice.position;
 	rayDirection = normalize(lightDir);
 	rayOrigin += rayDirection * lightChoice.radius;
-	t = SceneIntersect(rayOrigin, rayDirection, intersectedObjectID);
+	t = SceneIntersect();
 	if (hitType == DIFF)
 	{
 		lightHitPos = rayOrigin + rayDirection * t;
@@ -268,13 +271,13 @@ vec3 CalculateRadiance( vec3 originalRayOrigin, vec3 originalRayDirection, out v
 	rayDirection = originalRayDirection;
 
 	previousIntersecType = -100;
-	intersectedObjectID = -100.0;
+	hitObjectID = -100.0;
 
 
 	for (int bounces = 0; bounces < 6; bounces++)
 	{
 
-		t = SceneIntersect(rayOrigin, rayDirection, intersectedObjectID);
+		t = SceneIntersect();
 		
 		if (t == INFINITY)
 			break;
@@ -289,7 +292,7 @@ vec3 CalculateRadiance( vec3 originalRayOrigin, vec3 originalRayDirection, out v
 		{
 			objectNormal = nl;
 			objectColor = hitColor;
-			objectID = intersectedObjectID;
+			objectID = hitObjectID;
 		}
 		if (bounces == 1 && previousIntersecType == SPEC)
 		{
