@@ -20,12 +20,16 @@ uniform mat4 uCSG_ShapeB_InvMatrix;
 
 #define N_QUADS 6
 
-
 //-----------------------------------------------------------------------
 
-struct Ray { vec3 origin; vec3 direction; };
+vec3 rayOrigin, rayDirection;
+// recorded intersection data:
+vec3 hitNormal, hitEmission, hitColor;
+vec2 hitUV;
+float hitObjectID;
+int hitType;
+
 struct Quad { vec3 normal; vec3 v0; vec3 v1; vec3 v2; vec3 v3; vec3 emission; vec3 color; int type; };
-struct Intersection { vec3 normal; vec3 emission; vec3 color; int type; };
 
 
 Quad quads[N_QUADS];
@@ -71,10 +75,10 @@ Quad quads[N_QUADS];
 
 
 //---------------------------------------------------------------------------------------
-float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedObjectID )
+float SceneIntersect( )
 //---------------------------------------------------------------------------------------
 {
-	Ray rObj; 
+	vec3 rObjOrigin, rObjDirection; 
 	vec3 n, A_n0, A_n1, B_n0, B_n1, n0, n1;
 	vec3 A_color, B_color, color0, color1;
 	vec3 hit;
@@ -89,20 +93,20 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 	int A_type, B_type, type0, type1;
 	int objectCount = 0;
 	
-	intersectedObjectID = -INFINITY;
+	hitObjectID = -INFINITY;
 
 
 	for (int i = 0; i < N_QUADS; i++)
         {
-		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, r, false );
+		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, rayOrigin, rayDirection, false );
 		if (d < t)
 		{
 			t = d;
-			intersec.normal = normalize(quads[i].normal);
-			intersec.emission = quads[i].emission;
-			intersec.color = quads[i].color;
-			intersec.type = quads[i].type;
-			intersectedObjectID = float(objectCount);
+			hitNormal = normalize(quads[i].normal);
+			hitEmission = quads[i].emission;
+			hitColor = quads[i].color;
+			hitType = quads[i].type;
+			hitObjectID = float(objectCount);
 		}
 		objectCount++;
         }
@@ -110,34 +114,34 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 
 	// SHAPE A
 	// transform ray into CSG_Shape1's object space
-	rObj.origin = vec3( uCSG_ShapeA_InvMatrix * vec4(r.origin, 1.0) );
-	rObj.direction = vec3( uCSG_ShapeA_InvMatrix * vec4(r.direction, 0.0) );
+	rObjOrigin = vec3( uCSG_ShapeA_InvMatrix * vec4(rayOrigin, 1.0) );
+	rObjDirection = vec3( uCSG_ShapeA_InvMatrix * vec4(rayDirection, 0.0) );
 	if (uShapeAType == 0)
-		Sphere_CSG_Intersect( rObj.origin, rObj.direction, A_t0, A_t1, A_n0, A_n1 );
+		Sphere_CSG_Intersect( rObjOrigin, rObjDirection, A_t0, A_t1, A_n0, A_n1 );
 	else if (uShapeAType == 1)
-		Cylinder_CSG_Intersect( rObj.origin, rObj.direction, A_t0, A_t1, A_n0, A_n1 );
+		Cylinder_CSG_Intersect( rObjOrigin, rObjDirection, A_t0, A_t1, A_n0, A_n1 );
 	else if (uShapeAType == 2)
-		Cone_CSG_Intersect( uA_kParameter, rObj.origin, rObj.direction, A_t0, A_t1, A_n0, A_n1 );
+		Cone_CSG_Intersect( uA_kParameter, rObjOrigin, rObjDirection, A_t0, A_t1, A_n0, A_n1 );
 	else if (uShapeAType == 3)
-		Paraboloid_CSG_Intersect( rObj.origin, rObj.direction, A_t0, A_t1, A_n0, A_n1 );
+		Paraboloid_CSG_Intersect( rObjOrigin, rObjDirection, A_t0, A_t1, A_n0, A_n1 );
 	else if (uShapeAType == 4)
-		Hyperboloid1Sheet_CSG_Intersect( uA_kParameter, rObj.origin, rObj.direction, A_t0, A_t1, A_n0, A_n1 );
+		Hyperboloid1Sheet_CSG_Intersect( uA_kParameter, rObjOrigin, rObjDirection, A_t0, A_t1, A_n0, A_n1 );
 	else if (uShapeAType == 5)
-		Hyperboloid2Sheets_CSG_Intersect( uA_kParameter, rObj.origin, rObj.direction, A_t0, A_t1, A_n0, A_n1 );
+		Hyperboloid2Sheets_CSG_Intersect( uA_kParameter, rObjOrigin, rObjDirection, A_t0, A_t1, A_n0, A_n1 );
 	else if (uShapeAType == 6) 
-		Capsule_CSG_Intersect( uA_kParameter, rObj.origin, rObj.direction, A_t0, A_t1, A_n0, A_n1 );
+		Capsule_CSG_Intersect( uA_kParameter, rObjOrigin, rObjDirection, A_t0, A_t1, A_n0, A_n1 );
 	else if (uShapeAType == 7)
-		Box_CSG_Intersect( rObj.origin, rObj.direction, A_t0, A_t1, A_n0, A_n1 );
+		Box_CSG_Intersect( rObjOrigin, rObjDirection, A_t0, A_t1, A_n0, A_n1 );
 	else if (uShapeAType == 8)
-		PyramidFrustum_CSG_Intersect( uA_kParameter, rObj.origin, rObj.direction, A_t0, A_t1, A_n0, A_n1 );
+		PyramidFrustum_CSG_Intersect( uA_kParameter, rObjOrigin, rObjDirection, A_t0, A_t1, A_n0, A_n1 );
 	else if (uShapeAType == 9)
-		ConicalPrism_CSG_Intersect( uA_kParameter, rObj.origin, rObj.direction, A_t0, A_t1, A_n0, A_n1 );
+		ConicalPrism_CSG_Intersect( uA_kParameter, rObjOrigin, rObjDirection, A_t0, A_t1, A_n0, A_n1 );
 	else if (uShapeAType == 10)
-		ParabolicPrism_CSG_Intersect( rObj.origin, rObj.direction, A_t0, A_t1, A_n0, A_n1 );
+		ParabolicPrism_CSG_Intersect( rObjOrigin, rObjDirection, A_t0, A_t1, A_n0, A_n1 );
 	else if (uShapeAType == 11)
-		HyperbolicPrism1Sheet_CSG_Intersect( uA_kParameter, rObj.origin, rObj.direction, A_t0, A_t1, A_n0, A_n1 );
+		HyperbolicPrism1Sheet_CSG_Intersect( uA_kParameter, rObjOrigin, rObjDirection, A_t0, A_t1, A_n0, A_n1 );
 	else //if (uShapeAType == 12)
-		HyperbolicPrism2Sheets_CSG_Intersect( uA_kParameter, rObj.origin, rObj.direction, A_t0, A_t1, A_n0, A_n1 );
+		HyperbolicPrism2Sheets_CSG_Intersect( uA_kParameter, rObjOrigin, rObjDirection, A_t0, A_t1, A_n0, A_n1 );
 
 	n = normalize(A_n0);
 	A_n0 = normalize(transpose(mat3(uCSG_ShapeA_InvMatrix)) * n);
@@ -147,34 +151,34 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 
 	// SHAPE B
 	// transform ray into CSG_ShapeB's object space
-	rObj.origin = vec3( uCSG_ShapeB_InvMatrix * vec4(r.origin, 1.0) );
-	rObj.direction = vec3( uCSG_ShapeB_InvMatrix * vec4(r.direction, 0.0) );
+	rObjOrigin = vec3( uCSG_ShapeB_InvMatrix * vec4(rayOrigin, 1.0) );
+	rObjDirection = vec3( uCSG_ShapeB_InvMatrix * vec4(rayDirection, 0.0) );
 	if (uShapeBType == 0)
-		Sphere_CSG_Intersect( rObj.origin, rObj.direction, B_t0, B_t1, B_n0, B_n1 );
+		Sphere_CSG_Intersect( rObjOrigin, rObjDirection, B_t0, B_t1, B_n0, B_n1 );
 	else if (uShapeBType == 1)
-		Cylinder_CSG_Intersect( rObj.origin, rObj.direction, B_t0, B_t1, B_n0, B_n1 );
+		Cylinder_CSG_Intersect( rObjOrigin, rObjDirection, B_t0, B_t1, B_n0, B_n1 );
 	else if (uShapeBType == 2)
-		Cone_CSG_Intersect( uB_kParameter, rObj.origin, rObj.direction, B_t0, B_t1, B_n0, B_n1 );
+		Cone_CSG_Intersect( uB_kParameter, rObjOrigin, rObjDirection, B_t0, B_t1, B_n0, B_n1 );
 	else if (uShapeBType == 3)
-		Paraboloid_CSG_Intersect( rObj.origin, rObj.direction, B_t0, B_t1, B_n0, B_n1 );
+		Paraboloid_CSG_Intersect( rObjOrigin, rObjDirection, B_t0, B_t1, B_n0, B_n1 );
 	else if (uShapeBType == 4)
-		Hyperboloid1Sheet_CSG_Intersect( uB_kParameter, rObj.origin, rObj.direction, B_t0, B_t1, B_n0, B_n1 );
+		Hyperboloid1Sheet_CSG_Intersect( uB_kParameter, rObjOrigin, rObjDirection, B_t0, B_t1, B_n0, B_n1 );
 	else if (uShapeBType == 5)
-		Hyperboloid2Sheets_CSG_Intersect( uB_kParameter, rObj.origin, rObj.direction, B_t0, B_t1, B_n0, B_n1 );
+		Hyperboloid2Sheets_CSG_Intersect( uB_kParameter, rObjOrigin, rObjDirection, B_t0, B_t1, B_n0, B_n1 );
 	else if (uShapeBType == 6)
-		Capsule_CSG_Intersect( uB_kParameter, rObj.origin, rObj.direction, B_t0, B_t1, B_n0, B_n1 );
+		Capsule_CSG_Intersect( uB_kParameter, rObjOrigin, rObjDirection, B_t0, B_t1, B_n0, B_n1 );
 	else if (uShapeBType == 7)
-		Box_CSG_Intersect( rObj.origin, rObj.direction, B_t0, B_t1, B_n0, B_n1 );
+		Box_CSG_Intersect( rObjOrigin, rObjDirection, B_t0, B_t1, B_n0, B_n1 );
 	else if (uShapeBType == 8)
-		PyramidFrustum_CSG_Intersect( uB_kParameter, rObj.origin, rObj.direction, B_t0, B_t1, B_n0, B_n1 );
+		PyramidFrustum_CSG_Intersect( uB_kParameter, rObjOrigin, rObjDirection, B_t0, B_t1, B_n0, B_n1 );
 	else if (uShapeBType == 9)
-		ConicalPrism_CSG_Intersect( uB_kParameter, rObj.origin, rObj.direction, B_t0, B_t1, B_n0, B_n1 );
+		ConicalPrism_CSG_Intersect( uB_kParameter, rObjOrigin, rObjDirection, B_t0, B_t1, B_n0, B_n1 );
 	else if (uShapeBType == 10)
-		ParabolicPrism_CSG_Intersect( rObj.origin, rObj.direction, B_t0, B_t1, B_n0, B_n1 );
+		ParabolicPrism_CSG_Intersect( rObjOrigin, rObjDirection, B_t0, B_t1, B_n0, B_n1 );
 	else if (uShapeBType == 11)
-		HyperbolicPrism1Sheet_CSG_Intersect( uB_kParameter, rObj.origin, rObj.direction, B_t0, B_t1, B_n0, B_n1 );
+		HyperbolicPrism1Sheet_CSG_Intersect( uB_kParameter, rObjOrigin, rObjDirection, B_t0, B_t1, B_n0, B_n1 );
 	else //if (uShapeBType == 12)
-		HyperbolicPrism2Sheets_CSG_Intersect( uB_kParameter, rObj.origin, rObj.direction, B_t0, B_t1, B_n0, B_n1 );
+		HyperbolicPrism2Sheets_CSG_Intersect( uB_kParameter, rObjOrigin, rObjDirection, B_t0, B_t1, B_n0, B_n1 );
 
 	n = normalize(B_n0);
 	B_n0 = normalize(transpose(mat3(uCSG_ShapeB_InvMatrix)) * n);
@@ -204,32 +208,31 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 	if (t0 > 0.0 && t0 < t)
 	{
 		t = t0;
-		intersec.normal = normalize(n0);
-		intersec.emission = vec3(0);
-		intersec.color = color0;
-		intersec.type = type0;
-		intersectedObjectID = float(objectCount);
+		hitNormal = normalize(n0);
+		hitEmission = vec3(0);
+		hitColor = color0;
+		hitType = type0;
+		hitObjectID = float(objectCount);
 	}
 	else if (t1 > 0.0 && t1 < t)
 	{
 		t = t1;
-		intersec.normal = normalize(n1);
-		intersec.emission = vec3(0);
-		intersec.color = color1;
-		intersec.type = type1;
-		intersectedObjectID = float(objectCount + 1);
+		hitNormal = normalize(n1);
+		hitEmission = vec3(0);
+		hitColor = color1;
+		hitType = type1;
+		hitObjectID = float(objectCount + 1);
 	}
 
 
 	return t;
-}
+} // end float SceneIntersect( )
 
 
 //-----------------------------------------------------------------------------------------------------------------------------
-vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
+vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
 //-----------------------------------------------------------------------------------------------------------------------------
 {
-	Intersection intersec;
 	Quad light = quads[5];
 
 	vec3 accumCol = vec3(0);
@@ -242,7 +245,6 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 	float nc, nt, ratioIoR, Re, Tr;
 	float P, RP, TP;
 	float weight;
-	float intersectedObjectID;
 
 	int diffuseCount = 0;
 
@@ -255,21 +257,21 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 	for (int bounces = 0; bounces < 6; bounces++)
 	{
 
-		t = SceneIntersect(r, intersec, intersectedObjectID);
+		t = SceneIntersect();
 
 		if (t == INFINITY)	
 			break;
 
 		// useful data 
-		n = normalize(intersec.normal);
-                nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
-		x = r.origin + r.direction * t;
+		n = normalize(hitNormal);
+                nl = dot(n, rayDirection) < 0.0 ? normalize(n) : normalize(-n);
+		x = rayOrigin + rayDirection * t;
 
 		if (bounces == 0)
 		{
 			objectNormal = nl;
-			objectColor = intersec.color;
-			objectID = intersectedObjectID;
+			objectColor = hitColor;
+			objectID = hitObjectID;
 		}
 		if (bounces == 1 && diffuseCount == 0 && !coatTypeIntersected)
 		{
@@ -277,17 +279,17 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		}
 		
 		
-		if (intersec.type == LIGHT)
+		if (hitType == LIGHT)
 		{	
 			if (diffuseCount == 0)
 				pixelSharpness = 1.01;
 			
 			if (bounceIsSpecular || sampleLight)
-				accumCol = mask * intersec.emission;
+				accumCol = mask * hitEmission;
 			// reached a light, so we can exit
 			break;
 
-		} // end if (intersec.type == LIGHT)
+		} // end if (hitType == LIGHT)
 
 
 		// if we get here and sampleLight is still true, shadow ray failed to find a light source
@@ -296,43 +298,44 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 	
 		
 		    
-                if (intersec.type == DIFF) // Ideal DIFFUSE reflection
+                if (hitType == DIFF) // Ideal DIFFUSE reflection
 		{	
 			diffuseCount++;
 
-			mask *= intersec.color;
+			mask *= hitColor;
 
 			bounceIsSpecular = false;
 
 			if (diffuseCount == 1 && rand() < 0.5)
 			{
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
-				r.origin += nl * uEPS_intersect;
+				// choose random Diffuse sample vector
+				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
+				rayOrigin = x + nl * uEPS_intersect;
 				continue;
 			}
                         
 			dirToLight = sampleQuadLight(x, nl, quads[5], weight);
 			mask *= weight;
 
-			r = Ray( x, dirToLight );
-			r.origin += nl * uEPS_intersect;
+			rayDirection = dirToLight;
+			rayOrigin = x + nl * uEPS_intersect;
 
 			sampleLight = true;
 			continue;
                         
-		} // end if (intersec.type == DIFF)
+		} // end if (hitType == DIFF)
 		
-		if (intersec.type == SPEC)  // Ideal SPECULAR reflection
+		if (hitType == SPEC)  // Ideal SPECULAR reflection
 		{
-			mask *= intersec.color;
+			mask *= hitColor;
 
-			r = Ray( x, reflect(r.direction, nl) );
-			r.origin += nl * uEPS_intersect;
+			rayDirection = reflect(rayDirection, nl);
+			rayOrigin = x + nl * uEPS_intersect;
 
 			continue;
 		}
 		
-		if (intersec.type == REFR)  // Ideal dielectric REFRACTION
+		if (hitType == REFR)  // Ideal dielectric REFRACTION
 		{
 			if (diffuseCount == 0 && !coatTypeIntersected && !uCameraIsMoving )
 				pixelSharpness = 1.01;
@@ -343,7 +346,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
-			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
+			Re = calcFresnelReflectance(rayDirection, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 			P  = 0.25 + (0.5 * Re);
                 	RP = Re / P;
@@ -352,27 +355,27 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			if (rand() < P)
 			{
 				mask *= RP;
-				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
-				r.origin += nl * uEPS_intersect;
+				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
+				rayOrigin = x + nl * uEPS_intersect;
 				continue;
 			}
 
 			// transmit ray through surface
-			mask *= intersec.color;
+			mask *= hitColor;
 			mask *= TP;
 
-			tdir = refract(r.direction, nl, ratioIoR);
-			r = Ray(x, tdir);
-			r.origin -= nl * uEPS_intersect;
+			tdir = refract(rayDirection, nl, ratioIoR);
+			rayDirection = tdir;
+			rayOrigin = x - nl * uEPS_intersect;
 
 			if (diffuseCount == 1)
 				bounceIsSpecular = true; // turn on refracting caustics
 
 			continue;
 			
-		} // end if (intersec.type == REFR)
+		} // end if (hitType == REFR)
 		
-		if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top
+		if (hitType == COAT)  // Diffuse object underneath with ClearCoat on top
 		{
 			coatTypeIntersected = true;
 
@@ -380,7 +383,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 
 			nc = 1.0; // IOR of Air
 			nt = 1.4; // IOR of Clear Coat
-			Re = calcFresnelReflectance(r.direction, nl, nc, nt, ratioIoR);
+			Re = calcFresnelReflectance(rayDirection, nl, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 			P  = 0.25 + (0.5 * Re);
                 	RP = Re / P;
@@ -392,42 +395,42 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 					pixelSharpness = uFrameCounter > 200.0 ? 1.01 : -1.0;
 
 				mask *= RP;
-				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
-				r.origin += nl * uEPS_intersect;
+				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
+				rayOrigin = x + nl * uEPS_intersect;
 				continue;
 			}
 
 			diffuseCount++;
 			mask *= TP;
-			mask *= intersec.color;
+			mask *= hitColor;
 
 			bounceIsSpecular = false;
 			
 			if (diffuseCount == 1 && rand() < 0.5)
 			{
 				// choose random Diffuse sample vector
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
-				r.origin += nl * uEPS_intersect;
+				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
+				rayOrigin = x + nl * uEPS_intersect;
 				continue;
 			}
 
 			dirToLight = sampleQuadLight(x, nl, quads[5], weight);
 			mask *= weight;
 			
-			r = Ray( x, dirToLight );
-			r.origin += nl * uEPS_intersect;
+			rayDirection = dirToLight;
+			rayOrigin = x + nl * uEPS_intersect;
 
 			sampleLight = true;
 			continue;
 			
-		} //end if (intersec.type == COAT)
+		} //end if (hitType == COAT)
 		
 	} // end for (int bounces = 0; bounces < 6; bounces++)
 	
 	
 	return max(vec3(0), accumCol);
 
-} // end vec3 CalculateRadiance(Ray r)
+} // end vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
 
 
 
