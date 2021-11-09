@@ -286,7 +286,8 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out bool isRayExiting, 
 							// also, increase pointer by 1
 				
 				currentStackData = stackDataA;
-				currentBoxNodeData0 = nodeAData0; currentBoxNodeData1 = nodeAData1;
+				currentBoxNodeData0 = nodeAData0; 
+				currentBoxNodeData1 = nodeAData1;
 				skip = true; // this will prevent the stackptr from decreasing by 1
 			}
 
@@ -369,7 +370,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out bool isRayExiting, 
 
 
 //----------------------------------------------------------------------------------------------------------------------------------------------------
-vec3 CalculateRadiance( vec3 rayOrigin, vec3 rayDirection, out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
+vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
 //----------------------------------------------------------------------------------------------------------------------------------------------------
 {
         Sphere light = spheres[1];
@@ -742,7 +743,7 @@ void main( void )
 	float pixelSharpness = 0.0;
 	
 	// perform path tracing and get resulting pixel color
-	vec4 currentPixel = vec4( vec3(CalculateRadiance(rayOrigin, rayDirection, objectNormal, objectColor, objectID, pixelSharpness)), 0.0 );
+	vec4 currentPixel = vec4( vec3(CalculateRadiance(objectNormal, objectColor, objectID, pixelSharpness)), 0.0 );
 
 	// if difference between normals of neighboring pixels is less than the first edge0 threshold, the white edge line effect is considered off (0.0)
 	float edge0 = 0.2; // edge0 is the minimum difference required between normals of neighboring pixels to start becoming a white edge line
