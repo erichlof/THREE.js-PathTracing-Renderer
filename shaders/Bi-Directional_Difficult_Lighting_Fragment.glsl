@@ -28,6 +28,7 @@ vec3 rayOrigin, rayDirection;
 vec3 hitNormal, hitEmission, hitColor;
 vec2 hitUV;
 float hitRoughness;
+float hitObjectID;
 int hitTextureID;
 int hitType;
 bool hitIsModel;
@@ -104,9 +105,9 @@ void GetBoxNodeData(const in float i, inout vec4 boxNodeData0, inout vec4 boxNod
 	boxNodeData1 = texelFetch(tAABBTexture, uv1, 0);
 }
 
-
+// this SceneIntersect() function must take rayOrigin and rayDirection as parameters because they are altered for each teapot
 //--------------------------------------------------------------------------------------------------------
-float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, bool checkModels, out float intersectedObjectID )
+float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, bool checkModels )
 //--------------------------------------------------------------------------------------------------------
 {
 	vec4 currentBoxNodeData0, nodeAData0, nodeBData0, tmpNodeData0;
@@ -133,7 +134,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, bool checkModels, out f
 	int modelID = 0;
 	int objectCount = 0;
 	
-	intersectedObjectID = -INFINITY;
+	hitObjectID = -INFINITY;
 	
 	bool skip = false;
 	bool triangleLookupNeeded = false;
@@ -159,7 +160,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, bool checkModels, out f
 			hitColor = quads[i].color;
 			hitType = quads[i].type;
 			hitIsModel = false;
-			intersectedObjectID = float(objectCount);
+			hitObjectID = float(objectCount);
 		}
 		objectCount++;
         }
@@ -175,7 +176,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, bool checkModels, out f
 			hitColor = boxes[i].color;
 			hitType = boxes[i].type;
 			hitIsModel = false;
-			intersectedObjectID = float(objectCount);
+			hitObjectID = float(objectCount);
 		}
 		objectCount++;
 	}
@@ -197,7 +198,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, bool checkModels, out f
 		hitColor = boxes[9].color;
 		hitType = boxes[9].type;
 		hitIsModel = false;
-		intersectedObjectID = float(objectCount);
+		hitObjectID = float(objectCount);
 	}
 	objectCount++;
 	
@@ -212,7 +213,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, bool checkModels, out f
 			hitColor = openCylinders[i].color;
 			hitType = openCylinders[i].type;
 			hitIsModel = false;
-			intersectedObjectID = float(objectCount);
+			hitObjectID = float(objectCount);
 		}
 		objectCount++;
         }
@@ -230,7 +231,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, bool checkModels, out f
 			hitColor = spheres[i].color;
 			hitType = spheres[i].type;
 			hitIsModel = false;
-			intersectedObjectID = float(objectCount);
+			hitObjectID = float(objectCount);
 		}
 		objectCount++;
 	}
@@ -526,23 +527,23 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, bool checkModels, out f
 
 	if (triangleLookupNeeded)
 	{
-		//uv0 = ivec2( mod(triangleID + 0.0, 2048.0), (triangleID + 0.0) * INV_TEXTURE_WIDTH );
-		//uv1 = ivec2( mod(triangleID + 1.0, 2048.0), (triangleID + 1.0) * INV_TEXTURE_WIDTH );
+		uv0 = ivec2( mod(triangleID + 0.0, 2048.0), (triangleID + 0.0) * INV_TEXTURE_WIDTH );
+		uv1 = ivec2( mod(triangleID + 1.0, 2048.0), (triangleID + 1.0) * INV_TEXTURE_WIDTH );
 		uv2 = ivec2( mod(triangleID + 2.0, 2048.0), (triangleID + 2.0) * INV_TEXTURE_WIDTH );
 		uv3 = ivec2( mod(triangleID + 3.0, 2048.0), (triangleID + 3.0) * INV_TEXTURE_WIDTH );
 		uv4 = ivec2( mod(triangleID + 4.0, 2048.0), (triangleID + 4.0) * INV_TEXTURE_WIDTH );
 		uv5 = ivec2( mod(triangleID + 5.0, 2048.0), (triangleID + 5.0) * INV_TEXTURE_WIDTH );
-		//uv6 = ivec2( mod(triangleID + 6.0, 2048.0), (triangleID + 6.0) * INV_TEXTURE_WIDTH );
-		//uv7 = ivec2( mod(triangleID + 7.0, 2048.0), (triangleID + 7.0) * INV_TEXTURE_WIDTH );
+		uv6 = ivec2( mod(triangleID + 6.0, 2048.0), (triangleID + 6.0) * INV_TEXTURE_WIDTH );
+		uv7 = ivec2( mod(triangleID + 7.0, 2048.0), (triangleID + 7.0) * INV_TEXTURE_WIDTH );
 		
-		//vd0 = texelFetch(tTriangleTexture, uv0, 0);
-		//vd1 = texelFetch(tTriangleTexture, uv1, 0);
+		vd0 = texelFetch(tTriangleTexture, uv0, 0);
+		vd1 = texelFetch(tTriangleTexture, uv1, 0);
 		vd2 = texelFetch(tTriangleTexture, uv2, 0);
 		vd3 = texelFetch(tTriangleTexture, uv3, 0);
 		vd4 = texelFetch(tTriangleTexture, uv4, 0);
 		vd5 = texelFetch(tTriangleTexture, uv5, 0);
-		//vd6 = texelFetch(tTriangleTexture, uv6, 0);
-		//vd7 = texelFetch(tTriangleTexture, uv7, 0);
+		vd6 = texelFetch(tTriangleTexture, uv6, 0);
+		vd7 = texelFetch(tTriangleTexture, uv7, 0);
 
 	
 		// face normal for flat-shaded polygon look
@@ -558,13 +559,13 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, bool checkModels, out f
 		//hitAlbedoTextureID = int(vd7.x);
 		hitColor = vec3(0.7);
 		hitType = SPEC;
-		intersectedObjectID = float(objectCount);
+		hitObjectID = float(objectCount);
 		objectCount++;
 		if (modelID == 1)
 		{
 			hitColor = vec3(1.2); // makes white teapot a little more white
 			hitType = COAT;
-			intersectedObjectID = float(objectCount);
+			hitObjectID = float(objectCount);
 		}
 		objectCount++;
 		
@@ -572,7 +573,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, bool checkModels, out f
 		{
 			hitColor = vec3(1);
 			hitType = REFR;
-			intersectedObjectID = float(objectCount);
+			hitObjectID = float(objectCount);
 		}
 		
 		hitIsModel = true;
@@ -580,16 +581,18 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, bool checkModels, out f
 	
 	return t;
 	
-}
+} // end SceneIntersect( bool checkModels )
 
 
 
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------
-vec3 CalculateRadiance( vec3 originalRayOrigin, vec3 originalRayDirection, out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
+vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------
 {
 	vec4 texColor;
 
+	vec3 originalRayOrigin = rayOrigin;
+	vec3 originalRayDirection = rayDirection;
 	vec3 accumCol = vec3(0);
 	vec3 mask = vec3(1);
 	vec3 checkCol0 = vec3(0.01);
@@ -605,7 +608,7 @@ vec3 CalculateRadiance( vec3 originalRayOrigin, vec3 originalRayDirection, out v
 	float t = INFINITY;
 	float lightHitDistance = INFINITY;
 	float weight;
-	float intersectedObjectID;
+	float hitObjectID;
 
 	int diffuseCount = 0;
 	int previousIntersecType = -1;
@@ -630,7 +633,7 @@ vec3 CalculateRadiance( vec3 originalRayOrigin, vec3 originalRayDirection, out v
 	rayDirection = randomCosWeightedDirectionInHemisphere(lightNormal);
 	rayOrigin = randPointOnLight + lightNormal * uEPS_intersect; // move light ray out to prevent self-intersection with light
 	
-	t = SceneIntersect(rayOrigin, rayDirection, checkModels, intersectedObjectID);
+	t = SceneIntersect(rayOrigin, rayDirection, checkModels);
 		
 	if (hitType == DIFF)
 	{
@@ -646,7 +649,7 @@ vec3 CalculateRadiance( vec3 originalRayOrigin, vec3 originalRayDirection, out v
 	
 	checkModels = true;
 	hitType = -100;
-	intersectedObjectID = -100.0;
+	hitObjectID = -100.0;
 
 
 	// Eye path tracing (from Camera) ///////////////////////////////////////////////////////////////////////////
@@ -654,7 +657,7 @@ vec3 CalculateRadiance( vec3 originalRayOrigin, vec3 originalRayDirection, out v
 	for (int bounces = 0; bounces < 5; bounces++)
 	{
 	
-		t = SceneIntersect(rayOrigin, rayDirection, checkModels, intersectedObjectID);
+		t = SceneIntersect(rayOrigin, rayDirection, checkModels);
 		
 		if (t == INFINITY)
 			break;
@@ -668,7 +671,7 @@ vec3 CalculateRadiance( vec3 originalRayOrigin, vec3 originalRayDirection, out v
 		{
 			objectNormal = nl;
 			objectColor = hitColor;
-			objectID = intersectedObjectID;
+			objectID = hitObjectID;
 		}
 
 
@@ -685,7 +688,9 @@ vec3 CalculateRadiance( vec3 originalRayOrigin, vec3 originalRayDirection, out v
 
 		if (hitType == DIFF && sampleLight)
 		{
-			ableToJoinPaths = abs(t - lightHitDistance) < 0.5;
+			ableToJoinPaths = abs(t - lightHitDistance) < 0.01;
+
+			pixelSharpness = 0.0;
 			
 			if (ableToJoinPaths)
 			{
@@ -706,6 +711,8 @@ vec3 CalculateRadiance( vec3 originalRayOrigin, vec3 originalRayDirection, out v
 		if ( hitType == DIFF || hitType == LIGHTWOOD ||
 		     hitType == DARKWOOD || hitType == PAINTING ) // Ideal DIFFUSE reflection
 		{
+			if (bounces == 0)
+				pixelSharpness = 0.0;
 			
 			if (hitType == LIGHTWOOD)
 			{
@@ -781,12 +788,16 @@ vec3 CalculateRadiance( vec3 originalRayOrigin, vec3 originalRayDirection, out v
 		
 		if (hitType == REFR)  // Ideal dielectric refraction
 		{	
-			if (diffuseCount == 0 && !coatTypeIntersected && !uCameraIsMoving )
+			// if (diffuseCount == 0 && !coatTypeIntersected && !uCameraIsMoving )
+			// 	pixelSharpness = 1.01;
+			// if (diffuseCount > 0)
+			// 	pixelSharpness = 0.0;
+			//else
+			//	pixelSharpness = -1.0;
+			if (bounces == 0)
 				pixelSharpness = 1.01;
 			else if (diffuseCount > 0)
 				pixelSharpness = 0.0;
-			else
-				pixelSharpness = -1.0;
 
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
@@ -841,9 +852,6 @@ vec3 CalculateRadiance( vec3 originalRayOrigin, vec3 originalRayDirection, out v
 			// choose either specular reflection or diffuse
 			if( rand() < P )
 			{	
-				if (diffuseCount == 0)
-					pixelSharpness = -1.0;
-
 				mask *= RP;
 				// reflect ray from surface
 				rayDirection = randomDirectionInSpecularLobe(reflect(rayDirection, nl), hitRoughness);
