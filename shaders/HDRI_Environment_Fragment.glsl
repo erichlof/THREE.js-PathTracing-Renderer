@@ -34,6 +34,7 @@ vec3 rayOrigin, rayDirection;
 vec3 hitNormal, hitEmission, hitColor;
 vec2 hitUV;
 int hitType;
+float hitObjectID;
 bool hitIsModel;
 
 struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; int type; };
@@ -80,7 +81,7 @@ void GetBoxNodeData(const in float i, inout vec4 boxNodeData0, inout vec4 boxNod
 
 
 //-----------------------------------------------------------------------------------------------------------------------------------------------
-float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out bool finalIsRayExiting, out float intersectedObjectID )
+float SceneIntersect( out bool finalIsRayExiting )
 //-----------------------------------------------------------------------------------------------------------------------------------------------
 {
         vec4 currentBoxNodeData0, nodeAData0, nodeBData0, tmpNodeData0;
@@ -106,7 +107,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out bool finalIsRayExit
 
 	int objectCount = 0;
 	
-	intersectedObjectID = -INFINITY;
+	hitObjectID = -INFINITY;
 
 	bool skip = false;
 	bool triangleLookupNeeded = false;
@@ -125,7 +126,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out bool finalIsRayExit
 			hitColor = spheres[i].color;
 			hitType = spheres[i].type;
 			hitIsModel = false;
-			intersectedObjectID = float(objectCount);
+			hitObjectID = float(objectCount);
 		}
 		objectCount++;
 	}
@@ -143,7 +144,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out bool finalIsRayExit
 			hitType = boxes[i].type;
 			hitIsModel = false;
 			finalIsRayExiting = isRayExiting;
-			intersectedObjectID = float(objectCount);
+			hitObjectID = float(objectCount);
 		}
 		objectCount++;
 	}
@@ -275,12 +276,12 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out bool finalIsRayExit
 		hitType = int(uMaterialType);//int(vd6.x);
 		//hitAlbedoTextureID = -1;//int(vd7.x);
 		hitIsModel = true;
-		intersectedObjectID = float(objectCount);
+		hitObjectID = float(objectCount);
 	}
 
 	return t;
 
-} // end float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out bool finalIsRayExiting, out float intersectedObjectID )
+} // end float SceneIntersect( out bool finalIsRayExiting )
 
 
 
@@ -301,7 +302,7 @@ vec3 Get_HDR_Color(vec3 rDirection)
 
 
 //----------------------------------------------------------------------------------------------------------------------------------------------------
-vec3 CalculateRadiance( vec3 rayOrigin, vec3 rayDirection, out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
+vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
 //----------------------------------------------------------------------------------------------------------------------------------------------------
 {
 	vec3 accumCol = vec3(0);
@@ -317,7 +318,6 @@ vec3 CalculateRadiance( vec3 rayOrigin, vec3 rayDirection, out vec3 objectNormal
 	float weight;
 	float thickness = 0.1;
 	float roughness = 0.0;
-	float intersectedObjectID;
 
 	int diffuseCount = 0;
 	int previousIntersecType = -100;
@@ -333,7 +333,7 @@ vec3 CalculateRadiance( vec3 rayOrigin, vec3 rayDirection, out vec3 objectNormal
 	{
 		previousIntersecType = hitType;
 
-		t = SceneIntersect(rayOrigin, rayDirection, isRayExiting, intersectedObjectID);
+		t = SceneIntersect(isRayExiting);
 		roughness = hitIsModel ? uRoughness : roughness;
 		
 		
@@ -410,7 +410,7 @@ vec3 CalculateRadiance( vec3 rayOrigin, vec3 rayDirection, out vec3 objectNormal
 		{
 			objectNormal = nl;
 			objectColor = hitColor;
-			objectID = intersectedObjectID;
+			objectID = hitObjectID;
 		}
 		if (bounces == 1 && diffuseCount == 0 && !coatTypeIntersected)
 		{
@@ -570,7 +570,7 @@ vec3 CalculateRadiance( vec3 rayOrigin, vec3 rayDirection, out vec3 objectNormal
 
 	return max(vec3(0), accumCol);
 
-} // end vec3 CalculateRadiance( vec3 rayOrigin, vec3 rayDirection, out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
+} // end vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
 
 
 //-----------------------------------------------------------------------
