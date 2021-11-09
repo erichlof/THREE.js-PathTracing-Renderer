@@ -23,6 +23,7 @@ vec3 rayOrigin, rayDirection;
 // recorded intersection data:
 vec3 hitNormal, hitEmission, hitColor;
 vec2 hitUV;
+float hitObjectID;
 int hitType;
 
 float diskRadius;
@@ -80,7 +81,7 @@ void GetBoxNodeData(const in float i, inout vec4 boxNodeData0, inout vec4 boxNod
 
 
 //--------------------------------------------------------------------------------------------------------------
-float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out bool isRayExiting, out float intersectedObjectID )
+float SceneIntersect( out bool isRayExiting )
 //--------------------------------------------------------------------------------------------------------------
 {
 	vec4 currentBoxNodeData0, nodeAData0, nodeBData0, tmpNodeData0;
@@ -107,7 +108,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out bool isRayExiting, 
 
 	int objectCount = 0;
 	
-	intersectedObjectID = -INFINITY;
+	hitObjectID = -INFINITY;
 
 	bool skip = false;
 	bool triangleLookupNeeded = false;
@@ -123,7 +124,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out bool isRayExiting, 
 			hitEmission = spheres[i].emission;
 			hitColor = spheres[i].color;
 			hitType = spheres[i].type;
-			intersectedObjectID = float(objectCount);
+			hitObjectID = float(objectCount);
 		}
 		objectCount++;
 	}
@@ -138,7 +139,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out bool isRayExiting, 
 			hitEmission = boxes[i].emission;
 			hitColor = boxes[i].color;
 			hitType = boxes[i].type;
-			intersectedObjectID = float(objectCount);
+			hitObjectID = float(objectCount);
 		}
 		objectCount++;
 	}
@@ -163,7 +164,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out bool isRayExiting, 
 			hitType = DIFF;
 		}
 		
-		intersectedObjectID = float(objectCount);
+		hitObjectID = float(objectCount);
 	}
 
 	d = OpenCylinderIntersect( openCylinderPos0, openCylinderPos1, openCylinderRadius, rayOrigin, rayDirection, normal );
@@ -186,7 +187,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out bool isRayExiting, 
 			hitType = DIFF;
 		}
 		
-		intersectedObjectID = float(objectCount); // same as spotlight disk backing above
+		hitObjectID = float(objectCount); // same as spotlight disk backing above
 	}
 
 	objectCount++;
@@ -248,7 +249,8 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out bool isRayExiting, 
 							// also, increase pointer by 1
 				
 				currentStackData = stackDataA;
-				currentBoxNodeData0 = nodeAData0; currentBoxNodeData1 = nodeAData1;
+				currentBoxNodeData0 = nodeAData0; 
+				currentBoxNodeData1 = nodeAData1;
 				skip = true; // this will prevent the stackptr from decreasing by 1
 			}
 
@@ -316,17 +318,17 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out bool isRayExiting, 
 		//hitType = int(vd6.x);
 		//hitAlbedoTextureID = int(vd7.x);
 		hitType = COAT;
-		intersectedObjectID = float(objectCount);
+		hitObjectID = float(objectCount);
 	}
 
 	return t;
 
-} // end float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out float intersectedObjectID )
+} // end float SceneIntersect( out float hitObjectID )
 
 
 
 //----------------------------------------------------------------------------------------------------------------------------------------------------
-vec3 CalculateRadiance( vec3 rayOrigin, vec3 rayDirection, out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
+vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
 //----------------------------------------------------------------------------------------------------------------------------------------------------
 {
 	Sphere light = spheres[1];
@@ -344,7 +346,6 @@ vec3 CalculateRadiance( vec3 rayOrigin, vec3 rayDirection, out vec3 objectNormal
 	float P, RP, TP;
 	float weight;
 	float thickness = 0.1;
-	float intersectedObjectID;
 
 	int diffuseCount = 0;
 
@@ -358,7 +359,7 @@ vec3 CalculateRadiance( vec3 rayOrigin, vec3 rayDirection, out vec3 objectNormal
         for (int bounces = 0; bounces < 4; bounces++)
 	{
 
-		t = SceneIntersect(rayOrigin, rayDirection, isRayExiting, intersectedObjectID);
+		t = SceneIntersect(isRayExiting);
 		
 		/*
 		if (t == INFINITY)
@@ -383,7 +384,7 @@ vec3 CalculateRadiance( vec3 rayOrigin, vec3 rayDirection, out vec3 objectNormal
 		{
 			objectNormal = nl;
 			objectColor = hitColor;
-			objectID = intersectedObjectID;
+			objectID = hitObjectID;
 		}
 
 
@@ -569,7 +570,7 @@ vec3 CalculateRadiance( vec3 rayOrigin, vec3 rayDirection, out vec3 objectNormal
 
 	return max(vec3(0), accumCol);
 
-} // end vec3 CalculateRadiance( vec3 rayOrigin, vec3 rayDirection, out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
+} // end vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
 
 
 //-----------------------------------------------------------------------
