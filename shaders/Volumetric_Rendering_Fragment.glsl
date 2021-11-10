@@ -10,10 +10,10 @@ precision highp sampler2D;
 
 //-----------------------------------------------------------------------
 
-struct Ray { vec3 origin; vec3 direction; };
+vec3 rayOrigin, rayDirection;
+
 struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; int type; };
 struct Quad { vec3 normal; vec3 v0; vec3 v1; vec3 v2; vec3 v3; vec3 emission; vec3 color; int type; };
-struct Intersection { vec3 normal; vec3 emission; vec3 color; int type; };
 
 Sphere spheres[N_SPHERES];
 Quad quads[N_QUADS];
@@ -30,69 +30,70 @@ Quad quads[N_QUADS];
 #include <pathtracing_sample_sphere_light>
 
 
-//---------------------------------------------------------------------------------------
-float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedObjectID )
-//---------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------------------------------------------------------
+float SceneIntersect( vec3 rOrigin, vec3 rDirection, out vec3 hitNormal, out vec3 hitEmission, out vec3 hitColor, out float hitObjectID, out int hitType )
+//------------------------------------------------------------------------------------------------------------------------------------------------------------
 {
 	float d;
 	float t = INFINITY;
 	int objectCount = 0;
 	
-	intersectedObjectID = -INFINITY;
+	hitObjectID = -INFINITY;
 
 	
         for (int i = 0; i < N_SPHERES; i++)
         {
-		d = SphereIntersect( spheres[i].radius, spheres[i].position, r );
+		d = SphereIntersect( spheres[i].radius, spheres[i].position, rOrigin, rDirection );
 		if (d < t)
 		{
 			t = d;
-			intersec.normal = normalize((r.origin + r.direction * t) - spheres[i].position);
-			intersec.emission = spheres[i].emission;
-			intersec.color = spheres[i].color;
-			intersec.type = spheres[i].type;
-			intersectedObjectID = float(objectCount);
+			hitNormal = normalize((rOrigin + rDirection * t) - spheres[i].position);
+			hitEmission = spheres[i].emission;
+			hitColor = spheres[i].color;
+			hitType = spheres[i].type;
+			hitObjectID = float(objectCount);
 		}
 		objectCount++;
         }
 	
 	for (int i = 0; i < N_QUADS; i++)
         {
-		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, r, false );
+		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, rOrigin, rDirection, false );
 		if (d < t)
 		{
 			t = d;
-			intersec.normal = normalize( quads[i].normal );
-			intersec.emission = quads[i].emission;
-			intersec.color = quads[i].color;
-			intersec.type = quads[i].type;
-			intersectedObjectID = float(objectCount);
+			hitNormal = normalize( quads[i].normal );
+			hitEmission = quads[i].emission;
+			hitColor = quads[i].color;
+			hitType = quads[i].type;
+			hitObjectID = float(objectCount);
 		}
 		objectCount++;
         }
 	
 	return t;
-}
+} // end float SceneIntersect( vec3 rOrigin, vec3 rDirection, out vec3 hitNormal, out vec3 hitEmission, out vec3 hitColor, out float hitObjectID, out int hitType )
+
 
 /* Credit: Some of the equi-angular sampling code is borrowed from https://www.shadertoy.com/view/Xdf3zB posted by user 'sjb' ,
 // who in turn got it from the paper 'Importance Sampling Techniques for Path Tracing in Participating Media' ,
 which can be viewed at: https://docs.google.com/viewer?url=https%3A%2F%2Fwww.solidangle.com%2Fresearch%2Fegsr2012_volume.pdf */
-void sampleEquiAngular( float u, float maxDistance, Ray r, vec3 lightPos, out float dist, out float pdf )
+void sampleEquiAngular( float u, float maxDistance, vec3 rOrigin, vec3 rDirection, vec3 lightPos, out float dist, out float pdf )
 {
 	// get coord of closest point to light along (infinite) ray
-	float delta = dot(lightPos - r.origin, r.direction);
+	float delta = dot(lightPos - rOrigin, rDirection);
 	
 	// get distance this point is from light
-	float D = distance(r.origin + delta*r.direction, lightPos);
+	float D = distance(rOrigin + delta * rDirection, lightPos);
 
 	// get angle of endpoints
 	float thetaA = atan(0.0 - delta, D);
 	float thetaB = atan(maxDistance - delta, D);
 
 	// take sample
-	float t = D*tan(mix(thetaA, thetaB, u));
+	float t = D * tan( mix(thetaA, thetaB, u) );
 	dist = delta + t;
-	pdf = D/((thetaB - thetaA)*(D*D + t*t));
+	pdf = D / ( (thetaB - thetaA) * (D * D + t * t) );
 }
 
 
@@ -101,14 +102,23 @@ void sampleEquiAngular( float u, float maxDistance, Ray r, vec3 lightPos, out fl
 #define LIGHT_COLOR vec3(1.0, 1.0, 1.0) // color of light source
 #define LIGHT_POWER 30.0 // brightness of light source
 
+
 //-----------------------------------------------------------------------------------------------------------------------------
-vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
+vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
 //-----------------------------------------------------------------------------------------------------------------------------
 {
-	Intersection intersec;
-	Intersection vintersec;
-	Ray cameraRay = r;
-	Ray vray;
+	vec3 cameraRayOrigin = rayOrigin;
+	vec3 cameraRayDirection = rayDirection;
+	vec3 vRayOrigin, vRayDirection;
+
+	// recorded intersection data (from eye):
+	vec3 eHitNormal, eHitEmission, eHitColor;
+	float eHitObjectID;
+	int eHitType;
+	// recorded intersection data (from volumetric particle):
+	vec3 vHitNormal, vHitEmission, vHitColor;
+	float vHitObjectID;
+	int vHitType;
 
 	vec3 accumCol = vec3(0.0);
         vec3 mask = vec3(1.0);
@@ -126,7 +136,6 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 	float d;
 	float geomTerm;
 	float trans;
-	float intersectedObjectID, vintersectedObjectID;
 
 	int diffuseCount = 0;
 	int previousIntersecType = -100;
@@ -142,60 +151,61 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		
 		float u = rng();
 		
-		t = SceneIntersect(r, intersec, intersectedObjectID);
+		t = SceneIntersect(rayOrigin, rayDirection, eHitNormal, eHitEmission, eHitColor, eHitObjectID, eHitType);
 		
 		// on first loop iteration, save intersection distance along camera ray (t) into camt variable for use below
 		if (bounces == 0)
 		{
 			camt = t;
-			//objectNormal = nl; // handled below
-			objectColor = intersec.color;
-			objectID = intersectedObjectID;
+			//objectNormal = eHitNormal; // handled below
+			objectColor = eHitColor;
+			objectID = eHitObjectID;
 		}
 			
 
 		// sample along intial ray from camera into the scene
-		sampleEquiAngular(u, camt, cameraRay, spheres[0].position, xx, pdf);
+		sampleEquiAngular(u, camt, cameraRayOrigin, cameraRayDirection, spheres[0].position, xx, pdf);
 
 		// create a particle along cameraRay and cast a shadow ray towards light (similar to Direct Lighting)
-		particlePos = cameraRay.origin + xx * cameraRay.direction;
+		particlePos = cameraRayOrigin + xx * cameraRayDirection;
 		lightVec = spheres[0].position - particlePos;
 		d = length(lightVec);
-		vray = Ray(particlePos, normalize(lightVec));
 
-		vt = SceneIntersect(vray, vintersec, vintersectedObjectID);
+		vRayOrigin = particlePos;
+		vRayDirection = normalize(lightVec);
+
+		vt = SceneIntersect(vRayOrigin, vRayDirection, vHitNormal, vHitEmission, vHitColor, vHitObjectID, vHitType);
 		
 		// if the particle can see the light source, apply volumetric lighting calculation
-		if (vintersec.type == LIGHT)
+		if (vHitType == LIGHT)
 		{	
 			trans = exp( -((d + xx) * FOG_DENSITY) );
 			geomTerm = 1.0 / (d * d);
 			
-			accumCol += FOG_COLOR * vintersec.emission * geomTerm * trans / pdf;
+			accumCol += FOG_COLOR * vHitEmission * geomTerm * trans / pdf;
 		}
 		// otherwise the particle will remain in shadow - this is what produces the shafts of light vs. the volume shadows
 
 
 		// useful data 
-		vec3 n = normalize(intersec.normal);
-                vec3 nl = dot(n,r.direction) < 0.0 ? normalize(n) : normalize(-n);
-		vec3 x = r.origin + r.direction * t;
+		vec3 n = normalize(eHitNormal);
+                vec3 nl = dot(n, rayDirection) < 0.0 ? normalize(n) : normalize(-n);
+		vec3 x = rayOrigin + rayDirection * t;
 
 		if (diffuseCount == 0)
 		{
 			objectNormal = nl;
-			//objectColor = intersec.color; // handled above
-			//objectID = intersectedObjectID; // handled above
+			//objectColor = eHitColor; // handled above
+			//objectID = eHitObjectID; // handled above
 		}
 
 		// now do the normal path tracing routine with the camera ray
-		if (intersec.type == LIGHT)
+		if (eHitType == LIGHT)
 		{
-
 			if (bounceIsSpecular || sampleLight)
 			{
 				trans = exp( -((d + camt) * FOG_DENSITY) );
-				accumCol += mask * intersec.emission * trans;	
+				accumCol += mask * eHitEmission * trans;	
 			}
 
 			// normally we would 'break' here, but 'continue' allows more particles to be lit
@@ -204,86 +214,84 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		
 		
 		
-		    
-                if (intersec.type == DIFF) // Ideal DIFFUSE reflection
+                if (eHitType == DIFF) // Ideal DIFFUSE reflection
                 {
 			diffuseCount++;
 
-			mask *= intersec.color;
+			mask *= eHitColor;
 
 			bounceIsSpecular = false;
 
 			if (diffuseCount == 1 && rand() < 0.5)
 			{
 				// choose random Diffuse sample vector
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
-				r.origin += nl;
+				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
+				rayOrigin = x + nl * uEPS_intersect;
 				continue;
 			}
 			
 			dirToLight = sampleSphereLight(x, nl, spheres[0], weight);
 			mask *= weight;
 
-			r = Ray( x, dirToLight );
-			r.origin += nl;
+			rayDirection = dirToLight;
+			rayOrigin = x + nl * uEPS_intersect;
 			
 			sampleLight = true;
 			continue;	
                 }
 		
-                if (intersec.type == SPEC)  // Ideal SPECULAR reflection
+                if (eHitType == SPEC)  // Ideal SPECULAR reflection
                 {
-			mask *= intersec.color;
+			mask *= eHitColor;
 
-			r = Ray( x, reflect(r.direction, nl) );
-
-                        r.origin += nl;
+			rayDirection = reflect(rayDirection, nl);
+			rayOrigin = x + nl * uEPS_intersect;
                         
                         //bounceIsSpecular = true; // turn on mirror caustics
 			
                         continue;
                 }
 
-                if (intersec.type == REFR)  // Ideal dielectric REFRACTION
+                if (eHitType == REFR)  // Ideal dielectric REFRACTION
 		{
 			previousIntersecType = REFR;
 
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
-			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
+			Re = calcFresnelReflectance(rayDirection, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 			P  = 0.25 + (0.5 * Re);
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 
-			if (rand() < P) // reflect ray from surface
+			if (rand() < P)
 			{
 				mask *= RP;
-				r = Ray( x, reflect(r.direction, nl) );
-				r.origin += nl;
+				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
+				rayOrigin = x + nl * uEPS_intersect;
 				    
-				//bounceIsSpecular = true; // turn on reflecting caustics, useful for water
+				//bounceIsSpecular = true; // turn on reflecting caustics
 			    	continue;	
 			}
 			// transmit ray through surface
 			
 			mask *= TP;
-			mask *= intersec.color;
+			mask *= eHitColor;
 
-			tdir = refract(r.direction, nl, ratioIoR);
-			r = Ray(x, tdir);
-			r.origin -= nl;
+			tdir = refract(rayDirection, nl, ratioIoR);
+			rayDirection = tdir;
+			rayOrigin = x - nl * uEPS_intersect;
 
 			//bounceIsSpecular = true; // turn on refracting caustics
 			continue;
 			
-		} // end if (intersec.type == REFR)
+		} // end if (eHitType == REFR)
 		
-		if (intersec.type == COAT)  // Diffuse object underneath with ClearCoat on top
+		if (eHitType == COAT)  // Diffuse object underneath with ClearCoat on top
 		{
 			nc = 1.0; // IOR of air
 			nt = 1.4; // IOR of ClearCoat 
-			Re = calcFresnelReflectance(r.direction, nl, nc, nt, ratioIoR);
+			Re = calcFresnelReflectance(rayDirection, nl, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 			P  = 0.25 + (0.5 * Re);
                 	RP = Re / P;
@@ -293,8 +301,8 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			if (rand() < P)
 			{	
 				mask *= RP;
-				r = Ray( x, reflect(r.direction, nl) );
-				r.origin += nl;
+				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
+				rayOrigin = x + nl * uEPS_intersect;
 				continue;	
 			}
 
@@ -303,35 +311,36 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			bounceIsSpecular = false;
 
 			mask *= TP;
-			mask *= intersec.color;
+			mask *= eHitColor;
 
 			if (diffuseCount == 1 && rand() < 0.5)
                         {
                                 // choose random Diffuse sample vector
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
-				r.origin += nl;
+				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
+				rayOrigin = x + nl * uEPS_intersect;
 				continue;
                         }
                         
 			dirToLight = sampleSphereLight(x, nl, spheres[0], weight);
 			mask *= weight;
 
-			r = Ray( x, dirToLight );
-			r.origin += nl;
+			rayDirection = dirToLight;
+			rayOrigin = x + nl * uEPS_intersect;
 			
 			sampleLight = true;
 			continue;
 			
-		} //end if (intersec.type == COAT)
+		} //end if (eHitType == COAT)
 		
         } // end for (int bounces = 0; bounces < 4; bounces++)
+
 	
 	// Now we go hunting for volumetric caustics! A previously created particle (vray) is chosen
 	// as a starting point, the ray origin. Next, Randomize the ray direction based on glass sphere's radius.
 	// Then trace towards the light source, eventually rays will refract at just the right angles to find the light!
-	r.origin = vray.origin;
+	rayOrigin = particlePos;
 	vec3 lp = spheres[0].position + (randomSphereDirection() * spheres[1].radius * 0.9);
-	r.direction = normalize(lp - r.origin);
+	rayDirection = normalize(lp - rayOrigin);
 	mask = vec3(1.0); // reset color mask for this particle
 	previousIntersecType = -100;
 
@@ -339,32 +348,32 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 	for (int bounces = 0; bounces < 3; bounces++)
 	{
 		
-		t = SceneIntersect(r, intersec, intersectedObjectID);
+		t = SceneIntersect(rayOrigin, rayDirection, eHitNormal, eHitEmission, eHitColor, eHitObjectID, eHitType);
 
 		// early out test, we are only looking for glass objects and light sources
-		if (intersec.type != REFR && intersec.type != LIGHT)
+		if (eHitType != REFR && eHitType != LIGHT)
 			break;
 		
 		// useful data 
-		vec3 n = normalize(intersec.normal);
-		vec3 nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
-		vec3 x = r.origin + r.direction * t;
+		vec3 n = normalize(eHitNormal);
+		vec3 nl = dot(n, rayDirection) < 0.0 ? normalize(n) : normalize(-n);
+		vec3 x = rayOrigin + rayDirection * t;
 
-		if (intersec.type == REFR)  // Ideal dielectric REFRACTION
+		if (eHitType == REFR)  // Ideal dielectric REFRACTION
 		{
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
-			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
+			Re = calcFresnelReflectance(rayDirection, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 			P  = 0.25 + (0.5 * Re);
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 			
-			if (rand() < P) // reflect ray from surface
+			if (rand() < P)
 			{
 				mask *= RP;
-				r = Ray( x, reflect(r.direction, nl) );
-			    	r.origin += nl;
+				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
+				rayOrigin = x + nl * uEPS_intersect;
 				// the following 'incorrect' assignment turns off noisy caustics that we are not interested in
 				previousIntersecType = SPEC; 
 			    	continue;	
@@ -372,25 +381,25 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			// transmit ray through surface
 			
 			mask *= TP;
-			mask *= intersec.color;
+			mask *= eHitColor;
 
-			tdir = refract(r.direction, nl, ratioIoR);
-			r = Ray(x, tdir);
-			r.origin -= nl;
+			tdir = refract(rayDirection, nl, ratioIoR);
+			rayDirection = tdir;
+			rayOrigin = x - nl * uEPS_intersect;
 			
 			previousIntersecType = REFR; // will be used to create volumetric refracted caustics 
 			continue;
 			
-		} // end if (intersec.type == REFR)
+		} // end if (eHitType == REFR)
 
-		if (intersec.type == LIGHT)
+		if (eHitType == LIGHT)
 		{	
 			// if we have just traveled through a refractive surface(REFR) like glass, then 
 			// allow particle to be lit, producing volumetric caustics
 			if (previousIntersecType == REFR && bounces == 2)
 			{
 				trans = exp( -((d + xx) * FOG_DENSITY) );
-				accumCol *= mask * FOG_COLOR * intersec.emission * 50.0 * trans;
+				accumCol *= mask * FOG_COLOR * eHitEmission * 50.0 * trans;
 			}
 			
 			break;
@@ -401,7 +410,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 
 	return max(vec3(0), accumCol);
 
-}
+} // end vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
 
 //-----------------------------------------------------------------------
 void SetupScene(void)
