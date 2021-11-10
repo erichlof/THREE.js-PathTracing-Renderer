@@ -13,12 +13,17 @@ precision highp sampler2D;
 
 //-----------------------------------------------------------------------
 
-struct Ray { vec3 origin; vec3 direction; };
+vec3 rayOrigin, rayDirection;
+// recorded intersection data:
+vec3 hitNormal, hitEmission, hitColor;
+vec2 hitUV;
+float hitObjectID;
+int hitType;
+
 struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; int type; };
 struct Plane { vec4 pla; vec3 emission; vec3 color; int type; };
 struct Quad { vec3 normal; vec3 v0; vec3 v1; vec3 v2; vec3 v3; vec3 emission; vec3 color; int type; };
 struct Box { vec3 minCorner; vec3 maxCorner; vec3 emission; vec3 color; int type; };
-struct Intersection { vec3 normal; vec3 emission; vec3 color; int type; };
 
 Sphere spheres[N_SPHERES];
 Plane planes[N_PLANES];
@@ -37,17 +42,17 @@ Box boxes[N_BOXES];
 
 #include <pathtracing_sample_quad_light>
 
-//----------------------------------------------------------------------------------------------
-float CSG_SphereIntersect( float rad, vec3 pos, Ray r, out vec3 n1, out vec3 n2, out float far )
-//----------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------------------------
+float CSG_SphereIntersect( float rad, vec3 pos, vec3 rayOrigin, vec3 rayDirection, out vec3 n1, out vec3 n2, out float far )
+//--------------------------------------------------------------------------------------------------------------------------
 {
-	vec3 L = r.origin - pos;
+	vec3 L = rayOrigin - pos;
 	float t0, t1; 
 	float result = INFINITY;
 	far = INFINITY;
 	// quadratic equation coefficients
-	float a = dot( r.direction, r.direction );
-	float b = 2.0 * dot( r.direction, L );
+	float a = dot( rayDirection, rayDirection );
+	float b = 2.0 * dot( rayDirection, L );
 	float c = dot( L, L ) - (rad * rad);
 
 	solveQuadratic(a, b, c, t0, t1);
@@ -56,27 +61,27 @@ float CSG_SphereIntersect( float rad, vec3 pos, Ray r, out vec3 n1, out vec3 n2,
 	{
 		result = t1;
 		far = INFINITY;
-		n2 = (r.origin + r.direction * result) - pos;   
+		n2 = (rayOrigin + rayDirection * result) - pos;   
 	}
 	
 	if( t0 > 0.0 )
 	{
 		result = t0;
 		far = t1;
-		n1 = (r.origin + r.direction * result) - pos;
+		n1 = (rayOrigin + rayDirection * result) - pos;
 	}
 		
 	return result;	
 }
 
-//--------------------------------------------------------------------------------------------------
-float CSG_EllipsoidIntersect( vec3 radii, vec3 pos, Ray r, out vec3 n1, out vec3 n2, out float far )
-//--------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------------------------
+float CSG_EllipsoidIntersect( vec3 radii, vec3 pos, vec3 rayOrigin, vec3 rayDirection, out vec3 n1, out vec3 n2, out float far )
+//------------------------------------------------------------------------------------------------------------------------------
 {
-	vec3 oc = r.origin - pos;
+	vec3 oc = rayOrigin - pos;
 	vec3 oc2 = oc*oc;
-	vec3 ocrd = oc*r.direction;
-	vec3 rd2 = r.direction*r.direction;
+	vec3 ocrd = oc*rayDirection;
+	vec3 rd2 = rayDirection*rayDirection;
 	vec3 invRad = 1.0/radii;
 	vec3 invRad2 = invRad*invRad;
 	float t0, t1;
@@ -93,23 +98,23 @@ float CSG_EllipsoidIntersect( vec3 radii, vec3 pos, Ray r, out vec3 n1, out vec3
 	{
 		result = t1;
 		far = INFINITY;
-		n2 = ((r.origin + r.direction * result) - pos) * invRad2;
+		n2 = ((rayOrigin + rayDirection * result) - pos) * invRad2;
 	}
 	
 	if( t0 > 0.0 )
 	{
 		result = t0;
 		far = t1;
-		n1 = ((r.origin + r.direction * result) - pos) * invRad2;
+		n1 = ((rayOrigin + rayDirection * result) - pos) * invRad2;
 	}
 	
 	return result;	
 }
 
 
-//-------------------------------------------------------------------------------------------------------------
-float CSG_ConeIntersect( vec3 p0, float r0, vec3 p1, float r1, Ray r, out vec3 n1, out vec3 n2, out float far )
-//-------------------------------------------------------------------------------------------------------------  
+//-----------------------------------------------------------------------------------------------------------------------------------------
+float CSG_ConeIntersect( vec3 p0, float r0, vec3 p1, float r1, vec3 rayOrigin, vec3 rayDirection, out vec3 n1, out vec3 n2, out float far )
+//-----------------------------------------------------------------------------------------------------------------------------------------
 {
 	r0 += 0.1;
 	float result = INFINITY;
@@ -117,9 +122,8 @@ float CSG_ConeIntersect( vec3 p0, float r0, vec3 p1, float r1, Ray r, out vec3 n
 	vec3 locX;
 	vec3 locY;
 	vec3 locZ=-(p1-p0)/(1.0 - r1/r0);
-	
-	Ray ray = r;
-	ray.origin-=p0-locZ;
+
+	rayOrigin-=p0-locZ;
 	
 	if(abs(locZ.x)<abs(locZ.y))
 		locX=vec3(1,0,0);
@@ -136,16 +140,16 @@ float CSG_ConeIntersect( vec3 p0, float r0, vec3 p1, float r1, Ray r, out vec3 n
 	tm[1]=locY;
 	tm[2]=locZ;
 	
-	ray.direction*=tm;
-	ray.origin*=tm;
+	rayDirection*=tm;
+	rayOrigin*=tm;
 	
-	float dx=ray.direction.x;
-	float dy=ray.direction.y;
-	float dz=ray.direction.z;
+	float dx=rayDirection.x;
+	float dy=rayDirection.y;
+	float dz=rayDirection.z;
 	
-	float x0=ray.origin.x;
-	float y0=ray.origin.y;
-	float z0=ray.origin.z;
+	float x0=rayOrigin.x;
+	float y0=rayOrigin.y;
+	float z0=rayOrigin.z;
 	
 	float x02=x0*x0;
 	float y02=y0*y0;
@@ -173,8 +177,8 @@ float CSG_ConeIntersect( vec3 p0, float r0, vec3 p1, float r1, Ray r, out vec3 n
 	vec3 n;
 	float t0=(-x0*dx+z0*dz-y0*dy-sqrt(abs(det)))/(dx2-dz2+dy2);
 	float t1=(-x0*dx+z0*dz-y0*dy+sqrt(abs(det)))/(dx2-dz2+dy2);
-	vec3 pt0=ray.origin+t0*ray.direction;
-	vec3 pt1=ray.origin+t1*ray.direction;
+	vec3 pt0=rayOrigin+t0*rayDirection;
+	vec3 pt1=rayOrigin+t1*rayDirection;
 	
         if(t1>0.0 && pt1.z>r1/r0 && pt1.z<1.0)
 	{
@@ -206,13 +210,13 @@ float CSG_ConeIntersect( vec3 p0, float r0, vec3 p1, float r1, Ray r, out vec3 n
 
 #include <pathtracing_box_intersect>
 
-//------------------------------------------------------------------------------------------------------
-float CSG_BoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r, out vec3 n1, out vec3 n2, out float far )
-//------------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------------------------------------------------
+float CSG_BoxIntersect( vec3 minCorner, vec3 maxCorner, vec3 rayOrigin, vec3 rayDirection, out vec3 n1, out vec3 n2, out float far )
+//----------------------------------------------------------------------------------------------------------------------------------
 {
-	vec3 invDir = 1.0 / r.direction;
-	vec3 near = (minCorner - r.origin) * invDir;
-	vec3 further = (maxCorner - r.origin) * invDir;
+	vec3 invDir = 1.0 / rayDirection;
+	vec3 near = (minCorner - rayOrigin) * invDir;
+	vec3 further = (maxCorner - rayOrigin) * invDir;
 	
 	vec3 tmin = min(near, further);
 	vec3 tmax = max(near, further);
@@ -226,15 +230,15 @@ float CSG_BoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r, out vec3 n1, out 
 	
 	if (t1 > 0.0) // if we are inside the box
 	{
-		n2 = -sign(r.direction) * step(tmax, tmax.yzx) * step(tmax, tmax.zxy);
+		n2 = -sign(rayDirection) * step(tmax, tmax.yzx) * step(tmax, tmax.zxy);
 		far = INFINITY;
 		result = t1;
 	}
 
 	if (t0 > 0.0) // if we are outside the box
 	{
-		n1 = -sign(r.direction) * step(tmin.yzx, tmin) * step(tmin.zxy, tmin);
-		n2 = -sign(r.direction) * step(tmax, tmax.yzx) * step(tmax, tmax.zxy);
+		n1 = -sign(rayDirection) * step(tmin.yzx, tmin) * step(tmin.zxy, tmin);
+		n2 = -sign(rayDirection) * step(tmax, tmax.yzx) * step(tmax, tmax.zxy);
 		far = t1;
 		result = t0;	
 	}
@@ -242,18 +246,18 @@ float CSG_BoxIntersect( vec3 minCorner, vec3 maxCorner, Ray r, out vec3 n1, out 
 	return result;
 }
 
-//----------------------------------------------------------------------------------
-float CSG_PlaneIntersect( vec4 pla, Ray r, out vec3 n1, out vec3 n2, out float far )
-//----------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------------
+float CSG_PlaneIntersect( vec4 pla, vec3 rayOrigin, vec3 rayDirection, out vec3 n1, out vec3 n2, out float far )
+//--------------------------------------------------------------------------------------------------------------
 {
 	vec3 n = normalize(pla.xyz);
-	float denom = dot(n, r.direction);
+	float denom = dot(n, rayDirection);
 	
 	// uncomment if single-sided plane is desired
 	//if (denom >= 0.0)
 	//	return INFINITY;
 	
-        vec3 pOrO = (pla.w * n) - r.origin; 
+        vec3 pOrO = (pla.w * n) - rayOrigin; 
         float result = dot(pOrO, n) / denom;
 	far = INFINITY;
 	if (result < 0.0) return INFINITY;
@@ -803,7 +807,7 @@ float operation_HollowA_Overlap_HollowB( float A_near, float A_far, float B_near
 
 
 //---------------------------------------------------------------------------------------
-float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedObjectID )
+float SceneIntersect( )
 //---------------------------------------------------------------------------------------
 {
 	vec3 n, n2, A_n1, A_n2, B_n1, B_n2;
@@ -814,50 +818,50 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 	float t = INFINITY;
 	int objectCount = 0;
 	
-	intersectedObjectID = -INFINITY;
+	hitObjectID = -INFINITY;
 
 	// first, intersect all regular objects in the scene
 	
 	for (int i = 0; i < N_QUADS; i++)
         {
-		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, r, true );
+		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, rayOrigin, rayDirection, true );
 		if (d < t)
 		{
 			t = d;
-			intersec.normal = (quads[i].normal);
-			intersec.emission = quads[i].emission;
-			intersec.color = quads[i].color;
-			intersec.type = quads[i].type;
-			intersectedObjectID = float(objectCount);
+			hitNormal = (quads[i].normal);
+			hitEmission = quads[i].emission;
+			hitColor = quads[i].color;
+			hitType = quads[i].type;
+			hitObjectID = float(objectCount);
 		}
 		objectCount++;
 	}
 	
-	d = SphereIntersect( spheres[0].radius, spheres[0].position, r );	
+	d = SphereIntersect( spheres[0].radius, spheres[0].position, rayOrigin, rayDirection );	
 	if (d < t)
 	{
 		t = d;
-		//n = (r.origin + r.direction * d) - spheres[0].position;
+		//n = (rayOrigin + rayDirection * d) - spheres[0].position;
 		n = vec3(0,1,0);
-		intersec.normal = normalize(n);
-		intersec.emission = spheres[0].emission;
-		intersec.color = spheres[0].color;
-		intersec.type = spheres[0].type;
-		intersectedObjectID = float(objectCount);
+		hitNormal = normalize(n);
+		hitEmission = spheres[0].emission;
+		hitColor = spheres[0].color;
+		hitType = spheres[0].type;
+		hitObjectID = float(objectCount);
 	}
         objectCount++;
 
 	for (int i = 0; i < N_PLANES; i++)
         {
-		d = PlaneIntersect( planes[i].pla, r );
+		d = PlaneIntersect( planes[i].pla, rayOrigin, rayDirection );
 		if (d < t)
 		{
 			t = d;
-			intersec.normal = normalize(planes[i].pla.xyz);
-			intersec.emission = planes[i].emission;
-			intersec.color = planes[i].color;
-			intersec.type = planes[i].type;
-			intersectedObjectID = float(objectCount);
+			hitNormal = normalize(planes[i].pla.xyz);
+			hitEmission = planes[i].emission;
+			hitColor = planes[i].color;
+			hitType = planes[i].type;
+			hitObjectID = float(objectCount);
 		}
 		objectCount++;
         }
@@ -865,105 +869,104 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 	
 	// now intersect all CSG objects
 	// dark glass sculpture in center of room
-	A_near = CSG_EllipsoidIntersect( vec3(40, 30, 15), vec3(0, 30, 0), r, A_n1, A_n2, A_far);
-	B_near = CSG_SphereIntersect( 25.0, vec3(18, 20, 0), r, B_n1, B_n2, B_far);
+	A_near = CSG_EllipsoidIntersect( vec3(40, 30, 15), vec3(0, 30, 0), rayOrigin, rayDirection, A_n1, A_n2, A_far);
+	B_near = CSG_SphereIntersect( 25.0, vec3(18, 20, 0), rayOrigin, rayDirection, B_n1, B_n2, B_far);
 	d = operation_HollowA_Minus_SolidB( A_near, A_far, B_near, B_far, A_n1, A_n2, B_n1, B_n2, n );
 	if (d < t)
 	{
 		t = d;
-		intersec.normal = normalize(n);
-		intersec.emission = vec3(0);
-		intersec.color = vec3(0.0,0.01,0.0);
-		intersec.type = REFR;
-		intersectedObjectID = float(objectCount);
+		hitNormal = normalize(n);
+		hitEmission = vec3(0);
+		hitColor = vec3(0.0,0.01,0.0);
+		hitType = REFR;
+		hitObjectID = float(objectCount);
 	}
 	objectCount++;
 	
 	// Dark and Light Gray Box-Cones along left wall
-	A_near = CSG_BoxIntersect( vec3(-260, 0, 195), vec3(-230, 40, 225), r, A_n1, A_n2, A_far );
-	B_near = CSG_ConeIntersect( vec3(-235, 25, 240), 5.0, vec3(-240, 5, 170), 0.1, r, B_n1, B_n2, B_far );
+	A_near = CSG_BoxIntersect( vec3(-260, 0, 195), vec3(-230, 40, 225), rayOrigin, rayDirection, A_n1, A_n2, A_far );
+	B_near = CSG_ConeIntersect( vec3(-235, 25, 240), 5.0, vec3(-240, 5, 170), 0.1, rayOrigin, rayDirection, B_n1, B_n2, B_far );
 	d = operation_HollowA_Plus_HollowB( A_near, A_far, B_near, B_far, A_n1, A_n2, B_n1, B_n2, n );
 	if (d < t)
 	{
 		t = d;
-		intersec.normal = normalize(n);
-		intersec.emission = vec3(0);
-		intersec.color = vec3(0.03);
-		intersec.type = SPEC;
-		intersectedObjectID = float(objectCount);
+		hitNormal = normalize(n);
+		hitEmission = vec3(0);
+		hitColor = vec3(0.03);
+		hitType = SPEC;
+		hitObjectID = float(objectCount);
 	}
 	objectCount++;
 
-	A_near = CSG_BoxIntersect( vec3(-260, 0, 95), vec3(-230, 40, 125), r, A_n1, A_n2, A_far );
-	B_near = CSG_ConeIntersect( vec3(-235, 25, 140), 12.0, vec3(-240, 5, 70), 0.1, r, B_n1, B_n2, B_far );
+	A_near = CSG_BoxIntersect( vec3(-260, 0, 95), vec3(-230, 40, 125), rayOrigin, rayDirection, A_n1, A_n2, A_far );
+	B_near = CSG_ConeIntersect( vec3(-235, 25, 140), 12.0, vec3(-240, 5, 70), 0.1, rayOrigin, rayDirection, B_n1, B_n2, B_far );
 	d = operation_HollowA_Plus_HollowB( A_near, A_far, B_near, B_far, A_n1, A_n2, B_n1, B_n2, n );
 	if (d < t)
 	{
 		t = d;
-		intersec.normal = normalize(n);
-		intersec.emission = vec3(0);
-		intersec.color = vec3(0.25);
-		intersec.type = TRANSLUCENT;
-		intersectedObjectID = float(objectCount);
+		hitNormal = normalize(n);
+		hitEmission = vec3(0);
+		hitColor = vec3(0.25);
+		hitType = TRANSLUCENT;
+		hitObjectID = float(objectCount);
 	}
 	objectCount++;
 
-	A_near = CSG_BoxIntersect( vec3(-260, 0, -15), vec3(-230, 40, 15), r, A_n1, A_n2, A_far );
-	B_near = CSG_ConeIntersect( vec3(-235, 25, 30), 20.0, vec3(-240, 5, -40), 0.1, r, B_n1, B_n2, B_far );
+	A_near = CSG_BoxIntersect( vec3(-260, 0, -15), vec3(-230, 40, 15), rayOrigin, rayDirection, A_n1, A_n2, A_far );
+	B_near = CSG_ConeIntersect( vec3(-235, 25, 30), 20.0, vec3(-240, 5, -40), 0.1, rayOrigin, rayDirection, B_n1, B_n2, B_far );
 	d = operation_HollowA_Plus_HollowB( A_near, A_far, B_near, B_far, A_n1, A_n2, B_n1, B_n2, n );
 	if (d < t)
 	{
 		t = d;
-		intersec.normal = normalize(n);
-		intersec.emission = vec3(0);
-		intersec.color = vec3(0.7);
-		intersec.type = REFR;
-		intersectedObjectID = float(objectCount);
+		hitNormal = normalize(n);
+		hitEmission = vec3(0);
+		hitColor = vec3(0.7);
+		hitType = REFR;
+		hitObjectID = float(objectCount);
 	}
 	objectCount++;
 	
 	// doorframe
-	A_near = CSG_BoxIntersect( vec3(-304, -4, -132), vec3(-298, 82, -68), r, A_n1, A_n2, A_far );
-	B_near = CSG_BoxIntersect( vec3(-310, -2, -128), vec3(-296, 78, -72), r, B_n1, B_n2, B_far );
+	A_near = CSG_BoxIntersect( vec3(-304, -4, -132), vec3(-298, 82, -68), rayOrigin, rayDirection, A_n1, A_n2, A_far );
+	B_near = CSG_BoxIntersect( vec3(-310, -2, -128), vec3(-296, 78, -72), rayOrigin, rayDirection, B_n1, B_n2, B_far );
 	d = operation_SolidA_Minus_SolidB( A_near, A_far, B_near, B_far, A_n1, A_n2, B_n1, B_n2, n );
 	if (d < t)
 	{
 		t = d;
-		intersec.normal = normalize(n);
-		intersec.emission = vec3(0);
-		intersec.color = vec3(0.9);
-		intersec.type = COAT;
-		intersectedObjectID = float(objectCount);
+		hitNormal = normalize(n);
+		hitEmission = vec3(0);
+		hitColor = vec3(0.9);
+		hitType = COAT;
+		hitObjectID = float(objectCount);
 	}
 	objectCount++;
 	
 	// left wall and hallway
 	Plane leftWallPlane = Plane( vec4( 1,0,0, -300.0), vec3(0), vec3(0.05,0.15,0.15), DIFF);
-	A_near = CSG_PlaneIntersect( leftWallPlane.pla, r, A_n1, A_n2, A_far );
-	B_near = CSG_BoxIntersect( vec3(-350, 0, -128), vec3(-290, 78, -72), r, B_n1, B_n2, B_far );
+	A_near = CSG_PlaneIntersect( leftWallPlane.pla, rayOrigin, rayDirection, A_n1, A_n2, A_far );
+	B_near = CSG_BoxIntersect( vec3(-350, 0, -128), vec3(-290, 78, -72), rayOrigin, rayDirection, B_n1, B_n2, B_far );
 	d = operation_SolidA_Minus_SolidB( A_near, A_far, B_near, B_far, A_n1, A_n2, B_n1, B_n2, n );
 	if (d < t)
 	{
 		t = d;
-		intersec.normal = normalize(n);
-		intersec.emission = leftWallPlane.emission;
-		intersec.color = leftWallPlane.color;
-		intersec.type = leftWallPlane.type;
-		intersectedObjectID = float(objectCount);
+		hitNormal = normalize(n);
+		hitEmission = leftWallPlane.emission;
+		hitColor = leftWallPlane.color;
+		hitType = leftWallPlane.type;
+		hitObjectID = float(objectCount);
 	}
 	
 	return t;
 	
-} // end float SceneIntersect( Ray r, inout Intersection intersec )
+} // end float SceneIntersect( )
 
 
 
 
 //-----------------------------------------------------------------------------------------------------------------------------
-vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
+vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
 //-----------------------------------------------------------------------------------------------------------------------------
 {
-	Intersection intersec;
 	Quad lightChoice;
 
 	vec3 accumCol = vec3(0);
@@ -976,7 +979,6 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 	float weight;
 	float nc, nt, ratioIoR, Re, Tr;
 	float P, RP, TP;
-	float intersectedObjectID;
 
 	int diffuseCount = 0;
 
@@ -990,7 +992,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
         for (int bounces = 0; bounces < 5; bounces++)
 	{
 		
-		t = SceneIntersect(r, intersec, intersectedObjectID);
+		t = SceneIntersect();
 		
 		/*
 		//not used in this scene because we are inside a huge room - no rays can escape
@@ -1001,15 +1003,15 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		*/
 
 		// useful data 
-		n = normalize(intersec.normal);
-                nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
-		x = r.origin + r.direction * t;
+		n = normalize(hitNormal);
+                nl = dot(n, rayDirection) < 0.0 ? normalize(n) : normalize(-n);
+		x = rayOrigin + rayDirection * t;
 
 		if (bounces == 0)
 		{
 			objectNormal = nl;
-			objectColor = intersec.color;
-			objectID = intersectedObjectID;
+			objectColor = hitColor;
+			objectID = hitObjectID;
 		}
 		if (bounces == 1 && diffuseCount == 0 && !coatTypeIntersected)
 		{
@@ -1017,13 +1019,13 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		}
 
 		
-		if (intersec.type == LIGHT)
+		if (hitType == LIGHT)
 		{	
 			if (diffuseCount == 0 && bounces < 2)
 				pixelSharpness = 1.01;
 
 			if (bounceIsSpecular || sampleLight)
-				accumCol = mask * intersec.emission; // looking at light through a reflection
+				accumCol = mask * hitEmission; // looking at light through a reflection
 			// reached a light, so we can exit
 			break;
 		}
@@ -1033,44 +1035,45 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			break;
 		
 		    
-                if (intersec.type == DIFF ) // Ideal DIFFUSE reflection
+                if (hitType == DIFF ) // Ideal DIFFUSE reflection
 		{
 			diffuseCount++;
 
-			mask *= intersec.color;
+			mask *= hitColor;
 
 			bounceIsSpecular = false;
 
 			
 			if (diffuseCount == 1 && rand() < 0.5)
 			{
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
-				r.origin += nl * uEPS_intersect;
+				// choose random Diffuse sample vector
+				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
+				rayOrigin = x + nl * uEPS_intersect;
 				continue;
 			}
                         
 			dirToLight = sampleQuadLight(x, nl, lightChoice, weight);
 			mask *= weight * N_LIGHTS;
 
-			r = Ray( x, dirToLight );
-			r.origin += nl * uEPS_intersect;
+			rayDirection = dirToLight;
+			rayOrigin = x + nl * uEPS_intersect;
 
 			sampleLight = true;
 			continue;
 		}
 		
-		if (intersec.type == SPEC)  // Ideal SPECULAR reflection
+		if (hitType == SPEC)  // Ideal SPECULAR reflection
 		{
-			mask *= intersec.color;
+			mask *= hitColor;
 
-			r = Ray( x, reflect(r.direction, nl) );
-			r.origin += nl * uEPS_intersect;
+			rayDirection = reflect(rayDirection, nl);
+			rayOrigin = x + nl * uEPS_intersect;
 
 			//bounceIsSpecular = true; // turn on mirror caustics
 			continue;
 		}
 		
-		if (intersec.type == REFR)  // Ideal dielectric REFRACTION
+		if (hitType == REFR)  // Ideal dielectric REFRACTION
 		{
 			if (diffuseCount == 0 && !coatTypeIntersected && !uCameraIsMoving )
 				pixelSharpness = 1.01;
@@ -1081,7 +1084,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
-			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
+			Re = calcFresnelReflectance(rayDirection, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 			P  = 0.25 + (0.5 * Re);
                 	RP = Re / P;
@@ -1090,27 +1093,27 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			if (rand() < P)
 			{
 				mask *= RP;
-				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
-				r.origin += nl * uEPS_intersect;
+				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
+				rayOrigin = x + nl * uEPS_intersect;
 				continue;
 			}
 
 			// transmit ray through surface
 			mask *= TP;
-			mask *= intersec.color;
+			mask *= hitColor;
 			
-			tdir = refract(r.direction, nl, ratioIoR);
-			r = Ray(x, tdir);
-			r.origin -= nl * uEPS_intersect;
+			tdir = refract(rayDirection, nl, ratioIoR);
+			rayDirection = tdir;
+			rayOrigin = x - nl * uEPS_intersect;
 
 			if (diffuseCount == 1)
 				bounceIsSpecular = true; // turn on refracting caustics
 
 			continue;
 			
-		} // end if (intersec.type == REFR)
+		} // end if (hitType == REFR)
 		
-		if (intersec.type == COAT || intersec.type == CHECK)  // Diffuse object underneath with ClearCoat on top
+		if (hitType == COAT || hitType == CHECK)  // Diffuse object underneath with ClearCoat on top
 		{	
 			coatTypeIntersected = true;
 
@@ -1120,16 +1123,16 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			float maskFactor = 1.0;
 			nt = 1.4; // IOR of Clear Coat
 
-			if( intersec.type == CHECK )
+			if( hitType == CHECK )
 			{
 				vec3 checkCol0 = vec3(0.3, 0.1, 0.0);
 				vec3 checkCol1 = checkCol0 * 0.5;
 				vec3 firstColor = ( (mod(x.x, 20.0) > 10.0) == (mod(x.z, 20.0) > 10.0) )? checkCol0 : checkCol1;
 				vec3 secondColor = ( (mod(x.x, 10.0) > 5.0) == (mod(x.z, 10.0) > 5.0) )? checkCol1 : checkCol0;
 				vec3 thirdColor = ( (mod(x.x, 5.0) > 2.5) == (mod(x.z, 5.0) > 2.5) )? checkCol0 : checkCol1;
-				intersec.color = firstColor * secondColor * thirdColor;
+				hitColor = firstColor * secondColor * thirdColor;
 				if (bounces == 0)
-					objectColor = intersec.color;
+					objectColor = hitColor;
 
 				maskFactor = 0.1;
 				roughness = 0.1;
@@ -1138,7 +1141,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			
 			nc = 1.0; // IOR of Air
 			
-			Re = calcFresnelReflectance(r.direction, nl, nc, nt, ratioIoR);
+			Re = calcFresnelReflectance(rayDirection, nl, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 			P  = 0.25 + (0.5 * Re);
                 	RP = Re / P;
@@ -1151,40 +1154,40 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 
 				mask *= RP;
 				mask *= maskFactor;
-				r = Ray( x, reflect(r.direction, nl) ); // reflect ray from surface
-				r.direction = randomDirectionInSpecularLobe(r.direction, roughness);
-				r.origin += nl * uEPS_intersect;
+				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
+				rayDirection = randomDirectionInSpecularLobe(rayDirection, roughness);
+				rayOrigin = x + nl * uEPS_intersect;
 				continue;
 			}
 
 			diffuseCount++;
 
 			mask *= TP;
-			mask *= intersec.color;
+			mask *= hitColor;
 			
 			bounceIsSpecular = false;
 
 			if (diffuseCount == 1 && rand() < 0.5)
 			{
 				// choose random Diffuse sample vector
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
-				r.origin += nl * uEPS_intersect;
+				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
+				rayOrigin = x + nl * uEPS_intersect;
 				continue;
 			}
 
 			dirToLight = sampleQuadLight(x, nl, lightChoice, weight);
 			mask *= weight * N_LIGHTS;
 			
-			r = Ray( x, dirToLight );
-			r.origin += nl * uEPS_intersect;
+			rayDirection = dirToLight;
+			rayOrigin = x + nl * uEPS_intersect;
 
 			sampleLight = true;
 			continue;
                         
 			
-		} // end if (intersec.type == COAT || intersec.type == CHECK)
+		} // end if (hitType == COAT || hitType == CHECK)
 
-		if (intersec.type == TRANSLUCENT)  // Translucent Sub-Surface Scattering material
+		if (hitType == TRANSLUCENT)  // Translucent Sub-Surface Scattering material
 		{
 			float translucentDensity = 0.05;
 			float scatteringDistance = -log(rand()) / translucentDensity;
@@ -1195,8 +1198,8 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			{
 				mask *= exp(-absorptionCoefficient * t);
 				
-				r = Ray(x, normalize(r.direction));
-				r.origin += r.direction * scatteringDistance;
+				rayDirection = normalize(rayDirection);
+				rayOrigin = x + rayDirection * scatteringDistance;
 				
 				continue;
 			}
@@ -1211,21 +1214,21 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			if (diffuseCount == 1 && rand() < 0.5)
                         {
                                 // choose random scattering direction vector
-				r = Ray( x, randomSphereDirection() );
-				r.origin += r.direction * scatteringDistance;
+				rayDirection = randomSphereDirection();
+				rayOrigin = x + rayDirection * scatteringDistance;
 				continue;
                         }
                         
 			dirToLight = sampleQuadLight(x, nl, lightChoice, weight);
 			mask *= weight * N_LIGHTS;
 
-			r = Ray( x, dirToLight );
-			r.origin += r.direction * scatteringDistance;
+			rayDirection = dirToLight;
+			rayOrigin = x + rayDirection * scatteringDistance;
 			
 			sampleLight = true;
 			continue;
                         
-		} // end if (intersec.type == TRANSLUCENT)
+		} // end if (hitType == TRANSLUCENT)
 		
 		
 	} // end for (int bounces = 0; bounces < 5; bounces++)
