@@ -10,11 +10,15 @@ uniform mat4 uTallBoxInvMatrix;
 #define N_QUADS 6
 #define N_BOXES 2
 
+vec3 rayOrigin, rayDirection;
+// recorded intersection data:
+vec3 hitNormal, hitEmission, hitColor;
+vec2 hitUV;
+float hitObjectID;
+int hitType;
 
-struct Ray { vec3 origin; vec3 direction; };
 struct Quad { vec3 normal; vec3 v0; vec3 v1; vec3 v2; vec3 v3; vec3 emission; vec3 color; int type; };
 struct Box { vec3 minCorner; vec3 maxCorner; vec3 emission; vec3 color; int type; };
-struct Intersection { vec3 normal; vec3 emission; vec3 color; int type; };
 
 Quad quads[N_QUADS];
 Box boxes[N_BOXES];
@@ -31,40 +35,40 @@ Box boxes[N_BOXES];
 
 
 //---------------------------------------------------------------------------------------
-float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedObjectID )
+float SceneIntersect( )
 //---------------------------------------------------------------------------------------
 {
+	vec3 rObjOrigin, rObjDirection; 
 	vec3 normal;
         float d;
 	float t = INFINITY;
 	bool isRayExiting = false;
 	int objectCount = 0;
 	
-	intersectedObjectID = -INFINITY;
+	hitObjectID = -INFINITY;
 	
 		
 	for (int i = 0; i < N_QUADS; i++)
         {
-		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, r, false );
+		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, rayOrigin, rayDirection, false );
 		if (d < t)
 		{
 			t = d;
-			intersec.normal = normalize(quads[i].normal);
-			intersec.emission = quads[i].emission;
-			intersec.color = quads[i].color;
-			intersec.type = quads[i].type;
-			intersectedObjectID = float(objectCount);
+			hitNormal = normalize(quads[i].normal);
+			hitEmission = quads[i].emission;
+			hitColor = quads[i].color;
+			hitType = quads[i].type;
+			hitObjectID = float(objectCount);
 		}
 		objectCount++;
         }
 	
 	
 	// TALL MIRROR BOX
-	Ray rObj;
 	// transform ray into Tall Box's object space
-	rObj.origin = vec3( uTallBoxInvMatrix * vec4(r.origin, 1.0) );
-	rObj.direction = vec3( uTallBoxInvMatrix * vec4(r.direction, 0.0) );
-	d = BoxIntersect( boxes[0].minCorner, boxes[0].maxCorner, rObj, normal, isRayExiting );
+	rObjOrigin = vec3( uTallBoxInvMatrix * vec4(rayOrigin, 1.0) );
+	rObjDirection = vec3( uTallBoxInvMatrix * vec4(rayDirection, 0.0) );
+	d = BoxIntersect( boxes[0].minCorner, boxes[0].maxCorner, rObjOrigin, rObjDirection, normal, isRayExiting );
 	
 	if (d < t)
 	{	
@@ -72,20 +76,20 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		
 		// transfom normal back into world space
 		normal = normalize(normal);
-		intersec.normal = normalize(transpose(mat3(uTallBoxInvMatrix)) * normal);
-		intersec.emission = boxes[0].emission;
-		intersec.color = boxes[0].color;
-		intersec.type = boxes[0].type;
-		intersectedObjectID = float(objectCount);
+		hitNormal = normalize(transpose(mat3(uTallBoxInvMatrix)) * normal);
+		hitEmission = boxes[0].emission;
+		hitColor = boxes[0].color;
+		hitType = boxes[0].type;
+		hitObjectID = float(objectCount);
 	}
 	objectCount++;
 	
 	
 	// SHORT DIFFUSE WHITE BOX
 	// transform ray into Short Box's object space
-	rObj.origin = vec3( uShortBoxInvMatrix * vec4(r.origin, 1.0) );
-	rObj.direction = vec3( uShortBoxInvMatrix * vec4(r.direction, 0.0) );
-	d = BoxIntersect( boxes[1].minCorner, boxes[1].maxCorner, rObj, normal, isRayExiting );
+	rObjOrigin = vec3( uShortBoxInvMatrix * vec4(rayOrigin, 1.0) );
+	rObjDirection = vec3( uShortBoxInvMatrix * vec4(rayDirection, 0.0) );
+	d = BoxIntersect( boxes[1].minCorner, boxes[1].maxCorner, rObjOrigin, rObjDirection, normal, isRayExiting );
 	
 	if (d < t)
 	{	
@@ -93,22 +97,21 @@ float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedO
 		
 		// transfom normal back into world space
 		normal = normalize(normal);
-		intersec.normal = normalize(transpose(mat3(uShortBoxInvMatrix)) * normal);
-		intersec.emission = boxes[1].emission;
-		intersec.color = boxes[1].color;
-		intersec.type = boxes[1].type;
-		intersectedObjectID = float(objectCount);
+		hitNormal = normalize(transpose(mat3(uShortBoxInvMatrix)) * normal);
+		hitEmission = boxes[1].emission;
+		hitColor = boxes[1].color;
+		hitType = boxes[1].type;
+		hitObjectID = float(objectCount);
 	}
 
 	return t;
-} // end float SceneIntersect( Ray r, inout Intersection intersec, out float intersectedObjectID )
+} // end float SceneIntersect( )
 
 
 //-----------------------------------------------------------------------------------------------------------------------------
-vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
+vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
 //-----------------------------------------------------------------------------------------------------------------------------
 {
-        Intersection intersec;
         Quad light = quads[5];
 
 	vec3 accumCol = vec3(0);
@@ -118,11 +121,10 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
         
 	float t = INFINITY;
 	float weight, p;
-	float intersectedObjectID;
 	
 	int diffuseCount = 0;
 	int previousIntersecType = -100;
-	intersec.type = -100;
+	hitType = -100;
 	
 	bool bounceIsSpecular = true;
 	bool sampleLight = false;
@@ -131,23 +133,23 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 
 	for (int bounces = 0; bounces < 5; bounces++)
 	{
-		previousIntersecType = intersec.type;
+		previousIntersecType = hitType;
 
-		t = SceneIntersect(r, intersec, intersectedObjectID);
+		t = SceneIntersect();
 
 		if (t == INFINITY)
 			break;
 
 		// useful data 
-		n = normalize(intersec.normal);
-                nl = dot(n, r.direction) < 0.0 ? normalize(n) : normalize(-n);
-		x = r.origin + r.direction * t;
+		n = normalize(hitNormal);
+                nl = dot(n, rayDirection) < 0.0 ? normalize(n) : normalize(-n);
+		x = rayOrigin + rayDirection * t;
 
 		if (bounces == 0)
 		{
 			objectNormal = nl;
-			objectColor = intersec.color;
-			objectID = intersectedObjectID;
+			objectColor = hitColor;
+			objectID = hitObjectID;
 		}
 		if (bounces == 1 && previousIntersecType == SPEC)
 		{
@@ -155,13 +157,13 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 		}
 		
 		
-		if (intersec.type == LIGHT)
+		if (hitType == LIGHT)
 		{	
 			if (diffuseCount == 0)
 				pixelSharpness = 1.01;
 
 			if (bounceIsSpecular || sampleLight || createCausticRay)
-				accumCol = mask * intersec.emission;
+				accumCol = mask * hitEmission;
 
 			// reached a light source, so we can exit
 			break;
@@ -173,17 +175,17 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 
 
 
-                if (intersec.type == DIFF) // Ideal DIFFUSE reflection
+                if (hitType == DIFF) // Ideal DIFFUSE reflection
                 {
+			if (createCausticRay)
+				break;
+
 			if ( diffuseCount == 0 && previousIntersecType == SPEC )	
-				objectColor = intersec.color;
+				objectColor = hitColor;
 
 			diffuseCount++;
 
-			mask *= intersec.color;
-
-			if (createCausticRay)
-				break;
+			mask *= hitColor;
 
 			// create caustic ray
                         if (diffuseCount == 1 && rand() < 0.25)// && uSampleCounter > 20.0)
@@ -193,10 +195,11 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 				vec3 randVec = vec3(rng() * 2.0 - 1.0, rng() * 2.0 - 1.0, rng() * 2.0 - 1.0);
 				vec3 offset = vec3(randVec.x * 82.0, randVec.y * 170.0, randVec.z * 80.0);
 				vec3 target = vec3(180.0 + offset.x, 170.0 + offset.y, -350.0 + offset.z);
-				r = Ray( x, normalize(target - x) );
-				r.origin += nl * uEPS_intersect;
 				
-				weight = max(0.0, dot(nl, r.direction));
+				rayDirection = normalize(target - x);
+				rayOrigin = x + nl * uEPS_intersect;
+				
+				weight = max(0.0, dot(nl, rayDirection));
 				mask *= weight;
 
 				continue;
@@ -207,27 +210,27 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 			if (diffuseCount == 1 && rand() < 0.5)
 			{	
 				// choose random Diffuse sample vector
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
-				r.origin += nl * uEPS_intersect;
+				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
+				rayOrigin = x + nl * uEPS_intersect;
 				continue;
 			}
 			
 			dirToLight = sampleQuadLight(x, nl, light, weight);
 			mask *= weight;
 
-			r = Ray( x, dirToLight );
-			r.origin += nl * uEPS_intersect;
+			rayDirection = dirToLight;
+			rayOrigin = x + nl * uEPS_intersect;
 			sampleLight = true;
 			continue;
                         
-                } // end if (intersec.type == DIFF)
+                } // end if (hitType == DIFF)
 		
-                if (intersec.type == SPEC)  // Ideal SPECULAR reflection
+                if (hitType == SPEC)  // Ideal SPECULAR reflection
 		{
-			mask *= intersec.color;
+			mask *= hitColor;
 
-			r = Ray( x, reflect(r.direction, nl) );
-			r.origin += nl * uEPS_intersect;
+			rayDirection = reflect(rayDirection, nl);
+			rayOrigin = x + nl * uEPS_intersect;
 
 			continue;
 		}
@@ -236,7 +239,7 @@ vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out 
 	
 	return max(vec3(0), accumCol);
 
-}  // end vec3 CalculateRadiance( Ray r, out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
+}  // end vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
 
 
 //-----------------------------------------------------------------------
