@@ -16,9 +16,14 @@ uniform vec3 uSunColor;
 // (1 / 2048 texture width)
 #define INV_TEXTURE_WIDTH 0.00048828125
 
-struct Ray { vec3 origin; vec3 direction; };
+vec3 rayOrigin, rayDirection;
+// recorded intersection data:
+vec3 hitNormal, hitEmission, hitColor;
+vec2 hitUV;
+float hitObjectID, hitOpacity;
+int hitType, hitAlbedoTextureID;
+
 struct Plane { vec4 pla; vec3 emission; vec3 color; int type; };
-struct Intersection { vec3 normal; vec3 emission; vec3 color; vec2 uv; int type; int albedoTextureID; float opacity;};
 
 Plane plane;
 
@@ -29,56 +34,44 @@ Plane plane;
 #include <pathtracing_boundingbox_intersect>
 #include <pathtracing_bvhTriangle_intersect>
 
-struct StackLevelData
-{
-	float id;
-	float rayT;
-} stackLevels[24];
+vec2 stackLevels[28];
 
-struct BoxNode
-{
-	float branch_A_Index;
-	vec3 minCorner;
-	float branch_B_Index;
-	vec3 maxCorner;
-};
+//vec4 boxNodeData0 corresponds to .x = idTriangle,  .y = aabbMin.x, .z = aabbMin.y, .w = aabbMin.z
+//vec4 boxNodeData1 corresponds to .x = idRightChild .y = aabbMax.x, .z = aabbMax.y, .w = aabbMax.z
 
-BoxNode GetBoxNode(const in float i)
+void GetBoxNodeData(const in float i, inout vec4 boxNodeData0, inout vec4 boxNodeData1)
 {
 	// each bounding box's data is encoded in 2 rgba(or xyzw) texture slots 
-	float iX2 = (i * 2.0);
-	// (iX2 + 0.0) corresponds to .x: idLeftChild, .y: aabbMin.x, .z: aabbMin.y, .w: aabbMin.z 
-	// (iX2 + 1.0) corresponds to .x: idRightChild .y: aabbMax.x, .z: aabbMax.y, .w: aabbMax.z 
+	float ix2 = i * 2.0;
+	// (ix2 + 0.0) corresponds to .x = idTriangle,  .y = aabbMin.x, .z = aabbMin.y, .w = aabbMin.z 
+	// (ix2 + 1.0) corresponds to .x = idRightChild .y = aabbMax.x, .z = aabbMax.y, .w = aabbMax.z 
 
-	ivec2 uv0 = ivec2( mod(iX2 + 0.0, 2048.0), floor((iX2 + 0.0) * INV_TEXTURE_WIDTH) );
-	ivec2 uv1 = ivec2( mod(iX2 + 1.0, 2048.0), floor((iX2 + 1.0) * INV_TEXTURE_WIDTH) );
+	ivec2 uv0 = ivec2( mod(ix2 + 0.0, 2048.0), (ix2 + 0.0) * INV_TEXTURE_WIDTH ); // data0
+	ivec2 uv1 = ivec2( mod(ix2 + 1.0, 2048.0), (ix2 + 1.0) * INV_TEXTURE_WIDTH ); // data1
 	
-	vec4 aabbNodeData0 = texelFetch(tAABBTexture, uv0, 0);
-	vec4 aabbNodeData1 = texelFetch(tAABBTexture, uv1, 0);
-	
-	BoxNode BN = BoxNode( aabbNodeData0.x,
-			      aabbNodeData0.yzw,
-			      aabbNodeData1.x,
-			      aabbNodeData1.yzw );
-
-	return BN;
+	boxNodeData0 = texelFetch(tAABBTexture, uv0, 0);
+	boxNodeData1 = texelFetch(tAABBTexture, uv1, 0);
 }
 
+
 //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-float SceneIntersect( Ray r, inout Intersection intersec )
+float SceneIntersect( )
 //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 {
-	float d = INFINITY;
-	float t = INFINITY;
-
-	// AABB BVH Intersection variables
-	vec4 aabbNodeData0, aabbNodeData1, aabbNodeData2;
+	vec4 currentBoxNodeData0, nodeAData0, nodeBData0, tmpNodeData0;
+	vec4 currentBoxNodeData1, nodeAData1, nodeBData1, tmpNodeData1;
+	
 	vec4 vd0, vd1, vd2, vd3, vd4, vd5, vd6, vd7;
-	vec3 inverseDir = 1.0 / r.direction;
-	vec3 n = vec3(0);
+
+	vec3 inverseDir = 1.0 / rayDirection;
+	vec3 normal;
+
+	vec2 currentStackData, stackDataA, stackDataB, tmpStackData;
 	ivec2 uv0, uv1, uv2, uv3, uv4, uv5, uv6, uv7;
 
-	float stackptr = 0.0;
+	float d;
+	float t = INFINITY;
+        float stackptr = 0.0;
 	float id = 0.0;
 	float tu, tv;
 	float triangleID = 0.0;
@@ -86,109 +79,122 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 	float triangleV = 0.0;
 	float triangleW = 0.0;
 
+	int objectCount = 0;
+	
+	hitObjectID = -INFINITY;
+
 	bool skip = false;
 	bool triangleLookupNeeded = false;
 
-	BoxNode currentBoxNode, nodeA, nodeB, tnp;
-	StackLevelData currentStackData, slDataA, slDataB, tmp;
 	
 	// GROUND Plane
-    d = PlaneIntersect( plane.pla, r );
-    if (d < t)
-    {
-        t = d;
-        intersec.normal = normalize(plane.pla.xyz);
-        intersec.emission = plane.emission;
-        intersec.color = plane.color;
-        intersec.type = plane.type;
-    }
+	d = PlaneIntersect( plane.pla, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = normalize(plane.pla.xyz);
+		hitEmission = plane.emission;
+		hitColor = plane.color;
+		hitType = plane.type;
+	}
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////
 	// glTF
 	///////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	currentBoxNode = GetBoxNode(stackptr);
-	currentStackData = StackLevelData(stackptr, BoundingBoxIntersect(currentBoxNode.minCorner, currentBoxNode.maxCorner, r.origin, inverseDir));
+	GetBoxNodeData(stackptr, currentBoxNodeData0, currentBoxNodeData1);
+	currentStackData = vec2(stackptr, BoundingBoxIntersect(currentBoxNodeData0.yzw, currentBoxNodeData1.yzw, rayOrigin, inverseDir));
 	stackLevels[0] = currentStackData;
+	skip = (currentStackData.y < t);
 
-	while(true)
-	{
-		if (currentStackData.rayT < t)
-        	{
-			if (currentBoxNode.branch_A_Index >= 0.0) // signifies this is a branch
-			{
-				nodeA = GetBoxNode(currentBoxNode.branch_A_Index);
-				nodeB = GetBoxNode(currentBoxNode.branch_B_Index);
-				slDataA = StackLevelData(currentBoxNode.branch_A_Index, BoundingBoxIntersect(nodeA.minCorner, nodeA.maxCorner, r.origin, inverseDir));
-				slDataB = StackLevelData(currentBoxNode.branch_B_Index, BoundingBoxIntersect(nodeB.minCorner, nodeB.maxCorner, r.origin, inverseDir));
+	while (true)
+        {
+		if (!skip) 
+                {
+                        // decrease pointer by 1 (0.0 is root level, 27.0 is maximum depth)
+                        if (--stackptr < 0.0) // went past the root level, terminate loop
+                                break;
 
-				// first sort the branch node data so that 'a' is the smallest
-				if (slDataB.rayT < slDataA.rayT)
-				{
-					tmp = slDataB;
-					slDataB = slDataA;
-					slDataA = tmp;
-
-					tnp = nodeB;
-					nodeB = nodeA;
-					nodeA = tnp;
-				} // branch 'b' now has the larger rayT value of 'a' and 'b'
-
-				if (slDataB.rayT < t) // see if branch 'b' (the larger rayT) needs to be processed
-				{
-					currentStackData = slDataB;
-					currentBoxNode = nodeB;
-					skip = true; // this will prevent the stackptr from decreasing by 1
-				}
-
-				if (slDataA.rayT < t) // see if branch 'a' (the smaller rayT) needs to be processed
-				{
-					if (skip == true) // if larger branch 'b' needed to be processed also,
-						stackLevels[int(stackptr++)] = slDataB; // cue larger branch 'b' for future round
-												// also, increase pointer by 1
-
-					currentStackData = slDataA;
-					currentBoxNode = nodeA;
-					skip = true; // this will prevent the stackptr from decreasing by 1
-				}
-			}
-			else //if (currentBoxNode.branch_A_Index < 0.0) //  < 0.0 signifies a leaf node
-			{
-				// each triangle's data is encoded in 8 rgba(or xyzw) texture slots
-				id = 8.0 * (-currentBoxNode.branch_A_Index - 1.0);
-
-				uv0 = ivec2( mod(id + 0.0, 2048.0), floor((id + 0.0) * INV_TEXTURE_WIDTH) );
-				uv1 = ivec2( mod(id + 1.0, 2048.0), floor((id + 1.0) * INV_TEXTURE_WIDTH) );
-				uv2 = ivec2( mod(id + 2.0, 2048.0), floor((id + 2.0) * INV_TEXTURE_WIDTH) );
-				
-				vd0 = texelFetch(tTriangleTexture, uv0, 0);
-				vd1 = texelFetch(tTriangleTexture, uv1, 0);
-				vd2 = texelFetch(tTriangleTexture, uv2, 0);
-
-				d = BVH_TriangleIntersect( vec3(vd0.xyz), vec3(vd0.w, vd1.xy), vec3(vd1.zw, vd2.x), r, tu, tv );
-
-				if (d < t && d > 0.0)
-				{
-					t = d;
-					triangleID = id;
-					triangleU = tu;
-					triangleV = tv;
-					triangleLookupNeeded = true;
-				}
-			}
-		} // end if (currentStackData.rayT < t)
-
-		if (skip == false)
-		{
-			// decrease pointer by 1 (0.0 is root level, 24.0 is maximum depth)
-			if (--stackptr < 0.0) // went past the root level, terminate loop
-				break;
-			currentStackData = stackLevels[int(stackptr)];
-			currentBoxNode = GetBoxNode(currentStackData.id);
-		}
+                        currentStackData = stackLevels[int(stackptr)];
+			
+			if (currentStackData.y >= t)
+				continue;
+			
+			GetBoxNodeData(currentStackData.x, currentBoxNodeData0, currentBoxNodeData1);
+                }
 		skip = false; // reset skip
+		
+		// SAH builder specific x >= 0.0 (with FAST builder, opposite applies, x < 0.0 is inner node)
+		if (currentBoxNodeData0.x >= 0.0) // >= 0.0 signifies an inner node (for SAH builder)
+		{
+			GetBoxNodeData(currentStackData.x + 1.0, nodeAData0, nodeAData1);
+			GetBoxNodeData(currentBoxNodeData1.x, nodeBData0, nodeBData1);
+			stackDataA = vec2(currentStackData.x + 1.0, BoundingBoxIntersect(nodeAData0.yzw, nodeAData1.yzw, rayOrigin, inverseDir));
+			stackDataB = vec2(currentBoxNodeData1.x, BoundingBoxIntersect(nodeBData0.yzw, nodeBData1.yzw, rayOrigin, inverseDir));
+			
+			// first sort the branch node data so that 'a' is the smallest
+			if (stackDataB.y < stackDataA.y)
+			{
+				tmpStackData = stackDataB;
+				stackDataB = stackDataA;
+				stackDataA = tmpStackData;
 
-	} // end while (true)
+				tmpNodeData0 = nodeBData0;   tmpNodeData1 = nodeBData1;
+				nodeBData0   = nodeAData0;   nodeBData1   = nodeAData1;
+				nodeAData0   = tmpNodeData0; nodeAData1   = tmpNodeData1;
+			} // branch 'b' now has the larger rayT value of 'a' and 'b'
+
+			if (stackDataB.y < t) // see if branch 'b' (the larger rayT) needs to be processed
+			{
+				currentStackData = stackDataB;
+				currentBoxNodeData0 = nodeBData0;
+				currentBoxNodeData1 = nodeBData1;
+				skip = true; // this will prevent the stackptr from decreasing by 1
+			}
+			if (stackDataA.y < t) // see if branch 'a' (the smaller rayT) needs to be processed 
+			{
+				if (skip) // if larger branch 'b' needed to be processed also,
+					stackLevels[int(stackptr++)] = stackDataB; // cue larger branch 'b' for future round
+							// also, increase pointer by 1
+				
+				currentStackData = stackDataA;
+				currentBoxNodeData0 = nodeAData0; 
+				currentBoxNodeData1 = nodeAData1;
+				skip = true; // this will prevent the stackptr from decreasing by 1
+			}
+
+			continue;
+		} // end if (currentBoxNodeData0.x >= 0.0) // inner node (for SAH builder)
+
+
+		// else this is a leaf
+
+		// each triangle's data is encoded in 8 rgba(or xyzw) texture slots
+		
+		// SAH builder specific
+		id = 8.0 * (-currentBoxNodeData0.x - 1.0); // (for SAH builder)
+		//id = 8.0 * currentBoxNodeData0.x; // (for FAST builder)
+
+		uv0 = ivec2( mod(id + 0.0, 2048.0), (id + 0.0) * INV_TEXTURE_WIDTH );
+		uv1 = ivec2( mod(id + 1.0, 2048.0), (id + 1.0) * INV_TEXTURE_WIDTH );
+		uv2 = ivec2( mod(id + 2.0, 2048.0), (id + 2.0) * INV_TEXTURE_WIDTH );
+		
+		vd0 = texelFetch(tTriangleTexture, uv0, 0);
+		vd1 = texelFetch(tTriangleTexture, uv1, 0);
+		vd2 = texelFetch(tTriangleTexture, uv2, 0);
+
+		d = BVH_TriangleIntersect( vec3(vd0.xyz), vec3(vd0.w, vd1.xy), vec3(vd1.zw, vd2.x), rayOrigin, rayDirection, tu, tv );
+
+		if (d < t)
+		{
+			t = d;
+			triangleID = id;
+			triangleU = tu;
+			triangleV = tv;
+			triangleLookupNeeded = true;
+		}
+	      
+        } // end while (true)
 
 
 	if (triangleLookupNeeded)
@@ -212,29 +218,29 @@ float SceneIntersect( Ray r, inout Intersection intersec )
 		vd7 = texelFetch(tTriangleTexture, uv7, 0);
 
 		// face normal for flat-shaded polygon look
-		//intersec.normal = normalize( cross(vec3(vd0.w, vd1.xy) - vec3(vd0.xyz), vec3(vd1.zw, vd2.x) - vec3(vd0.xyz)) );
+		//hitNormal = normalize( cross(vec3(vd0.w, vd1.xy) - vec3(vd0.xyz), vec3(vd1.zw, vd2.x) - vec3(vd0.xyz)) );
 
 		// interpolated normal using triangle intersection's uv's
 		triangleW = 1.0 - triangleU - triangleV;
-		intersec.normal = normalize(triangleW * vec3(vd2.yzw) + triangleU * vec3(vd3.xyz) + triangleV * vec3(vd3.w, vd4.xy));
-		intersec.emission = vec3(1, 0, 1); // use this if intersec.type will be LIGHT
-		intersec.color = vd6.yzw;
-		intersec.opacity = vd7.y;
-		intersec.uv = triangleW * vec2(vd4.zw) + triangleU * vec2(vd5.xy) + triangleV * vec2(vd5.zw);
-		intersec.type = int(vd6.x);
-		intersec.albedoTextureID = int(vd7.x);
+		hitNormal = normalize(triangleW * vec3(vd2.yzw) + triangleU * vec3(vd3.xyz) + triangleV * vec3(vd3.w, vd4.xy));
+		hitEmission = vec3(1, 0, 1); // use this if hitType will be LIGHT
+		hitColor = vd6.yzw;
+		hitOpacity = vd7.y;
+		hitUV = triangleW * vec2(vd4.zw) + triangleU * vec2(vd5.xy) + triangleV * vec2(vd5.zw);
+		hitType = int(vd6.x);
+		hitAlbedoTextureID = int(vd7.x);
 	}
 
 	return t;
 
-} // end float SceneIntersect( Ray r, inout Intersection intersec )
+} // end float SceneIntersect( )
 
 
-vec3 Get_HDR_Color(Ray r)
+vec3 Get_HDR_Color(vec3 rayDirection)
 {
 	vec2 sampleUV;
-	sampleUV.x = atan(r.direction.z, r.direction.x) * ONE_OVER_TWO_PI + 0.5;
-	sampleUV.y = asin(clamp(r.direction.y, -1.0, 1.0)) * ONE_OVER_PI + 0.5;
+	sampleUV.x = atan(rayDirection.z, rayDirection.x) * ONE_OVER_TWO_PI + 0.5;
+	sampleUV.y = asin(clamp(rayDirection.y, -1.0, 1.0)) * ONE_OVER_PI + 0.5;
 	vec4 texData = texture( tHDRTexture, sampleUV );
 	texData = RGBEToLinear(texData);
 	
@@ -245,12 +251,11 @@ vec3 Get_HDR_Color(Ray r)
 }
 
 //-----------------------------------------------------------------------
-vec3 CalculateRadiance(Ray r, vec3 sunDirection)
+vec3 CalculateRadiance()
 //-----------------------------------------------------------------------
 {
 	vec3 randVec = vec3(rand() * 2.0 - 1.0, rand() * 2.0 - 1.0, rand() * 2.0 - 1.0);
 
-	Intersection intersec;
 	vec3 accumCol = vec3(0.0);
 	vec3 mask = vec3(1.0);
 	vec3 n, nl, x;
@@ -273,64 +278,64 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection)
     	for (int bounces = 0; bounces < 4; bounces++)
 	{
 
-		float t = SceneIntersect(r, intersec);
+		t = SceneIntersect();
 
 		// ray hits sky first
 		if (t == INFINITY && bounces == 0 )
 		{
-			accumCol = Get_HDR_Color(r);
+			accumCol = Get_HDR_Color(rayDirection);
 
 			break;	
 		}
 
-        	// if ray bounced off of diffuse material and hits sky
+		// if ray bounced off of diffuse material and hits sky
 		if (t == INFINITY && previousIntersecType == DIFF)
 		{
 			if (sampleSunLight)
 				accumCol = mask * uSunColor * uSunLightIntensity;
 			else
-				accumCol = mask * Get_HDR_Color(r) * uSkyLightIntensity;
+				accumCol = mask * Get_HDR_Color(rayDirection) * uSkyLightIntensity;
 
 			break;
 		}
 
-        	// if ray bounced off of glass and hits sky
+		// if ray bounced off of glass and hits sky
 		if (t == INFINITY && previousIntersecType == REFR)
 		{
-            		if (diffuseCount == 0) // camera looking through glass, hitting the sky
-			    	mask *= Get_HDR_Color(r);
+	    		if (diffuseCount == 0) // camera looking through glass, hitting the sky
+			    	mask *= Get_HDR_Color(rayDirection);
 			else if (sampleSunLight) // sun rays going through glass, hitting another surface
 				mask *= uSunColor * uSunLightIntensity;
 			else  // sky rays going through glass, hitting another surface
-                		mask *= Get_HDR_Color(r) * uSkyLightIntensity;
+				mask *= Get_HDR_Color(rayDirection) * uSkyLightIntensity;
 
 			if (bounceIsSpecular) // prevents sun 'fireflies' on diffuse surfaces
-                		accumCol = mask;
+				accumCol = mask;
 
 			break;
 		}
 
-        	// other lights, like houselights, could be added to the scene
+		// other lights, like houselights, could be added to the scene
 		// if we reached light material, don't spawn any more rays
-		if (intersec.type == LIGHT)
+		if (hitType == LIGHT)
 		{
-            		accumCol = mask * intersec.emission;
+	    		accumCol = mask * hitEmission;
 
 			break;
 		}
 
 		// useful data
-		vec3 n = normalize(intersec.normal);
-        	vec3 nl = dot(n,r.direction) <= 0.0 ? normalize(n) : normalize(-n);
-		vec3 x = r.origin + r.direction * t;
+		vec3 n = normalize(hitNormal);
+		vec3 nl = dot(n, rayDirection) < 0.0 ? normalize(n) : normalize(-n);
+		vec3 x = rayOrigin + rayDirection * t;
 
-        	if (intersec.type == DIFF) // Ideal DIFFUSE reflection
-        	{
+		if (hitType == DIFF) // Ideal DIFFUSE reflection
+		{
 			diffuseCount++;
 			previousIntersecType = DIFF;
 
-			mask *= intersec.color;
-            		bounceIsSpecular = false;
+			mask *= hitColor;
+	    		bounceIsSpecular = false;
 
 			/*
 			// Russian Roulette
@@ -338,9 +343,9 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 			if (bounces > 0)
 			{
 				if (rand() < p)
-                    			mask *= 1.0 / p;
-                		else
-                    			break;
+		    			mask *= 1.0 / p;
+				else
+		    			break;
 			}
 			*/
 
@@ -348,72 +353,72 @@ vec3 CalculateRadiance(Ray r, vec3 sunDirection)
 			{
 				// this branch gathers color bleeding / caustics from other surfaces hit in the future
 				// choose random Diffuse sample vector
-				r = Ray( x, randomCosWeightedDirectionInHemisphere(nl) );
-				r.origin += r.direction * epsIntersect;
+				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
+				rayOrigin = x + nl * epsIntersect;
 
 				continue;
 			}
-			else
-			{
-				// this branch acts like a traditional shadowRay, checking for direct light from the Sun..
-				// if it has a clear path and hits the Sun on the next bounce, sunlight is gathered, otherwise returns black (shadow)
-				r = Ray( x, normalize(sunDirection + (randVec * 0.01)) );
-				r.origin += nl * epsIntersect;
-				weight = dot(r.direction, nl);
-				if (weight < 0.01)
-					break;
+			
+			// this branch acts like a traditional shadowRay, checking for direct light from the Sun..
+			// if it has a clear path and hits the Sun on the next bounce, sunlight is gathered, otherwise returns black (shadow)
+			rayDirection = normalize(uSunDirection + (randVec * 0.01));
+			rayOrigin = x + nl * epsIntersect;
 
-				mask *= weight;
-				sampleSunLight = true;
-				continue;
-			}
-		} // end if (intersec.type == DIFF)
+			weight = max(0.0, dot(rayDirection, nl));
+			mask *= weight;
+			
+			sampleSunLight = true;
+			continue;
+			
+		} // end if (hitType == DIFF)
 
-		if (intersec.type == SPEC)  // Ideal SPECULAR reflection
+		if (hitType == SPEC)  // Ideal SPECULAR reflection
 		{
 			previousIntersecType = SPEC;
-			mask *= intersec.color;
+			mask *= hitColor;
 
-			r = Ray( x, reflect(r.direction, nl) );
-			r.origin += r.direction * epsIntersect;
+			rayDirection = reflect(rayDirection, nl);
+			rayOrigin = x + rayDirection * epsIntersect;
 
 			//bounceIsSpecular = true; // turn on mirror caustics
 			continue;
 		}
 
-        	if (intersec.type == REFR)  // Ideal dielectric REFRACTION
+		if (hitType == REFR)  // Ideal dielectric REFRACTION
 		{
 			previousIntersecType = REFR;
 
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
-			Re = calcFresnelReflectance(r.direction, n, nc, nt, ratioIoR);
+			Re = calcFresnelReflectance(rayDirection, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 
 			if (rand() < Re) // reflect ray from surface
 			{
-				r = Ray( x, reflect(r.direction, nl) );
-				r.origin += r.direction * epsIntersect;
-                		continue;
-			}
-			else // transmit ray through surface
-			{
-				mask *= 1.0 - (intersec.color * intersec.opacity);
-				tdir = refract(r.direction, nl, ratioIoR);
-				r = Ray(x, r.direction); // TODO using r.direction instead of tdir, because going through common Glass makes everything spherical from up close...
-				r.origin += r.direction * epsIntersect;
-				
-                		if (diffuseCount < 2)
-					bounceIsSpecular = true;
+				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
+				rayOrigin = x + nl * epsIntersect;
 				continue;
 			}
+			
+			// transmit ray through surface
+			
+			mask *= 1.0 - (hitColor * hitOpacity);
+			//tdir = refract(rayDirection, nl, ratioIoR);
+			rayDirection = rayDirection; // TODO using rayDirection instead of tdir, because going through common Glass makes everything spherical from up close...
+			rayOrigin = x + rayDirection * epsIntersect;
+			
+			if (diffuseCount < 2)
+				bounceIsSpecular = true;
+			continue;
+			
 
-		} // end if (intersec.type == REFR)
+		} // end if (hitType == REFR)
 
 	} // end for (int bounces = 0; bounces < 4; bounces++)
 
 	return accumCol;
-}
+} // end vec3 CalculateRadiance()
+
 
 // tentFilter from Peter Shirley's 'Realistic Ray Tracing (2nd Edition)' book, pg. 60
 float tentFilter(float x)
@@ -456,13 +461,14 @@ void main( void )
 	// point on aperture to focal point
 	vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
 	
-	Ray ray = Ray( cameraPosition + randomAperturePos , finalRayDir );
+	rayOrigin = cameraPosition + randomAperturePos;
+	rayDirection = finalRayDir;
 
 	// Add ground plane
 	plane = Plane( vec4(0, 1, 0, 0.0), vec3(0), vec3(0.45), DIFF);
 
 	// perform path tracing and get resulting pixel color
-	vec3 pixelColor = CalculateRadiance(ray, uSunDirection);
+	vec3 pixelColor = CalculateRadiance();
 
 	vec3 previousColor = texelFetch(tPreviousTexture, ivec2(gl_FragCoord.xy), 0).rgb;
 	
