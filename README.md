@@ -75,7 +75,27 @@ Demonstrates increasing levels of roughness on different materials.  From left t
 
 * [Transforming Quadric Geometry Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Transforming_Quadric_Geometry_Showcase.html) Using the game engine version of the three.js path tracer, this demo shows how to create multiple objects (a bunch of 'THREE.Object3d()'s, each with its own transform) on the JavaScript side when initializing three.js, and then send the objects over to the GPU for realtime pathtracing.  The nice thing about having my pathtracer sitting on top of three.js is that I can use its built-in transformations such as Translate, Rotate, and Scale.  Since these shapes are mathematical (all quadrics), I also included clipping parameters so you can have partial shapes and can even animate the cutting process! *Note: this demo may take several seconds to compile* <br> <br>
 
-* <h3>Classic Scenes</h3>
+* <h3>Classic Scenes / Ray Tracing History</h3>
+
+<img src="https://github.com/erichlof/THREE.js-PathTracing-Renderer/blob/gh-pages/readme-Images/4-Figure7-1.png" width=30% height=30%>
+
+Arthur Appel is credited with the first formal mention of Ray Tracing (raycasting and shadow rays, shown above) in his 1968 paper [Some Techniques for Shading Machine Renderings of Solids](https://docs.google.com/viewer?url=https%3A%2F%2Fohiostate.pressbooks.pub%2Fapp%2Fuploads%2Fsites%2F45%2F2017%2F09%2Fshading-appel.pdf).  Mr. Appel used this new technique to help visualize machine parts and architectural concepts on printed paper in black and white.  The scene data was sent to an IBM 1627 (Calcomp) digital plotter that cleverly used text characters (like '+') with different spacing and brightness to differentiate the various shading of sides of a 3D model under a virtual light source.  Here are a few examples of Mr. Appel's digital plot renderings from his 1968 paper:
+
+<img src="https://github.com/erichlof/THREE.js-PathTracing-Renderer/blob/gh-pages/readme-Images/2-Figure2-1.png" width=20% height=20%> <img src="https://github.com/erichlof/THREE.js-PathTracing-Renderer/blob/gh-pages/readme-Images/4-Figure3-1.png" width=70% height=70%>
+
+Until now (2021), actual photos of Arthur Appel were not publicly available (none can be found with a thorough internet search).  All that was known was that he was working at IBM Research (TJW Center) at the time he wrote this seminal 1968 paper.  I really wanted to see what Mr. Appel looked like, and to share and celebrate his image and contributions to the field of Ray Tracing and Rendering.  With a little hesitation at first, I reached out to the IBM Corporate Archives in New York to see if they might have any remaining employee portraits of Arthur Appel.  I'm so glad I did, because I met (via email) a wonderful IBM Archive employee, Max Campbell, who kindly searched the entire archives and found 2 rarely-seen photos of Mr. Appel.  Since these images are copyrighted by IBM (and NOT a part of my repo's CC License), Max also kindly and graciously helped me to obtain permission from IBM to share these historic photos of the man who started it all!  Click on the images to see the full resolution photos:
+
+<img src="https://github.com/erichlof/THREE.js-PathTracing-Renderer/blob/gh-pages/readme-Images/1982_December_Arthur%20Appel_IBM%20Research%20Magazine.png" width=20% height=20%> <br>
+Arthur Appel, from the IBM Research Employee Gallery, ca. 1982
+Reprint Courtesy of IBM Corporation © <br>
+
+<img src="https://github.com/erichlof/THREE.js-PathTracing-Renderer/blob/gh-pages/readme-Images/1983_December_Arthur%20Appel_IBM%20Research%20Magazine.png" width=20% height=20%> <br>
+Arthur Appel demonstrating display architecture, from IBM Research Magazine ca. 1983
+Reprint Courtesy of IBM Corporation © <br>
+
+Many thanks to Max Campbell at IBM Research Archives for locating these rare photos and helping me to obtain permission to share them with everyone who is interested in ray tracing!  It is so nice to be able to finally put a face with the name of one of my ray tracing heroes, Arthur Appel.  Thank you Mr. Appel for your historic contributions to field of Computer Graphics! <br>
+<br>
+
 
 ![](readme-Images/Whitted_1979.jpg)
 
