@@ -88,7 +88,7 @@ vec3 terrain_calcNormal( vec3 pos, float t )
 float TerrainIntersect()
 {
 	vec3 pos = rayOrigin;
-	vec3 dir = normalize(rayDirection);
+	vec3 dir = rayDirection;
 	float h = 0.0;
 	float t = 0.0;
 	float epsilon = 1.0;
@@ -105,7 +105,6 @@ float TerrainIntersect()
 
 bool isLightSourceVisible( vec3 pos, vec3 n, vec3 dirToLight)
 {
-	dirToLight = normalize(dirToLight);
 	float h = 1.0;
 	float t = 0.0;
 	float terrainHeight = TERRAIN_HEIGHT * 1.5 + TERRAIN_LIFT;
@@ -209,7 +208,7 @@ float getOceanWaterHeight_Detail( vec3 p )
 float OceanIntersect()
 {
 	vec3 pos = rayOrigin;
-	vec3 dir = normalize(rayDirection);
+	vec3 dir = rayDirection;
 	float h = 0.0;
 	float t = 0.0;
 	
@@ -285,11 +284,6 @@ vec3 CalculateRadiance()
 	vec3 randVec = vec3(rng() * 2.0 - 1.0, rng() * 2.0 - 1.0, rng() * 2.0 - 1.0);
 	vec3 initialSkyColor = Get_Sky_Color(rayDirection);
 	
-	//Ray skyRay = Ray( rayOrigin * vec3(0.05), normalize(vec3(rayDirection.x, abs(rayDirection.y), rayDirection.z)) );
-	//float dc = SphereIntersect( 10000.0, vec3(skyRay.origin.x, -9800, skyRay.origin.z) + vec3(rng() * 2.0), skyRay );
-	//vec3 skyPos = skyRay.origin + skyRay.direction * dc;
-	//vec4 cld = render_clouds(skyRay, skyPos);
-	
 	vec3 accumCol = vec3(0);
         vec3 mask = vec3(1);
 	vec3 firstMask = vec3(1);
@@ -298,15 +292,15 @@ vec3 CalculateRadiance()
 	vec3 tdir;
 	
 	float nc, nt, ratioIoR, Re, Tr;
+	float P, RP, TP;
 	float t = INFINITY;
 	float cameraUnderWaterValue = rayOrigin.y < getOceanWaterHeight(rayOrigin) ? 1.0 : 0.0;
 	float thickness = 0.01;
 
+	int previousIntersecType = -100;
+
 	bool checkWater = true;
 	bool skyHit = false;
-	bool firstTypeWasREFR = false;
-	bool reflectionTime = false;
-	bool rayEnteredWater = false;
 
 	
         for (int bounces = 0; bounces < 3; bounces++)
@@ -325,23 +319,10 @@ vec3 CalculateRadiance()
 				break; // exit early	
 			}
 
-			if (firstTypeWasREFR)
+			if (previousIntersecType == REFR && bounces == 1)
 			{
-				if (!reflectionTime) 
-				{
-					accumCol = mask * Get_Sky_Color(rayDirection);
-					
-					// start back at the refractive surface, but this time follow reflective branch
-					rayOrigin = firstRayOrigin;
-					rayDirection = firstRayDirection;
-					mask = firstMask;
-					// set/reset variables
-					reflectionTime = true;
-					// continue with the reflection ray
-					continue;
-				}
-
-				accumCol += mask * Get_Sky_Color(rayDirection); // add reflective result to the refractive result (if any)
+				skyHit = true;
+				accumCol = mask * Get_Sky_Color(rayDirection);
 				break;
 			}
 			
@@ -351,8 +332,8 @@ vec3 CalculateRadiance()
 		
 		
 		// useful data 
-		n = normalize(hitNormal);
-                nl = dot(n, rayDirection) < 0.0 ? normalize(n) : normalize(-n);
+		n = hitNormal;
+                nl = dot(n, rayDirection) < 0.0 ? n : -n;
 		x = rayOrigin + rayDirection * t;
 		
 		if (bounces == 0) 
@@ -361,11 +342,13 @@ vec3 CalculateRadiance()
 		// ray hits terrain
 		if (hitType == TERRAIN)
 		{
+			previousIntersecType = TERRAIN;
+
 			float rockNoise = texture(t_PerlinNoise, (0.0001 * x.xz) + 0.5).x;
 			vec3 rockColor0 = vec3(0.2, 0.2, 0.2) * 0.01 * rockNoise;
 			vec3 rockColor1 = vec3(0.2, 0.2, 0.2) * rockNoise;
 			vec3 snowColor = vec3(0.9);
-			vec3 up = normalize(vec3(0, 1, 0));
+			vec3 up = vec3(0, 1, 0);
 			vec3 randomSkyVec = randomCosWeightedDirectionInHemisphere(mix(n, up, 0.9));
 			vec3 skyColor = Get_Sky_Color(randomSkyVec);
 			if (dot(randomSkyVec, uSunDirection) > 0.98) skyColor *= 0.01;
@@ -387,12 +370,20 @@ vec3 CalculateRadiance()
 					nt = 1.2; // IOR of watery rock
 					Re = calcFresnelReflectance(rayDirection, n, nc, nt, ratioIoR);
 					Tr = 1.0 - Re;
-					firstTypeWasREFR = true;
-					reflectionTime = false;
-					firstRayDirection = reflect(rayDirection, n);
-					firstRayOrigin = x + nl * uEPS_intersect;
-					mask *= Tr;
-					firstMask = vec3(1) * Re;
+					P  = 0.25 + (0.5 * Re);
+					RP = Re / P;
+					TP = Tr / (1.0 - P);
+					
+					if (rand() < P)
+					{	
+						previousIntersecType = REFR;
+						mask *= RP;
+						rayDirection = reflect(rayDirection, nl); // reflect ray from surface
+						rayOrigin = x + nl * uEPS_intersect;
+						continue;
+					}
+					else 
+						mask *= TP; 
 				}
 			}
 				
@@ -403,31 +394,6 @@ vec3 CalculateRadiance()
 				mask = hitColor * sunColor;	
 			}
 
-			if (rayEnteredWater)
-			{
-				rayEnteredWater = false;
-				mask *= exp(log(WATER_COLOR) * thickness * t); 
-			}
-				
-			if (firstTypeWasREFR )
-			{
-				if (!reflectionTime) 
-				{	
-					accumCol = mask;
-					// start back at the refractive surface, but this time follow reflective branch
-					rayOrigin = firstRayOrigin;
-					rayDirection = firstRayDirection;
-					mask = firstMask;
-					// set/reset variables
-					reflectionTime = true;
-					// continue with the reflection ray
-					continue;
-				}
-
-				accumCol += mask;
-				break;
-			}
-
 			accumCol = mask;	
 			break;
 		} // end if (hitType == TERRAIN)
@@ -435,31 +401,27 @@ vec3 CalculateRadiance()
 		
 		if (hitType == REFR)  // Ideal dielectric REFRACTION
 		{
+			previousIntersecType = REFR;
+
 			nc = 1.0; // IOR of air
 			nt = 1.33; // IOR of water
 			Re = calcFresnelReflectance(rayDirection, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
+			P  = 0.25 + (0.5 * Re);
+                	RP = Re / P;
+                	TP = Tr / (1.0 - P);
 			
-			if (bounces == 0)
+			if (rand() < P)
 			{	
-				// save intersection data for future reflection trace
-				firstTypeWasREFR = true;
-				firstMask = mask * Re;
-				firstRayDirection = reflect(rayDirection, nl); // create reflection ray from surface
-				firstRayOrigin = x + nl * uEPS_intersect;
-				mask *= Tr;
-				rayEnteredWater = true;
+				mask *= RP;
+				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
+				rayOrigin = x + nl * uEPS_intersect;
+				continue;
 			}
 			
 			// transmit ray through surface
-			
-			// is ray leaving a solid object from the inside? 
-			// If so, attenuate ray color with object color by how far ray has travelled through the medium
-			if (distance(n, nl) > 0.1)
-			{
-				rayEnteredWater = false;
-				mask *= exp(log(WATER_COLOR) * thickness * t);
-			}
+			mask *= TP;
+			mask *= hitColor;
 			
 			tdir = refract(rayDirection, nl, ratioIoR);
 			rayDirection = tdir;
@@ -477,7 +439,7 @@ vec3 CalculateRadiance()
 	float hitDistance = distance(cameraRayOrigin, firstX);
 	float fogDistance;
 
-	if (skyHit && cameraUnderWaterValue == 0.0 ) // sky and clouds
+	if (skyHit)
 	{
 		//vec3 cloudColor = cld.rgb / (cld.a + 0.00001);
 		//vec3 sunColor = clamp(Get_Sky_Color( normalize((randVec * 0.03) + uSunDirection)), 0.0, 1.0);
@@ -486,7 +448,7 @@ vec3 CalculateRadiance()
 		//accumCol = mask * mix( accumCol, cloudColor, clamp( exp2( -hitDistance * 0.003 ), 0.0, 1.0 ) );
 		fogDistance = max(0.0, hitDistance - fogStartDistance);
 		accumCol = mix( initialSkyColor, accumCol, clamp( exp(-(fogDistance * 0.00005)), 0.0, 1.0 ) );
-	}	
+	}
 	else // terrain and other objects
 	{
 		fogDistance = max(0.0, hitDistance - fogStartDistance);
@@ -494,7 +456,7 @@ vec3 CalculateRadiance()
 
 		// underwater fog effect
 		hitDistance *= cameraUnderWaterValue;
-		accumCol = mix( vec3(0.0,0.001,0.001), accumCol, clamp( exp2( -hitDistance * 0.001 ), 0.0, 1.0 ) );
+		accumCol = mix( vec3(0.0,0.001,0.001), accumCol, clamp( exp2( -hitDistance * 0.0001 ), 0.0, 1.0 ) );
 	}
 	
 	
@@ -530,12 +492,12 @@ void main( void )
 	// calculate unique seed for rng() function
 	seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord);
 
-	/* // initialize rand() variables
+	// initialize rand() variables
 	counter = -1.0; // will get incremented by 1 on each call to rand()
 	channel = 0; // the final selected color channel to use for rand() calc (range: 0 to 3, corresponds to R,G,B, or A)
 	randNumber = 0.0; // the final randomly-generated number (range: 0.0 to 1.0)
 	randVec4 = vec4(0); // samples and holds the RGBA blueNoise texture value for this pixel
-	randVec4 = texelFetch(tBlueNoiseTexture, ivec2(mod(gl_FragCoord.xy + floor(uRandomVec2 * 256.0), 256.0)), 0); */
+	randVec4 = texelFetch(tBlueNoiseTexture, ivec2(mod(gl_FragCoord.xy + floor(uRandomVec2 * 256.0), 256.0)), 0);
 	
 	vec2 pixelOffset = vec2( tentFilter(rng()), tentFilter(rng()) ) * 0.5;
 	// we must map pixelPos into the range -1.0 to +1.0
