@@ -93,7 +93,7 @@ Reprint Courtesy of IBM Corporation © <br>
 Arthur Appel demonstrating display architecture, from IBM Research Magazine ca. 1983
 Reprint Courtesy of IBM Corporation © <br>
 
-Many thanks to Max Campbell at IBM Research Archives for locating these rare photos and helping me to obtain permission to share them with everyone who is interested in ray tracing!  It is so nice to be able to finally put a face with the name of one of my ray tracing heroes, Arthur Appel.  Thank you Mr. Appel for your historic contributions to field of Computer Graphics! <br>
+Many thanks to Max Campbell at IBM Research Archives for locating these rare photos and helping me to obtain permission to share them with everyone who is interested in ray tracing!  It is so nice to be able to finally put a face with the name of one of my ray tracing heroes.  Thank you Arthur Appel for your historic contributions to the field of Computer Graphics! <br>
 <br>
 
 
