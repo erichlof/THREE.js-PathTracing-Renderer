@@ -39,7 +39,7 @@ Sphere spheres[N_SPHERES];
 
 #define EARTH_RADIUS      6360.0 // in Km
 #define ATMOSPHERE_RADIUS 6420.0 // in Km
-#define SUN_POWER 30.0
+#define SUN_POWER 20.0
 
 vec3 hash33(vec3 p)
 {
@@ -222,7 +222,6 @@ vec3 terrain_calcNormal( vec3 pos, float t )
 
 bool terrain_isSunVisible( vec3 pos, vec3 n, vec3 dirToLight)
 {
-	dirToLight = normalize(dirToLight);
 	float h = 1.0;
 	float a = 0.0;
 	float t = 0.0;
@@ -396,8 +395,30 @@ float SceneIntersect( bool checkWater )
 	vec3 hitPos;
 	vec3 normal;
 
-	
+	// sun and moon
+	for (int i = 0; i < N_SPHERES; i++)
+        {
+		// Sun and Moon Spheres
+		d = SphereIntersect( spheres[i].radius, spheres[i].position, rayOrigin, rayDirection );
+		if (d < t)
+		{
+			t = d;
+			hitNormal = normalize((rayOrigin + rayDirection * t) - spheres[i].position);
+			hitEmission = spheres[i].emission;
+			hitColor = spheres[i].color;
+			hitType = spheres[i].type;
+		}
+	}
 
+	d = SphereIntersect(EARTH_RADIUS, vec3(0), rayOrigin, rayDirection);
+	if (d < INFINITY)
+	{
+		t = INFINITY;
+		hitType = -100;
+	}
+		
+
+	
 	d = TerrainIntersect();
 
 	if (d > TERRAIN_FAR)
@@ -416,11 +437,10 @@ float SceneIntersect( bool checkWater )
 		t = d;
 		hitPos = rayOrigin + rayDirection * t;
 		hitNormal = terrain_calcNormal(hitPos, t);
-		hitEmission = vec3(1,0,1);
+		hitEmission = vec3(0);//vec3(1,0,1);
 		hitColor = vec3(0);
 		hitType = TERRAIN;
 	}
-
 	
 	if (!checkWater)
 		return t;
@@ -473,23 +493,24 @@ vec3 CalculateRadiance()
 	vec3 firstMask = vec3(1);
 	vec3 n, nl, x;
 	vec3 initialSkyColor = vec3(0);
-	vec3 firstX = vec3(0);
+	vec3 firstX = cameraRayOrigin;
 	vec3 tdir;
 	
 	float nc, nt, ratioIoR, Re, Tr;
+	float P, RP, TP;
 	float t0, t1, tMax = INFINITY;
 	float t = INFINITY;
 	
+	int previousIntersecType = -100;
+
 	bool waterHit = false;
 	bool terrainHit = false;
 	bool bounceIsSpecular = true;
-	bool firstTypeWasREFR = false;
-	bool reflectionTime = false;
 	bool checkWater = true;
 	bool isDayTime = true;
 	
 	
-	if (dot(normalize(uSunDirection), normalize(uCameraFrameUp)) <= 0.0)
+	if (dot(uSunDirection, uCameraFrameUp) < 0.0)
 	{
 		isDayTime = false;
 	}
@@ -524,36 +545,58 @@ vec3 CalculateRadiance()
 				break; // exit early	
 			}
 
-			if (firstTypeWasREFR)
+			if (previousIntersecType == REFR)
 			{
-				if (!reflectionTime) 
-				{
-					accumCol = mask * initialSkyColor;// computeIncidentLight(rayOrigin, rayDirection, 0.0, tMax);
-					
-					// start back at the refractive surface, but this time follow reflective branch
-					rayOrigin = firstRayOrigin;
-					rayDirection = firstRayDirection;
-					mask = firstMask;
-					// set/reset variables
-					reflectionTime = true;
-					
-					// continue with the reflection ray
-					continue;
-				}
-
-				accumCol += mask * computeIncidentLight(rayOrigin, rayDirection, 0.0, tMax); // add reflective result to the refractive result (if any)
+				accumCol = mask * computeIncidentLight(rayOrigin, rayDirection, 0.0, tMax);
 				break;
 			}
 
 			// reached the sky light, so we can exit
 			break;
 		} // end if (t == INFINITY)
-		
+
 		
 		// useful data 
 		n = hitNormal;
-                nl = dot(n,rayDirection) <= 0.0 ? normalize(n) : normalize(n * -1.0);
+                nl = dot(n, rayDirection) < 0.0 ? n : -n;
 		x = rayOrigin + rayDirection * t;
+
+		// SUN
+		//if ((uCameraUnderWater > 0.0 || uCameraWithinAtmosphere || !terrainHit) && hitType == LIGHT)
+		if (hitType == LIGHT)
+		{	
+			if ( bounces == 0 || (bounces == 1 && (uCameraUnderWater > 0.0 || uCameraWithinAtmosphere)) )
+			{
+				vec3 sampleSkyCol = computeIncidentLight(rayOrigin, rayDirection, 0.0, tMax);
+				mask = mix(sampleSkyCol, hitEmission, 0.5);
+				accumCol = mask;
+				break;
+			}
+		}
+		
+		// MOON
+		//if ((uCameraUnderWater > 0.0 || uCameraWithinAtmosphere || !terrainHit) && hitType == DIFF)
+		if (hitType == DIFF)
+		{
+			if ( bounces == 0 || (bounces == 1 && (uCameraUnderWater > 0.0 || uCameraWithinAtmosphere)) )
+			{
+				vec2 uv;
+				vec3 mn = hitNormal;
+				uv.x = (1.0 + atan(mn.z, mn.x) / PI) * 0.5;
+				uv.y = acos(mn.y) / PI;
+				uv.x *= 1.3;
+				float rockNoise = clamp(texture(t_PerlinNoise, uv).x, 0.0, 1.0);
+				hitColor = clamp(hitColor * rockNoise, 0.0, 1.0);
+				vec3 sampleSkyCol = computeIncidentLight(rayOrigin, rayDirection, 0.0, tMax);
+				mask = mix(hitColor, sampleSkyCol, clamp(0.7 * (sampleSkyCol.r + sampleSkyCol.b), 0.0, 1.0));
+						// * max(0.0, dot(nl, uSunDirection)); // for moon phases
+
+				accumCol = mask;
+				break;
+			}
+		}
+
+
 
 		if (bounces == 0) 
 			firstX = x;
@@ -563,6 +606,7 @@ vec3 CalculateRadiance()
 		if (hitType == TERRAIN)
 		{
 			terrainHit = true;
+			previousIntersecType = TERRAIN;
 
 			float altitude = length(x) - EARTH_RADIUS;
 			vec2 uv;
@@ -574,14 +618,14 @@ vec3 CalculateRadiance()
 			vec3 snowColor = vec3(1);
 			vec3 up = normalize(x);
 			float nY = max(0.0, dot(n, up));
-			vec3 sunDirection = normalize(uSunDirection);
+			vec3 sunDirection = uSunDirection;
 			vec3 randomSkyVec = normalize(n + (randVec * 0.2));
 			vec3 skyColor = computeIncidentLight(x, up, 0.0, tMax);
 			vec3 sunColor = computeIncidentLight(x, normalize(sunDirection + (randomSkyVec * 0.02)), 0.0, tMax);
 			float terrainLayer = clamp( (altitude + (rockNoise * 1.0) * nY) / (TERRAIN_HEIGHT * 1.5 + TERRAIN_LIFT), 0.0, 1.0 );
 
 			if (!isDayTime)
-				sunDirection = normalize(-sunDirection);
+				sunDirection = -sunDirection;
 			else
 				sunColor = sunColor + 0.3;
 			
@@ -595,13 +639,12 @@ vec3 CalculateRadiance()
 			else
 			{
 				hitColor = mix(rockColor0, rockColor1, clamp(nY, 0.0, 1.0) );
-				//skyColor = (uCameraWithinAtmosphere && isDayTime) ? (skyColor + 0.5) : skyColor;
 				mask = hitColor * skyColor; // ambient color from sky light
 			}		
 				
 			vec3 shadowRayDirection = normalize(sunDirection + (randomSkyVec * 0.05));
 									
-			if ( bounces == 0 && terrain_isSunVisible(x, n, shadowRayDirection) ) // in direct sunlight
+			if ( bounces == 0 && dot(n, shadowRayDirection) > 0.1 && terrain_isSunVisible(x, n, shadowRayDirection) ) // in direct sunlight
 			{
 				if (isDayTime)
 					mask = hitColor * sunColor;
@@ -614,26 +657,6 @@ vec3 CalculateRadiance()
 				mask = mix(rockColor0, mask, clamp(0.1*altitude, 0.0, 1.0)) * 0.1;
 			}
 			
-			if (firstTypeWasREFR)
-			{
-				if (!reflectionTime) 
-				{	
-					accumCol = mask;
-					// start back at the refractive surface, but this time follow reflective branch
-					rayOrigin = firstRayOrigin;
-					rayDirection = firstRayDirection;
-					rayDirection = normalize(rayDirection);
-					mask = firstMask;
-					// set/reset variables
-					reflectionTime = true;
-					// continue with the reflection ray
-					continue;
-				}
-
-				accumCol += mask;
-				break;
-			}
-
 			accumCol = mask;
 			break;
 		}
@@ -641,29 +664,32 @@ vec3 CalculateRadiance()
                 if (hitType == REFR)  // Ideal dielectric REFRACTION
 		{
 			waterHit = true;
+			previousIntersecType = REFR;
 
 			nc = 1.0; // IOR of air
 			nt = 1.33; // IOR of water
 			Re = calcFresnelReflectance(rayDirection, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
+			P  = 0.25 + (0.5 * Re);
+                	RP = Re / P;
+                	TP = Tr / (1.0 - P);
 			
-			if (bounces == 0)
+			if (rand() < P)
 			{	
-				// save intersection data for future reflection trace
-				firstTypeWasREFR = true;
-				firstMask = mask * Re;
-				firstRayDirection = reflect(rayDirection, nl); // create reflection ray from surface
-				firstRayOrigin = x + nl * uEPS_intersect;
-				mask *= Tr;
+				mask *= RP;
+				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
+				rayOrigin = x + nl * uEPS_intersect;
+				continue;
 			}
 			
 			// transmit ray through surface
+			mask *= TP;
 			mask *= hitColor;
 			
 			tdir = refract(rayDirection, nl, ratioIoR);
 			rayDirection = tdir;
 			rayOrigin = x - nl * uEPS_intersect;
-
+			
 			continue;
 			
 		} // end if (hitType == REFR)
@@ -682,45 +708,6 @@ vec3 CalculateRadiance()
 		accumCol = mix( vec3(0.0,0.05,0.05), accumCol, clamp( exp2( -hitDistance * 1.0 ), 0.0, 1.0 ) );
 	}
 	
-	// sun and moon
-	for (int i = 0; i < N_SPHERES; i++)
-        {
-		// Sun and Moon Spheres
-		float d = SphereIntersect( spheres[i].radius, spheres[i].position, rayOrigin, rayDirection );
-		if (d < t)
-		{
-			t = d;
-			hitNormal = normalize((rayOrigin + rayDirection * t) - spheres[i].position);
-			hitEmission = spheres[i].emission;
-			hitColor = spheres[i].color;
-			hitType = spheres[i].type;
-		}
-	}
-
-	// SUN
-	if ((uCameraUnderWater > 0.0 || uCameraWithinAtmosphere || !terrainHit) && hitType == LIGHT)
-	{	
-		vec3 sampleSkyCol = computeIncidentLight(rayOrigin, rayDirection, 0.0, tMax);
-		mask = mix(sampleSkyCol, hitEmission, 0.5);
-		accumCol = mask;
-	}
-	
-	// MOON
-	if ((uCameraUnderWater > 0.0 || uCameraWithinAtmosphere || !terrainHit) && hitType == DIFF)
-	{
-		vec2 uv;
-		vec3 mn = hitNormal;
-		uv.x = (1.0 + atan(mn.z, mn.x) / PI) * 0.5;
-		uv.y = acos(mn.y) / PI;
-		uv.x *= 1.3;
-		float rockNoise = clamp(texture(t_PerlinNoise, uv).x, 0.0, 1.0);
-		hitColor = clamp(hitColor * rockNoise, 0.0, 1.0);
-		vec3 sampleSkyCol = computeIncidentLight(rayOrigin, rayDirection, 0.0, tMax);
-		mask = mix(hitColor, sampleSkyCol, clamp(0.7 * (sampleSkyCol.r + sampleSkyCol.b), 0.0, 1.0));
-				// * max(0.0, dot(nl, uSunDirection)); // for moon phases
-
-		accumCol = mask;
-	}
 	
 	// stars
 	if (t == INFINITY && !waterHit)
@@ -754,7 +741,7 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0); // no color value, black        
-        vec3 L1 = vec3(1.0, 0.9, 0.8) * SUN_POWER;// Sun Light
+        vec3 L1 = vec3(1.0, 0.9, 0.8) * 8.0;// Sun Light
 	spheres[0] = Sphere( 100.0, cameraPosition +  uSunDirection * 5000.0, L1, z, LIGHT);//Sun
 	spheres[1] = Sphere( 150.0, cameraPosition + -uSunDirection * 5000.0, z, vec3(1), DIFF);//Moon	
 }
@@ -771,19 +758,19 @@ void main( void )
 	// not needed, three.js has a built-in uniform named cameraPosition
 	//vec3 camPos   = vec3( uCameraMatrix[3][0],  uCameraMatrix[3][1],  uCameraMatrix[3][2]);
 
-    	vec3 camRight   = normalize( vec3( uCameraMatrix[0][0],  uCameraMatrix[0][1],  uCameraMatrix[0][2]) );
-	vec3 camUp      = normalize( vec3( uCameraMatrix[1][0],  uCameraMatrix[1][1],  uCameraMatrix[1][2]) );    
-	vec3 camForward = normalize( vec3(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]) );
+    	vec3 camRight   = vec3( uCameraMatrix[0][0],  uCameraMatrix[0][1],  uCameraMatrix[0][2] );
+	vec3 camUp      = vec3( uCameraMatrix[1][0],  uCameraMatrix[1][1],  uCameraMatrix[1][2] );    
+	vec3 camForward = vec3(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2] );
 
 	// calculate unique seed for rng() function
 	seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord);
 
-	/* // initialize rand() variables
+	// initialize rand() variables
 	counter = -1.0; // will get incremented by 1 on each call to rand()
 	channel = 0; // the final selected color channel to use for rand() calc (range: 0 to 3, corresponds to R,G,B, or A)
 	randNumber = 0.0; // the final randomly-generated number (range: 0.0 to 1.0)
 	randVec4 = vec4(0); // samples and holds the RGBA blueNoise texture value for this pixel
-	randVec4 = texelFetch(tBlueNoiseTexture, ivec2(mod(gl_FragCoord.xy + floor(uRandomVec2 * 256.0), 256.0)), 0); */
+	randVec4 = texelFetch(tBlueNoiseTexture, ivec2(mod(gl_FragCoord.xy + floor(uRandomVec2 * 256.0), 256.0)), 0);
 	
 	vec2 pixelOffset = vec2( tentFilter(rng()), tentFilter(rng()) ) * 0.5;
 	// we must map pixelPos into the range -1.0 to +1.0
