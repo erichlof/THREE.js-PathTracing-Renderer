@@ -288,7 +288,7 @@ vec3 CalculateRadiance()
         vec3 mask = vec3(1);
 	vec3 firstMask = vec3(1);
 	vec3 n, nl, x;
-	vec3 firstX = vec3(0);
+	vec3 firstX = cameraRayOrigin;// vec3(0);
 	vec3 tdir;
 	
 	float nc, nt, ratioIoR, Re, Tr;
@@ -314,14 +314,12 @@ vec3 CalculateRadiance()
 			if (bounces == 0) // ray hits sky first	
 			{
 				skyHit = true;
-				//firstX = skyPos;
 				accumCol = initialSkyColor;
 				break; // exit early	
 			}
 
-			if (previousIntersecType == REFR && bounces == 1)
+			if (previousIntersecType == REFR)
 			{
-				skyHit = true;
 				accumCol = mask * Get_Sky_Color(rayDirection);
 				break;
 			}
@@ -367,7 +365,7 @@ vec3 CalculateRadiance()
 				if (x.y > uWaterLevel && cameraUnderWaterValue == 0.0 && bounces == 0)
 				{
 					nc = 1.0; // IOR of air
-					nt = 1.2; // IOR of watery rock
+					nt = 1.33; // IOR of watery rock
 					Re = calcFresnelReflectance(rayDirection, n, nc, nt, ratioIoR);
 					Tr = 1.0 - Re;
 					P  = 0.25 + (0.5 * Re);
@@ -377,6 +375,7 @@ vec3 CalculateRadiance()
 					if (rand() < P)
 					{	
 						previousIntersecType = REFR;
+						mask = vec3(1);
 						mask *= RP;
 						rayDirection = reflect(rayDirection, nl); // reflect ray from surface
 						rayOrigin = x + nl * uEPS_intersect;
@@ -389,9 +388,10 @@ vec3 CalculateRadiance()
 				
 			
 			vec3 shadowRayDirection = randomDirectionInSpecularLobe(uSunDirection, 0.4);						
-			if ( isLightSourceVisible(x, n, shadowRayDirection) && x.y > uWaterLevel ) // in direct sunlight
+			//if ( isLightSourceVisible(x, n, shadowRayDirection) && x.y > uWaterLevel ) // in direct sunlight
+			if (bounces == 0 && x.y > uWaterLevel && dot(n, shadowRayDirection) > 0.1 && isLightSourceVisible(x, n, shadowRayDirection) ) // in direct sunlight
 			{
-				mask = hitColor * sunColor;	
+				mask = hitColor * mix(skyColor, sunColor, clamp(dot(n,shadowRayDirection),0.0,1.0));	
 			}
 
 			accumCol = mask;	
@@ -453,10 +453,10 @@ vec3 CalculateRadiance()
 	{
 		fogDistance = max(0.0, hitDistance - fogStartDistance);
 		accumCol = mix( initialSkyColor, accumCol, clamp( exp(-(fogDistance * 0.00005)), 0.0, 1.0 ) );
-
 		// underwater fog effect
+		hitDistance = distance(cameraRayOrigin, firstX);
 		hitDistance *= cameraUnderWaterValue;
-		accumCol = mix( vec3(0.0,0.001,0.001), accumCol, clamp( exp2( -hitDistance * 0.0001 ), 0.0, 1.0 ) );
+		accumCol = mix( vec3(0.0,0.05,0.05), accumCol, clamp( exp2( -hitDistance * 0.001 ), 0.0, 1.0 ) );
 	}
 	
 	
