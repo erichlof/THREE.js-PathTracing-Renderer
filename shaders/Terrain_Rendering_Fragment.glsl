@@ -251,7 +251,6 @@ vec3 terrain_calcNormal( vec3 pos, float t )
 bool isLightSourceVisible( vec3 pos, vec3 n, vec3 dirToLight)
 {
 	pos += n;
-	dirToLight = normalize(dirToLight);
 	float h = 1.0;
 	float t = 0.0;
 	float terrainHeight = TERRAIN_HEIGHT * 2.0 + TERRAIN_LIFT;
@@ -279,7 +278,7 @@ float SceneIntersect( bool checkWater )
 	float waterWaveHeight;
 	// Terrain
 	vec3 pos = rayOrigin;
-	vec3 dir = normalize(rayDirection);
+	vec3 dir = rayDirection;
 	float h = 0.0;
 	
 	for (int i = 0; i < 300; i++)
@@ -382,18 +381,18 @@ vec3 CalculateRadiance()
         vec3 mask = vec3(1);
 	vec3 firstMask = vec3(1);
 	vec3 n, nl, x;
-	vec3 firstX = vec3(0);
+	vec3 firstX = cameraRayOrigin;// vec3(0);
 	vec3 tdir;
 	
 	float nc, nt, ratioIoR, Re, Tr;
+	float P, RP, TP;
 	float t = INFINITY;
 	float thickness = 0.01;
 
+	int previousIntersecType = -100;
+
 	bool checkWater = true;
 	bool skyHit = false;
-	bool firstTypeWasREFR = false;
-	bool reflectionTime = false;
-	bool rayEnteredWater = false;
 	
 	
         for (int bounces = 0; bounces < 3; bounces++)
@@ -407,46 +406,24 @@ vec3 CalculateRadiance()
 			if (bounces == 0) // ray hits sky first	
 			{
 				skyHit = true;
-				firstX = skyPos;
 				accumCol = initialSkyColor;
 				break; // exit early	
 			}
 
-			if (firstTypeWasREFR)
+			if (previousIntersecType == REFR)
 			{
-				if (!reflectionTime) 
-				{
-					accumCol = mask * Get_Sky_Color(rayDirection);
-					
-					// start back at the refractive surface, but this time follow reflective branch
-					rayOrigin = firstRayOrigin;
-					rayDirection = firstRayDirection;
-					mask = firstMask;
-					// set/reset variables
-					reflectionTime = true;
-					// continue with the reflection ray
-					continue;
-				}
-
-				accumCol += mask * Get_Sky_Color(rayDirection); // add reflective result to the refractive result (if any)
-			}
-			else 
 				accumCol = mask * Get_Sky_Color(rayDirection);
-			/*
-			else if (dot(rayDirection, sunDirection) < 0.98)
-				accumCol = mask * 2.0 * Get_Sky_Color(rayDirection);
-			else 
-				accumCol = mask * 0.03 * Get_Sky_Color(rayDirection);
-			*/
-
+				break;
+			}
+			
 			// reached the sky light, so we can exit
 			break;
 		} // end if (t == INFINITY)
 		
 		
 		// useful data 
-		n = normalize(hitNormal);
-                nl = dot(n, rayDirection) < 0.0 ? normalize(n) : normalize(-n);
+		n = hitNormal;
+                nl = dot(n, rayDirection) < 0.0 ? n : -n;
 		x = rayOrigin + rayDirection * t;
 		
 		if (bounces == 0) 
@@ -455,6 +432,8 @@ vec3 CalculateRadiance()
 		// ray hits terrain
 		if (hitType == TERRAIN)
 		{
+			previousIntersecType = TERRAIN;
+
 			float rockNoise = texture(t_PerlinNoise, (0.0003 * x.xz)).x;
 			vec3 rockColor0 = max(vec3(0.01), vec3(0.04, 0.01, 0.01) * rockNoise);
 			vec3 rockColor1 = max(vec3(0.01), vec3(0.08, 0.07, 0.07) * rockNoise);
@@ -479,61 +458,33 @@ vec3 CalculateRadiance()
 				mask = hitColor * mix(skyColor, sunColor, clamp(dot(n,shadowRayDirection),0.0,1.0));	
 			}
 
-			if (rayEnteredWater)
-			{
-				rayEnteredWater = false;
-				mask *= exp(log(WATER_COLOR) * thickness * t); 
-			}
-
-			if (firstTypeWasREFR)
-			{
-				if (!reflectionTime) 
-				{	
-					accumCol = mask;
-					// start back at the refractive surface, but this time follow reflective branch
-					rayOrigin = firstRayOrigin;
-					rayDirection = firstRayDirection;
-					rayDirection = normalize(rayDirection);
-					mask = firstMask;
-					// set/reset variables
-					reflectionTime = true;
-					// continue with the reflection ray
-					continue;
-				}
-
-				accumCol += mask;
-				break;
-			}
-
 			accumCol = mask;	
 			break;
 		}
 		
 		if (hitType == REFR)  // Ideal dielectric REFRACTION
 		{
+			previousIntersecType = REFR;
+
 			nc = 1.0; // IOR of air
 			nt = 1.33; // IOR of water
 			Re = calcFresnelReflectance(rayDirection, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
+			P  = 0.25 + (0.5 * Re);
+                	RP = Re / P;
+                	TP = Tr / (1.0 - P);
 			
-			if (bounces == 0)
+			if (rand() < P)
 			{	
-				// save intersection data for future reflection trace
-				firstTypeWasREFR = true;
-				firstMask = mask * Re;
-				firstRayDirection = reflect(rayDirection, nl); // create reflection ray from surface
-				firstRayOrigin = x + nl * uEPS_intersect;
-				mask *= Tr;
-				rayEnteredWater = true;
+				mask *= RP;
+				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
+				rayOrigin = x + nl * uEPS_intersect;
+				continue;
 			}
 			
-			// is ray leaving a solid object from the inside? 
-			// If so, attenuate ray color with object color by how far ray has travelled through the medium
-			if (distance(n, nl) > 0.1)
-			{
-				rayEnteredWater = false;
-				mask *= exp(log(WATER_COLOR) * thickness * t);
-			}
+			// transmit ray through surface
+			mask *= TP;
+			mask *= hitColor;
 			
 			tdir = refract(rayDirection, nl, ratioIoR);
 			rayDirection = tdir;
@@ -606,12 +557,12 @@ void main( void )
 	// calculate unique seed for rng() function
 	seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord);
 
-	/* // initialize rand() variables
+	// initialize rand() variables
 	counter = -1.0; // will get incremented by 1 on each call to rand()
 	channel = 0; // the final selected color channel to use for rand() calc (range: 0 to 3, corresponds to R,G,B, or A)
 	randNumber = 0.0; // the final randomly-generated number (range: 0.0 to 1.0)
 	randVec4 = vec4(0); // samples and holds the RGBA blueNoise texture value for this pixel
-	randVec4 = texelFetch(tBlueNoiseTexture, ivec2(mod(gl_FragCoord.xy + floor(uRandomVec2 * 256.0), 256.0)), 0); */
+	randVec4 = texelFetch(tBlueNoiseTexture, ivec2(mod(gl_FragCoord.xy + floor(uRandomVec2 * 256.0), 256.0)), 0);
 	
 	vec2 pixelOffset = vec2( tentFilter(rng()), tentFilter(rng()) ) * 0.5;
 	// we must map pixelPos into the range -1.0 to +1.0
