@@ -31,13 +31,45 @@ struct Box { vec3 minCorner; vec3 maxCorner; vec3 emission; vec3 color; int type
 
 #include <pathtracing_sphere_intersect>
 
+#include <pathtracing_plane_intersect>
+
 #include <pathtracing_physical_sky_functions>
+
+//---------------------------------------------------------------------------------------------------------
+float DisplacementBoxIntersect( vec3 minCorner, vec3 maxCorner, vec3 rayOrigin, vec3 rayDirection )
+//---------------------------------------------------------------------------------------------------------
+{
+	vec3 invDir = 1.0 / rayDirection;
+	vec3 tmin = (minCorner - rayOrigin) * invDir;
+	vec3 tmax = (maxCorner - rayOrigin) * invDir;
+	
+	vec3 real_min = min(tmin, tmax);
+	vec3 real_max = max(tmin, tmax);
+	
+	float minmax = min( min(real_max.x, real_max.y), real_max.z);
+	float maxmin = max( max(real_min.x, real_min.y), real_min.z);
+	
+	// early out
+	if (minmax < maxmin) return INFINITY;
+	
+	if (maxmin > 0.0) // if we are outside the box
+	{
+		return maxmin;	
+	}
+		
+	if (minmax > 0.0) // else if we are inside the box
+	{
+		return minmax;
+	}
+				
+	return INFINITY;
+}
 
 
 
 // TERRAIN
 
-#define TERRAIN_FAR 100000.0
+#define TERRAIN_DETAIL_FAR 50000.0
 #define TERRAIN_HEIGHT 2000.0 // terrain amplitude
 #define TERRAIN_LIFT  -1900.0 // how much to lift/drop the entire terrain
 #define TERRAIN_SAMPLE_SCALE 0.00001
@@ -85,24 +117,6 @@ vec3 terrain_calcNormal( vec3 pos, float t )
 			  	lookup_Normal(pos-eps.yyx) - lookup_Normal(pos+eps.yyx) ) );
 }
 
-float TerrainIntersect()
-{
-	vec3 pos = rayOrigin;
-	vec3 dir = rayDirection;
-	float h = 0.0;
-	float t = 0.0;
-	float epsilon = 1.0;
-	
-	for(int i = 0; i < 200; i++)
-	{
-		h = pos.y - lookup_Heightmap(pos);
-		if (t > TERRAIN_FAR || h < epsilon) break;
-		t += h * 0.6;
-		pos += dir * h * 0.6; 
-	}
-	return (h <= epsilon) ? t : INFINITY;	    
-}
-
 bool isLightSourceVisible( vec3 pos, vec3 n, vec3 dirToLight)
 {
 	float h = 1.0;
@@ -122,13 +136,14 @@ bool isLightSourceVisible( vec3 pos, vec3 n, vec3 dirToLight)
 // WATER
 /* Credit: some of the following water code is borrowed from https://www.shadertoy.com/view/Ms2SD1 posted by user 'TDM' */
 
+#define WATER_DETAIL_FAR 1000.0
 #define WATER_COLOR vec3(0.96, 1.0, 0.98)
 #define WATER_SAMPLE_SCALE 0.009 
 #define WATER_WAVE_HEIGHT 20.0 // max height of water waves   
 #define WATER_FREQ        0.2 // wave density: lower = spread out, higher = close together
-#define WATER_CHOPPY      1.9 // smaller beachfront-type waves, they travel in parallel
+#define WATER_CHOPPY      2.0 // smaller beachfront-type waves, they travel in parallel
 #define WATER_SPEED       1.7 // how quickly time passes
-#define M1  mat2(1.6, 1.2, -1.2, 1.6);
+#define OCTAVE_M  mat2(1.6, 1.2, -1.2, 1.6);
 
 float hash( vec2 p )
 {
@@ -164,19 +179,12 @@ float getOceanWaterHeight( vec3 p )
 	float sea_time = uTime * WATER_SPEED;
 	
 	vec2 uv = p.xz * WATER_SAMPLE_SCALE; 
-	//uv.x *= 0.75;
-	float h, d = 0.0;    
-	for(int i = 0; i < 1; i++)
-	{        
-		d =  ocean_octave((uv + sea_time) * freq, choppy);
-		d += ocean_octave((uv - sea_time) * freq, choppy);
-		h += d * amp;     
-		uv *= M1; 
-		freq *= 1.9; 
-		amp *= 0.22;
-		choppy = mix(choppy, 1.0, 0.2);
-	}
-
+	uv.x *= 0.75;
+	float d, h = 0.0;
+	d =  ocean_octave((uv + sea_time) * freq, choppy);
+	d += ocean_octave((uv - sea_time) * freq, choppy);
+	h += d * amp;        
+	
 	return h * WATER_WAVE_HEIGHT + uWaterLevel;
 }
 
@@ -188,38 +196,17 @@ float getOceanWaterHeight_Detail( vec3 p )
 	float sea_time = uTime * WATER_SPEED;
 	
 	vec2 uv = p.xz * WATER_SAMPLE_SCALE; 
-	//uv.x *= 0.75;
-	float h, d = 0.0;    
+	uv.x *= 0.75;
+	float d, h = 0.0;    
 	for(int i = 0; i < 4; i++)
 	{        
 		d =  ocean_octave((uv + sea_time) * freq, choppy);
 		d += ocean_octave((uv - sea_time) * freq, choppy);
-		h += d * amp;     
-		uv *= M1; 
-		freq *= 1.9; 
-		amp *= 0.22;
+		h += d * amp;        
+		uv *= OCTAVE_M; freq *= 1.9; amp *= 0.22;
 		choppy = mix(choppy, 1.0, 0.2);
 	}
-
 	return h * WATER_WAVE_HEIGHT + uWaterLevel;
-}
-
-
-float OceanIntersect()
-{
-	vec3 pos = rayOrigin;
-	vec3 dir = rayDirection;
-	float h = 0.0;
-	float t = 0.0;
-	
-	for(int i = 0; i < 200; i++)
-	{
-		h = abs(pos.y - getOceanWaterHeight(pos));
-		if (t > TERRAIN_FAR || h < 1.0) break;
-		t += h;
-		pos += dir * h; 
-	}
-	return (h <= 1.0) ? t : INFINITY;
 }
 
 vec3 ocean_calcNormal( vec3 pos, float t )
@@ -237,12 +224,36 @@ float SceneIntersect( bool checkWater )
 //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 {
 	vec3 normal;
-        float d, dw;
+        float d, dp, dw, h, terrainHeight, waterWaveHeight;
 	float t = INFINITY;
 	vec3 hitPos; 
 
 	// Terrain
-	d = TerrainIntersect();
+	vec3 pos = rayOrigin;
+	vec3 dir = rayDirection;
+		
+	for (int i = 0; i < 200; i++)
+	{
+		h = pos.y - lookup_Heightmap(pos);
+		if (d > TERRAIN_DETAIL_FAR || h < 1.0) break;
+		d += h * 0.6;
+		pos += dir * h * 0.6; 
+	}
+	hitPos = pos;
+	if (h >= 1.0) d = INFINITY;
+
+	if (d > TERRAIN_DETAIL_FAR)
+	{
+		dp = PlaneIntersect( vec4(0, 1, 0, uWaterLevel), rayOrigin, rayDirection );
+		if (dp < d)
+		{
+			hitPos = rayOrigin + rayDirection * dp;
+			terrainHeight = lookup_Heightmap(hitPos);
+			d = DisplacementBoxIntersect( vec3(-INFINITY, -INFINITY, -INFINITY), vec3(INFINITY, terrainHeight, INFINITY), rayOrigin, rayDirection);
+		}
+		
+	}
+
 	if (d < t)
 	{
 		t = d;
@@ -256,7 +267,34 @@ float SceneIntersect( bool checkWater )
 	if (!checkWater)
 		return t;
         
-        d = OceanIntersect();    
+        // Water
+	pos = rayOrigin; // reset pos
+	dir = rayDirection; // reset dir
+	h = 0.0; // reset h
+	d = 0.0; // reset d
+
+	for(int i = 0; i < 50; i++)
+	{
+		h = abs(pos.y - getOceanWaterHeight(pos));
+		if (d > WATER_DETAIL_FAR || abs(h) < 1.0) break;
+		d += h;
+		pos += dir * h; 
+	}  
+
+	hitPos = pos;
+	if (h >= 1.0) d = INFINITY;
+
+	if (d > WATER_DETAIL_FAR)
+	{
+		dp = PlaneIntersect( vec4(0, 1, 0, uWaterLevel), rayOrigin, rayDirection );
+		if ( dp < d )
+		{
+			hitPos = rayOrigin + rayDirection * dp;
+			waterWaveHeight = getOceanWaterHeight_Detail(hitPos);
+			d = DisplacementBoxIntersect( vec3(rayOrigin.x - TERRAIN_DETAIL_FAR, -INFINITY, rayOrigin.z - TERRAIN_DETAIL_FAR), 
+							vec3(rayOrigin.x + TERRAIN_DETAIL_FAR, waterWaveHeight, rayOrigin.z + TERRAIN_DETAIL_FAR), rayOrigin, rayDirection);
+		}	
+	}
 	
 	if (d < t)
 	{
@@ -288,7 +326,7 @@ vec3 CalculateRadiance()
         vec3 mask = vec3(1);
 	vec3 firstMask = vec3(1);
 	vec3 n, nl, x;
-	vec3 firstX = cameraRayOrigin;// vec3(0);
+	vec3 firstX = cameraRayOrigin;
 	vec3 tdir;
 	
 	float nc, nt, ratioIoR, Re, Tr;
@@ -435,7 +473,7 @@ vec3 CalculateRadiance()
 	
 	
 	// atmospheric haze effect (aerial perspective)
-	float fogStartDistance = TERRAIN_FAR * 0.3;
+	float fogStartDistance = TERRAIN_DETAIL_FAR * 0.3;
 	float hitDistance = distance(cameraRayOrigin, firstX);
 	float fogDistance;
 
