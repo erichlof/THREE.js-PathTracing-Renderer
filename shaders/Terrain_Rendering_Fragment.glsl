@@ -74,6 +74,7 @@ float DisplacementBoxIntersect( vec3 minCorner, vec3 maxCorner, vec3 rayOrigin, 
 #define WATER_CHOPPY      2.0 // smaller beachfront-type waves, they travel in parallel
 #define WATER_SPEED       0.1 // how quickly time passes
 #define OCTAVE_M  mat2(1.6, 1.2, -1.2, 1.6);
+#define WATER_DETAIL_FAR 1000.0
 
 // float noise( in vec2 p )
 // {
@@ -207,7 +208,7 @@ vec4 render_clouds(vec3 rayOrigin, vec3 rayDirection)
 #define TERRAIN_HEIGHT 2000.0
 #define TERRAIN_SAMPLE_SCALE 0.00004 
 #define TERRAIN_LIFT -1300.0 // how much to lift or drop the entire terrain
-#define TERRAIN_FAR 80000.0
+#define TERRAIN_DETAIL_FAR 40000.0
 
 float lookup_Heightmap( in vec3 pos )
 {
@@ -284,13 +285,14 @@ float SceneIntersect( bool checkWater )
 	for (int i = 0; i < 300; i++)
 	{
 		h = pos.y - lookup_Heightmap(pos);
-		if (d > TERRAIN_FAR || h < 1.0) break;
+		if (d > TERRAIN_DETAIL_FAR || h < 1.0) break;
 		d += h * 0.45;
 		pos += dir * h * 0.45; 
 	}
 	hitPos = pos;
 	if (h >= 1.0) d = INFINITY;
-	if (d > TERRAIN_FAR)
+
+	if (d > TERRAIN_DETAIL_FAR)
 	{
 		dp = PlaneIntersect( vec4(0, 1, 0, uWaterLevel), rayOrigin, rayDirection );
 		if (dp < d)
@@ -320,14 +322,15 @@ float SceneIntersect( bool checkWater )
 	for(int i = 0; i < 50; i++)
 	{
 		h = abs(pos.y - getOceanWaterHeight(pos));
-		if (d > 1000.0 || h < 1.0) break;
+		if (d > WATER_DETAIL_FAR || abs(h) < 1.0) break;
 		d += h;
 		pos += dir * h; 
 	}
+	
 	hitPos = pos;
 	if (h >= 1.0) d = INFINITY;
 	
-	if (d > 1000.0)
+	if (d > WATER_DETAIL_FAR)
 	{
 		dp = PlaneIntersect( vec4(0, 1, 0, uWaterLevel), rayOrigin, rayDirection );
 		if ( dp < d )
@@ -335,8 +338,7 @@ float SceneIntersect( bool checkWater )
 			hitPos = rayOrigin + rayDirection * dp;
 			waterWaveHeight = getOceanWaterHeight_Detail(hitPos);
 			d = DisplacementBoxIntersect( vec3(-INFINITY, -INFINITY, -INFINITY), vec3(INFINITY, waterWaveHeight, INFINITY), rayOrigin, rayDirection);
-		}
-		
+		}	
 	}
 	
 	if (d < t) 
@@ -381,7 +383,7 @@ vec3 CalculateRadiance()
         vec3 mask = vec3(1);
 	vec3 firstMask = vec3(1);
 	vec3 n, nl, x;
-	vec3 firstX = cameraRayOrigin;// vec3(0);
+	vec3 firstX = cameraRayOrigin;
 	vec3 tdir;
 	
 	float nc, nt, ratioIoR, Re, Tr;
