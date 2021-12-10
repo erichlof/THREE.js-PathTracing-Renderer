@@ -52,6 +52,7 @@ let useGenericInput = true;
 let EPS_intersect;
 let blueNoiseTexture;
 let cameraRotationSpeed = 1;
+let useToneMapping = true;
 
 // the following variables will be used to calculate rotations and directions from the camera
 let cameraDirectionVector = new THREE.Vector3(); //for moving where the camera is looking
@@ -454,7 +455,8 @@ function initTHREEjs()
 
 	screenOutputUniforms = {
 		uOneOverSampleCounter: { type: "f", value: 0.0 },
-		tPathTracedImageTexture: { type: "t", value: pathTracingRenderTarget.texture }
+		tPathTracedImageTexture: { type: "t", value: pathTracingRenderTarget.texture },
+		uUseToneMapping: { type: "b1", value: useToneMapping }
 	};
 
 	fileLoader.load('shaders/ScreenOutput_Fragment.glsl', function (shaderText) {
