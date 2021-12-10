@@ -2414,7 +2414,7 @@ vec3 randomSphereDirection()
 }
 vec3 randomDirectionInHemisphere(vec3 nl)
 {
-	float r = rng(); // uniform distribution in hemisphere
+	float r = rng();
 	float phi = rng() * TWO_PI;
 	float x = r * cos(phi);
 	float y = r * sin(phi);
@@ -2426,7 +2426,7 @@ vec3 randomDirectionInHemisphere(vec3 nl)
 }
 vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 {
-	float r = sqrt(rng()); // cos-weighted distribution in hemisphere
+	float r = sqrt(rng());
 	float phi = rng() * TWO_PI;
 	float x = r * cos(phi);
 	float y = r * sin(phi);
@@ -2435,6 +2435,7 @@ vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 	vec3 V = cross(nl, U);
 	return normalize(x * U + y * V + z * nl);
 }
+
 // #define N_POINTS 32.0
 // vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 // {
@@ -2455,18 +2456,20 @@ vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 	
 // 	return normalize(x * T + y * B + z * nl);
 // }
+
 vec3 randomDirectionInSpecularLobe(vec3 reflectionDir, float roughness)
 {
-	roughness = clamp(roughness, 0.0, 1.0);
-	float exponent = mix(7.0, 0.0, sqrt(roughness));
-	float cosTheta = pow(rng(), 1.0 / (exp(exponent) + 1.0));
-	float sinTheta = sqrt(max(0.0, 1.0 - cosTheta * cosTheta));
+	float r = sqrt(rng());
 	float phi = rng() * TWO_PI;
+	float x = r * cos(phi);
+	float y = r * sin(phi);
+	float z = sqrt(1.0 - x*x - y*y);
 	
 	vec3 U = normalize( cross( abs(reflectionDir.y) < 0.9 ? vec3(0, 1, 0) : vec3(1, 0, 0), reflectionDir ) );
 	vec3 V = cross(reflectionDir, U);
-	return normalize(mix(reflectionDir, (U * cos(phi) * sinTheta + V * sin(phi) * sinTheta + reflectionDir * cosTheta), roughness));
+	return normalize( mix(reflectionDir, x * U + y * V + z * reflectionDir, roughness * sqrt(roughness)) );
 }
+
 // //the following alternative skips the creation of tangent and bi-tangent vectors u and v 
 // vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 // {
