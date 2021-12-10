@@ -2,6 +2,7 @@ precision highp float;
 precision highp int;
 precision highp sampler2D;
 
+uniform bool uUseToneMapping;
 uniform float uOneOverSampleCounter;
 uniform sampler2D tPathTracedImageTexture;
 
@@ -273,7 +274,7 @@ void main()
         filteredPixelColor *= uOneOverSampleCounter;
 
         // apply tone mapping (brings pixel into 0.0-1.0 rgb color range)
-        filteredPixelColor = ReinhardToneMapping(filteredPixelColor);
+        filteredPixelColor = uUseToneMapping ? ReinhardToneMapping(filteredPixelColor) : filteredPixelColor;
         //filteredPixelColor = OptimizedCineonToneMapping(filteredPixelColor);
         //filteredPixelColor = ACESFilmicToneMapping(filteredPixelColor);
 
