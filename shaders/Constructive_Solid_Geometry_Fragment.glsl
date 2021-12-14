@@ -80,7 +80,7 @@ float SceneIntersect( )
 {
 	vec3 rObjOrigin, rObjDirection; 
 	vec3 n, A_n0, A_n1, B_n0, B_n1, n0, n1;
-	vec3 A_color, B_color, color0, color1;
+	vec3 A_color0, A_color1, B_color0, B_color1, color0, color1;
 	vec3 hit;
 	float A_t0 = 0.0;
 	float A_t1 = 0.0;
@@ -90,7 +90,8 @@ float SceneIntersect( )
 	float t1 = 0.0;
 	float d = INFINITY;
 	float t = INFINITY;
-	int A_type, B_type, type0, type1;
+	int A_type0, A_type1, B_type0, B_type1, type0, type1;
+	int A_objectID0, A_objectID1, B_objectID0, B_objectID1, objectID0, objectID1;
 	int objectCount = 0;
 	
 	hitObjectID = -INFINITY;
@@ -186,22 +187,26 @@ float SceneIntersect( )
 	B_n1 = normalize(transpose(mat3(uCSG_ShapeB_InvMatrix)) * n);
 
 	
-	A_color = uMaterialAColor;
-	A_type = uMaterialAType;
-	B_color = uMaterialBColor;
-	B_type = uMaterialBType;
+	A_color0 = A_color1 = uMaterialAColor;
+	A_type0 = A_type1 = uMaterialAType;
+	B_color0 = B_color1 = uMaterialBColor;
+	B_type0 = B_type1 = uMaterialBType;
 
 	// reset t0 and t1
 	t0 = t1 = 0.0;
+
 	if (uCSG_OperationType == 0)
-	CSG_Union_Operation( A_t0, A_n0, A_t1, A_n1, B_t0, B_n0, B_t1, B_n1, A_type, A_color, B_type, B_color,// <-- this line = input surfaces data
-				t0, n0, t1, n1, type0, color0, type1, color1 ); // <-- this line = resulting csg operation data output
+		CSG_Union_Operation( A_t0, A_n0, A_type0, A_color0, A_objectID0, A_t1, A_n1, A_type1, A_color1, A_objectID1, // <-- this line = input 1st surface data
+				     B_t0, B_n0, B_type0, B_color0, B_objectID0, B_t1, B_n1, B_type1, B_color1, B_objectID1, // <-- this line = input 2nd surface data
+				     t0, n0, type0, color0, objectID0, t1, n1, type1, color1, objectID1 ); // <-- this line = resulting csg operation data output
 	else if (uCSG_OperationType == 1)
-	CSG_Difference_Operation( A_t0, A_n0, A_t1, A_n1, B_t0, B_n0, B_t1, B_n1, A_type, A_color, B_type, B_color,// <-- this line = input surfaces data
-				t0, n0, t1, n1, type0, color0, type1, color1 ); // <-- this line = resulting csg operation data output
+		CSG_Difference_Operation( A_t0, A_n0, A_type0, A_color0, A_objectID0, A_t1, A_n1, A_type1, A_color1, A_objectID1, // <-- this line = input 1st surface data
+				     	  B_t0, B_n0, B_type0, B_color0, B_objectID0, B_t1, B_n1, B_type1, B_color1, B_objectID1, // <-- this line = input 2nd surface data
+				          t0, n0, type0, color0, objectID0, t1, n1, type1, color1, objectID1 ); // <-- this line = resulting csg operation data output
 	else
-	CSG_Intersection_Operation( A_t0, A_n0, A_t1, A_n1, B_t0, B_n0, B_t1, B_n1, A_type, A_color, B_type, B_color,// <-- this line = input surfaces data
-				t0, n0, t1, n1, type0, color0, type1, color1 ); // <-- this line = resulting csg operation data output
+		CSG_Intersection_Operation( A_t0, A_n0, A_type0, A_color0, A_objectID0, A_t1, A_n1, A_type1, A_color1, A_objectID1, // <-- this line = input 1st surface data
+				     	    B_t0, B_n0, B_type0, B_color0, B_objectID0, B_t1, B_n1, B_type1, B_color1, B_objectID1, // <-- this line = input 2nd surface data
+				            t0, n0, type0, color0, objectID0, t1, n1, type1, color1, objectID1 ); // <-- this line = resulting csg operation data output
 	
 	// compare the resulting intersection pair (t0/t1) with the rest of the scene and update data if we get a closer t value
 	
