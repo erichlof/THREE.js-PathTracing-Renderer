@@ -1229,88 +1229,118 @@ void PyramidFrustum_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out 
 `;
 
 THREE.ShaderChunk[ 'pathtracing_csg_operations' ] = `
-//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-void CSG_Union_Operation( float A_t0, vec3 A_n0, float A_t1, vec3 A_n1, float B_t0, vec3 B_n0, float B_t1, vec3 B_n1, int A_type, vec3 A_color, int B_type, vec3 B_color, 
-			    out float t0, out vec3 n0, out float t1, out vec3 n1, out int type0, out vec3 color0, out int type1, out vec3 color1  )
-//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void CSG_Union_Operation( float A_t0, vec3 A_n0, int A_type0, vec3 A_color0, int A_objectID0, float A_t1, vec3 A_n1, int A_type1, vec3 A_color1, int A_objectID1, 
+			  float B_t0, vec3 B_n0, int B_type0, vec3 B_color0, int B_objectID0, float B_t1, vec3 B_n1, int B_type1, vec3 B_color1, int B_objectID1, 
+			  out float t0, out vec3 n0, out int type0, out vec3 color0, out int objectID0, out float t1, out vec3 n1, out int type1, out vec3 color1, out int objectID1 )
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 {
 	// CSG UNION OPERATION [A + B] (outside of shape A and outside of shape B are fused together into a single, new shape)
 	// (hypothetically, the interior volume of the newly created union could be completely filled with water in one pass)
 	
-	vec3 temp_n0, temp_n1, temp_col;
+	vec3 temp_n0, temp_n1, temp_col0, temp_col1;
 	float temp_t0, temp_t1;
-	int temp_type;
+	int temp_type0, temp_type1, temp_objectID0, temp_objectID1;
 	// if shape B is closer than A, swap shapes
 	if (B_t0 < A_t0)
 	{
 		temp_t0 = A_t0;
-		temp_t1 = A_t1;
 		temp_n0 = A_n0;
+		temp_col0 = A_color0;
+		temp_type0 = A_type0;
+		temp_objectID0 = A_objectID0;
+		
+		temp_t1 = A_t1;
 		temp_n1 = A_n1;
-		temp_col = A_color;
-		temp_type = A_type;
+		temp_col1 = A_color1;
+		temp_type1 = A_type1;
+		temp_objectID1 = A_objectID1;
+
+
 		A_t0 = B_t0;
-		A_t1 = B_t1;
 		A_n0 = B_n0;
+		A_color0 = B_color0;
+		A_type0 = B_type0;
+		A_objectID0 = B_objectID0;
+
+		A_t1 = B_t1;
 		A_n1 = B_n1;
-		A_color = B_color;
-		A_type = B_type;
+		A_color1 = B_color1;
+		A_type1 = B_type1;
+		A_objectID1 = B_objectID1;
+
+
 		B_t0 = temp_t0;
-		B_t1 = temp_t1;
 		B_n0 = temp_n0;
+		B_color0 = temp_col0;
+		B_type0 = temp_type0;
+		B_objectID0 = temp_objectID0;
+
+		B_t1 = temp_t1;
 		B_n1 = temp_n1;
-		B_color = temp_col;
-		B_type = temp_type;
+		B_color1 = temp_col1;
+		B_type1 = temp_type1;
+		B_objectID1 = temp_objectID1;
 	}
-	// shape A is always considered first
+	// shape A is always considered to be first
 	t0 = A_t0;
 	n0 = A_n0;
-	type0 = A_type;
-	color0 = A_color;
+	type0 = A_type0;
+	color0 = A_color0;
+	objectID0 = A_objectID0;
+
 	t1 = A_t1;
 	n1 = A_n1;
-	type1 = A_type;
-	color1 = A_color;
+	type1 = A_type1;
+	color1 = A_color1;
+	objectID1 = A_objectID1;
 	
 	// except for when the outside of shape B matches the outside of shape A
 	if (B_t0 == A_t0)
 	{
 		t0 = B_t0;
 		n0 = B_n0;
-		type0 = B_type;
-		color0 = B_color;
+		type0 = B_type0;
+		color0 = B_color0;
+		objectID0 = B_objectID0;
 	}
 	// A is behind us and completely in front of B
 	if (A_t1 <= 0.0 && A_t1 < B_t0)
 	{
 		t0 = B_t0;
 		n0 = B_n0;
-		type0 = B_type;
-		color0 = B_color;
+		type0 = B_type0;
+		color0 = B_color0;
+		objectID0 = B_objectID0;
+
 		t1 = B_t1;
 		n1 = B_n1;
-		type1 = B_type;
-		color1 = B_color;
+		type1 = B_type1;
+		color1 = B_color1;
+		objectID1 = B_objectID1;
 	}
 	else if (B_t0 <= A_t1 && B_t1 > A_t1)
 	{
 		t1 = B_t1;
 		n1 = B_n1;
-		type1 = B_type;
-		color1 = B_color;
+		type1 = B_type1;
+		color1 = B_color1;
+		objectID1 = B_objectID1;
 	}
 	else if (B_t0 <= A_t1 && B_t1 <= A_t1)
 	{
 		t1 = A_t1;
 		n1 = A_n1;
-		type1 = A_type;
-		color1 = A_color;
+		type1 = A_type1;
+		color1 = A_color1;
+		objectID1 = A_objectID1;
 	}
 }
-//----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-void CSG_Difference_Operation( float A_t0, vec3 A_n0, float A_t1, vec3 A_n1, float B_t0, vec3 B_n0, float B_t1, vec3 B_n1, int A_type, vec3 A_color, int B_type, vec3 B_color, 
-				 out float t0, out vec3 n0, out float t1, out vec3 n1, out int type0, out vec3 color0, out int type1, out vec3 color1  )
-//----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void CSG_Difference_Operation( float A_t0, vec3 A_n0, int A_type0, vec3 A_color0, int A_objectID0, float A_t1, vec3 A_n1, int A_type1, vec3 A_color1, int A_objectID1, 
+			       float B_t0, vec3 B_n0, int B_type0, vec3 B_color0, int B_objectID0, float B_t1, vec3 B_n1, int B_type1, vec3 B_color1, int B_objectID1, 
+			       out float t0, out vec3 n0, out int type0, out vec3 color0, out int objectID0, out float t1, out vec3 n1, out int type1, out vec3 color1, out int objectID1 )
+//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 {
 	// CSG DIFFERENCE OPERATION [A - B] (shape A is carved out with shape B where the two shapes overlap)
 	
@@ -1318,91 +1348,123 @@ void CSG_Difference_Operation( float A_t0, vec3 A_n0, float A_t1, vec3 A_n1, flo
 	{
 		t0 = A_t0;
 		n0 = A_n0;
-		type0 = A_type;
-		color0 = A_color;
+		type0 = A_type0;
+		color0 = A_color0;
+		objectID0 = A_objectID0;
+
 		t1 = A_t1;
 		n1 = A_n1;
-		type1 = A_type;
-		color1 = A_color;
+		type1 = A_type1;
+		color1 = A_color1;
+		objectID1 = A_objectID1;
 	}
 	else if (B_t0 > 0.0 && B_t0 < A_t1 && B_t0 > A_t0)
 	{
 		t0 = A_t0;
 		n0 = A_n0;
-		type0 = A_type;
-		color0 = A_color;
+		type0 = A_type0;
+		color0 = A_color0;
+		objectID0 = A_objectID0;
+
 		t1 = B_t0;
 		n1 = B_n0;
-		type1 = B_type;
-		color1 = B_color;
+		type1 = B_type0;
+		color1 = B_color0;
+		objectID1 = B_objectID0;
 	}
 	else if (B_t1 > A_t0 && B_t1 < A_t1)
 	{
 		t0 = B_t1;
 		n0 = B_n1;
-		type0 = B_type;
-		color0 = B_color;
+		type0 = B_type1;
+		color0 = B_color1;
+		objectID0 = B_objectID1;
+
 		t1 = A_t1;
 		n1 = A_n1;
-		type1 = A_type;
-		color1 = A_color;
+		type1 = A_type1;
+		color1 = A_color1;
+		objectID1 = A_objectID1;
 	}
 }
-//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-void CSG_Intersection_Operation( float A_t0, vec3 A_n0, float A_t1, vec3 A_n1, float B_t0, vec3 B_n0, float B_t1, vec3 B_n1, int A_type, vec3 A_color, int B_type, vec3 B_color, 
-				   out float t0, out vec3 n0, out float t1, out vec3 n1, out int type0, out vec3 color0, out int type1, out vec3 color1  )
-//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+void CSG_Intersection_Operation( float A_t0, vec3 A_n0, int A_type0, vec3 A_color0, int A_objectID0, float A_t1, vec3 A_n1, int A_type1, vec3 A_color1, int A_objectID1, 
+			  	 float B_t0, vec3 B_n0, int B_type0, vec3 B_color0, int B_objectID0, float B_t1, vec3 B_n1, int B_type1, vec3 B_color1, int B_objectID1, 
+			  	 out float t0, out vec3 n0, out int type0, out vec3 color0, out int objectID0, out float t1, out vec3 n1, out int type1, out vec3 color1, out int objectID1 )
+//-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 {
 	// CSG INTERSECTION OPERATION [A ^ B] (Only valid where shape A overlaps shape B)
 	// (ray must intersect both shape A and shape B)
-	vec3 temp_n0, temp_n1, temp_col;
+	vec3 temp_n0, temp_n1, temp_col0, temp_col1;
 	float temp_t0, temp_t1;
-	int temp_type;
+	int temp_type0, temp_type1, temp_objectID0, temp_objectID1;
 	// if shape B is closer than A, swap shapes
 	if (B_t0 < A_t0)
 	{
 		temp_t0 = A_t0;
-		temp_t1 = A_t1;
 		temp_n0 = A_n0;
+		temp_col0 = A_color0;
+		temp_type0 = A_type0;
+		temp_objectID0 = A_objectID0;
+		
+		temp_t1 = A_t1;
 		temp_n1 = A_n1;
-		temp_col = A_color;
-		temp_type = A_type;
+		temp_col1 = A_color1;
+		temp_type1 = A_type1;
+		temp_objectID1 = A_objectID1;
+
+
 		A_t0 = B_t0;
-		A_t1 = B_t1;
 		A_n0 = B_n0;
+		A_color0 = B_color0;
+		A_type0 = B_type0;
+		A_objectID0 = B_objectID0;
+
+		A_t1 = B_t1;
 		A_n1 = B_n1;
-		A_color = B_color;
-		A_type = B_type;
+		A_color1 = B_color1;
+		A_type1 = B_type1;
+		A_objectID1 = B_objectID1;
+
+
 		B_t0 = temp_t0;
-		B_t1 = temp_t1;
 		B_n0 = temp_n0;
+		B_color0 = temp_col0;
+		B_type0 = temp_type0;
+		B_objectID0 = temp_objectID0;
+
+		B_t1 = temp_t1;
 		B_n1 = temp_n1;
-		B_color = temp_col;
-		B_type = temp_type;
+		B_color1 = temp_col1;
+		B_type1 = temp_type1;
+		B_objectID1 = temp_objectID1;
 	}
 	if (B_t0 < A_t1)
 	{
 		t0 = B_t0;
 		n0 = B_n0;
 		// in surfaceA's space, so must use surfaceA's material
-		type0 = A_type; 
-		color0 = A_color;
+		type0 = A_type0; 
+		color0 = A_color0;
+		objectID0 = A_objectID0;
 	}
 	if (A_t1 > B_t0 && A_t1 < B_t1)
 	{
 		t1 = A_t1;
 		n1 = A_n1;
 		// in surfaceB's space, so must use surfaceB's material
-		type1 = B_type;
-		color1 = B_color;
+		type1 = B_type0;
+		color1 = B_color0;
+		objectID1 = B_objectID0;
 	}
 	else if (B_t1 > A_t0 && B_t1 <= A_t1)
 	{
 		t1 = B_t1;
 		n1 = B_n1;
 		// in surfaceA's space, so must use surfaceA's material
-		type1 = A_type;
-		color1 = A_color;
+		type1 = A_type0;
+		color1 = A_color0;
+		objectID1 = A_objectID0;
 	}
 }
 `;
