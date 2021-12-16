@@ -83,6 +83,11 @@ Arthur Appel is credited with the first formal mention of Ray Tracing (raycastin
 
 <img src="https://github.com/erichlof/THREE.js-PathTracing-Renderer/blob/gh-pages/readme-Images/2-Figure2-1.png" width=20% height=20%> <img src="https://github.com/erichlof/THREE.js-PathTracing-Renderer/blob/gh-pages/readme-Images/4-Figure3-1.png" width=70% height=70%>
 
+And here is a demo that lets you literally jump into Appel's 1968 research paper and experience his groundbreaking techniques of per-pixel raycasting and shadow rays:
+* [Shading Machine Renderings of Solids demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Classic_Scene_Appel_ShadingMachineRenderingsOfSolids.html) <br>
+
+Scenes that used to take several minutes on Appel's digital plotting device now run at 60 fps in your browser!  I think Arthur would get a kick out of dragging the sunlight around in real time on his classic scenes!
+
 Until now (2021), actual photos of Arthur Appel were not publicly available (none can be found with a thorough internet search).  All that was known was that he was working at IBM Research (TJW Center) at the time he wrote this seminal 1968 paper.  I really wanted to see what Mr. Appel looked like, and to share and celebrate his image and contributions to the field of Ray Tracing and Rendering.  With a little hesitation at first, I reached out to the IBM Corporate Archives in New York to see if they might have any remaining employee portraits of Arthur Appel.  I'm so glad I did, because I met (via email) a wonderful IBM Archive employee, Max Campbell, who kindly searched the entire archives and found 2 rarely-seen photos of Mr. Appel.  Since these images are copyrighted by IBM (and NOT a part of my repo's CC License), Max also kindly and graciously helped me to obtain permission from IBM to share these historic photos of the man who started it all!  Click on the images to see the full resolution photos:
 
 <img src="https://github.com/erichlof/THREE.js-PathTracing-Renderer/blob/gh-pages/readme-Images/1982_December_Arthur%20Appel_IBM%20Research%20Magazine.png" width=20% height=20%> <br>
