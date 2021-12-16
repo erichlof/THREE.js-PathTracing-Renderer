@@ -83,7 +83,9 @@ Arthur Appel is credited with the first formal mention of Ray Tracing (raycastin
 
 <img src="https://github.com/erichlof/THREE.js-PathTracing-Renderer/blob/gh-pages/readme-Images/2-Figure2-1.png" width=20% height=20%> <img src="https://github.com/erichlof/THREE.js-PathTracing-Renderer/blob/gh-pages/readme-Images/4-Figure3-1.png" width=70% height=70%>
 
-And here is a demo that lets you literally jump into Appel's 1968 research paper and experience his groundbreaking techniques of per-pixel raycasting and shadow rays:
+For reference, here is a link to all the images featured in the research paper: https://www.semanticscholar.org/paper/Some-techniques-for-shading-machine-renderings-of-Appel/14a97553cf2d5414ec94b14bf22700b1b3c93a0d (click on the 'View All 14 Figures and Tables' button below the first images).
+
+And here is a demo that lets you literally 'jump into' Appel's 1968 research paper and experience his groundbreaking techniques of per-pixel raycasting and shadow rays:
 * [Shading Machine Renderings of Solids demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Classic_Scene_Appel_ShadingMachineRenderingsOfSolids.html) <br>
 
 Scenes that used to take several minutes on Appel's digital plotting device now run at 60 fps in your browser!  I think Arthur would get a kick out of dragging the sunlight around in real time on his classic scenes!
