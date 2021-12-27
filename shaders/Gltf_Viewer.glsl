@@ -241,11 +241,11 @@ vec3 Get_HDR_Color(vec3 rayDirection)
 	vec2 sampleUV;
 	sampleUV.x = atan(rayDirection.z, rayDirection.x) * ONE_OVER_TWO_PI + 0.5;
 	sampleUV.y = asin(clamp(rayDirection.y, -1.0, 1.0)) * ONE_OVER_PI + 0.5;
-	vec4 texData = texture( tHDRTexture, sampleUV );
-	texData = RGBEToLinear(texData);
+	
+	vec3 texColor = texture( tHDRTexture, sampleUV ).rgb;
 	
 	// tone mapping
-	vec3 texColor = ACESFilmicToneMapping(texData.rgb);
+	texColor = ACESFilmicToneMapping(texColor.rgb);
 
 	return texColor;
 }
