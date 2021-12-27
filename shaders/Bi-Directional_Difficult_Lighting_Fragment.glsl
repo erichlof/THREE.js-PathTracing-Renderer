@@ -720,19 +720,19 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				else if (abs(nl.y) > 0.5) sampleUV = vec2(x.x, x.z);
 				else sampleUV = vec2(x.x, x.y);
 				texColor = texture(tLightWoodTexture, sampleUV * 0.01);
-				hitColor *= GammaToLinear(texColor, 2.2).rgb;
+				hitColor *= pow(texColor.rgb, vec3(2.2));
 			}
 			else if (hitType == DARKWOOD)
 			{
 				sampleUV = vec2( uDoorObjectInvMatrix * vec4(x, 1.0) );
 				texColor = texture(tDarkWoodTexture, sampleUV * vec2(0.01,0.005));
-				hitColor *= GammaToLinear(texColor, 2.2).rgb;
+				hitColor *= pow(texColor.rgb, vec3(2.2));
 			}
 			else if (hitType == PAINTING)
 			{
 				sampleUV = vec2((55.0 + x.x) / 110.0, (x.y - 20.0) / 44.0);
 				texColor = texture(tPaintingTexture, sampleUV);
-				hitColor *= GammaToLinear(texColor, 2.2).rgb;
+				hitColor *= pow(texColor.rgb, vec3(2.2));
 			}
 
 			if (bounces == 0 || (diffuseCount == 0 && !coatTypeIntersected && previousIntersecType == SPEC))	
@@ -873,7 +873,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				//sampleUV.x = atan(-nl.z, nl.x) * ONE_OVER_TWO_PI + 0.5;
 				//sampleUV.y = asin(clamp(nl.y, -1.0, 1.0)) * ONE_OVER_PI + 0.5;
 				texColor = texture(tMarbleTexture, hitUV * vec2(-1.0, 1.0));
-				hitColor *= GammaToLinear(texColor, 2.2).rgb;		
+				hitColor *= pow(texColor.rgb, vec3(2.2));		
 			}
 
 			if (bounces == 0)
