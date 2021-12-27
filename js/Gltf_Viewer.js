@@ -683,10 +683,12 @@ async function prepareGeometryForPT(meshList, pathTracingMaterialList, triangleM
 
 
 	hdrLoader = new THREE.RGBELoader();
+	hdrLoader.type = THREE.FloatType; // override THREE's default of HalfFloatType
+
 	hdrPath = 'textures/daytime.hdr';
 
 	hdrTexture = hdrLoader.load( hdrPath, function ( texture, textureData ) {
-		texture.encoding = THREE.RGBEEncoding;
+		texture.encoding = THREE.LinearEncoding;
 		texture.minFilter = THREE.NearestFilter;
 		texture.magFilter = THREE.NearestFilter;
 		texture.flipY = true;
