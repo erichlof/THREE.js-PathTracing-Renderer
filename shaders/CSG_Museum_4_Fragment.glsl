@@ -1046,6 +1046,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			
 			if (diffuseCount == 1 && rand() < 0.5)
 			{
+				mask *= 2.0;
 				// choose random Diffuse sample vector
 				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
 				rayOrigin = x + nl * uEPS_intersect;
@@ -1053,6 +1054,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			}
                         
 			dirToLight = sampleQuadLight(x, nl, lightChoice, weight);
+			mask *= diffuseCount == 1 ? 2.0 : 1.0;
 			mask *= weight * N_LIGHTS;
 
 			rayDirection = dirToLight;
@@ -1169,6 +1171,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			if (diffuseCount == 1 && rand() < 0.5)
 			{
+				mask *= 2.0;
 				// choose random Diffuse sample vector
 				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
 				rayOrigin = x + nl * uEPS_intersect;
@@ -1176,6 +1179,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			}
 
 			dirToLight = sampleQuadLight(x, nl, lightChoice, weight);
+			mask *= diffuseCount == 1 ? 2.0 : 1.0;
 			mask *= weight * N_LIGHTS;
 			
 			rayDirection = dirToLight;
@@ -1213,6 +1217,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			if (diffuseCount == 1 && rand() < 0.5)
                         {
+				//mask *= 2.0;
                                 // choose random scattering direction vector
 				rayDirection = randomSphereDirection();
 				rayOrigin = x + rayDirection * scatteringDistance;
@@ -1220,6 +1225,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
                         }
                         
 			dirToLight = sampleQuadLight(x, nl, lightChoice, weight);
+			mask *= 2.0;
 			mask *= weight * N_LIGHTS;
 
 			rayDirection = dirToLight;
