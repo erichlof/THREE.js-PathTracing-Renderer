@@ -235,6 +235,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			
 			if (diffuseCount == 1 && rng() < 0.5)
 			{
+				mask *= 2.0;
 				// choose random Diffuse sample vector
 				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
 				rayOrigin = x + nl * uEPS_intersect;
@@ -242,6 +243,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			}
                         
 			dirToLight = sampleRectangleLight(x, nl, lightChoice, weight);
+			mask *= diffuseCount == 1 ? 2.0 : 1.0;
 			mask *= weight * N_LIGHTS;
 
 			rayDirection = dirToLight;
@@ -320,9 +322,9 @@ void SetupScene(void)
 {
 	vec3 z  = vec3(0.0);
 	vec3 lightColor = vec3(1.0, 0.8, 0.4);          
-	vec3 L1 = lightColor * 40.0;
-	vec3 L2 = lightColor * 60.0;
-	vec3 L3 = lightColor * 100.0;
+	vec3 L1 = lightColor * 20.0;//40.0;
+	vec3 L2 = lightColor * 30.0;//60.0;
+	vec3 L3 = lightColor * 50.0;//100.0;
 	vec3 glassColor = vec3(0.3, 1.0, 0.9);
 	vec3 diffuseColor = vec3(1);
 	
