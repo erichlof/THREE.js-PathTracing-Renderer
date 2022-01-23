@@ -624,6 +624,7 @@ vec3 CalculateRadiance(out vec3 objectNormal, out vec3 objectColor, out float ob
 
 			if (diffuseCount == 1 && rand() < 0.5)
 			{
+				mask *= 2.0;
 				// choose random Diffuse sample vector
 				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
 				rayOrigin = x + nl * uEPS_intersect;
@@ -634,6 +635,7 @@ vec3 CalculateRadiance(out vec3 objectNormal, out vec3 objectColor, out float ob
 			rayOrigin = x + nl * uEPS_intersect;
 			
 			weight = max(0.0, dot(rayDirection, nl)) * 0.05; // down-weight directSunLight contribution
+			mask *= diffuseCount == 1 ? 2.0 : 1.0;
 			mask *= weight * cloudShadowFactor;
 			
 			sampleLight = true;
@@ -737,6 +739,7 @@ vec3 CalculateRadiance(out vec3 objectNormal, out vec3 objectColor, out float ob
 
 			if (diffuseCount == 1 && rand() < 0.5)
 			{
+				mask *= 2.0;
 				// choose random Diffuse sample vector
 				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
 				rayOrigin = x + nl * uEPS_intersect;
@@ -744,6 +747,7 @@ vec3 CalculateRadiance(out vec3 objectNormal, out vec3 objectColor, out float ob
 			}
 			
 			rayDirection = randomDirectionInSpecularLobe(uSunDirection, 0.1); // create shadow ray pointed towards light
+			mask *= diffuseCount == 1 ? 2.0 : 1.0;
 			rayOrigin = x + nl * uEPS_intersect;
 
 			weight = max(0.0, dot(rayDirection, nl)) * 0.05; // down-weight directSunLight contribution
