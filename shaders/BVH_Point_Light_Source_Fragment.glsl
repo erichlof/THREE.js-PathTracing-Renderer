@@ -335,9 +335,9 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			if (bounceIsSpecular)
 			{
 				if (bounces == 0) // looking directly at light
-					accumCol = mask * clamp(hitEmission, 0.0, 10.0);
-				else if (bounces == 1) // single bounce reflection or refraction
 					accumCol = mask * clamp(hitEmission, 0.0, 20.0);
+				else if (bounces == 1) // single bounce reflection or refraction
+					accumCol = mask * clamp(hitEmission, 0.0, 100.0);
 				else // caustic
 					accumCol = mask * clamp(hitEmission, 0.0, 1.0);
 			}
@@ -375,6 +375,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			if (diffuseCount == 1 && rand() < 0.5)
 			{
+				mask *= 2.0;
 				// choose random Diffuse sample vector
 				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
 				rayOrigin = x + nl * uEPS_intersect;
@@ -382,6 +383,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			}
                         
 			dirToLight = sampleSphereLight(x, nl, light, weight);
+			mask *= diffuseCount == 1 ? 2.0 : 1.0;
 			mask *= weight;
 
 			rayDirection = dirToLight;
@@ -485,6 +487,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			
 			if (diffuseCount == 1 && rand() < 0.5)
 			{
+				mask *= 2.0;
 				// choose random Diffuse sample vector
 				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
 				rayOrigin = x + nl * uEPS_intersect;
@@ -492,6 +495,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			}
                         
 			dirToLight = sampleSphereLight(x, nl, light, weight);
+			mask *= diffuseCount == 1 ? 2.0 : 1.0;
 			mask *= weight;
 			
 			rayDirection = dirToLight;
@@ -516,7 +520,7 @@ void SetupScene(void)
 {
 	vec3 z  = vec3(0);
 	vec3 L1 = vec3(0.5, 0.7, 1.0) * 0.01;// Blueish sky light
-	vec3 L2 = vec3(1.0, 0.9, 0.8) * 1000.0;// Bright white light bulb
+	vec3 L2 = vec3(1.0, 0.9, 0.8) * 500.0;// Bright white light bulb
 	
 	spheres[0] = Sphere( 10000.0, vec3(0, 0, 0), L1, z, LIGHT);//large spherical sky light
 	spheres[1] = Sphere( 0.5, vec3(-10, 35, -10), L2, z, POINT_LIGHT);//small spherical point light
