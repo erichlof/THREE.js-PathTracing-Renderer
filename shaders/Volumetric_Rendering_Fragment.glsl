@@ -100,7 +100,7 @@ void sampleEquiAngular( float u, float maxDistance, vec3 rOrigin, vec3 rDirectio
 #define FOG_COLOR vec3(0.05, 0.05, 0.4) // color of the fog / participating medium
 #define FOG_DENSITY 0.0005 // this is dependent on the particular scene size dimensions
 #define LIGHT_COLOR vec3(1.0, 1.0, 1.0) // color of light source
-#define LIGHT_POWER 30.0 // brightness of light source
+#define LIGHT_POWER 15.0 // brightness of light source
 
 
 //-----------------------------------------------------------------------------------------------------------------------------
@@ -224,6 +224,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			if (diffuseCount == 1 && rand() < 0.5)
 			{
+				mask *= 2.0;
 				// choose random Diffuse sample vector
 				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
 				rayOrigin = x + nl * uEPS_intersect;
@@ -231,6 +232,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			}
 			
 			dirToLight = sampleSphereLight(x, nl, spheres[0], weight);
+			mask *= diffuseCount == 1 ? 2.0 : 1.0;
 			mask *= weight;
 
 			rayDirection = dirToLight;
@@ -315,6 +317,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			if (diffuseCount == 1 && rand() < 0.5)
                         {
+				mask *= 2.0;
                                 // choose random Diffuse sample vector
 				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
 				rayOrigin = x + nl * uEPS_intersect;
@@ -322,6 +325,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
                         }
                         
 			dirToLight = sampleSphereLight(x, nl, spheres[0], weight);
+			mask *= diffuseCount == 1 ? 2.0 : 1.0;
 			mask *= weight;
 
 			rayDirection = dirToLight;
