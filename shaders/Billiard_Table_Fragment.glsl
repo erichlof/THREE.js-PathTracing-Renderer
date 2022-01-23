@@ -182,7 +182,6 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	vec3 tdir;
 	vec3 dirToLight;
 	vec3 x, n, nl;
-	vec3 clothTextureColor, darkWoodTextureColor, lightWoodTextureColor;
         
 	float t;
         float weight;
@@ -254,6 +253,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			if (diffuseCount == 1 && rand() < 0.5)
 			{	
+				mask *= 2.0;
 				// choose random Diffuse sample vector
 				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
 				rayOrigin = x + nl * uEPS_intersect;
@@ -261,6 +261,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			}
                         
 			dirToLight = sampleQuadLight(x, nl, lightChoice, weight);
+			mask *= diffuseCount == 1 ? 2.0 : 1.0;
 			mask *= weight * N_LIGHTS;
 
 			rayDirection = dirToLight;
@@ -305,6 +306,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			if (diffuseCount == 1 && rand() < 0.5)
 			{	
+				mask *= 2.0;
 				// choose random Diffuse sample vector
 				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
 				rayOrigin = x + nl * uEPS_intersect;
@@ -312,6 +314,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			}
                         
 			dirToLight = sampleQuadLight(x, nl, lightChoice, weight);
+			mask *= diffuseCount == 1 ? 2.0 : 1.0;
 			mask *= weight * N_LIGHTS;
 			
 			rayDirection = dirToLight;
@@ -412,6 +415,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			if (diffuseCount == 1 && rand() < 0.5)
                         {
+				mask *= 2.0;
 				// choose random Diffuse sample vector
 				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
 				rayOrigin = x + nl * uEPS_intersect;
@@ -419,6 +423,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
                         }
 
 			dirToLight = sampleQuadLight(x, nl, lightChoice, weight);
+			mask *= diffuseCount == 1 ? 2.0 : 1.0;
 			mask *= weight * N_LIGHTS;
 			
 			rayDirection = dirToLight;
@@ -443,7 +448,7 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0);          
-	vec3 L1 = vec3(1.0, 1.0, 1.0) * 4.0;// Bright White light
+	vec3 L1 = vec3(1.0, 1.0, 1.0) * 2.0;// Bright White light
 	vec3 clothColor = vec3(0.0, 0.2, 1.0) * 0.7;
 	vec3 railWoodColor = vec3(0.05,0.0,0.0);
 	float ceilingHeight = 300.0;
