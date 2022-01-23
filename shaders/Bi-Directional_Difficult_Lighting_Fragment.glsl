@@ -748,6 +748,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			if (diffuseCount == 1 && rand() < 0.5)
 			{
+				mask *= 2.0;
 				// choose random Diffuse sample vector
 				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
 				rayOrigin = x + nl * uEPS_intersect;
@@ -756,6 +757,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			dirToLight = normalize(lightHitPos - x);
 			weight = max(0.0, dot(nl, dirToLight));
+			mask *= diffuseCount == 1 ? 2.0 : 1.0;
 			mask *= weight;
 			
 			rayDirection = dirToLight;
@@ -890,6 +892,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			
 			if (diffuseCount == 1 && rand() < 0.5)
 			{
+				mask *= 2.0;
 				// choose random Diffuse sample vector
 				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
 				rayOrigin = x + nl * uEPS_intersect;
@@ -898,6 +901,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			dirToLight = normalize(lightHitPos - x);
 			weight = max(0.0, dot(nl, dirToLight));
+			mask *= diffuseCount == 1 ? 2.0 : 1.0;
 			mask *= weight;
 			
 			rayDirection = dirToLight;
@@ -922,7 +926,7 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0);// No color value, Black
-	vec3 L2 = vec3(1.0, 0.9, 0.8) * 15.0;// Bright Yellowish light
+	vec3 L2 = vec3(1.0, 0.9, 0.8) * 8.0;//15.0;// Bright Yellowish light
 	vec3 wallColor = vec3(0.5);
 	vec3 tableColor = vec3(1.0, 0.7, 0.4) * 0.6;
 	vec3 brassColor = vec3(1.0, 0.7, 0.5) * 0.7;
