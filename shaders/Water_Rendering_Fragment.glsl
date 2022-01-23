@@ -270,6 +270,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			if (diffuseCount == 1 && rand() < 0.4)
 			{
+				mask /= 0.4;
 				// choose random Diffuse sample vector
 				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
 				rayOrigin = x + nl * uEPS_intersect;
@@ -277,6 +278,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			}
                         
 			dirToLight = sampleQuadLight(x, nl, quads[5], weight);
+			mask /= diffuseCount == 1 ? 0.6 : 1.0;
 			mask *= weight;
 
 			rayDirection = dirToLight;
@@ -361,7 +363,7 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0);// No color value, Black        
-	vec3 L1 = vec3(1.0, 0.7, 0.38) * 30.0;// Bright Yellowish light
+	vec3 L1 = vec3(1.0, 0.7, 0.38) * 15.0;// Bright Yellowish light
 		    // 0.736507, 0.642866, 0.210431  Original values
 	
 	quads[0] = Quad( vec3( 0.0, 0.0, 1.0), vec3(  0.0,   0.0,-559.2), vec3(549.6,   0.0,-559.2), vec3(549.6, 548.8,-559.2), vec3(  0.0, 548.8,-559.2),  z, vec3(1),  DIFF);// Back Wall
