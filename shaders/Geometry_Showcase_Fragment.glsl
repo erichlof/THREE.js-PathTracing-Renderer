@@ -312,6 +312,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			if (diffuseCount == 1 && rand() < 0.5)
 			{
+				mask *= 2.0;
 				// choose random Diffuse sample vector
 				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
 				rayOrigin = x + nl * uEPS_intersect;
@@ -319,6 +320,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			}
 
 			dirToLight = sampleSphereLight(x, nl, lightChoice, weight);
+			mask *= diffuseCount == 1 ? 2.0 : 1.0;
 			mask *= weight * N_LIGHTS;
 
 			rayDirection = dirToLight;
@@ -426,6 +428,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			if (diffuseCount == 1 && rand() < 0.5)
 			{
+				mask *= 2.0;
 				// choose random Diffuse sample vector
 				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
 				rayOrigin = x + nl * uEPS_intersect;
@@ -437,6 +440,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			else
 				dirToLight = sampleSphereLight(x, nl, lightChoice, weight);
 			
+			mask *= diffuseCount == 1 ? 2.0 : 1.0;
 			mask *= weight * N_LIGHTS;
 			
 			rayDirection = dirToLight;
@@ -461,9 +465,9 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0);          
-	vec3 L1 = vec3(1.0, 1.0, 1.0) * 13.0;// White light
-	vec3 L2 = vec3(1.0, 0.8, 0.2) * 10.0;// Yellow light
-	vec3 L3 = vec3(0.1, 0.7, 1.0) * 5.0; // Blue light
+	vec3 L1 = vec3(1.0, 1.0, 1.0) * 5.0;// White light
+	vec3 L2 = vec3(1.0, 0.8, 0.2) * 4.0;// Yellow light
+	vec3 L3 = vec3(0.1, 0.7, 1.0) * 2.0;// Blue light
 		
         spheres[0] = Sphere(150.0, vec3(-400, 900, 200), L1, z, LIGHT);//spherical white Light1 
 	spheres[1] = Sphere(100.0, vec3( 300, 400,-300), L2, z, LIGHT);//spherical yellow Light2
