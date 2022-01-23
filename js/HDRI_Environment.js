@@ -48,7 +48,7 @@ function init_GUI()
 {
 
 	HDRI_ExposureController = {
-		HDRI_Exposure: 1.5
+		HDRI_Exposure: 1.2
 	};
 	material_TypeController = {
 		Material_Type: 3
