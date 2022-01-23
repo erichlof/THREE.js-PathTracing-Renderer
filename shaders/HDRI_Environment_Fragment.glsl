@@ -441,6 +441,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
                         
 			if (diffuseCount == 1 && rand() < 0.5)
 			{
+				mask *= 2.0;
 				// choose random Diffuse sample vector
 				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
 				rayOrigin = x + nl * uEPS_intersect;
@@ -449,7 +450,8 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			rayDirection = randomDirectionInSpecularLobe(uSunDirectionVector, 0.03);
 			rayOrigin = x + nl * uEPS_intersect;
-			weight = max(0.0, dot(rayDirection, nl)) * 0.00002; // down-weight directSunLight contribution
+			weight = max(0.0, dot(rayDirection, nl)) * 0.000015; // down-weight directSunLight contribution
+			mask *= diffuseCount == 1 ? 2.0 : 1.0;
 			mask *= weight;
 
 			sampleLight = true;
@@ -547,6 +549,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			if (diffuseCount == 1 && rand() < 0.5)
 			{
+				mask *= 2.0;
 				// choose random Diffuse sample vector
 				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
 				rayOrigin = x + nl * uEPS_intersect;
@@ -555,7 +558,8 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			rayDirection = randomDirectionInSpecularLobe(uSunDirectionVector, 0.03);
 			rayOrigin = x + nl * uEPS_intersect;
-			weight = max(0.0, dot(rayDirection, nl)) * 0.00002; // down-weight directSunLight contribution
+			weight = max(0.0, dot(rayDirection, nl)) * 0.000015; // down-weight directSunLight contribution
+			mask *= diffuseCount == 1 ? 2.0 : 1.0;
 			mask *= weight;
 
 			sampleLight = true;
