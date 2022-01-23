@@ -292,9 +292,9 @@ vec3 CalculateRadiance()
 		if (t == INFINITY && previousIntersecType == DIFF)
 		{
 			if (sampleSunLight)
-				accumCol = mask * uSunColor * uSunLightIntensity;
+				accumCol = mask * uSunColor * uSunLightIntensity * 0.5;
 			else
-				accumCol = mask * Get_HDR_Color(rayDirection) * uSkyLightIntensity;
+				accumCol = mask * Get_HDR_Color(rayDirection) * uSkyLightIntensity * 0.5;
 
 			break;
 		}
@@ -319,7 +319,7 @@ vec3 CalculateRadiance()
 		// if we reached light material, don't spawn any more rays
 		if (hitType == LIGHT)
 		{
-	    		accumCol = mask * hitEmission;
+	    		accumCol = mask * hitEmission * 0.5;
 
 			break;
 		}
@@ -351,6 +351,7 @@ vec3 CalculateRadiance()
 
 			if (diffuseCount == 1 && rand() < 0.5)
 			{
+				mask *= 2.0;
 				// this branch gathers color bleeding / caustics from other surfaces hit in the future
 				// choose random Diffuse sample vector
 				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
@@ -365,6 +366,7 @@ vec3 CalculateRadiance()
 			rayOrigin = x + nl * epsIntersect;
 
 			weight = max(0.0, dot(rayDirection, nl));
+			mask *= diffuseCount == 1 ? 2.0 : 1.0;
 			mask *= weight;
 			
 			sampleSunLight = true;
