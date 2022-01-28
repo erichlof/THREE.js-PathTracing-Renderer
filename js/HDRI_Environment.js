@@ -532,7 +532,7 @@ function initSceneData()
 
 		let texel = 0;
 		let max = 0;
-		for (let i = 0; i < dataLength; i += 3)
+		for (let i = 0; i < dataLength; i += 4)
 		{
 			red = hdrImgData[i + 0];
 			green = hdrImgData[i + 1];
@@ -556,9 +556,9 @@ function initSceneData()
 		}
 
 		console.log("brightest texel index: " + texel + " | max luminance value: " + max);
-		// the raw flat array has 3 elements (R,G,B) for every single pixel, but we just want the index of the brightest pixel
-		// so divide the brightest pixel array index by 3, in order to get back to the '0 to hdrImgWidth*hdrImgHeight' range
-		texel /= 3;
+		// the raw flat array has 4 elements (R,G,B,A) for every single pixel, but we just want the index of the brightest pixel
+		// so divide the brightest pixel array index by 4, in order to get back to the '0 to hdrImgWidth*hdrImgHeight' range
+		texel /= 4;
 
 		// map this texel's 1D array index into 2D (x and y) coordinates
 		brightestPixelX = texel % hdrImgWidth;
