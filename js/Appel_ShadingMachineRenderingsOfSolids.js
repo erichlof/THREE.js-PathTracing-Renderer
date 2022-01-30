@@ -400,7 +400,9 @@ function init_GUI()
 	function handleFParameterKChange() { needChangeFParameterK = true; }
 	
 
-	gui = new dat.GUI();
+	// since I use the lil-gui.min.js minified version of lil-gui without modern exports, 
+	//'g()' is 'GUI()' ('g' is the shortened version of 'GUI' inside the lil-gui.min.js file)
+	gui = new g(); // same as gui = new GUI();
 
 	// Scene preset
 	sceneFrom1968Paper_PresetController = gui.add(sceneFrom1968Paper_PresetObject, 'Appel1968Scene_Preset', ['Scene 1', 'Scene 2', 'Scene 3', 'Scene 4', 'Scene 5', 'Scene 6']).onChange(handleScenePresetChange);
@@ -614,6 +616,13 @@ function init_GUI()
 	transformF_SkewZ_YController = skewF_Folder.add(transformF_SkewZ_YObject, 'skewZ_Y', -0.9, 0.9, 0.1).onChange(handleFSkewChange);
 
 
+	transformA_Folder.close();
+	transformB_Folder.close();
+	transformC_Folder.close();
+	transformD_Folder.close();
+	transformE_Folder.close();
+	transformF_Folder.close();
+
 	// jumpstart all the gui change controller handlers so that the pathtracing fragment shader uniforms are correct and up-to-date
 	
 	handleScenePresetChange();
@@ -677,7 +686,7 @@ function init_GUI()
 	handleFShapeTypeChange();
 	handleFParameterKChange();
 
-	gui.domElement.style.webkitUserSelect = "none";
+	gui.domElement.style.userSelect = "none";
 	gui.domElement.style.MozUserSelect = "none";
 
 	window.addEventListener('resize', onWindowResize, false);
@@ -700,10 +709,10 @@ function init_GUI()
 
 		window.addEventListener('wheel', onMouseWheel, false);
 
-		window.addEventListener("click", function (event)
-		{
-			event.preventDefault();
-		}, false);
+		// window.addEventListener("click", function (event)
+		// {
+		// 	event.preventDefault();
+		// }, false);
 		window.addEventListener("dblclick", function (event)
 		{
 			event.preventDefault();
@@ -774,7 +783,7 @@ function initSceneData()
 	cameraInfoElement.style.color = 'rgb(0,0,0)';
 
 	// pixelRatio is resolution - range: 0.5(half resolution) to 1.0(full resolution)
-	pixelRatio = mouseControl ? 0.75 : 0.75; // less demanding on battery-powered mobile devices
+	pixelRatio = mouseControl ? 0.8 : 0.8; // less demanding on battery-powered mobile devices
 	pixelRatio = 1.0;
 
 	EPS_intersect = 0.01;
