@@ -85,6 +85,7 @@ let currentBShapeType = '';
 
 let needChangeOperationType = false;
 let kValue = 0;
+let matColor;
 
 
 function init_GUI()
@@ -152,7 +153,7 @@ function init_GUI()
 		A_matType: 'Transparent Refractive'
 	};
 	materialA_ColorObject = {
-		A_matColor: [0, 255, 0]
+		A_matColor: [0, 1, 0]
 	};
 
 	// SHAPE B
@@ -214,7 +215,7 @@ function init_GUI()
 		B_matType: 'ClearCoat Diffuse'
 	};
 	materialB_ColorObject = {
-		B_matColor: [255, 0, 255]
+		B_matColor: [1, 0, 1]
 	};
 
 	function handleOperationTypeChange()
@@ -295,7 +296,10 @@ function init_GUI()
 	{
 		needChangeMaterialBColor = true;
 	}
-	gui = new dat.GUI();
+
+	// since I use the lil-gui.min.js minified version of lil-gui without modern exports, 
+	//'g()' is 'GUI()' ('g' is the shortened version of 'GUI' inside the lil-gui.min.js file)
+	gui = new g(); // same as gui = new GUI();
 
 	csgOperation_TypeController = gui.add(csgOperation_TypeObject, 'CSG_Operation', ['Union (A + B)', 'Difference (A - B)',
 		'Intersection (A ^ B)']).onChange(handleOperationTypeChange);
@@ -374,6 +378,10 @@ function init_GUI()
 	materialB_ColorController = gui.addColor(materialB_ColorObject, 'B_matColor').onChange(handleMaterialBColorChange);
 
 
+	transformA_Folder.close();
+	transformB_Folder.close();
+
+
 	// jumpstart all the gui change controller handlers so that the pathtracing fragment shader uniforms are correct and up-to-date
 	handleOperationTypeChange();
 	handleAPositionChange();
@@ -395,7 +403,7 @@ function init_GUI()
 	handleMaterialBTypeChange();
 	handleMaterialBColorChange();
 
-	gui.domElement.style.webkitUserSelect = "none";
+	gui.domElement.style.userSelect = "none";
 	gui.domElement.style.MozUserSelect = "none";
 
 	window.addEventListener('resize', onWindowResize, false);
@@ -418,10 +426,10 @@ function init_GUI()
 
 		window.addEventListener('wheel', onMouseWheel, false);
 
-		window.addEventListener("click", function (event)
-		{
-			event.preventDefault();
-		}, false);
+		// window.addEventListener("click", function (event)
+		// {
+		// 	event.preventDefault();
+		// }, false);
 		window.addEventListener("dblclick", function (event)
 		{
 			event.preventDefault();
@@ -806,9 +814,8 @@ function updateVariablesAndUniforms()
 
 	if (needChangeMaterialAColor)
 	{
-		pathTracingUniforms.uMaterialAColor.value.setRGB(materialA_ColorController.getValue()[0] / 255,
-			materialA_ColorController.getValue()[1] / 255,
-			materialA_ColorController.getValue()[2] / 255);
+		matColor = materialA_ColorController.getValue();
+		pathTracingUniforms.uMaterialAColor.value.setRGB(matColor[0], matColor[1], matColor[2]);
 
 		cameraIsMoving = true;
 		needChangeMaterialAColor = false;
@@ -1024,9 +1031,8 @@ function updateVariablesAndUniforms()
 
 	if (needChangeMaterialBColor)
 	{
-		pathTracingUniforms.uMaterialBColor.value.setRGB(materialB_ColorController.getValue()[0] / 255,
-			materialB_ColorController.getValue()[1] / 255,
-			materialB_ColorController.getValue()[2] / 255);
+		matColor = materialB_ColorController.getValue();
+		pathTracingUniforms.uMaterialBColor.value.setRGB(matColor[0], matColor[1], matColor[2]);
 
 		cameraIsMoving = true;
 		needChangeMaterialBColor = false;
