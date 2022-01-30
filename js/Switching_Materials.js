@@ -7,6 +7,7 @@ var material_TypeObject, material_ColorObject;
 var material_LTypeController, material_LColorController;
 var material_RTypeController, material_RColorController;
 var matType = 0;
+var matColor;
 var changeLeftSphereMaterialType = false;
 var changeRightSphereMaterialType = false;
 var changeLeftSphereMaterialColor = false;
@@ -21,8 +22,8 @@ function init_GUI()
 		RSphereMaterial: 2
 	};
 	material_ColorObject = {
-		LSphereColor: [255, 255, 255],
-		RSphereColor: [255, 255, 255]
+		LSphereColor: [1, 1, 1],
+		RSphereColor: [1, 1, 1]
 	};
 
 	function leftMatTypeChanger() 
@@ -42,7 +43,9 @@ function init_GUI()
 		changeRightSphereMaterialColor = true;
 	}
 
-	gui = new dat.GUI();
+	// since I use the lil-gui.min.js minified version of lil-gui without modern exports, 
+	//'g()' is 'GUI()' ('g' is the shortened version of 'GUI' inside the lil-gui.min.js file)
+	gui = new g(); // same as gui = new GUI();
 	
 	material_LTypeController = gui.add( material_TypeObject, 'LSphereMaterial', 1, 7, 1 ).onChange( leftMatTypeChanger );
 	material_RTypeController = gui.add( material_TypeObject, 'RSphereMaterial', 1, 7, 1 ).onChange( rightMatTypeChanger );
@@ -54,7 +57,7 @@ function init_GUI()
 	leftMatColorChanger();
 	rightMatColorChanger();
 
-	gui.domElement.style.webkitUserSelect = "none";
+	gui.domElement.style.userSelect = "none";
 	gui.domElement.style.MozUserSelect = "none";
 	
 	window.addEventListener('resize', onWindowResize, false);
@@ -77,10 +80,10 @@ function init_GUI()
 
 		window.addEventListener( 'wheel', onMouseWheel, false );
 
-		window.addEventListener("click", function(event) 
-		{
-			event.preventDefault();	
-		}, false);
+		// window.addEventListener("click", function(event) 
+		// {
+		// 	event.preventDefault();	
+		// }, false);
 		window.addEventListener("dblclick", function(event) 
 		{
 			event.preventDefault();	
@@ -286,9 +289,9 @@ function updateVariablesAndUniforms()
 		}
 
 		
-		material_LColorController.setValue([ pathTracingUniforms.uLeftSphereColor.value.r * 255,
-						     pathTracingUniforms.uLeftSphereColor.value.g * 255,
-						     pathTracingUniforms.uLeftSphereColor.value.b * 255 ]);
+		material_LColorController.setValue([ pathTracingUniforms.uLeftSphereColor.value.r,
+						     pathTracingUniforms.uLeftSphereColor.value.g,
+						     pathTracingUniforms.uLeftSphereColor.value.b ]);
 		
 		cameraIsMoving = true;
 		changeLeftSphereMaterialType = false;
@@ -336,9 +339,9 @@ function updateVariablesAndUniforms()
 		}
 
 		
-		material_RColorController.setValue([ pathTracingUniforms.uRightSphereColor.value.r * 255,
-						     pathTracingUniforms.uRightSphereColor.value.g * 255,
-						     pathTracingUniforms.uRightSphereColor.value.b * 255 ]);
+		material_RColorController.setValue([ pathTracingUniforms.uRightSphereColor.value.r,
+						     pathTracingUniforms.uRightSphereColor.value.g,
+						     pathTracingUniforms.uRightSphereColor.value.b ]);
 		
 		cameraIsMoving = true;
 		changeRightSphereMaterialType = false;
@@ -346,12 +349,9 @@ function updateVariablesAndUniforms()
 
 	if (changeLeftSphereMaterialColor) 
 	{
-		matType = Math.floor(material_LTypeController.getValue());
+		matColor = material_LColorController.getValue();
 
-		
-		pathTracingUniforms.uLeftSphereColor.value.setRGB( material_LColorController.getValue()[0] / 255, 
-								   material_LColorController.getValue()[1] / 255, 
-								   material_LColorController.getValue()[2] / 255 );
+		pathTracingUniforms.uLeftSphereColor.value.setRGB(matColor[0], matColor[1], matColor[2]);
 		
 		cameraIsMoving = true;
 		changeLeftSphereMaterialColor = false;
@@ -359,14 +359,10 @@ function updateVariablesAndUniforms()
 	
 	if (changeRightSphereMaterialColor) 
 	{
-		matType = Math.floor(material_RTypeController.getValue());
-
+		matColor = material_RColorController.getValue();
 		
-		pathTracingUniforms.uRightSphereColor.value.setRGB( material_RColorController.getValue()[0] / 255, 
-								    material_RColorController.getValue()[1] / 255, 
-								    material_RColorController.getValue()[2] / 255 );
+		pathTracingUniforms.uRightSphereColor.value.setRGB(matColor[0], matColor[1], matColor[2]);
 		
-
 		cameraIsMoving = true;
 		changeRightSphereMaterialColor = false;
 	}
