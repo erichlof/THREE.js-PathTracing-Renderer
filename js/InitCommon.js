@@ -159,7 +159,8 @@ function onWindowResize(event)
 	screenCopyRenderTarget.setSize(context.drawingBufferWidth, context.drawingBufferHeight);
 
 	worldCamera.aspect = SCREEN_WIDTH / SCREEN_HEIGHT;
-	worldCamera.updateProjectionMatrix();
+	// the following is normally used with traditional rasterized rendering, but it is not needed for our fragment shader raytraced rendering 
+	///worldCamera.updateProjectionMatrix();
 
 	// the following scales all scene objects by the worldCamera's field of view,
 	// taking into account the screen aspect ratio and multiplying the uniform uULen,
@@ -327,7 +328,7 @@ function initTHREEjs()
 	stats.domElement.style.position = 'absolute';
 	stats.domElement.style.top = '0px';
 	stats.domElement.style.cursor = "default";
-	stats.domElement.style.webkitUserSelect = "none";
+	stats.domElement.style.userSelect = "none";
 	stats.domElement.style.MozUserSelect = "none";
 	container.appendChild(stats.domElement);
 
