@@ -11,7 +11,7 @@ let cameraDirectionVector = new THREE.Vector3(), cameraRightVector = new THREE.V
 // HDR image variables
 var hdrPath, hdrTexture, hdrLoader, hdrExposure = 1.0;
 // Environment variables
-var skyLightIntensity = 2.0, sunLightIntensity = 2.0, sunColor = [255, 250, 235];
+var skyLightIntensity = 2.0, sunLightIntensity = 2.0, sunColor = [1.0, 0.98, 0.92];
 var skyLightIntensityChanged = false, sunLightIntensityChanged = false, sunColorChanged = false;
 var cameraControlsObject; //for positioning and moving the camera itself
 var cameraControlsYawObject; //allows access to control camera's left/right movements through mobile input
@@ -317,9 +317,9 @@ function initThree() {
 		document.addEventListener('mozpointerlockchange', pointerlockChange, false);
 		document.addEventListener('webkitpointerlockchange', pointerlockChange, false);
 
-		window.addEventListener("click", function (event) {
-			event.preventDefault();
-		}, false);
+		// window.addEventListener("click", function (event) {
+		// 	event.preventDefault();
+		// }, false);
 		window.addEventListener("dblclick", function (event) {
 			event.preventDefault();
 		}, false);
@@ -341,7 +341,7 @@ function initThree() {
 	stats.domElement.style.position = 'absolute';
 	stats.domElement.style.top = '0px';
 	stats.domElement.style.cursor = "default";
-	stats.domElement.style.webkitUserSelect = "none";
+	stats.domElement.style.userSelect = "none";
 	stats.domElement.style.MozUserSelect = "none";
 	container.appendChild(stats.domElement);
 
@@ -722,7 +722,7 @@ async function prepareGeometryForPT(meshList, pathTracingMaterialList, triangleM
 		uFocusDistance: {type: "f", value: focusDistance},
 		uSkyLightIntensity: {type: "f", value: skyLightIntensity},
 		uSunLightIntensity: {type: "f", value: sunLightIntensity},
-		uSunColor: {type: "v3", value: new THREE.Color().fromArray(sunColor.map(x => x / 255))},
+		uSunColor: {type: "v3", value: new THREE.Color().fromArray(sunColor.map(x => x))},
 
 		uResolution: {type: "v2", value: new THREE.Vector2()},
 		uRandomVec2: { type: "v2", value: new THREE.Vector2() },
@@ -838,7 +838,10 @@ function initMenu() {
 	if (gui)
 		return;
 
-	gui = new dat.GUI();
+	// since I use the lil-gui.min.js minified version of lil-gui without modern exports, 
+	//'g()' is 'GUI()' ('g' is the shortened version of 'GUI' inside the lil-gui.min.js file)
+	gui = new g(); // same as gui = new GUI();
+
 	if (mouseControl) {
 		gui.domElement.addEventListener("mouseenter", function(event) {
 				ableToEngagePointerLock = false;	
@@ -1160,7 +1163,7 @@ function animate() {
 	}
 
 	if (sunColorChanged) {
-		pathTracingUniforms.uSunColor.value = new THREE.Color().fromArray(sunColor.map(x => x / 255));
+		pathTracingUniforms.uSunColor.value = new THREE.Color().fromArray(sunColor.map(x => x));
 		sunColorChanged = false;
 	}
 
