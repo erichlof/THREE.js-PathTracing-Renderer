@@ -9,6 +9,7 @@ var material_TypeController, material_ColorController;
 var changeMaterialType = false;
 var changeMaterialColor = false;
 var matType = 0;
+var matColor;
 
 
 function init_GUI() 
@@ -18,7 +19,7 @@ function init_GUI()
 		Material_Preset: 'ClearCoat Diffuse'
 	};
 	material_ColorObject = {
-		Material_Color: [0, 255, 255]
+		Material_Color: [0, 1, 1]
 	};
 	
 	function materialTypeChanger() 
@@ -29,7 +30,10 @@ function init_GUI()
 	{
 		changeMaterialColor = true;
 	}
-	gui = new dat.GUI();
+
+	// since I use the lil-gui.min.js minified version of lil-gui without modern exports, 
+	//'g()' is 'GUI()' ('g' is the shortened version of 'GUI' inside the lil-gui.min.js file)
+	gui = new g(); // same as gui = new GUI();
 	
 	material_TypeController = gui.add( material_TypeObject, 'Material_Preset', [ 'ClearCoat Diffuse', 'Transparent Refractive', 
 		'Copper Metal', 'Aluminum Metal', 'Gold Metal', 'Silver Metal', 'ClearCoat Metal(Brass)' ] ).onChange( materialTypeChanger );
@@ -39,7 +43,7 @@ function init_GUI()
 	materialTypeChanger();
 	materialColorChanger();
 
-	gui.domElement.style.webkitUserSelect = "none";
+	gui.domElement.style.userSelect = "none";
 	gui.domElement.style.MozUserSelect = "none";
 	
 	window.addEventListener('resize', onWindowResize, false);
@@ -62,10 +66,10 @@ function init_GUI()
 
 		window.addEventListener( 'wheel', onMouseWheel, false );
 
-		window.addEventListener("click", function(event) 
-		{
-			event.preventDefault();	
-		}, false);
+		// window.addEventListener("click", function(event) 
+		// {
+		// 	event.preventDefault();	
+		// }, false);
 		window.addEventListener("dblclick", function(event) 
 		{
 			event.preventDefault();	
@@ -208,46 +212,48 @@ function updateVariablesAndUniforms()
 
 	if (changeMaterialType) {
 
-		if (material_TypeController.getValue() == 'ClearCoat Diffuse') 
+		matType = material_TypeController.getValue();
+
+		if (matType == 'ClearCoat Diffuse') 
 		{
 			pathTracingUniforms.uMaterialType.value = 4;
 			pathTracingUniforms.uMaterialColor.value.setRGB(0.0, 1.0, 1.0);
 		}
-		else if (material_TypeController.getValue() == 'Transparent Refractive') 
+		else if (matType == 'Transparent Refractive') 
 		{
 			pathTracingUniforms.uMaterialType.value = 2;
 			pathTracingUniforms.uMaterialColor.value.setRGB(0.1, 1.0, 0.6);
 		}
-		else if (material_TypeController.getValue() == 'Copper Metal') 
+		else if (matType == 'Copper Metal') 
 		{
 			pathTracingUniforms.uMaterialType.value = 3;
 			pathTracingUniforms.uMaterialColor.value.setRGB(0.955008, 0.637427, 0.538163);
 		}
-		else if (material_TypeController.getValue() == 'Aluminum Metal') 
+		else if (matType == 'Aluminum Metal') 
 		{
 			pathTracingUniforms.uMaterialType.value = 3;
 			pathTracingUniforms.uMaterialColor.value.setRGB(0.913183, 0.921494, 0.924524);
 		}
-		else if (material_TypeController.getValue() == 'Gold Metal') 
+		else if (matType == 'Gold Metal') 
 		{
 			pathTracingUniforms.uMaterialType.value = 3;
 			pathTracingUniforms.uMaterialColor.value.setRGB(1.000000, 0.765557, 0.336057);
 		}
-		else if (material_TypeController.getValue() == 'Silver Metal') 
+		else if (matType == 'Silver Metal') 
 		{
 			pathTracingUniforms.uMaterialType.value = 3;
 			pathTracingUniforms.uMaterialColor.value.setRGB(0.971519, 0.959915, 0.915324);
 		}
-		else if (material_TypeController.getValue() == 'ClearCoat Metal(Brass)') 
+		else if (matType == 'ClearCoat Metal(Brass)') 
 		{
 			pathTracingUniforms.uMaterialType.value = 18;
 			pathTracingUniforms.uMaterialColor.value.setRGB(0.956863, 0.894118, 0.678431);
 		}
 			
 		
-		material_ColorController.setValue([ pathTracingUniforms.uMaterialColor.value.r * 255,
-						    pathTracingUniforms.uMaterialColor.value.g * 255,
-						    pathTracingUniforms.uMaterialColor.value.b * 255 ]);
+		material_ColorController.setValue([ pathTracingUniforms.uMaterialColor.value.r,
+						    pathTracingUniforms.uMaterialColor.value.g,
+						    pathTracingUniforms.uMaterialColor.value.b ]);
 		
 		cameraIsMoving = true;
 		changeMaterialType = false;
@@ -255,9 +261,8 @@ function updateVariablesAndUniforms()
 
 	if (changeMaterialColor) 
 	{
-		pathTracingUniforms.uMaterialColor.value.setRGB( material_ColorController.getValue()[0] / 255, 
-								 material_ColorController.getValue()[1] / 255, 
-								 material_ColorController.getValue()[2] / 255 );
+		matColor = material_ColorController.getValue();
+		pathTracingUniforms.uMaterialColor.value.setRGB( matColor[0], matColor[1], matColor[2] );
 		
 		cameraIsMoving = true;
 		changeMaterialColor = false;
