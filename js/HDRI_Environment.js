@@ -32,11 +32,13 @@ let vt2 = new THREE.Vector2();
 
 let gui;
 let ableToEngagePointerLock = true;
+var HDRI_ExposureObject, material_TypeObject, material_ColorObject, material_RoughnessObject;
 let HDRI_ExposureController, material_TypeController, material_ColorController, material_RoughnessController;
 let changeHDRI_Exposure = false;
 let changeMaterialType = false;
 let changeMaterialColor = false;
 let changeMaterialRoughness = false;
+let matColor;
 let sunDirectionVector = new THREE.Vector3();
 let theta = 0;
 let phi = 0;
@@ -47,16 +49,16 @@ let HDRI_bright_v = 0;
 function init_GUI() 
 {
 
-	HDRI_ExposureController = {
+	HDRI_ExposureObject = {
 		HDRI_Exposure: 1.2
 	};
-	material_TypeController = {
+	material_TypeObject = {
 		Material_Type: 3
 	};
-	material_ColorController = {
-		Material_Color: [255, 255, 255]
+	material_ColorObject = {
+		Material_Color: [ 1, 1, 1 ]
 	};
-	material_RoughnessController = {
+	material_RoughnessObject = {
 		Material_Roughness: 0.0
 	};
 	function HDRI_ExposureChanger() 
@@ -76,19 +78,21 @@ function init_GUI()
 		changeMaterialRoughness = true;
 	}
 
-	gui = new dat.GUI();
+	// since I use the lil-gui.min.js minified version of lil-gui without modern exports, 
+	//'g()' is 'GUI()' ('g' is the shortened version of 'GUI' inside the lil-gui.min.js file)
+	gui = new g(); // same as gui = new GUI();
 	
-	gui.add( HDRI_ExposureController, 'HDRI_Exposure', 0, 3, 0.05 ).onChange( HDRI_ExposureChanger );
-	gui.add( material_TypeController, 'Material_Type', 2, 4, 1 ).onChange( materialTypeChanger );
-	gui.addColor( material_ColorController, 'Material_Color' ).onChange( materialColorChanger );
-	gui.add( material_RoughnessController, 'Material_Roughness', 0.0, 1.0, 0.01 ).onChange( materialRoughnessChanger );
+	HDRI_ExposureController = gui.add( HDRI_ExposureObject, 'HDRI_Exposure', 0, 3, 0.05 ).onChange( HDRI_ExposureChanger );
+	material_TypeController = gui.add( material_TypeObject, 'Material_Type', 2, 4, 1 ).onChange( materialTypeChanger );
+	material_ColorController = gui.addColor(material_ColorObject, 'Material_Color').onChange(materialColorChanger);
+	material_RoughnessController = gui.add( material_RoughnessObject, 'Material_Roughness', 0.0, 1.0, 0.01 ).onChange( materialRoughnessChanger );
 
 	HDRI_ExposureChanger();
 	materialTypeChanger();
 	materialColorChanger();
 	materialRoughnessChanger();
 
-	gui.domElement.style.webkitUserSelect = "none";
+	gui.domElement.style.userSelect = "none";
 	gui.domElement.style.MozUserSelect = "none";
 	
 	window.addEventListener('resize', onWindowResize, false);
@@ -111,10 +115,10 @@ function init_GUI()
 
 		window.addEventListener( 'wheel', onMouseWheel, false );
 
-		window.addEventListener("click", function(event) 
-		{
-			event.preventDefault();	
-		}, false);
+		// window.addEventListener("click", function(event) 
+		// {
+		// 	event.preventDefault();	
+		// }, false);
 		window.addEventListener("dblclick", function(event) 
 		{
 			event.preventDefault();	
@@ -665,31 +669,31 @@ function updateVariablesAndUniforms()
 	
 	if (changeHDRI_Exposure) 
 	{
-		renderer.toneMappingExposure = HDRI_ExposureController.HDRI_Exposure;
-		pathTracingUniforms.uHDRI_Exposure.value = HDRI_ExposureController.HDRI_Exposure;
+		renderer.toneMappingExposure = HDRI_ExposureController.getValue();
+		pathTracingUniforms.uHDRI_Exposure.value = HDRI_ExposureController.getValue();
 		cameraIsMoving = true;
 		changeHDRI_Exposure = false;
 	}
 	
 	if (changeMaterialType) 
 	{
-		pathTracingUniforms.uMaterialType.value = material_TypeController.Material_Type;
+		pathTracingUniforms.uMaterialType.value = material_TypeController.getValue();
 		cameraIsMoving = true;
 		changeMaterialType = false;
 	}
 
 	if (changeMaterialColor) 
 	{
-		pathTracingUniforms.uMaterialColor.value.setRGB( material_ColorController.Material_Color[0] / 255, 
-								 material_ColorController.Material_Color[1] / 255, 
-								 material_ColorController.Material_Color[2] / 255 );
+		matColor = material_ColorController.getValue();
+		pathTracingUniforms.uMaterialColor.value.setRGB(matColor[0], matColor[1], matColor[2]);
+
 		cameraIsMoving = true;
 		changeMaterialColor = false;
 	}
 
 	if (changeMaterialRoughness) 
 	{
-		pathTracingUniforms.uRoughness.value = material_RoughnessController.Material_Roughness;
+		pathTracingUniforms.uRoughness.value = material_RoughnessController.getValue();
 		cameraIsMoving = true;
 		changeMaterialRoughness = false;
 	}
