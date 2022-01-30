@@ -28,26 +28,30 @@ var vt2 = new THREE.Vector2();
 
 var gui;
 var ableToEngagePointerLock = true;
-var BVH_LevelController;
+var BVH_LevelObject, BVH_LevelController;
 var changeBVH_Level = false;
 
 function init_GUI() 
 {
 
-        BVH_LevelController = {
+        BVH_LevelObject = {
                 BVH_NodeDepth: 2
         };
+
         function BVH_LevelChanger() 
         {
                 changeBVH_Level = true;
         }
-        gui = new dat.GUI();
+
+        // since I use the lil-gui.min.js minified version of lil-gui without modern exports, 
+        //'g()' is 'GUI()' ('g' is the shortened version of 'GUI' inside the lil-gui.min.js file)
+        gui = new g(); // same as gui = new GUI();
         
-        gui.add( BVH_LevelController, 'BVH_NodeDepth', 0, 27, 1 ).onChange( BVH_LevelChanger );
+        BVH_LevelController = gui.add( BVH_LevelObject, 'BVH_NodeDepth', 0, 27, 1 ).onChange( BVH_LevelChanger );
         
         BVH_LevelChanger();
 
-        gui.domElement.style.webkitUserSelect = "none";
+        gui.domElement.style.userSelect = "none";
         gui.domElement.style.MozUserSelect = "none";
         
         window.addEventListener('resize', onWindowResize, false);
@@ -70,10 +74,10 @@ function init_GUI()
 
                 window.addEventListener( 'wheel', onMouseWheel, false );
 
-                window.addEventListener("click", function(event) 
-                {
-                        event.preventDefault();	
-                }, false);
+                // window.addEventListener("click", function(event) 
+                // {
+                //         event.preventDefault();	
+                // }, false);
                 window.addEventListener("dblclick", function(event) 
                 {
                         event.preventDefault();	
@@ -540,7 +544,7 @@ function updateVariablesAndUniforms()
         
         if (changeBVH_Level) 
         {
-                pathTracingUniforms.uBVH_NodeLevel.value = BVH_LevelController.BVH_NodeDepth;
+                pathTracingUniforms.uBVH_NodeLevel.value = BVH_LevelController.getValue();
                 cameraIsMoving = true;
                 changeBVH_Level = false;
         }
