@@ -199,7 +199,6 @@ float ModelIntersect( vec3 leafPosition, vec3 rObjOrigin, vec3 rObjDirection, fl
 			triangleU = tu;
 			triangleV = tv;
 			triangleLookupNeeded = true;
-			break;
 		}
 	      
         } // end while (true)
