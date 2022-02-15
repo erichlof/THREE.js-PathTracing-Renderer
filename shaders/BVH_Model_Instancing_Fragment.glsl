@@ -6,7 +6,10 @@ precision highp sampler2D;
 
 uniform sampler2D tTriangleTexture;
 uniform sampler2D tAABBTexture;
-uniform sampler2D tAlbedoTextures[8]; // 8 = max number of diffuse albedo textures per model
+uniform vec3 uModelPosition;
+uniform float uModelScale;
+uniform float uLeafModelScale;
+uniform float uLeafAABBVolumeScale;
 
 //float InvTextureWidth = 0.000244140625; // (1 / 4096 texture width)
 //float InvTextureWidth = 0.00048828125;  // (1 / 2048 texture width)
@@ -47,6 +50,42 @@ Box boxes[N_BOXES];
 
 #include <pathtracing_sample_sphere_light>
 
+mat4 makeRotateY(float rot)
+{
+	float s = sin(rot);
+	float c = cos(rot);	
+	return mat4(
+	 	c, 0,-s, 0,
+	 	0, 1, 0, 0,
+	        s, 0, c, 0,
+	 	0, 0, 0, 1 
+	);
+}
+
+mat4 makeRotateX(float rot)
+{
+	float s = sin(rot);
+	float c = cos(rot);
+	return mat4(
+		1, 0, 0, 0,
+		0, c, s, 0,
+		0,-s, c, 0,
+		0, 0, 0, 1
+	);
+}
+
+mat4 makeRotateZ(float rot)
+{
+	float s = sin(rot);
+	float c = cos(rot);
+	return mat4(
+		c, s, 0, 0,
+	       -s, c, 0, 0,
+		0, 0, 1, 0,
+		0, 0, 0, 1
+	);
+}
+
 
 vec2 stackLevels[28];
 vec2 objStackLevels[28];
@@ -70,7 +109,7 @@ void GetBoxNodeData(const in float i, inout vec4 boxNodeData0, inout vec4 boxNod
 
 
 //--------------------------------------------------------------------------------------------------------------
-float ModelIntersect( vec3 leafPosition, vec3 rObjOrigin, vec3 rObjDirection, float t )
+float ModelIntersect( vec3 leafPosition, float leafAABBVolume, vec3 rObjOrigin, vec3 rObjDirection, float t )
 //--------------------------------------------------------------------------------------------------------------
 {
 	vec4 currentBoxNodeData0, nodeAData0, nodeBData0, tmpNodeData0;
@@ -96,14 +135,20 @@ float ModelIntersect( vec3 leafPosition, vec3 rObjOrigin, vec3 rObjDirection, fl
 	bool skip = false;
 	bool triangleLookupNeeded = false;
 	
-	// teapot model setting
-	//float leafModelScale = 0.08;
-	// bunny model setting
-	float leafModelScale = 0.01;
+	
+	float leafModelScale = uLeafModelScale + (leafAABBVolume * uLeafAABBVolumeScale);
+
 	mat4 ModelMatrix = mat4(leafModelScale,0,0,0,
 				0,leafModelScale,0,0,
 				0,0,leafModelScale,0,
 				leafPosition,      1);
+
+	// rotation
+	mat4 rotateX_Matrix = makeRotateX(mod(uTime + leafPosition.x * 10.0, TWO_PI));
+	mat4 rotateY_Matrix = makeRotateY(mod(uTime + leafPosition.y * 10.0, TWO_PI));
+	mat4 rotateZ_Matrix = makeRotateZ(mod(uTime + leafPosition.z * 10.0, TWO_PI));
+
+	ModelMatrix = ModelMatrix * rotateZ_Matrix * rotateY_Matrix * rotateX_Matrix;
 
 	mat4 Model_InvMatrix = inverse(ModelMatrix);
 
@@ -272,6 +317,7 @@ float SceneIntersect( out bool isRayExiting )
 	float triangleU = 0.0;
 	float triangleV = 0.0;
 	float triangleW = 0.0;
+	float leafAABBVolume;
 
 	int objectCount = 0;
 	
@@ -311,17 +357,16 @@ float SceneIntersect( out bool isRayExiting )
 		objectCount++;
 	}
 	
-	// teapot model settings
-	//float modelScale = 1.0;
-	//vec3 modelPosition = vec3(0,25.6,-40);
+	
+	mat4 ModelMatrix = mat4(uModelScale,0,0,0,
+				0,uModelScale,0,0,
+				0,0,uModelScale,0,
+				uModelPosition, 1);
 
-	// bunny model settings
-	float modelScale = 0.04;
-	vec3 modelPosition = vec3(0,27.6,-40);
-	mat4 ModelMatrix = mat4(modelScale,0,0,0,
-				0,modelScale,0,0,
-				0,0,modelScale,0,
-				modelPosition, 1);
+	// rotation
+	//mat4 rotateY_Matrix = makeRotateY(mod(uTime, TWO_PI));
+	//ModelMatrix = ModelMatrix * rotateY_Matrix;
+
 	mat4 Model_InvMatrix = inverse(ModelMatrix);
 
 	// transform ray into Model's object space
@@ -413,7 +458,10 @@ float SceneIntersect( out bool isRayExiting )
 		//d = SphereIntersect(1.0, leafPosition, rayOrigin, rayDirection );
 
 		//leafPosition = (currentBoxNodeData0.yzw + currentBoxNodeData1.yzw) * 0.5;
-		d = ModelIntersect(leafPosition, rObjOrigin, rObjDirection, t);
+		leafAABBVolume = (currentBoxNodeData1.y - currentBoxNodeData0.y) *
+				 (currentBoxNodeData1.z - currentBoxNodeData0.z) *
+				 (currentBoxNodeData1.w - currentBoxNodeData0.w);
+		d = ModelIntersect(leafPosition, leafAABBVolume, rObjOrigin, rObjDirection, t);
 		if (d < t)
 		{
 			t = d;
@@ -693,4 +741,118 @@ void SetupScene(void)
 }
 
 
-#include <pathtracing_main>
+//#include <pathtracing_main>
+
+// tentFilter from Peter Shirley's 'Realistic Ray Tracing (2nd Edition)' book, pg. 60		
+float tentFilter(float x)
+{
+	return (x < 0.5) ? sqrt(2.0 * x) - 1.0 : 1.0 - sqrt(2.0 - (2.0 * x));
+}
+
+
+void main( void )
+{
+        // not needed, three.js has a built-in uniform named cameraPosition
+        //vec3 camPos   = vec3( uCameraMatrix[3][0],  uCameraMatrix[3][1],  uCameraMatrix[3][2]);
+        
+        vec3 camRight   = vec3( uCameraMatrix[0][0],  uCameraMatrix[0][1],  uCameraMatrix[0][2]);
+        vec3 camUp      = vec3( uCameraMatrix[1][0],  uCameraMatrix[1][1],  uCameraMatrix[1][2]);
+        vec3 camForward = vec3(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]);
+        
+        // calculate unique seed for rng() function
+	seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord);
+
+	// initialize rand() variables
+	counter = -1.0; // will get incremented by 1 on each call to rand()
+	channel = 0; // the final selected color channel to use for rand() calc (range: 0 to 3, corresponds to R,G,B, or A)
+	randNumber = 0.0; // the final randomly-generated number (range: 0.0 to 1.0)
+	randVec4 = vec4(0); // samples and holds the RGBA blueNoise texture value for this pixel
+	randVec4 = texelFetch(tBlueNoiseTexture, ivec2(mod(gl_FragCoord.xy + floor(uRandomVec2 * 256.0), 256.0)), 0);
+	
+	vec2 pixelOffset = vec2( tentFilter(rng()), tentFilter(rng()) ) * 0.5;
+	// we must map pixelPos into the range -1.0 to +1.0
+	vec2 pixelPos = ((gl_FragCoord.xy + pixelOffset) / uResolution) * 2.0 - 1.0;
+
+        vec3 rayDir = normalize( pixelPos.x * camRight * uULen + pixelPos.y * camUp * uVLen + camForward );
+        
+        // depth of field
+        vec3 focalPoint = uFocusDistance * rayDir;
+        float randomAngle = rng() * TWO_PI; // pick random point on aperture
+        float randomRadius = rng() * uApertureSize;
+        vec3  randomAperturePos = ( cos(randomAngle) * camRight + sin(randomAngle) * camUp ) * sqrt(randomRadius);
+        // point on aperture to focal point
+        vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
+        
+        rayOrigin = cameraPosition + randomAperturePos;
+	rayDirection = finalRayDir;
+
+        SetupScene(); 
+
+        // Edge Detection - don't want to blur edges where either surface normals change abruptly (i.e. room wall corners), objects overlap each other (i.e. edge of a foreground sphere in front of another sphere right behind it),
+	// or an abrupt color variation on the same smooth surface, even if it has similar surface normals (i.e. checkerboard pattern). Want to keep all of these cases as sharp as possible - no blur filter will be applied.
+	vec3 objectNormal, objectColor;
+	float objectID = -INFINITY;
+	float pixelSharpness = 0.0;
+	
+	// perform path tracing and get resulting pixel color
+	vec4 currentPixel = vec4( vec3(CalculateRadiance(objectNormal, objectColor, objectID, pixelSharpness)), 0.0 );
+
+	// if difference between normals of neighboring pixels is less than the first edge0 threshold, the white edge line effect is considered off (0.0)
+	float edge0 = 0.2; // edge0 is the minimum difference required between normals of neighboring pixels to start becoming a white edge line
+	// any difference between normals of neighboring pixels that is between edge0 and edge1 smoothly ramps up the white edge line brightness (smoothstep 0.0-1.0)
+	float edge1 = 0.6; // once the difference between normals of neighboring pixels is >= this edge1 threshold, the white edge line is considered fully bright (1.0)
+	float difference_Nx = fwidth(objectNormal.x);
+	float difference_Ny = fwidth(objectNormal.y);
+	float difference_Nz = fwidth(objectNormal.z);
+	float normalDifference = smoothstep(edge0, edge1, difference_Nx) + smoothstep(edge0, edge1, difference_Ny) + smoothstep(edge0, edge1, difference_Nz);
+
+	edge0 = 0.0;
+	edge1 = 0.5;
+	float difference_obj = abs(dFdx(objectID)) > 0.0 ? 1.0 : 0.0;
+	difference_obj += abs(dFdy(objectID)) > 0.0 ? 1.0 : 0.0;
+	float objectDifference = smoothstep(edge0, edge1, difference_obj);
+
+	float difference_col = length(dFdx(objectColor)) > 0.0 ? 1.0 : 0.0;
+	difference_col += length(dFdy(objectColor)) > 0.0 ? 1.0 : 0.0;
+	float colorDifference = smoothstep(edge0, edge1, difference_col);
+	// edge detector (normal and object differences) white-line debug visualization
+	//currentPixel.rgb += 1.0 * vec3(max(normalDifference, objectDifference));
+	
+	vec4 previousPixel = texelFetch(tPreviousTexture, ivec2(gl_FragCoord.xy), 0);
+
+
+	if (uCameraIsMoving) // camera is currently moving
+	{
+		previousPixel.rgb *= 0.5; // motion-blur trail amount (old image)
+		currentPixel.rgb *= 0.5; // brightness of new image (noisy)
+
+		previousPixel.a = 0.0;
+	}
+	else
+	{
+		previousPixel.rgb *= 0.9; // motion-blur trail amount (old image)
+		currentPixel.rgb *= 0.1; // brightness of new image (noisy)
+	}
+
+	currentPixel.a = 0.0;
+	if (colorDifference >= 1.0 || normalDifference >= 1.0 || objectDifference >= 1.0)
+		pixelSharpness = 1.01;
+
+	
+	// Eventually, all edge-containing pixels' .a (alpha channel) values will converge to 1.01, which keeps them from getting blurred by the box-blur filter, thus retaining sharpness.
+	if (previousPixel.a == 1.01)
+		currentPixel.a = 1.01;
+	// for dynamic scenes
+	if (previousPixel.a == 1.01 && rng() < 0.1)
+		currentPixel.a = 1.0;
+	if (previousPixel.a == -1.0)
+		currentPixel.a = 0.0;
+
+	if (pixelSharpness == 1.01)
+		currentPixel.a = 1.01;
+	if (pixelSharpness == -1.0)
+		currentPixel.a = -1.0;
+	
+	
+	pc_fragColor = vec4(previousPixel.rgb + currentPixel.rgb, currentPixel.a);
+}
