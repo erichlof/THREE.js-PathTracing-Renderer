@@ -406,11 +406,11 @@ function initTHREEjs()
 		tBlueNoiseTexture: { type: "t", value: blueNoiseTexture },
 
 		uCameraIsMoving: { type: "b1", value: false },
-		uSceneIsDynamic: { type: "b1", value: sceneIsDynamic },
 
 		uEPS_intersect: { type: "f", value: EPS_intersect },
 		uTime: { type: "f", value: 0.0 },
 		uSampleCounter: { type: "f", value: 0.0 },
+		uPreviousSampleCount: { type: "f", value: 1.0 },
 		uFrameCounter: { type: "f", value: 1.0 },
 		uULen: { type: "f", value: 1.0 },
 		uVLen: { type: "f", value: 1.0 },
@@ -738,14 +738,17 @@ function animate()
 
 	if (cameraIsMoving)
 	{
-		sampleCounter = 1.0;
 		frameCounter += 1.0;
 
 		if (!cameraRecentlyMoving)
 		{
+			// record current sampleCounter before it gets set to 1.0 below
+			pathTracingUniforms.uPreviousSampleCount.value = sampleCounter;
 			frameCounter = 1.0;
 			cameraRecentlyMoving = true;
 		}
+
+		sampleCounter = 1.0;
 	}
 
 	pathTracingUniforms.uTime.value = elapsedTime;
