@@ -86,9 +86,9 @@ mat4 makeRotateZ(float rot)
 	);
 }
 
-
-vec2 stackLevels[28];
-vec2 objStackLevels[28];
+		  // when there are 2 stackLevels, for example stackLevels[23] and objStackLevels[23],...
+vec2 stackLevels[23]; // [23] is max size for my Samsung Galaxy S21, [24] crashes on compile
+vec2 objStackLevels[23]; // [23] is max size for my Samsung Galaxy S21, [24] crashes on compile
 
 //vec4 boxNodeData0 corresponds to .x = idTriangle,  .y = aabbMin.x, .z = aabbMin.y, .w = aabbMin.z
 //vec4 boxNodeData1 corresponds to .x = idRightChild .y = aabbMax.x, .z = aabbMax.y, .w = aabbMax.z
