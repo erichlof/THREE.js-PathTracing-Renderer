@@ -1,6 +1,5 @@
 THREE.ShaderChunk[ 'pathtracing_uniforms_and_defines' ] = `
 uniform bool uCameraIsMoving;
-uniform bool uSceneIsDynamic;
 uniform float uEPS_intersect;
 uniform float uTime;
 uniform float uSampleCounter;
@@ -9,8 +8,7 @@ uniform float uULen;
 uniform float uVLen;
 uniform float uApertureSize;
 uniform float uFocusDistance;
-uniform float uSamplesPerFrame;
-uniform float uFrameBlendingAmount;
+uniform float uPreviousSampleCount;
 uniform vec2 uResolution;
 uniform vec2 uRandomVec2;
 uniform mat4 uCameraMatrix;
@@ -1029,8 +1027,60 @@ void Box_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1, out vec3 n
 // Although I am proud of coming up with this ray casting / ray intersection algo for arbitrary mathematical convex polyhedra, and it does indeed give pixel-perfect sharp cut convex polygon faces (tris, quads, pentagons, hexagons, etc), 
 // I'm not currently using it because it runs too slowly on mobile, probably due to the nested for loops that have to compare each plane against all of its neighbor planes: big O(N-squared) - ouch! Hopefully I can optimize someday!
 // -Erich  erichlof on GitHub
-const int numPlanes = 6;
+
+const int numPlanes = 8;
 vec4 convex_planes[numPlanes];
+//------------------------------------------------------------------------------------------------------------
+float ConvexPolyhedron_Intersect( vec3 ro, vec3 rd, out vec3 n )
+//------------------------------------------------------------------------------------------------------------
+{
+	vec3 hit;
+	float t;
+	float smallestT = INFINITY;
+
+	// to get triangular bipyramid (hexahedron), set numPlanes = 6 above
+	//convex_planes[0] = vec4(normalize(vec3(1, 1, -1)), 0.5);
+	//convex_planes[1] = vec4(normalize(vec3(-1, 1, -1)), 0.5);
+	//convex_planes[2] = vec4(normalize(vec3(0, 1, 1)), 0.5);
+	//convex_planes[3] = vec4(normalize(vec3(0, -1, 1)), 0.5);
+	//convex_planes[4] = vec4(normalize(vec3(1, -1, -1)), 0.5);
+	//convex_planes[5] = vec4(normalize(vec3(-1, -1, -1)), 0.5);
+
+	// to get rectangular bipyramid (octahedron), set numPlanes = 8 above
+	convex_planes[0] = vec4(normalize(vec3(1, 1, 0)), 0.5);
+	convex_planes[1] = vec4(normalize(vec3(-1, 1, 0)), 0.5);
+	convex_planes[2] = vec4(normalize(vec3(0, 1, 1)), 0.5);
+	convex_planes[3] = vec4(normalize(vec3(0, 1, -1)), 0.5);
+	convex_planes[4] = vec4(normalize(vec3(1, -1, 0)), 0.5);
+	convex_planes[5] = vec4(normalize(vec3(-1, -1, 0)), 0.5);
+	convex_planes[6] = vec4(normalize(vec3(0, -1, 1)), 0.5);
+	convex_planes[7] = vec4(normalize(vec3(0, -1, -1)), 0.5);
+	
+	for (int i = 0; i < numPlanes; i++)
+	{
+		t = (-dot(convex_planes[i].xyz, ro) + convex_planes[i].w) / dot(convex_planes[i].xyz, rd);
+		if (t <= 0.0)
+			continue;
+		hit = ro + rd * t;
+
+		for (int j = 0; j < numPlanes; j++)
+		{
+			if (i != j)
+				t = dot(convex_planes[j].xyz, (hit - (convex_planes[j].xyz * convex_planes[j].w))) > 0.0 ? INFINITY : t;
+		}
+		
+		if (t < smallestT)
+		{
+			smallestT = t;
+			n = convex_planes[i].xyz;
+		}
+	}
+
+	return smallestT;
+}
+
+//const int numPlanes = 8;
+//vec4 convex_planes[numPlanes];
 //------------------------------------------------------------------------------------------------------------
 void ConvexPolyhedron_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1, out vec3 n0, out vec3 n1 )
 //------------------------------------------------------------------------------------------------------------
@@ -1039,22 +1089,25 @@ void ConvexPolyhedron_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t
 	float smallestT = INFINITY;
 	float largestT = -INFINITY;
 	float t = 0.0;
-	// triangular bipyramid (hexahedron) / set numPlanes = 6 above
-	convex_planes[0] = vec4(normalize(vec3(1, 1, -1)), 0.5);
-	convex_planes[1] = vec4(normalize(vec3(-1, 1, -1)), 0.5);
+	
+	// to get triangular bipyramid (hexahedron), set numPlanes = 6 above
+	//convex_planes[0] = vec4(normalize(vec3(1, 1, -1)), 0.5);
+	//convex_planes[1] = vec4(normalize(vec3(-1, 1, -1)), 0.5);
+	//convex_planes[2] = vec4(normalize(vec3(0, 1, 1)), 0.5);
+	//convex_planes[3] = vec4(normalize(vec3(0, -1, 1)), 0.5);
+	//convex_planes[4] = vec4(normalize(vec3(1, -1, -1)), 0.5);
+	//convex_planes[5] = vec4(normalize(vec3(-1, -1, -1)), 0.5);
+
+	// to get rectangular bipyramid (octahedron), set numPlanes = 8 above
+	convex_planes[0] = vec4(normalize(vec3(1, 1, 0)), 0.5);
+	convex_planes[1] = vec4(normalize(vec3(-1, 1, 0)), 0.5);
 	convex_planes[2] = vec4(normalize(vec3(0, 1, 1)), 0.5);
-	convex_planes[3] = vec4(normalize(vec3(0, -1, 1)), 0.5);
-	convex_planes[4] = vec4(normalize(vec3(1, -1, -1)), 0.5);
-	convex_planes[5] = vec4(normalize(vec3(-1, -1, -1)), 0.5);
-	// rectangular bipyramid (octahedron) / set numPlanes = 8 above
-	// convex_planes[0] = vec4(normalize(vec3(1, 1, 0)), 0.5);
-	// convex_planes[1] = vec4(normalize(vec3(-1, 1, 0)), 0.5);
-	// convex_planes[2] = vec4(normalize(vec3(0, 1, 1)), 0.5);
-	// convex_planes[3] = vec4(normalize(vec3(0, 1, -1)), 0.5);
-	// convex_planes[4] = vec4(normalize(vec3(1, -1, 0)), 0.5);
-	// convex_planes[5] = vec4(normalize(vec3(-1, -1, 0)), 0.5);
-	// convex_planes[6] = vec4(normalize(vec3(0, -1, 1)), 0.5);
-	// convex_planes[7] = vec4(normalize(vec3(0, -1, -1)), 0.5);
+	convex_planes[3] = vec4(normalize(vec3(0, 1, -1)), 0.5);
+	convex_planes[4] = vec4(normalize(vec3(1, -1, 0)), 0.5);
+	convex_planes[5] = vec4(normalize(vec3(-1, -1, 0)), 0.5);
+	convex_planes[6] = vec4(normalize(vec3(0, -1, 1)), 0.5);
+	convex_planes[7] = vec4(normalize(vec3(0, -1, -1)), 0.5);
+
 	for (int i = 0; i < numPlanes; i++)
 	{
 		t = (-dot(convex_planes[i].xyz, ro) + convex_planes[i].w) / dot(convex_planes[i].xyz, rd);
@@ -2697,16 +2750,18 @@ void main( void )
 	//currentPixel.rgb += 1.0 * vec3(colorDifference);
 
 	vec4 previousPixel = texelFetch(tPreviousTexture, ivec2(gl_FragCoord.xy), 0);
+	
 	if (uFrameCounter == 1.0) // camera just moved after being still
 	{
-		previousPixel = vec4(0); // clear rendering accumulation buffer
+		previousPixel.rgb *= (1.0 / (uPreviousSampleCount * 2.0)); // essentially previousPixel *= 0.5, like below
+		previousPixel.a = 0.0;
+		currentPixel.rgb *= 0.5;
 	}
 	else if (uCameraIsMoving) // camera is currently moving
 	{
 		previousPixel.rgb *= 0.5; // motion-blur trail amount (old image)
-		currentPixel.rgb *= 0.5; // brightness of new image (noisy)
-
 		previousPixel.a = 0.0;
+		currentPixel.rgb *= 0.5; // brightness of new image (noisy)
 	}
 
 	currentPixel.a = 0.0;
