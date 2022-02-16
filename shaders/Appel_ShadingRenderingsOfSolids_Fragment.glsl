@@ -576,14 +576,15 @@ void main( void )
 
 	if (uFrameCounter == 1.0) // camera just moved after being still
 	{
-		previousPixel = vec4(0); // clear rendering accumulation buffer
+		previousPixel.rgb *= (1.0 / (uPreviousSampleCount * 2.0)); // essentially previousPixel *= 0.5, like below
+		//previousPixel.a = 0.0;
+		currentPixel.rgb *= 0.5;
 	}
 	else if (uCameraIsMoving) // camera is currently moving
 	{
 		previousPixel.rgb *= 0.5; // motion-blur trail amount (old image)
+		//previousPixel.a = 0.0;
 		currentPixel.rgb *= 0.5; // brightness of new image (noisy)
-
-		previousPixel.a = 0.0;
 	}
 
 	currentPixel.a = 1.01;
