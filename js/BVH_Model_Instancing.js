@@ -472,7 +472,7 @@ function initSceneData()
 	// position and orient camera
 	cameraControlsObject.position.set(0, 30, 30);
 	// look slightly downward
-	//cameraControlsPitchObject.rotation.x = -0.2;
+	cameraControlsPitchObject.rotation.x = -0.1;
 
 } // end function initSceneData()
 
@@ -540,6 +540,7 @@ function createPathTracingMaterial()
 // called automatically from within the animate() function
 function updateVariablesAndUniforms() 
 {
+	
 	if (modelWasJustLoaded)
 	{
 		if (gltfModel_SelectionController.getValue() == 'Utah Teapot')
