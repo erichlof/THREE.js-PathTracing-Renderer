@@ -716,6 +716,7 @@ async function prepareGeometryForPT(meshList, pathTracingMaterialList, triangleM
 
 		uTime: {type: "f", value: 0.0},
 		uFrameCounter: {type: "f", value: 1.0},
+		uPreviousSampleCount: { type: "f", value: 1.0 },
 		uULen: {type: "f", value: 1.0},
 		uVLen: {type: "f", value: 1.0},
 		uApertureSize: {type: "f", value: apertureSize},
@@ -1167,25 +1168,30 @@ function animate() {
 		sunColorChanged = false;
 	}
 
-	if ( !cameraIsMoving ) {
-				
+	if (!cameraIsMoving)
+	{
 		if (sceneIsDynamic)
 			sampleCounter = 1.0; // reset for continuous updating of image
 		else sampleCounter += 1.0; // for progressive refinement of image
-				
+
 		frameCounter += 1.0;
 
-		cameraRecentlyMoving = false;  
+		cameraRecentlyMoving = false;
 	}
 
-	if (cameraIsMoving) {
-		sampleCounter = 1.0;
+	if (cameraIsMoving)
+	{
 		frameCounter += 1.0;
 
-		if (!cameraRecentlyMoving) {
-				frameCounter = 1.0;
-				cameraRecentlyMoving = true;
+		if (!cameraRecentlyMoving)
+		{
+			// record current sampleCounter before it gets set to 1.0 below
+			pathTracingUniforms.uPreviousSampleCount.value = sampleCounter;
+			frameCounter = 1.0;
+			cameraRecentlyMoving = true;
 		}
+
+		sampleCounter = 1.0;
 	}
 
 	//sunAngle = (elapsedTime * 0.03) % Math.PI;
