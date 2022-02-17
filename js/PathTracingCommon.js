@@ -2753,7 +2753,7 @@ void main( void )
 	
 	if (uFrameCounter == 1.0) // camera just moved after being still
 	{
-		previousPixel.rgb *= (1.0 / (uPreviousSampleCount * 2.0)); // essentially previousPixel *= 0.5, like below
+		previousPixel.rgb *= (1.0 / uPreviousSampleCount) * 0.5; // essentially previousPixel *= 0.5, like below
 		previousPixel.a = 0.0;
 		currentPixel.rgb *= 0.5;
 	}
