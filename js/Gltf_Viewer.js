@@ -18,7 +18,7 @@ var cameraControlsYawObject; //allows access to control camera's left/right move
 var cameraControlsPitchObject; //allows access to control camera's up/down movements through mobile input
 // Camera setting variables
 let cameraRotationSpeed = 1;
-var apertureSize = 0.0, focusDistance = 100.0, speed = 60, camFlightSpeed;
+var apertureSize = 0.0, focusDistance = 100.0, speed = 60, cameraFlightSpeed;
 var fovScale;
 // Rendering variables
 var pixelRatio = 0.5; // 1 is full resolution, 0.5 is half, 0.25 is quarter, etc. (must be > than 0.0)
@@ -1078,37 +1078,37 @@ function animate() {
 	controls.getRightVector(cameraRightVector); //for strafing the camera right and left
 	controls.getUpVector(cameraUpVector); //for moving camera up and down
 
-	camFlightSpeed = speed;
+	cameraFlightSpeed = speed;
 
 	// allow flying camera
 	if ((keyPressed('w') || button3Pressed) && !(keyPressed('s') || button4Pressed)) {
 
-		cameraControlsObject.position.add(cameraDirectionVector.multiplyScalar(camFlightSpeed * frameTime));
+		cameraControlsObject.position.add(cameraDirectionVector.multiplyScalar(cameraFlightSpeed * frameTime));
 		cameraIsMoving = true;
 	}
 	if ((keyPressed('s') || button4Pressed) && !(keyPressed('w') || button3Pressed)) {
 
-		cameraControlsObject.position.sub(cameraDirectionVector.multiplyScalar(camFlightSpeed * frameTime));
+		cameraControlsObject.position.sub(cameraDirectionVector.multiplyScalar(cameraFlightSpeed * frameTime));
 		cameraIsMoving = true;
 	}
 	if ((keyPressed('a') || button1Pressed) && !(keyPressed('d') || button2Pressed)) {
 
-		cameraControlsObject.position.sub(cameraRightVector.multiplyScalar(camFlightSpeed * frameTime));
+		cameraControlsObject.position.sub(cameraRightVector.multiplyScalar(cameraFlightSpeed * frameTime));
 		cameraIsMoving = true;
 	}
 	if ((keyPressed('d') || button2Pressed) && !(keyPressed('a') || button1Pressed)) {
 
-		cameraControlsObject.position.add(cameraRightVector.multiplyScalar(camFlightSpeed * frameTime));
+		cameraControlsObject.position.add(cameraRightVector.multiplyScalar(cameraFlightSpeed * frameTime));
 		cameraIsMoving = true;
 	}
 	if (keyPressed('e') && !keyPressed('q')) {
 
-		cameraControlsObject.position.add(cameraUpVector.multiplyScalar(camFlightSpeed * frameTime));
+		cameraControlsObject.position.add(cameraUpVector.multiplyScalar(cameraFlightSpeed * frameTime));
 		cameraIsMoving = true;
 	}
 	if (keyPressed('q') && !keyPressed('e')) {
 
-		cameraControlsObject.position.sub(cameraUpVector.multiplyScalar(camFlightSpeed * frameTime));
+		cameraControlsObject.position.sub(cameraUpVector.multiplyScalar(cameraFlightSpeed * frameTime));
 		cameraIsMoving = true;
 	}
 	if ((keyPressed('up') || button5Pressed) && !(keyPressed('down') || button6Pressed)) {
