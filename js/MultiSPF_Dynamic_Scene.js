@@ -1,6 +1,4 @@
 // scene/demo-specific variables go here
-let sceneIsDynamic = true;
-let camFlightSpeed = 60;
 let torusObject;
 let torusRotationAngle = 0;
 
@@ -12,6 +10,10 @@ let samplesPerFrame_AmountController, samplesPerFrame_AmountObject;
 let needChangeSamplesPerFrameAmount = false;
 let previousFrameBlend_WeightController, previousFrameBlend_WeightObject;
 let needChangePreviousFrameBlendWeight = false;
+let cameraFlight_SpeedController, cameraFlight_SpeedObject;
+let needChangeCameraFlightSpeed = false;
+let cameraRotation_SpeedController, cameraRotation_SpeedObject;
+let needChangeCameraRotationSpeed = false;
 
 
 function init_GUI() 
@@ -26,6 +28,14 @@ function init_GUI()
 
 	previousFrameBlend_WeightObject = {
 		previousFrameBlendWeight: 0.5
+	};
+
+	cameraFlight_SpeedObject = {
+		cameraFlightSpeed: 60
+	};
+
+	cameraRotation_SpeedObject = {
+		cameraRotationSpeed: 1
 	};
 
 
@@ -44,16 +54,27 @@ function init_GUI()
 		needChangePreviousFrameBlendWeight = true;
 	}
 
+	function handleCameraFlightSpeedChange()
+	{
+		needChangeCameraFlightSpeed = true;
+	}
+
+	function handleCameraRotationSpeedChange()
+	{
+		needChangeCameraRotationSpeed = true;
+	}
+
 
 	// since I use the lil-gui.min.js minified version of lil-gui without modern exports, 
 	//'g()' is 'GUI()' ('g' is the shortened version of 'GUI' inside the lil-gui.min.js file)
 	gui = new g(); // same as gui = new GUI();
 
 	pixel_ResolutionController = gui.add(pixel_ResolutionObject, 'pixel_Resolution', 0.3, 1.0, 0.01).onChange(handlePixelResolutionChange);
-
 	samplesPerFrame_AmountController = gui.add(samplesPerFrame_AmountObject, 'samplesPerFrame', 1, 20, 1).onChange(handleSamplesPerFrameAmountChange);
-
 	previousFrameBlend_WeightController = gui.add(previousFrameBlend_WeightObject, 'previousFrameBlendWeight', 0.0, 1.0, 0.01).onChange(handlePreviousFrameBlendWeightChange);
+	cameraFlight_SpeedController = gui.add(cameraFlight_SpeedObject, 'cameraFlightSpeed', 1, 1000, 1).onChange(handleCameraFlightSpeedChange);
+	cameraRotation_SpeedController = gui.add(cameraRotation_SpeedObject, 'cameraRotationSpeed', 0.0001, 2.0, 0.0001).onChange(handleCameraRotationSpeedChange);
+
 
 	gui.domElement.style.userSelect = "none";
 	gui.domElement.style.MozUserSelect = "none";
@@ -142,6 +163,8 @@ init_GUI();
 function initSceneData()
 {
 	// scene/demo-specific three.js objects setup goes here
+	sceneIsDynamic = true;
+	cameraFlightSpeed = 60;
 
 	// pixelRatio is resolution - range: 0.5(half resolution) to 1.0(full resolution)
 	//pixelRatio = mouseControl ? 0.75 : 0.75; // less demanding on battery-powered mobile devices
@@ -248,6 +271,18 @@ function updateVariablesAndUniforms()
 		pathTracingUniforms.uPreviousFrameBlendWeight.value = previousFrameBlend_WeightController.getValue();
 		cameraIsMoving = true;
 		needChangePreviousFrameBlendWeight = false;
+	}
+
+	if (needChangeCameraFlightSpeed)
+	{
+		cameraFlightSpeed = cameraFlight_SpeedController.getValue();
+		needChangeCameraFlightSpeed = false;
+	}
+
+	if (needChangeCameraRotationSpeed)
+	{
+		cameraRotationSpeed = cameraRotation_SpeedController.getValue();
+		needChangeCameraRotationSpeed = false;
 	}
 
 
