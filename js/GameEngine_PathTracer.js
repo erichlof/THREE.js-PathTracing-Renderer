@@ -1,34 +1,34 @@
 // scene/demo-specific variables go here
-var sceneIsDynamic = true;
-var camFlightSpeed = 60;
 var torusObject;
 var torusRotationAngle = 0;
 
 // called automatically from within initTHREEjs() function
 function initSceneData()
 {
-        // scene/demo-specific three.js objects setup goes here
+	// scene/demo-specific three.js objects setup goes here
+	sceneIsDynamic = true;
+	cameraFlightSpeed = 60;
 
-        // pixelRatio is resolution - range: 0.5(half resolution) to 1.0(full resolution)
-        pixelRatio = mouseControl ? 0.75 : 0.75; // less demanding on battery-powered mobile devices
+	// pixelRatio is resolution - range: 0.5(half resolution) to 1.0(full resolution)
+	pixelRatio = mouseControl ? 0.75 : 0.75; // less demanding on battery-powered mobile devices
 
-        EPS_intersect = 0.01;
+	EPS_intersect = 0.01;
 
-        // Torus Object
-        torusObject = new THREE.Object3D();
-        pathTracingScene.add(torusObject);
-        //torusObject.rotation.set(Math.PI * 0.5, 0, 0);
-        torusObject.position.set(-60, 18, 50);
+	// Torus Object
+	torusObject = new THREE.Object3D();
+	pathTracingScene.add(torusObject);
+	//torusObject.rotation.set(Math.PI * 0.5, 0, 0);
+	torusObject.position.set(-60, 18, 50);
 
-        // set camera's field of view
-        worldCamera.fov = 60;
-        focusDistance = 130.0;
+	// set camera's field of view
+	worldCamera.fov = 60;
+	focusDistance = 130.0;
 
-        // position and orient camera
-        cameraControlsObject.position.set(0, 20, 120);
-        ///cameraControlsYawObject.rotation.y = 0.0;
-        // look slightly downward
-        ///cameraControlsPitchObject.rotation.x = -0.4;
+	// position and orient camera
+	cameraControlsObject.position.set(0, 20, 120);
+	///cameraControlsYawObject.rotation.y = 0.0;
+	// look slightly downward
+	///cameraControlsPitchObject.rotation.x = -0.4;
 
 } // end function initSceneData()
 
@@ -37,21 +37,21 @@ function initSceneData()
 // called automatically from within initTHREEjs() function
 function initPathTracingShaders()
 {
-        // scene/demo-specific uniforms go here
-        pathTracingUniforms.uTorusInvMatrix = { type: "m4", value: new THREE.Matrix4() };
+	// scene/demo-specific uniforms go here
+	pathTracingUniforms.uTorusInvMatrix = { type: "m4", value: new THREE.Matrix4() };
 
 
-        pathTracingDefines = {
-                //NUMBER_OF_TRIANGLES: total_number_of_triangles
-        };
+	pathTracingDefines = {
+		//NUMBER_OF_TRIANGLES: total_number_of_triangles
+	};
 
-        // load vertex and fragment shader files that are used in the pathTracing material, mesh and scene
-        fileLoader.load('shaders/common_PathTracing_Vertex.glsl', function (shaderText)
-        {
-                pathTracingVertexShader = shaderText;
+	// load vertex and fragment shader files that are used in the pathTracing material, mesh and scene
+	fileLoader.load('shaders/common_PathTracing_Vertex.glsl', function (shaderText)
+	{
+		pathTracingVertexShader = shaderText;
 
-                createPathTracingMaterial();
-        });
+		createPathTracingMaterial();
+	});
 
 } // end function initPathTracingShaders()
 
@@ -60,29 +60,29 @@ function initPathTracingShaders()
 function createPathTracingMaterial()
 {
 
-        fileLoader.load('shaders/GameEngine_PathTracer_Fragment.glsl', function (shaderText)
-        {
+	fileLoader.load('shaders/GameEngine_PathTracer_Fragment.glsl', function (shaderText)
+	{
 
-                pathTracingFragmentShader = shaderText;
+		pathTracingFragmentShader = shaderText;
 
-                pathTracingMaterial = new THREE.ShaderMaterial({
-                        uniforms: pathTracingUniforms,
-                        defines: pathTracingDefines,
-                        vertexShader: pathTracingVertexShader,
-                        fragmentShader: pathTracingFragmentShader,
-                        depthTest: false,
-                        depthWrite: false
-                });
+		pathTracingMaterial = new THREE.ShaderMaterial({
+			uniforms: pathTracingUniforms,
+			defines: pathTracingDefines,
+			vertexShader: pathTracingVertexShader,
+			fragmentShader: pathTracingFragmentShader,
+			depthTest: false,
+			depthWrite: false
+		});
 
-                pathTracingMesh = new THREE.Mesh(pathTracingGeometry, pathTracingMaterial);
-                pathTracingScene.add(pathTracingMesh);
+		pathTracingMesh = new THREE.Mesh(pathTracingGeometry, pathTracingMaterial);
+		pathTracingScene.add(pathTracingMesh);
 
-                // the following keeps the large scene ShaderMaterial quad right in front 
-                //   of the camera at all times. This is necessary because without it, the scene 
-                //   quad will fall out of view and get clipped when the camera rotates past 180 degrees.
-                worldCamera.add(pathTracingMesh);
+		// the following keeps the large scene ShaderMaterial quad right in front 
+		//   of the camera at all times. This is necessary because without it, the scene 
+		//   quad will fall out of view and get clipped when the camera rotates past 180 degrees.
+		worldCamera.add(pathTracingMesh);
 
-        });
+	});
 
 } // end function createPathTracingMaterial()
 
@@ -92,15 +92,15 @@ function createPathTracingMaterial()
 function updateVariablesAndUniforms()
 {
 
-        // TORUS
-        torusRotationAngle += (1.5 * frameTime);
-        torusRotationAngle %= TWO_PI;
-        torusObject.rotation.set(0, torusRotationAngle, Math.PI * 0.5);
-        torusObject.updateMatrixWorld(true); // 'true' forces immediate matrix update
-        pathTracingUniforms.uTorusInvMatrix.value.copy(torusObject.matrixWorld).invert();
+	// TORUS
+	torusRotationAngle += (1.5 * frameTime);
+	torusRotationAngle %= TWO_PI;
+	torusObject.rotation.set(0, torusRotationAngle, Math.PI * 0.5);
+	torusObject.updateMatrixWorld(true); // 'true' forces immediate matrix update
+	pathTracingUniforms.uTorusInvMatrix.value.copy(torusObject.matrixWorld).invert();
 
-        // INFO
-        cameraInfoElement.innerHTML = "FOV: " + worldCamera.fov + " / Aperture: " + apertureSize.toFixed(2) + " / FocusDistance: " + focusDistance + "<br>" + "Samples: " + sampleCounter;
+	// INFO
+	cameraInfoElement.innerHTML = "FOV: " + worldCamera.fov + " / Aperture: " + apertureSize.toFixed(2) + " / FocusDistance: " + focusDistance + "<br>" + "Samples: " + sampleCounter;
 
 } // end function updateUniforms()
 
