@@ -1,6 +1,4 @@
 // scene/demo-specific variables go here
-let sceneIsDynamic = false;
-let camFlightSpeed = 60;
 let gltfLoader;
 let modelMesh;
 let modelNameAndExtension;
@@ -458,7 +456,8 @@ function Prepare_Model_For_PathTracing()
 function initSceneData() 
 {
 	// scene/demo-specific three.js objects setup goes here
-	sceneIsDynamic = true;
+	sceneIsDynamic = false;
+	cameraFlightSpeed = 60;
 
 	// pixelRatio is resolution - range: 0.5(half resolution) to 1.0(full resolution)
 	pixelRatio = mouseControl ? 0.5 : 0.5; // less demanding on battery-powered mobile devices
