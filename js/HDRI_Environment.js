@@ -1,6 +1,4 @@
 // scene/demo-specific variables go here
-let sceneIsDynamic = false;
-let camFlightSpeed = 60;
 let hdrPath, hdrTexture, hdrLoader, hdrImgData;
 let hdrImgWidth = 0;
 let hdrImgHeight = 0;
@@ -300,6 +298,8 @@ function load_GLTF_Model()
 function initSceneData() 
 {
 	// scene/demo-specific three.js objects setup goes here
+	sceneIsDynamic = false;
+	cameraFlightSpeed = 60;
 
 	// pixelRatio is resolution - range: 0.5(half resolution) to 1.0(full resolution)
 	pixelRatio = mouseControl ? 0.75 : 0.7; // less demanding on battery-powered mobile devices
