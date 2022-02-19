@@ -1,12 +1,12 @@
 // scene/demo-specific variables go here
-var sceneIsDynamic = true;
-var camFlightSpeed = 60;
 var tileNormalMapTexture;
 
 // called automatically from within initTHREEjs() function
 function initSceneData()
 {
 	// scene/demo-specific three.js objects setup goes here
+	sceneIsDynamic = true;
+	cameraFlightSpeed = 60;
 
 	// pixelRatio is resolution - range: 0.5(half resolution) to 1.0(full resolution)
 	pixelRatio = mouseControl ? 1.0 : 1.0; // mobile devices can also handle full resolution for this raytracing (not full pathtracing) demo 
