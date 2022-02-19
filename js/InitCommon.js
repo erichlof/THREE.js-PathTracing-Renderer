@@ -16,6 +16,9 @@ let pathTracingRenderTarget, screenCopyRenderTarget;
 let quadCamera, worldCamera;
 let renderer, clock;
 let frameTime, elapsedTime;
+let sceneIsDynamic = false;
+let cameraFlightSpeed = 60;
+let cameraRotationSpeed = 1;
 let fovScale;
 let increaseFOV = false;
 let decreaseFOV = false;
@@ -51,7 +54,6 @@ let fontAspect;
 let useGenericInput = true;
 let EPS_intersect;
 let blueNoiseTexture;
-let cameraRotationSpeed = 1;
 let useToneMapping = true;
 
 // the following variables will be used to calculate rotations and directions from the camera
@@ -609,32 +611,32 @@ function animate()
 		{
 			if ( (keyPressed('w') || button3Pressed) && !(keyPressed('s') || button4Pressed) )
 			{
-				cameraControlsObject.position.add(cameraDirectionVector.multiplyScalar(camFlightSpeed * frameTime));
+				cameraControlsObject.position.add(cameraDirectionVector.multiplyScalar(cameraFlightSpeed * frameTime));
 				cameraIsMoving = true;
 			}
 			if ( (keyPressed('s') || button4Pressed) && !(keyPressed('w') || button3Pressed) )
 			{
-				cameraControlsObject.position.sub(cameraDirectionVector.multiplyScalar(camFlightSpeed * frameTime));
+				cameraControlsObject.position.sub(cameraDirectionVector.multiplyScalar(cameraFlightSpeed * frameTime));
 				cameraIsMoving = true;
 			}
 			if ( (keyPressed('a') || button1Pressed) && !(keyPressed('d') || button2Pressed) )
 			{
-				cameraControlsObject.position.sub(cameraRightVector.multiplyScalar(camFlightSpeed * frameTime));
+				cameraControlsObject.position.sub(cameraRightVector.multiplyScalar(cameraFlightSpeed * frameTime));
 				cameraIsMoving = true;
 			}
 			if ( (keyPressed('d') || button2Pressed) && !(keyPressed('a') || button1Pressed) )
 			{
-				cameraControlsObject.position.add(cameraRightVector.multiplyScalar(camFlightSpeed * frameTime));
+				cameraControlsObject.position.add(cameraRightVector.multiplyScalar(cameraFlightSpeed * frameTime));
 				cameraIsMoving = true;
 			}
 			if (keyPressed('q') && !keyPressed('z'))
 			{
-				cameraControlsObject.position.add(cameraUpVector.multiplyScalar(camFlightSpeed * frameTime));
+				cameraControlsObject.position.add(cameraUpVector.multiplyScalar(cameraFlightSpeed * frameTime));
 				cameraIsMoving = true;
 			}
 			if (keyPressed('z') && !keyPressed('q'))
 			{
-				cameraControlsObject.position.sub(cameraUpVector.multiplyScalar(camFlightSpeed * frameTime));
+				cameraControlsObject.position.sub(cameraUpVector.multiplyScalar(cameraFlightSpeed * frameTime));
 				cameraIsMoving = true;
 			}
 			if ( (keyPressed('up') || button5Pressed) && !(keyPressed('down') || button6Pressed) )
