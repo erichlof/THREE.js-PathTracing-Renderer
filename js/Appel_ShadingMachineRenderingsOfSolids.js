@@ -1,6 +1,4 @@
 // scene/demo-specific variables go here
-let sceneIsDynamic = false;
-let camFlightSpeed = 100;
 let CSG_shapeA, CSG_shapeB, CSG_shapeC, CSG_shapeD, CSG_shapeE, CSG_shapeF;
 let A_SkewMatrix = new THREE.Matrix4();
 let B_SkewMatrix = new THREE.Matrix4();
@@ -773,6 +771,8 @@ function init_GUI()
 function initSceneData()
 {
 	// scene/demo-specific three.js objects setup goes here
+	sceneIsDynamic = false;
+	cameraFlightSpeed = 100;
 
 	// This is a classic black and white digital plotter scene, so we don't have light source values exceeding 1.0.
 	//  All color values will already be in the normalized rgb 0.0-1.0 range, so no tone mapper is needed.
