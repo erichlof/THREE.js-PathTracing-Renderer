@@ -1,6 +1,4 @@
 // scene/demo-specific variables go here
-let sceneIsDynamic = false;
-let camFlightSpeed = 100;
 let CSG_shapeA, CSG_shapeB;
 let A_SkewMatrix = new THREE.Matrix4();
 let B_SkewMatrix = new THREE.Matrix4();
@@ -490,6 +488,8 @@ function init_GUI()
 function initSceneData()
 {
 	// scene/demo-specific three.js objects setup goes here
+	sceneIsDynamic = false;
+	cameraFlightSpeed = 100;
 
 	// pixelRatio is resolution - range: 0.5(half resolution) to 1.0(full resolution)
 	pixelRatio = mouseControl ? 0.75 : 0.75; // less demanding on battery-powered mobile devices
