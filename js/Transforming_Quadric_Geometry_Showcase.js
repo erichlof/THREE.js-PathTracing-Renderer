@@ -1,6 +1,4 @@
 // scene/demo-specific variables go here
-var sceneIsDynamic = true;
-var camFlightSpeed = 60;
 
 var ellipsoidTranslate, cylinderTranslate, coneTranslate, paraboloidTranslate, hyperboloidTranslate, hyperbolicParaboloidTranslate;
 var ellipsoidRotate, cylinderRotate, coneRotate, paraboloidRotate, hyperboloidRotate, hyperbolicParaboloidRotate;
@@ -22,6 +20,9 @@ var posXOffset = 25;
 function initSceneData()
 {
 	// scene/demo-specific three.js objects setup goes here
+	sceneIsDynamic = true;
+	cameraFlightSpeed = 60;
+
 	// pixelRatio is resolution - range: 0.5(half resolution) to 1.0(full resolution)
 	pixelRatio = mouseControl ? 0.75 : 0.75; // less demanding on battery-powered mobile devices
 
