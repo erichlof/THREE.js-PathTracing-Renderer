@@ -49,9 +49,8 @@ function load_GLTF_Model() {
 	//modelScale = 0.1; // good scale size for Duck model
 	
 	//gltfLoader.load("models/Duck.gltf", function (meshGroup) { // Triangles:  4,212
-	//gltfLoader.load("models/DamagedHelmet.gltf", function (meshGroup) { // Triangles: 15,452       
-	gltfLoader.load("models/Tron_LightCycle.glb", function (meshGroup) // Triangles: 
-	{
+	gltfLoader.load("models/DamagedHelmet.gltf", function (meshGroup) { // Triangles: 15,452 
+		
 		if (meshGroup.scene)
 			meshGroup = meshGroup.scene;
 			
