@@ -265,12 +265,11 @@ void main()
 	// and gives crisper edges/boundries to area light sources (spheres, quads, etc.)
 	if (centerPixel.a == 1.01)
 	{
-		filteredPixelColor = mix(filteredPixelColor, centerPixel.rgb, 0.5);
+		filteredPixelColor = mix(centerPixel.rgb, filteredPixelColor, uOneOverSampleCounter);
 	}
 
 	if ((centerPixel.a == 1.01 && uOneOverSampleCounter < 0.005) || uOneOverSampleCounter < 0.0002)
 	{
-		
 		filteredPixelColor = centerPixel.rgb;
 	}
 
