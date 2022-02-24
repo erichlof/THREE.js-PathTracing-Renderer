@@ -188,9 +188,9 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			mask *= hitColor;
 
 			// create caustic ray
-                        if (diffuseCount == 1 && rand() < 0.25)// && uSampleCounter > 20.0)
+                        if (diffuseCount == 1 && rand() < 0.25)
                         {
-				mask *= 4.0;
+				mask *= 3.0;
 				createCausticRay = true;
 
 				vec3 randVec = vec3(rng() * 2.0 - 1.0, rng() * 2.0 - 1.0, rng() * 2.0 - 1.0);
