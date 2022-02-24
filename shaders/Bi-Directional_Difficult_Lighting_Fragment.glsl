@@ -689,8 +689,6 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		if (hitType == DIFF && sampleLight)
 		{
 			ableToJoinPaths = abs(t - lightHitDistance) < 0.5;
-
-			pixelSharpness = 0.0;
 			
 			if (ableToJoinPaths)
 			{
@@ -711,8 +709,6 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		if ( hitType == DIFF || hitType == LIGHTWOOD ||
 		     hitType == DARKWOOD || hitType == PAINTING ) // Ideal DIFFUSE reflection
 		{
-			if (bounces == 0)
-				pixelSharpness = 0.0;
 			
 			if (hitType == LIGHTWOOD)
 			{
@@ -790,16 +786,13 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		
 		if (hitType == REFR)  // Ideal dielectric refraction
 		{	
-			// if (diffuseCount == 0 && !coatTypeIntersected && !uCameraIsMoving )
-			// 	pixelSharpness = 1.01;
-			// if (diffuseCount > 0)
-			// 	pixelSharpness = 0.0;
-			//else
-			//	pixelSharpness = -1.0;
-			if (bounces == 0)
+			if (diffuseCount == 0 && !coatTypeIntersected && !uCameraIsMoving )
 				pixelSharpness = 1.01;
 			else if (diffuseCount > 0)
 				pixelSharpness = 0.0;
+			else
+				pixelSharpness = -1.0;
+
 
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
@@ -840,8 +833,6 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		if (hitType == COAT || hitType == CHECK)  // Diffuse object underneath with ClearCoat on top
 		{	
 			coatTypeIntersected = true;
-
-			pixelSharpness = 0.0;
 
 			nc = 1.0; // IOR of Air
 			nt = 1.4; // IOR of ClearCoat
