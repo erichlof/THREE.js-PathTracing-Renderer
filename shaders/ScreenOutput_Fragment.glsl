@@ -2,6 +2,7 @@ precision highp float;
 precision highp int;
 precision highp sampler2D;
 
+uniform bool uSceneIsDynamic;
 uniform bool uUseToneMapping;
 uniform float uOneOverSampleCounter;
 uniform sampler2D tPathTracedImageTexture;
@@ -265,7 +266,8 @@ void main()
 	// and gives crisper edges/boundries to area light sources (spheres, quads, etc.)
 	if (centerPixel.a == 1.01)
 	{
-		filteredPixelColor = mix(centerPixel.rgb, filteredPixelColor, uOneOverSampleCounter);
+		filteredPixelColor = uSceneIsDynamic ? mix(centerPixel.rgb, filteredPixelColor, 0.5) : 
+					mix(centerPixel.rgb, filteredPixelColor, uOneOverSampleCounter);
 	}
 
 	if ((centerPixel.a == 1.01 && uOneOverSampleCounter < 0.005) || uOneOverSampleCounter < 0.0002)
