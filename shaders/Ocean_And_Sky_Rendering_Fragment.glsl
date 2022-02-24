@@ -662,8 +662,9 @@ vec3 CalculateRadiance(out vec3 objectNormal, out vec3 objectColor, out float ob
 		if (hitType == REFR)  // Ideal dielectric REFRACTION
 		{
 			//previousIntersecType = REFR;
-			// must be placed under the if statement below that uses previousIntersecType
+			//above REFR setting must be placed under the if statement below that uses previousIntersecType
 
+			// use the following simplified check if scene is dynamic
 			if (diffuseCount == 0)
 				pixelSharpness = -1.0;
 
@@ -904,6 +905,14 @@ void main( void )
 	{
 		previousPixel.rgb *= 0.9; // motion-blur trail amount (old image)
 		currentPixel.rgb *= 0.1; // brightness of new image (noisy)
+	}
+
+	// if current raytraced pixel didn't return any color value, just use the previous frame's pixel color
+	if (currentPixel.rgb == vec3(0.0))
+	{
+		currentPixel.rgb = previousPixel.rgb;
+		previousPixel.rgb *= 0.5;
+		currentPixel.rgb *= 0.5;
 	}
 
 	currentPixel.a = 0.0;
