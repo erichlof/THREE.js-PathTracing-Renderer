@@ -172,6 +172,21 @@ float SceneIntersect()
 	// GLASS EGG
 	vec3 hitPos;
 	
+	d = SphereIntersect( spheres[3].radius, spheres[3].position, rayOrigin, rayDirection );
+	hitPos = rayOrigin + rayDirection * d;
+	if (hitPos.y >= spheres[3].position.y) 
+		d = INFINITY;
+	if (d < t)
+	{
+		t = d;
+		hitNormal = normalize((rayOrigin + rayDirection * t) - spheres[3].position);
+		hitEmission = spheres[3].emission;
+		hitColor = spheres[3].color;
+		hitRoughness = spheres[3].roughness;
+		hitType = spheres[3].type;
+		hitObjectID = float(objectCount); // same as ellipsoid - sphere and ellipsoid make up 1 object
+	}
+
 	d = EllipsoidIntersect( ellipsoids[0].radii, ellipsoids[0].position, rayOrigin, rayDirection );
 	hitPos = rayOrigin + rayDirection * d;
 	if (hitPos.y < ellipsoids[0].position.y) 
@@ -185,24 +200,10 @@ float SceneIntersect()
 		hitColor = ellipsoids[0].color;
 		hitRoughness = ellipsoids[0].roughness;
 		hitType = ellipsoids[0].type;
-		hitObjectID = float(objectCount);
+		hitObjectID = float(objectCount);  // same as sphere - sphere and ellipsoid make up 1 object
 	}
+
 	
-	d = SphereIntersect( spheres[3].radius, spheres[3].position, rayOrigin, rayDirection );
-	hitPos = rayOrigin + rayDirection * d;
-	if (hitPos.y >= spheres[3].position.y) 
-		d = INFINITY;
-	
-	if (d < t)
-	{
-		t = d;
-		hitNormal = normalize((rayOrigin + rayDirection * t) - spheres[3].position);
-		hitEmission = spheres[3].emission;
-		hitColor = spheres[3].color;
-		hitRoughness = spheres[3].roughness;
-		hitType = spheres[3].type;
-		hitObjectID = float(objectCount); // same as ellipsoid above - sphere and ellipsoid make up 1 object
-	}
 	
 	
 	return t;
@@ -274,7 +275,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	hitObjectID = -100.0;
 
 
-	for (int bounces = 0; bounces < 6; bounces++)
+	for (int bounces = 0; bounces < 5; bounces++)
 	{
 
 		t = SceneIntersect();
@@ -306,7 +307,6 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			if (diffuseCount == 0 || (bounceIsSpecular && previousIntersecType == REFR))
 				pixelSharpness = 1.01;
 
-
 			if (firstTypeWasDIFF && bounceIsSpecular)
 				accumCol = mask * hitEmission * 50.0;		 
 			else if (bounceIsSpecular || sampleLight)
@@ -320,8 +320,6 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		if (hitType == DIFF && sampleLight)
 		{
 			ableToJoinPaths = abs(lightHitDistance - t) < 0.5;
-
-			pixelSharpness = 0.0;
 			
 			if (ableToJoinPaths)
 			{
@@ -341,9 +339,6 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
                 if (hitType == DIFF) // Ideal DIFFUSE reflection
 		{
 			previousIntersecType = DIFF;
-
-			if (bounces == 0)
-				pixelSharpness = 0.0;
 
 			if (bounces == 0 || diffuseCount == 0)	
 				objectColor = hitColor;
