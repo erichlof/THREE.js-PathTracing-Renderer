@@ -674,7 +674,7 @@ vec3 CalculateRadiance()
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 			
-			if (rand() < P)
+			if (bounces == 0 && rand() < P)
 			{	
 				mask *= RP;
 				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
