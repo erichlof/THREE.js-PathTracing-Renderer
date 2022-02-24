@@ -2727,7 +2727,7 @@ void main( void )
 
 	// perform path tracing and get resulting pixel color
 	vec4 currentPixel = vec4( vec3(CalculateRadiance(objectNormal, objectColor, objectID, pixelSharpness)), 0.0 );
-	
+
 	// if difference between normals of neighboring pixels is less than the first edge0 threshold, the white edge line effect is considered off (0.0)
 	float edge0 = 0.2; // edge0 is the minimum difference required between normals of neighboring pixels to start becoming a white edge line
 	// any difference between normals of neighboring pixels that is between edge0 and edge1 smoothly ramps up the white edge line brightness (smoothstep 0.0-1.0)
@@ -2750,6 +2750,9 @@ void main( void )
 	//currentPixel.rgb += 1.0 * vec3(colorDifference);
 
 	vec4 previousPixel = texelFetch(tPreviousTexture, ivec2(gl_FragCoord.xy), 0);
+
+	
+		
 	
 	if (uFrameCounter == 1.0) // camera just moved after being still
 	{
@@ -2762,6 +2765,14 @@ void main( void )
 		previousPixel.rgb *= 0.5; // motion-blur trail amount (old image)
 		previousPixel.a = 0.0;
 		currentPixel.rgb *= 0.5; // brightness of new image (noisy)
+	}
+
+	// if current raytraced pixel didn't return any color value, just use the previous frame's pixel color
+	if (currentPixel.rgb == vec3(0.0))
+	{
+		currentPixel.rgb = previousPixel.rgb;
+		previousPixel.rgb *= 0.5;
+		currentPixel.rgb *= 0.5;
 	}
 
 	currentPixel.a = 0.0;
@@ -2778,9 +2789,8 @@ void main( void )
 
 	if (previousPixel.a == 1.01)
 		currentPixel.a = 1.01;
-
-	if (previousPixel.a == -1.0)
-		currentPixel.a = 0.0;
+	// if (previousPixel.a == -1.0)
+	// 	currentPixel.a = 0.0;
 
 
 	pc_fragColor = vec4(previousPixel.rgb + currentPixel.rgb, currentPixel.a);
