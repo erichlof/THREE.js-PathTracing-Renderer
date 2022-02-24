@@ -459,6 +459,7 @@ function initTHREEjs()
 	screenOutputUniforms = {
 		uOneOverSampleCounter: { type: "f", value: 0.0 },
 		tPathTracedImageTexture: { type: "t", value: pathTracingRenderTarget.texture },
+		uSceneIsDynamic: { type: "b1", value: sceneIsDynamic },
 		uUseToneMapping: { type: "b1", value: useToneMapping }
 	};
 
