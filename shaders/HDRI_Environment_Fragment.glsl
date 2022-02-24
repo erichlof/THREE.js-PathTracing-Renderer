@@ -517,10 +517,6 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		{
 			coatTypeIntersected = true;
 
-			//pixelSharpness = 0.0;
-			if (diffuseCount == 0)
-				pixelSharpness = uFrameCounter > 200.0 ? -1.0 : 0.0;
-
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of Clear Coat
 			Re = calcFresnelReflectance(rayDirection, nl, nc, nt, ratioIoR);
@@ -531,9 +527,6 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			if (rand() < P)
 			{
-				if (diffuseCount == 0)
-					pixelSharpness = uFrameCounter > 200.0 ? 1.01 : -1.0;
-
 				mask *= RP;
 				rayDirection = randomDirectionInSpecularLobe(reflect(rayDirection, nl), roughness);
 				rayOrigin = x + nl * uEPS_intersect;
