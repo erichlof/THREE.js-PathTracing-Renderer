@@ -284,7 +284,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			if (bounces == 0 && rand() < P)
 			{
-				if (diffuseCount == 0)
+				if (bounces == 0)
 					pixelSharpness = uFrameCounter > 200.0 ? 1.01 : -1.0;
 
 				mask *= RP;
@@ -335,7 +335,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			if (bounces == 0 && rand() < P)
 			{
-				if (diffuseCount == 0)
+				if (bounces == 0)
 					pixelSharpness = uFrameCounter > 200.0 ? 1.01 : -1.0;
 
 				mask *= RP;
