@@ -408,6 +408,9 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			
 			if (rand() < P)
 			{
+				if (bounces == 0)
+					pixelSharpness = uFrameCounter > 200.0 ? 1.01 : -1.0;
+					
 				mask *= RP;
 				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
 				rayOrigin = x + nl * uEPS_intersect;
