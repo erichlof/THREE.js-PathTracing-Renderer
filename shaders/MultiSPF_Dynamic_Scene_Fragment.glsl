@@ -346,6 +346,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		
 		if (hitType == REFR)  // Ideal dielectric REFRACTION
 		{
+			// use the following simplified check if scene is dynamic
 			if (bounces == 0)
 				pixelSharpness = -1.0;
 
@@ -573,6 +574,14 @@ void main( void )
 	{
 		previousPixel.rgb *= uPreviousFrameBlendWeight; // motion-blur trail amount (old image)
 		currentPixel.rgb *= (1.0 - uPreviousFrameBlendWeight); // brightness of new image (noisy)
+	}
+
+	// if current raytraced pixel didn't return any color value, just use the previous frame's pixel color
+	if (currentPixel.rgb == vec3(0.0))
+	{
+		currentPixel.rgb = previousPixel.rgb;
+		previousPixel.rgb *= 0.5;
+		currentPixel.rgb *= 0.5;
 	}
 	
 	pc_fragColor = vec4(previousPixel.rgb + currentPixel.rgb, 1.01); // 1.01 is a signal to screenOutputShader to skip noise blur-filtering
