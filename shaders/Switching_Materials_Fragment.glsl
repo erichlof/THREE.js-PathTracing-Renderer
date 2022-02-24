@@ -252,8 +252,6 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		{
 			coatTypeIntersected = true;
 
-			pixelSharpness = 0.0;
-
 			nc = 1.0; // IOR of Air
 			nt = 1.4; // IOR of Clear Coat
 			Re = calcFresnelReflectance(rayDirection, nl, nc, nt, ratioIoR);
@@ -405,8 +403,6 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
                 if (hitType == SPECSUB)  // Shiny(specular) coating over Sub-Surface Scattering material
 		{
 			coatTypeIntersected = true;
-
-			pixelSharpness = 0.0;
 
 			nc = 1.0; // IOR of Air
 			nt = 1.3; // IOR of clear coating (for polished jade)
