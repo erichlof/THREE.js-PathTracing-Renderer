@@ -519,8 +519,6 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		{	
 			coatTypeIntersected = true;
 
-			pixelSharpness = 0.0;
-
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of Clear Coat
 			Re = calcFresnelReflectance(rayDirection, nl, nc, nt, ratioIoR);
