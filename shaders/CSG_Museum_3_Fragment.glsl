@@ -1050,8 +1050,6 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		if (hitType == COAT || hitType == CHECK)  // Diffuse object underneath with ClearCoat on top
 		{	
 			coatTypeIntersected = true;
-
-			pixelSharpness = 0.0;
 			
 			float roughness = 0.0;
 			float maskFactor = 1.0;
@@ -1084,7 +1082,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			if (rand() < P)
 			{
 				if (diffuseCount == 0)
-					pixelSharpness = -1.0;
+					pixelSharpness = uFrameCounter > 200.0 ? 1.01 : -1.0;
 
 				mask *= RP;
 				mask *= maskFactor;
