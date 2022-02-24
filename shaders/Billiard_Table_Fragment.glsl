@@ -274,8 +274,6 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		
 		if (hitType == COAT)  // Diffuse object underneath with ClearCoat on top
 		{
-			pixelSharpness = 0.0;
-
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of Clear Coat
 			Re = calcFresnelReflectance(rayDirection, nl, nc, nt, ratioIoR);
@@ -327,8 +325,6 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		
 		if (hitType == LIGHTWOOD || hitType == DARKWOOD)  // Diffuse object underneath with thin ClearCoat on top
 		{
-			pixelSharpness = 0.0;
-
 			nc = 1.0; // IOR of Air
 			nt = 1.1; // IOR of Clear Coat
 			Re = calcFresnelReflectance(rayDirection, nl, nc, nt, ratioIoR);
@@ -340,7 +336,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			if (bounces == 0 && rand() < P)
 			{
 				if (diffuseCount == 0)
-					pixelSharpness = -1.0;
+					pixelSharpness = uFrameCounter > 200.0 ? 1.01 : -1.0;
 
 				mask *= RP;
 				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
