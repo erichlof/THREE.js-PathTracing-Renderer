@@ -1123,8 +1123,6 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		{	
 			coatTypeIntersected = true;
 
-			pixelSharpness = 0.0;
-
 			float roughness = 0.0;
 			float maskFactor = 1.0;
 			nt = 1.4; // IOR of Clear Coat
@@ -1156,8 +1154,8 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			if (rand() < P)
 			{
 				if (diffuseCount == 0)
-					pixelSharpness = -1.0;
-
+					pixelSharpness = uFrameCounter > 200.0 ? 1.01 : -1.0;
+					
 				mask *= RP;
 				mask *= maskFactor;
 				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
