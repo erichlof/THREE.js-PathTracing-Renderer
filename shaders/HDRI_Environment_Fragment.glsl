@@ -484,7 +484,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 
-			if (rand() < P)
+			if (diffuseCount == 0 && rand() < P)
 			{
 				mask *= RP;
 				rayDirection = randomDirectionInSpecularLobe(reflect(rayDirection, nl), roughness);
@@ -525,7 +525,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 
-			if (rand() < P)
+			if (diffuseCount == 0 && rand() < P)
 			{
 				//  diffuseCount rather than bounces check helps get rid of hot spots from Sun
 				if (diffuseCount == 0)
