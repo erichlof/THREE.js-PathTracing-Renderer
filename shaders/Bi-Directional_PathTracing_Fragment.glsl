@@ -79,7 +79,7 @@ float SceneIntersect()
 		if (d < t)
 		{
 			t = d;
-			hitNormal = normalize( quads[i].normal );
+			hitNormal = quads[i].normal;
 			hitEmission = quads[i].emission;
 			hitColor = quads[i].color;
 			hitRoughness = quads[i].roughness;
@@ -94,7 +94,7 @@ float SceneIntersect()
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(normal);
+		hitNormal = normal;
 		hitEmission = boxes[0].emission;
 		hitColor = boxes[0].color;
 		hitRoughness = boxes[0].roughness;
@@ -110,7 +110,7 @@ float SceneIntersect()
 		if (d < t)
 		{
 			t = d;
-			hitNormal = normalize(normal);
+			hitNormal = normal;
 			hitEmission = openCylinders[i].emission;
 			hitColor = openCylinders[i].color;
 			hitRoughness = openCylinders[i].roughness;
@@ -127,7 +127,7 @@ float SceneIntersect()
 		if (d < t)
 		{
 			t = d;
-			hitNormal = normalize((rayOrigin + rayDirection * t) - spheres[i].position);
+			hitNormal = (rayOrigin + rayDirection * t) - spheres[i].position;
 			hitEmission = spheres[i].emission;
 			hitColor = spheres[i].color;
 			hitRoughness = spheres[i].roughness;
@@ -144,7 +144,7 @@ float SceneIntersect()
 		if (d < t)
 		{
 			t = d;
-			hitNormal = normalize(disks[i].normal);
+			hitNormal = disks[i].normal;
 			hitEmission = disks[i].emission;
 			hitColor = disks[i].color;
 			hitRoughness = disks[i].roughness;
@@ -159,7 +159,7 @@ float SceneIntersect()
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(normal);
+		hitNormal = normal;
 		hitEmission = cones[0].emission;
 		hitColor = cones[0].color;
 		hitRoughness = cones[0].roughness;
@@ -179,7 +179,7 @@ float SceneIntersect()
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize((rayOrigin + rayDirection * t) - spheres[3].position);
+		hitNormal = (rayOrigin + rayDirection * t) - spheres[3].position;
 		hitEmission = spheres[3].emission;
 		hitColor = spheres[3].color;
 		hitRoughness = spheres[3].roughness;
@@ -195,7 +195,7 @@ float SceneIntersect()
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize( ((rayOrigin + rayDirection * t) - ellipsoids[0].position) / (ellipsoids[0].radii * ellipsoids[0].radii) );
+		hitNormal = ((rayOrigin + rayDirection * t) - ellipsoids[0].position) / (ellipsoids[0].radii * ellipsoids[0].radii);
 		hitEmission = ellipsoids[0].emission;
 		hitColor = ellipsoids[0].color;
 		hitRoughness = ellipsoids[0].roughness;
@@ -304,11 +304,12 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		
 		if (hitType == LIGHT)
 		{	
-			if (diffuseCount == 0 || (bounceIsSpecular && previousIntersecType == REFR))
+			if (diffuseCount == 0)// || (bounceIsSpecular && previousIntersecType == REFR))
 				pixelSharpness = 1.01;
 
 			if (firstTypeWasDIFF && bounceIsSpecular)
-				accumCol = mask * hitEmission * 50.0;		 
+				accumCol = mask * hitEmission * 50.0;
+					 
 			else if (bounceIsSpecular || sampleLight)
 				accumCol = mask * hitEmission;
 
@@ -351,11 +352,9 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			if (bounces == 0)
 			{
-				firstTypeWasDIFF = true;
-				
+				firstTypeWasDIFF = true;	
 			}
 				
-
 			if (diffuseCount == 1 && rand() < 0.5)
 			{
 				mask *= 2.0;
@@ -411,7 +410,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 			
-			if (rand() < P)
+			if (bounces == 0 && rand() < P)
 			{
 				mask *= RP;
 				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
@@ -428,7 +427,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			rayDirection = tdir;
 			rayOrigin = x - nl * uEPS_intersect;
 
-			if (bounces == 1)
+			if (t < 50.0 && bounces == 1)
 				bounceIsSpecular = true; // turn on refracting caustics
 
 			continue;
