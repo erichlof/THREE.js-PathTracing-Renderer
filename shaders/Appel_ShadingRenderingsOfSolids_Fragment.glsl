@@ -521,7 +521,7 @@ void main( void )
 	// rand() produces higher FPS and almost immediate convergence, but may have very slight jagged diagonal edges on higher frequency color patterns, i.e. checkerboards.
 	//vec2 pixelOffset = vec2( tentFilter(rand()), tentFilter(rand()) );
 	// rng() has a little less FPS on mobile, and a little more noisy initially, but eventually converges on perfect anti-aliased edges - use this if 'beauty-render' is desired.
-	vec2 pixelOffset = vec2( tentFilter(rng()), tentFilter(rng()) );
+	vec2 pixelOffset = vec2( tentFilter(rng()), tentFilter(rng()) ) * 2.0;
 
 	// we must map pixelPos into the range -1.0 to +1.0
 	vec2 pixelPos = ((gl_FragCoord.xy + pixelOffset) / uResolution) * 2.0 - 1.0;
