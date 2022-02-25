@@ -744,7 +744,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			if (diffuseCount == 1 && rand() < 0.5)
 			{
-				mask *= 2.0;
+				///mask *= 2.0;
 				// choose random Diffuse sample vector
 				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
 				rayOrigin = x + nl * uEPS_intersect;
