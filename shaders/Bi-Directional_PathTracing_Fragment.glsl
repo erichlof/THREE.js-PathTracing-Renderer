@@ -215,7 +215,7 @@ float SceneIntersect()
 vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------
 {
-	float randChoose = rand() * 2.0; // 2 lights to choose from
+	float randChoose = rng() * 2.0; // 2 lights to choose from
 	Sphere lightChoice = spheres[int(randChoose)]; 
 	
 	vec3 originalRayOrigin = rayOrigin;
@@ -275,7 +275,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	hitObjectID = -100.0;
 
 
-	for (int bounces = 0; bounces < 5; bounces++)
+	for (int bounces = 0; bounces < 6; bounces++)
 	{
 
 		t = SceneIntersect();
@@ -326,6 +326,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			{
 				weight = max(0.0, dot(normalize(hitNormal), -rayDirection));
 				accumCol = mask * lightHitEmission * weight;
+				pixelSharpness = 0.0;
 			}
 
 			break;
@@ -357,7 +358,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				
 			if (diffuseCount == 1 && rand() < 0.5)
 			{
-				mask *= 2.0;
+				//mask *= 2.0;
 				// choose random Diffuse sample vector
 				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
 				rayOrigin = x + nl * uEPS_intersect;
@@ -403,7 +404,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				pixelSharpness = -1.0;
 
 			nc = 1.0; // IOR of Air
-			nt = 1.45; // IOR of Glass
+			nt = 1.5; // IOR of Glass
 			Re = calcFresnelReflectance(rayDirection, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 			P  = 0.25 + (0.5 * Re);
