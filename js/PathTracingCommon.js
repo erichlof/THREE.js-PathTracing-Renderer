@@ -2697,9 +2697,13 @@ void main( void )
 	randVec4 = texelFetch(tBlueNoiseTexture, ivec2(mod(gl_FragCoord.xy + floor(uRandomVec2 * 256.0), 256.0)), 0);
 
 	// rand() produces higher FPS and almost immediate convergence, but may have very slight jagged diagonal edges on higher frequency color patterns, i.e. checkerboards.
-	//vec2 pixelOffset = vec2( tentFilter(rand()), tentFilter(rand()) );
 	// rng() has a little less FPS on mobile, and a little more noisy initially, but eventually converges on perfect anti-aliased edges - use this if 'beauty-render' is desired.
-	vec2 pixelOffset = vec2( tentFilter(rng()), tentFilter(rng()) );
+	vec2 pixelOffset;
+	pixelOffset = uFrameCounter < 150.0 ? vec2( tentFilter(rand()), tentFilter(rand()) ) :
+					      vec2( tentFilter(rng()), tentFilter(rng()) );
+	
+	pixelOffset *= uCameraIsMoving ? 0.2 : 1.0;
+		
 
 	// we must map pixelPos into the range -1.0 to +1.0
 	vec2 pixelPos = ((gl_FragCoord.xy + pixelOffset) / uResolution) * 2.0 - 1.0;
