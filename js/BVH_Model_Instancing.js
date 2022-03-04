@@ -28,10 +28,6 @@ let vt0 = new THREE.Vector2();
 let vt1 = new THREE.Vector2();
 let vt2 = new THREE.Vector2();
 
-let gui;
-let ableToEngagePointerLock = true;
-let pixel_ResolutionController, pixel_ResolutionObject;
-let needChangePixelResolution = false;
 let gltfModel_SelectionController, gltfModel_SelectionObject;
 let needChangeGltfModelSelection = false;
 let leafModel_ScaleController, leafModel_ScaleObject;
@@ -55,131 +51,6 @@ function MaterialObject()
 	this.opacity = 1.0;   // 0.0 to 1.0 range, fully transparent to fully opaque
 	this.refractiveIndex = 1.0; // 1.0=air, 1.33=water, 1.4=clearCoat, 1.5=glass, etc.
 }
-
-
-
-function init_GUI() 
-{
-	pixel_ResolutionObject = {
-		pixel_Resolution: 0.5
-	}
-
-	gltfModel_SelectionObject = {
-		Model_Selection: 'Utah Teapot'
-	};
-
-	leafModel_ScaleObject = {
-		leafModel_Scale: 0.03
-	}
-
-	function handlePixelResolutionChange()
-	{
-		needChangePixelResolution = true;
-	}
-
-	function handleGltfModelSelectionChange()
-	{
-		needChangeGltfModelSelection = true;
-	}
-
-	function handleLeafModelScaleChange()
-	{
-		needChangeLeafModelScale = true;
-	}
-
-	// since I use the lil-gui.min.js minified version of lil-gui without modern exports, 
-	//'g()' is 'GUI()' ('g' is the shortened version of 'GUI' inside the lil-gui.min.js file)
-	gui = new g(); // same as gui = new GUI();
-
-	pixel_ResolutionController = gui.add(pixel_ResolutionObject, 'pixel_Resolution', 0.3, 1.0, 0.01).onChange(handlePixelResolutionChange);
-
-	gltfModel_SelectionController = gui.add(gltfModel_SelectionObject, 'Model_Selection', ['Utah Teapot',
-		'Stanford Bunny', 'Stanford Dragon']).onChange(handleGltfModelSelectionChange);
-
-	leafModel_ScaleController = gui.add(leafModel_ScaleObject, 'leafModel_Scale', 0.00001, 0.1, 0.0001).onChange(handleLeafModelScaleChange);
-
-
-	gui.domElement.style.userSelect = "none";
-	gui.domElement.style.MozUserSelect = "none";
-
-	window.addEventListener('resize', onWindowResize, false);
-
-	if ('ontouchstart' in window) 
-	{
-		mouseControl = false;
-		// if on mobile device, unpause the app because there is no ESC key and no mouse capture to do
-		isPaused = false;
-
-		ableToEngagePointerLock = true;
-
-		mobileJoystickControls = new MobileJoystickControls({
-			//showJoystick: true
-		});
-	}
-
-	if (mouseControl) 
-	{
-
-		window.addEventListener('wheel', onMouseWheel, false);
-
-		// window.addEventListener("click", function(event) 
-		// {
-		// 	event.preventDefault();	
-		// }, false);
-		window.addEventListener("dblclick", function (event) 
-		{
-			event.preventDefault();
-		}, false);
-
-		document.body.addEventListener("click", function (event) 
-		{
-			if (!ableToEngagePointerLock)
-				return;
-			this.requestPointerLock = this.requestPointerLock || this.mozRequestPointerLock;
-			this.requestPointerLock();
-		}, false);
-
-
-		pointerlockChange = function (event)
-		{
-			if (document.pointerLockElement === document.body ||
-				document.mozPointerLockElement === document.body || document.webkitPointerLockElement === document.body)
-			{
-				document.addEventListener('keydown', onKeyDown, false);
-				document.addEventListener('keyup', onKeyUp, false);
-				isPaused = false;
-			}
-			else
-			{
-				document.removeEventListener('keydown', onKeyDown, false);
-				document.removeEventListener('keyup', onKeyUp, false);
-				isPaused = true;
-			}
-		};
-
-		// Hook pointer lock state change events
-		document.addEventListener('pointerlockchange', pointerlockChange, false);
-		document.addEventListener('mozpointerlockchange', pointerlockChange, false);
-		document.addEventListener('webkitpointerlockchange', pointerlockChange, false);
-
-	}
-
-	if (mouseControl) 
-	{
-		gui.domElement.addEventListener("mouseenter", function (event) 
-		{
-			ableToEngagePointerLock = false;
-		}, false);
-		gui.domElement.addEventListener("mouseleave", function (event) 
-		{
-			ableToEngagePointerLock = true;
-		}, false);
-	}
-
-	
-} // end function init_GUI()
-
-init_GUI();
 
 
 // Load in the model either in glTF or glb format  /////////////////////////////////////////////////////
@@ -440,21 +311,26 @@ function Prepare_Model_For_PathTracing()
 	aabbDataTexture.generateMipmaps = false;
 	aabbDataTexture.needsUpdate = true;
 
+
+	
+	modelWasJustLoaded = true;
+	// now that the model has been loaded and processed, we can init the app..
+	// (if it's the 1st time loading a model)
 	if (appIsStartingUp)
 	{
 		appIsStartingUp = false;
-		initTHREEjs(); // boilerplate: init necessary three.js items and scene/demo-specific objects
+		init();
 	}
-
-	modelWasJustLoaded = true;
-		
+	
 } // end function Prepare_Model_For_PathTracing()
 
 
 
-// called automatically from within initTHREEjs() function
+// called automatically from within initTHREEjs() function (located in InitCommon.js file)
 function initSceneData() 
 {
+	demoFragmentShaderFileName = 'BVH_Model_Instancing_Fragment.glsl';
+
 	// scene/demo-specific three.js objects setup goes here
 	sceneIsDynamic = true;
 	cameraFlightSpeed = 60;
@@ -473,13 +349,33 @@ function initSceneData()
 	// look slightly downward
 	cameraControlsPitchObject.rotation.x = -0.1;
 
-} // end function initSceneData()
+
+	// In addition to the default GUI on all demos, add any special GUI elements that this particular demo requires
+	
+	gltfModel_SelectionObject = {
+		Model_Selection: 'Utah Teapot'
+	};
+
+	leafModel_ScaleObject = {
+		leafModel_Scale: 0.03
+	}
+
+	function handleGltfModelSelectionChange()
+	{
+		needChangeGltfModelSelection = true;
+	}
+
+	function handleLeafModelScaleChange()
+	{
+		needChangeLeafModelScale = true;
+	}
+
+	gltfModel_SelectionController = gui.add(gltfModel_SelectionObject, 'Model_Selection', ['Utah Teapot',
+		'Stanford Bunny', 'Stanford Dragon']).onChange(handleGltfModelSelectionChange);
+
+	leafModel_ScaleController = gui.add(leafModel_ScaleObject, 'leafModel_Scale', 0.00001, 0.1, 0.0001).onChange(handleLeafModelScaleChange);
 
 
-
-// called automatically from within initTHREEjs() function
-function initPathTracingShaders() 
-{
 	// scene/demo-specific uniforms go here
 	pathTracingUniforms.tTriangleTexture = { type: "t", value: triangleDataTexture };
 	pathTracingUniforms.tAABBTexture = { type: "t", value: aabbDataTexture };
@@ -488,55 +384,12 @@ function initPathTracingShaders()
 	pathTracingUniforms.uLeafModelScale = { type: "f", value: 1.0 };
 	pathTracingUniforms.uLeafAABBVolumeScale = { type: "f", value: 1.0 };
 
-	pathTracingDefines = {
-		//NUMBER_OF_TRIANGLES: total_number_of_triangles
-	};
-
-	// load vertex and fragment shader files that are used in the pathTracing material, mesh and scene
-	fileLoader.load('shaders/common_PathTracing_Vertex.glsl', function (shaderText) 
-	{
-		pathTracingVertexShader = shaderText;
-
-		createPathTracingMaterial();
-	});
-
-} // end function initPathTracingShaders()
-
-
-// called automatically from within initPathTracingShaders() function above
-function createPathTracingMaterial() 
-{
-
-	fileLoader.load('shaders/BVH_Model_Instancing_Fragment.glsl', function (shaderText) 
-	{
-		
-		pathTracingFragmentShader = shaderText;
-
-		pathTracingMaterial = new THREE.ShaderMaterial({
-			uniforms: pathTracingUniforms,
-			defines: pathTracingDefines,
-			vertexShader: pathTracingVertexShader,
-			fragmentShader: pathTracingFragmentShader,
-			depthTest: false,
-			depthWrite: false
-		});
-
-		pathTracingMesh = new THREE.Mesh(pathTracingGeometry, pathTracingMaterial);
-		pathTracingScene.add(pathTracingMesh);
-
-		// the following keeps the large scene ShaderMaterial quad right in front 
-		//   of the camera at all times. This is necessary because without it, the scene 
-		//   quad will fall out of view and get clipped when the camera rotates past 180 degrees.
-		worldCamera.add(pathTracingMesh);
-		
-	});
-
-} // end function createPathTracingMaterial()
+} // end function initSceneData()
 
 
 
 
-// called automatically from within the animate() function
+// called automatically from within the animate() function (located in InitCommon.js file)
 function updateVariablesAndUniforms() 
 {
 	
@@ -575,13 +428,6 @@ function updateVariablesAndUniforms()
 	
 
 	// if GUI has been used, update
-
-	if (needChangePixelResolution)
-	{
-		pixelRatio = pixel_ResolutionController.getValue();
-		onWindowResize();
-		needChangePixelResolution = false;
-	}
 
 	if (needChangeGltfModelSelection)
 	{
