@@ -1,9 +1,11 @@
 // scene/demo-specific variables go here
-var PerlinNoiseTexture;
+let PerlinNoiseTexture;
 
-// called automatically from within initTHREEjs() function
-function initSceneData() {
-	
+// called automatically from within initTHREEjs() function (located in InitCommon.js file)
+function initSceneData()
+{
+	demoFragmentShaderFileName = 'Grid_Acceleration_Fragment.glsl';
+
 	// scene/demo-specific three.js objects setup goes here
 	sceneIsDynamic = true;
 	cameraFlightSpeed = 60;
@@ -27,7 +29,7 @@ function initSceneData() {
 	// look slightly downward
 	cameraControlsPitchObject.rotation.x = -0.5;
 
-	PerlinNoiseTexture = new THREE.TextureLoader().load( 'textures/DinoIsland1024.png' );
+	PerlinNoiseTexture = new THREE.TextureLoader().load('textures/DinoIsland1024.png');
 	//PerlinNoiseTexture.wrapS = THREE.RepeatWrapping;
 	//PerlinNoiseTexture.wrapT = THREE.RepeatWrapping;
 	PerlinNoiseTexture.flipY = false;
@@ -35,64 +37,18 @@ function initSceneData() {
 	PerlinNoiseTexture.magFilter = THREE.NearestFilter;
 	PerlinNoiseTexture.generateMipmaps = false;
 
+
+	// scene/demo-specific uniforms go here
+	pathTracingUniforms.t_PerlinNoise = { type: "t", value: PerlinNoiseTexture };
+
 } // end function initSceneData()
 
 
 
-// called automatically from within initTHREEjs() function
-function initPathTracingShaders() {
- 
-	// scene/demo-specific uniforms go here
-	pathTracingUniforms.t_PerlinNoise = { type: "t", value: PerlinNoiseTexture };
+// called automatically from within the animate() function (located in InitCommon.js file)
+function updateVariablesAndUniforms()
+{
 
-
-	pathTracingDefines = {
-		//NUMBER_OF_TRIANGLES: total_number_of_triangles
-	};
-
-	// load vertex and fragment shader files that are used in the pathTracing material, mesh and scene
-	fileLoader.load('shaders/common_PathTracing_Vertex.glsl', function (shaderText) {
-		pathTracingVertexShader = shaderText;
-
-		createPathTracingMaterial();
-	});
-
-} // end function initPathTracingShaders()
-
-
-// called automatically from within initPathTracingShaders() function above
-function createPathTracingMaterial() {
-
-	fileLoader.load('shaders/Grid_Acceleration_Fragment.glsl', function (shaderText) {
-		
-		pathTracingFragmentShader = shaderText;
-
-		pathTracingMaterial = new THREE.ShaderMaterial({
-			uniforms: pathTracingUniforms,
-			defines: pathTracingDefines,
-			vertexShader: pathTracingVertexShader,
-			fragmentShader: pathTracingFragmentShader,
-			depthTest: false,
-			depthWrite: false
-		});
-
-		pathTracingMesh = new THREE.Mesh(pathTracingGeometry, pathTracingMaterial);
-		pathTracingScene.add(pathTracingMesh);
-
-		// the following keeps the large scene ShaderMaterial quad right in front 
-		//   of the camera at all times. This is necessary because without it, the scene 
-		//   quad will fall out of view and get clipped when the camera rotates past 180 degrees.
-		worldCamera.add(pathTracingMesh);
-		
-	});
-
-} // end function createPathTracingMaterial()
-
-
-
-// called automatically from within the animate() function
-function updateVariablesAndUniforms() {
-	
 	// INFO
 	cameraInfoElement.innerHTML = "FOV: " + worldCamera.fov + " / Aperture: " + apertureSize.toFixed(2) + " / FocusDistance: " + focusDistance + "<br>" + "Samples: " + sampleCounter;
 
