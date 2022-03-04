@@ -1,131 +1,17 @@
 // scene/demo-specific variables go here
-var gui;
-var ableToEngagePointerLock = true;
-var material_TypeObject, material_ColorObject;
-var material_TypeController, material_ColorController;
-var changeMaterialType = false;
-var changeMaterialColor = false;
-var matType = 0;
-var matColor;
+let material_TypeObject, material_ColorObject;
+let material_TypeController, material_ColorController;
+let changeMaterialType = false;
+let changeMaterialColor = false;
+let matType = 0;
+let matColor;
 
 
-function init_GUI() 
-{
-
-	material_TypeObject = {
-		Material_Preset: 'ClearCoat Diffuse'
-	};
-	material_ColorObject = {
-		Material_Color: [0, 1, 1]
-	};
-	
-	function materialTypeChanger() 
-	{
-		changeMaterialType = true;
-	}
-	function materialColorChanger() 
-	{
-		changeMaterialColor = true;
-	}
-
-	// since I use the lil-gui.min.js minified version of lil-gui without modern exports, 
-	//'g()' is 'GUI()' ('g' is the shortened version of 'GUI' inside the lil-gui.min.js file)
-	gui = new g(); // same as gui = new GUI();
-	
-	material_TypeController = gui.add( material_TypeObject, 'Material_Preset', [ 'ClearCoat Diffuse', 'Transparent Refractive', 
-		'Copper Metal', 'Aluminum Metal', 'Gold Metal', 'Silver Metal', 'ClearCoat Metal(Brass)' ] ).onChange( materialTypeChanger );
-	
-	material_ColorController = gui.addColor( material_ColorObject, 'Material_Color' ).onChange( materialColorChanger );
-	
-	materialTypeChanger();
-	materialColorChanger();
-
-	gui.domElement.style.userSelect = "none";
-	gui.domElement.style.MozUserSelect = "none";
-	
-	window.addEventListener('resize', onWindowResize, false);
-
-	if ( 'ontouchstart' in window ) 
-	{
-		mouseControl = false;
-		// if on mobile device, unpause the app because there is no ESC key and no mouse capture to do
-		isPaused = false;
-		
-		ableToEngagePointerLock = true;
-
-		mobileJoystickControls = new MobileJoystickControls ({
-			//showJoystick: true
-		});	
-	}
-
-	if (mouseControl) 
-	{
-
-		window.addEventListener( 'wheel', onMouseWheel, false );
-
-		// window.addEventListener("click", function(event) 
-		// {
-		// 	event.preventDefault();	
-		// }, false);
-		window.addEventListener("dblclick", function(event) 
-		{
-			event.preventDefault();	
-		}, false);
-		
-		document.body.addEventListener("click", function(event) 
-		{
-			if (!ableToEngagePointerLock)
-				return;
-			this.requestPointerLock = this.requestPointerLock || this.mozRequestPointerLock;
-			this.requestPointerLock();
-		}, false);
-
-
-		pointerlockChange = function (event)
-		{
-			if (document.pointerLockElement === document.body ||
-				document.mozPointerLockElement === document.body || document.webkitPointerLockElement === document.body)
-			{
-				document.addEventListener('keydown', onKeyDown, false);
-				document.addEventListener('keyup', onKeyUp, false);
-				isPaused = false;
-			}
-			else
-			{
-				document.removeEventListener('keydown', onKeyDown, false);
-				document.removeEventListener('keyup', onKeyUp, false);
-				isPaused = true;
-			}
-		};
-
-		// Hook pointer lock state change events
-		document.addEventListener( 'pointerlockchange', pointerlockChange, false );
-		document.addEventListener( 'mozpointerlockchange', pointerlockChange, false );
-		document.addEventListener( 'webkitpointerlockchange', pointerlockChange, false );
-
-	}
-
-	if (mouseControl) 
-	{
-		gui.domElement.addEventListener("mouseenter", function(event) 
-		{
-			ableToEngagePointerLock = false;	
-		}, false);
-		gui.domElement.addEventListener("mouseleave", function(event) 
-		{
-			ableToEngagePointerLock = true;
-		}, false);
-	}
-
-	initTHREEjs(); // boilerplate: init necessary three.js items and scene/demo-specific objects
-
-} // end function init_GUI()
-
-
-
-// called automatically from within initTHREEjs() function
+// called automatically from within initTHREEjs() function (located in InitCommon.js file)
 function initSceneData() 
 {
+	demoFragmentShaderFileName = 'Material_Roughness_Fragment.glsl';
+
 	// scene/demo-specific three.js objects setup goes here
 	sceneIsDynamic = false;
 	cameraFlightSpeed = 60;
@@ -145,71 +31,45 @@ function initSceneData()
 	// look slightly downward
 	///cameraControlsPitchObject.rotation.x = -0.4;
 
+
+	// In addition to the default GUI on all demos, add any special GUI elements that this particular demo requires
+
+	material_TypeObject = {
+		Material_Preset: 'ClearCoat Diffuse'
+	};
+	material_ColorObject = {
+		Material_Color: [0, 1, 1]
+	};
+
+	function materialTypeChanger() 
+	{
+		changeMaterialType = true;
+	}
+	function materialColorChanger() 
+	{
+		changeMaterialColor = true;
+	}
+
+	material_TypeController = gui.add(material_TypeObject, 'Material_Preset', ['ClearCoat Diffuse', 'Transparent Refractive',
+		'Copper Metal', 'Aluminum Metal', 'Gold Metal', 'Silver Metal', 'ClearCoat Metal(Brass)']).onChange(materialTypeChanger);
+
+	material_ColorController = gui.addColor(material_ColorObject, 'Material_Color').onChange(materialColorChanger);
+
+
+	// scene/demo-specific uniforms go here
+	pathTracingUniforms.uMaterialType = { type: "i", value: 4 };
+	pathTracingUniforms.uMaterialColor = { type: "v3", value: new THREE.Color(0.0, 1.0, 1.0) };
+
 } // end function initSceneData()
 
 
 
-// called automatically from within initTHREEjs() function
-function initPathTracingShaders() 
-{
- 
-	// scene/demo-specific uniforms go here
-	pathTracingUniforms.uMaterialType = { type: "i", value: 4 };
-	pathTracingUniforms.uMaterialColor = { type: "v3", value: new THREE.Color(0.0, 1.0, 1.0) };
-	
-
-	pathTracingDefines = {
-		//NUMBER_OF_TRIANGLES: total_number_of_triangles
-	};
-
-	// load vertex and fragment shader files that are used in the pathTracing material, mesh and scene
-	fileLoader.load('shaders/common_PathTracing_Vertex.glsl', function (shaderText) 
-	{
-		pathTracingVertexShader = shaderText;
-
-		createPathTracingMaterial();
-	});
-
-} // end function initPathTracingShaders()
-
-
-// called automatically from within initPathTracingShaders() function above
-function createPathTracingMaterial() 
-{
-
-	fileLoader.load('shaders/Material_Roughness_Fragment.glsl', function (shaderText) 
-	{
-		
-		pathTracingFragmentShader = shaderText;
-
-		pathTracingMaterial = new THREE.ShaderMaterial({
-			uniforms: pathTracingUniforms,
-			defines: pathTracingDefines,
-			vertexShader: pathTracingVertexShader,
-			fragmentShader: pathTracingFragmentShader,
-			depthTest: false,
-			depthWrite: false
-		});
-
-		pathTracingMesh = new THREE.Mesh(pathTracingGeometry, pathTracingMaterial);
-		pathTracingScene.add(pathTracingMesh);
-
-		// the following keeps the large scene ShaderMaterial quad right in front 
-		//   of the camera at all times. This is necessary because without it, the scene 
-		//   quad will fall out of view and get clipped when the camera rotates past 180 degrees.
-		worldCamera.add(pathTracingMesh);
-		
-	});
-
-} // end function createPathTracingMaterial()
-
-
-
-// called automatically from within the animate() function
+// called automatically from within the animate() function (located in InitCommon.js file)
 function updateVariablesAndUniforms() 
 {
 
-	if (changeMaterialType) {
+	if (changeMaterialType) 
+	{
 
 		matType = material_TypeController.getValue();
 
@@ -274,4 +134,4 @@ function updateVariablesAndUniforms()
 
 
 
-init_GUI(); // init app and start animating
+init(); // init app and start animating
