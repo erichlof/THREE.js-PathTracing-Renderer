@@ -1,13 +1,15 @@
 // scene/demo-specific variables go here
-var sunAngle = 0;
-var sunDirection = new THREE.Vector3();
-var waterLevel = 400;
-var cameraUnderWater = 0.0;
-var PerlinNoiseTexture;
+let sunAngle = 0;
+let sunDirection = new THREE.Vector3();
+let waterLevel = 400;
+let cameraUnderWater = 0.0;
+let PerlinNoiseTexture;
 
-// called automatically from within initTHREEjs() function
+// called automatically from within initTHREEjs() function (located in InitCommon.js file)
 function initSceneData()
 {
+	demoFragmentShaderFileName = 'Terrain_Rendering_Fragment.glsl';
+
 	// scene/demo-specific three.js objects setup goes here
 	sceneIsDynamic = true;
 	cameraFlightSpeed = 300;
@@ -34,13 +36,6 @@ function initSceneData()
 	PerlinNoiseTexture.magFilter = THREE.LinearFilter;
 	PerlinNoiseTexture.generateMipmaps = false;
 
-} // end function initSceneData()
-
-
-
-// called automatically from within initTHREEjs() function
-function initPathTracingShaders()
-{
 
 	// scene/demo-specific uniforms go here
 	pathTracingUniforms.t_PerlinNoise = { type: "t", value: PerlinNoiseTexture };
@@ -48,55 +43,11 @@ function initPathTracingShaders()
 	pathTracingUniforms.uWaterLevel = { type: "f", value: 0.0 };
 	pathTracingUniforms.uSunDirection = { type: "v3", value: new THREE.Vector3() };
 
-
-	pathTracingDefines = {
-		//NUMBER_OF_TRIANGLES: total_number_of_triangles
-	};
-
-	// load vertex and fragment shader files that are used in the pathTracing material, mesh and scene
-	fileLoader.load('shaders/common_PathTracing_Vertex.glsl', function (shaderText)
-	{
-		pathTracingVertexShader = shaderText;
-
-		createPathTracingMaterial();
-	});
-
-} // end function initPathTracingShaders()
-
-
-// called automatically from within initPathTracingShaders() function above
-function createPathTracingMaterial()
-{
-
-	fileLoader.load('shaders/Terrain_Rendering_Fragment.glsl', function (shaderText)
-	{
-
-		pathTracingFragmentShader = shaderText;
-
-		pathTracingMaterial = new THREE.ShaderMaterial({
-			uniforms: pathTracingUniforms,
-			defines: pathTracingDefines,
-			vertexShader: pathTracingVertexShader,
-			fragmentShader: pathTracingFragmentShader,
-			depthTest: false,
-			depthWrite: false
-		});
-
-		pathTracingMesh = new THREE.Mesh(pathTracingGeometry, pathTracingMaterial);
-		pathTracingScene.add(pathTracingMesh);
-
-		// the following keeps the large scene ShaderMaterial quad right in front 
-		//   of the camera at all times. This is necessary because without it, the scene 
-		//   quad will fall out of view and get clipped when the camera rotates past 180 degrees.
-		worldCamera.add(pathTracingMesh);
-
-	});
-
-} // end function createPathTracingMaterial()
+} // end function initSceneData()
 
 
 
-// called automatically from within the animate() function
+// called automatically from within the animate() function (located in InitCommon.js file)
 function updateVariablesAndUniforms()
 {
 
