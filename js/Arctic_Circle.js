@@ -1,18 +1,20 @@
 // scene/demo-specific variables go here
-var sunAngle = 0;
-var sunDirection = new THREE.Vector3();
-var waterLevel = 0.0;
-var cameraUnderWater = false;
+let sunAngle = 0;
+let sunDirection = new THREE.Vector3();
+let waterLevel = 0.0;
+let cameraUnderWater = false;
 
-// called automatically from within initTHREEjs() function
+// called automatically from within initTHREEjs() function (located in InitCommon.js file)
 function initSceneData()
 {
+	demoFragmentShaderFileName = 'Arctic_Circle_Fragment.glsl';
+
 	// scene/demo-specific three.js objects setup goes here
 	sceneIsDynamic = true;
 	cameraFlightSpeed = 1000;
 
 	// pixelRatio is resolution - range: 0.5(half resolution) to 1.0(full resolution)
-	pixelRatio = mouseControl ? 0.8 : 0.8;
+	pixelRatio = mouseControl ? 0.7 : 0.8;
 
 	EPS_intersect = 1.0;
 
@@ -33,67 +35,16 @@ function initSceneData()
 	PerlinNoiseTexture.magFilter = THREE.LinearFilter;
 	PerlinNoiseTexture.generateMipmaps = false;
 
+	// scene/demo-specific uniforms go here
+	pathTracingUniforms.t_PerlinNoise = { type: "t", value: PerlinNoiseTexture };
+	pathTracingUniforms.uWaterLevel = { type: "f", value: 0.0 };
+	pathTracingUniforms.uSunDirection = { type: "v3", value: new THREE.Vector3() };
+
 } // end function initSceneData()
 
 
 
-// called automatically from within initTHREEjs() function
-function initPathTracingShaders()
-{
-
-	// scene/demo-specific uniforms go here
-	pathTracingUniforms.t_PerlinNoise = { type: "t", value: PerlinNoiseTexture };       
-	pathTracingUniforms.uWaterLevel = { type: "f", value: 0.0 };
-	pathTracingUniforms.uSunDirection = { type: "v3", value: new THREE.Vector3() };
-
-	pathTracingDefines = {
-		//NUMBER_OF_TRIANGLES: total_number_of_triangles
-	};
-
-	// load vertex and fragment shader files that are used in the pathTracing material, mesh and scene
-	fileLoader.load('shaders/common_PathTracing_Vertex.glsl', function (shaderText)
-	{
-		pathTracingVertexShader = shaderText;
-
-		createPathTracingMaterial();
-	});
-
-} // end function initPathTracingShaders()
-
-
-// called automatically from within initPathTracingShaders() function above
-function createPathTracingMaterial()
-{
-
-	fileLoader.load('shaders/Arctic_Circle_Fragment.glsl', function (shaderText)
-	{
-
-		pathTracingFragmentShader = shaderText;
-
-		pathTracingMaterial = new THREE.ShaderMaterial({
-			uniforms: pathTracingUniforms,
-			defines: pathTracingDefines,
-			vertexShader: pathTracingVertexShader,
-			fragmentShader: pathTracingFragmentShader,
-			depthTest: false,
-			depthWrite: false
-		});
-
-		pathTracingMesh = new THREE.Mesh(pathTracingGeometry, pathTracingMaterial);
-		pathTracingScene.add(pathTracingMesh);
-
-		// the following keeps the large scene ShaderMaterial quad right in front 
-		//   of the camera at all times. This is necessary because without it, the scene 
-		//   quad will fall out of view and get clipped when the camera rotates past 180 degrees.
-		worldCamera.add(pathTracingMesh);
-
-	});
-
-} // end function createPathTracingMaterial()
-
-
-
-// called automatically from within the animate() function
+// called automatically from within the animate() function (located in InitCommon.js file)
 function updateVariablesAndUniforms()
 {
 
