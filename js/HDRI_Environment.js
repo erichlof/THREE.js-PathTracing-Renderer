@@ -28,9 +28,7 @@ let vt0 = new THREE.Vector2();
 let vt1 = new THREE.Vector2();
 let vt2 = new THREE.Vector2();
 
-let gui;
-let ableToEngagePointerLock = true;
-var HDRI_ExposureObject, material_TypeObject, material_ColorObject, material_RoughnessObject;
+let HDRI_ExposureObject, material_TypeObject, material_ColorObject, material_RoughnessObject;
 let HDRI_ExposureController, material_TypeController, material_ColorController, material_RoughnessController;
 let changeHDRI_Exposure = false;
 let changeMaterialType = false;
@@ -76,9 +74,6 @@ function init_GUI()
 		changeMaterialRoughness = true;
 	}
 
-	// since I use the lil-gui.min.js minified version of lil-gui without modern exports, 
-	//'g()' is 'GUI()' ('g' is the shortened version of 'GUI' inside the lil-gui.min.js file)
-	gui = new g(); // same as gui = new GUI();
 	
 	HDRI_ExposureController = gui.add( HDRI_ExposureObject, 'HDRI_Exposure', 0, 3, 0.05 ).onChange( HDRI_ExposureChanger );
 	material_TypeController = gui.add( material_TypeObject, 'Material_Type', 2, 4, 1 ).onChange( materialTypeChanger );
@@ -89,85 +84,6 @@ function init_GUI()
 	materialTypeChanger();
 	materialColorChanger();
 	materialRoughnessChanger();
-
-	gui.domElement.style.userSelect = "none";
-	gui.domElement.style.MozUserSelect = "none";
-	
-	window.addEventListener('resize', onWindowResize, false);
-
-	if ( 'ontouchstart' in window ) 
-	{
-		mouseControl = false;
-		// if on mobile device, unpause the app because there is no ESC key and no mouse capture to do
-		isPaused = false;
-		
-		ableToEngagePointerLock = true;
-
-		mobileJoystickControls = new MobileJoystickControls ({
-			//showJoystick: true
-		});	
-	}
-
-	if (mouseControl) 
-	{
-
-		window.addEventListener( 'wheel', onMouseWheel, false );
-
-		// window.addEventListener("click", function(event) 
-		// {
-		// 	event.preventDefault();	
-		// }, false);
-		window.addEventListener("dblclick", function(event) 
-		{
-			event.preventDefault();	
-		}, false);
-		
-		document.body.addEventListener("click", function(event) 
-		{
-			if (!ableToEngagePointerLock)
-				return;
-			this.requestPointerLock = this.requestPointerLock || this.mozRequestPointerLock;
-			this.requestPointerLock();
-		}, false);
-
-
-		pointerlockChange = function (event)
-		{
-			if (document.pointerLockElement === document.body ||
-				document.mozPointerLockElement === document.body || document.webkitPointerLockElement === document.body)
-			{
-				document.addEventListener('keydown', onKeyDown, false);
-				document.addEventListener('keyup', onKeyUp, false);
-				isPaused = false;
-			}
-			else
-			{
-				document.removeEventListener('keydown', onKeyDown, false);
-				document.removeEventListener('keyup', onKeyUp, false);
-				isPaused = true;
-			}
-		};
-
-		// Hook pointer lock state change events
-		document.addEventListener( 'pointerlockchange', pointerlockChange, false );
-		document.addEventListener( 'mozpointerlockchange', pointerlockChange, false );
-		document.addEventListener( 'webkitpointerlockchange', pointerlockChange, false );
-
-	}
-
-	if (mouseControl) 
-	{
-		gui.domElement.addEventListener("mouseenter", function(event) 
-		{
-				ableToEngagePointerLock = false;	
-		}, false);
-		gui.domElement.addEventListener("mouseleave", function(event) 
-		{
-				ableToEngagePointerLock = true;
-		}, false);
-	}
-
-	initTHREEjs(); // boilerplate: init necessary three.js items and scene/demo-specific objects
 
 } // end function init_GUI()
 
@@ -283,20 +199,20 @@ function load_GLTF_Model()
 		// settings for StanfordBunny model
 		//modelScale = 0.04;
 		//modelPositionOffset.set(0, 28, -40);
-		
-		
-		// now that the models have been loaded, we can init (with GUI for this demo)
-		init_GUI();
 
-	});
+		// now that the model has loaded, we can init the app
+		init();
+	}); // end gltfLoader.load()
 
 } // end function load_GLTF_Model()
 
 
 
-// called automatically from within initTHREEjs() function
+// called automatically from within initTHREEjs() function (located in InitCommon.js file)
 function initSceneData() 
 {
+	demoFragmentShaderFileName = 'HDRI_Environment_Fragment.glsl';
+
 	// scene/demo-specific three.js objects setup goes here
 	sceneIsDynamic = false;
 	cameraFlightSpeed = 60;
@@ -597,14 +513,10 @@ function initSceneData()
 		sunDirectionVector.x *= -1;
 	} );
 
-} // end function initSceneData()
+
+	init_GUI();
 
 
-
-// called automatically from within initTHREEjs() function
-function initPathTracingShaders() 
-{
- 
 	// scene/demo-specific uniforms go here
 	pathTracingUniforms.tTriangleTexture = { type: "t", value: triangleDataTexture };
 	pathTracingUniforms.tAABBTexture = { type: "t", value: aabbDataTexture };
@@ -614,56 +526,13 @@ function initPathTracingShaders()
 	pathTracingUniforms.uRoughness = { type: "f", value: 0.0 };
 	pathTracingUniforms.uMaterialColor = { type: "v3", value: new THREE.Color() };
 	pathTracingUniforms.uSunDirectionVector = { type: "v3", value: sunDirectionVector };
-	
 
-	pathTracingDefines = {
-		//NUMBER_OF_TRIANGLES: total_number_of_triangles
-	};
-
-	// load vertex and fragment shader files that are used in the pathTracing material, mesh and scene
-	fileLoader.load('shaders/common_PathTracing_Vertex.glsl', function (shaderText) 
-	{
-		pathTracingVertexShader = shaderText;
-
-		createPathTracingMaterial();
-	});
-
-} // end function initPathTracingShaders()
-
-
-// called automatically from within initPathTracingShaders() function above
-function createPathTracingMaterial() 
-{
-
-	fileLoader.load('shaders/HDRI_Environment_Fragment.glsl', function (shaderText) 
-	{
-		
-		pathTracingFragmentShader = shaderText;
-
-		pathTracingMaterial = new THREE.ShaderMaterial({
-			uniforms: pathTracingUniforms,
-			defines: pathTracingDefines,
-			vertexShader: pathTracingVertexShader,
-			fragmentShader: pathTracingFragmentShader,
-			depthTest: false,
-			depthWrite: false
-		});
-
-		pathTracingMesh = new THREE.Mesh(pathTracingGeometry, pathTracingMaterial);
-		pathTracingScene.add(pathTracingMesh);
-
-		// the following keeps the large scene ShaderMaterial quad right in front 
-		//   of the camera at all times. This is necessary because without it, the scene 
-		//   quad will fall out of view and get clipped when the camera rotates past 180 degrees.
-		worldCamera.add(pathTracingMesh);
-		
-	});
-
-} // end function createPathTracingMaterial()
+} // end function initSceneData()
 
 
 
-// called automatically from within the animate() function
+
+// called automatically from within the animate() function (located in InitCommon.js file)
 function updateVariablesAndUniforms()
 {
 	
