@@ -4,9 +4,11 @@ let canvas, context;
 let container, stats;
 let controls;
 let pathTracingScene, screenCopyScene, screenOutputScene;
-let pathTracingUniforms, screenCopyUniforms, screenOutputUniforms;
+let pathTracingUniforms = {};
+let screenCopyUniforms, screenOutputUniforms;
 let pathTracingDefines;
 let pathTracingVertexShader, pathTracingFragmentShader;
+let demoFragmentShaderFileName;
 let screenCopyVertexShader, screenCopyFragmentShader;
 let screenOutputVertexShader, screenOutputFragmentShader;
 let pathTracingGeometry, pathTracingMaterial, pathTracingMesh;
@@ -55,6 +57,11 @@ let useGenericInput = true;
 let EPS_intersect;
 let blueNoiseTexture;
 let useToneMapping = true;
+
+let gui;
+let ableToEngagePointerLock = true;
+let pixel_ResolutionController, pixel_ResolutionObject;
+let needChangePixelResolution = false;
 
 // the following variables will be used to calculate rotations and directions from the camera
 let cameraDirectionVector = new THREE.Vector3(); //for moving where the camera is looking
@@ -220,38 +227,61 @@ function onWindowResize(event)
 
 function init()
 {
+	// default GUI elements for all demos
 
-	window.addEventListener('resize', onWindowResize, false);
+	pixel_ResolutionObject = {
+		pixel_Resolution: 0.5 // will be set by each demo's js file
+	}
 
-	if ('ontouchstart' in window)
+	function handlePixelResolutionChange()
+	{
+		needChangePixelResolution = true;
+	}
+
+	// since I use the lil-gui.min.js minified version of lil-gui without modern exports, 
+	//'g()' is 'GUI()' ('g' is the shortened version of 'GUI' inside the lil-gui.min.js file)
+	gui = new g(); // same as gui = new GUI();
+
+	pixel_ResolutionController = gui.add(pixel_ResolutionObject, 'pixel_Resolution', 0.5, 1.0, 0.05).onChange(handlePixelResolutionChange);
+
+	gui.domElement.style.userSelect = "none";
+	gui.domElement.style.MozUserSelect = "none";
+
+	
+
+	if ('ontouchstart' in window) 
 	{
 		mouseControl = false;
+		// if on mobile device, unpause the app because there is no ESC key and no mouse capture to do
+		isPaused = false;
+
+		ableToEngagePointerLock = true;
 
 		mobileJoystickControls = new MobileJoystickControls({
 			//showJoystick: true
 		});
 	}
 
-	// if on mobile device, unpause the app because there is no ESC key and no mouse capture to do
-	if (!mouseControl)
-		isPaused = false;
-
-	if (mouseControl)
+	if (mouseControl) 
 	{
 
 		window.addEventListener('wheel', onMouseWheel, false);
 
-		document.body.addEventListener("click", function () {
+		// window.addEventListener("click", function(event) 
+		// {
+		// 	event.preventDefault();	
+		// }, false);
+		window.addEventListener("dblclick", function (event) 
+		{
+			event.preventDefault();
+		}, false);
+
+		document.body.addEventListener("click", function (event) 
+		{
+			if (!ableToEngagePointerLock)
+				return;
 			this.requestPointerLock = this.requestPointerLock || this.mozRequestPointerLock;
 			this.requestPointerLock();
-		}, false);
-
-		window.addEventListener("click", function (event) {
-			event.preventDefault();
-		}, false);
-
-		window.addEventListener("dblclick", function (event) {
-			event.preventDefault();
 		}, false);
 
 
@@ -279,8 +309,22 @@ function init()
 
 	}
 
+	if (mouseControl) 
+	{
+		gui.domElement.addEventListener("mouseenter", function (event) 
+		{
+			ableToEngagePointerLock = false;
+		}, false);
+		gui.domElement.addEventListener("mouseleave", function (event) 
+		{
+			ableToEngagePointerLock = true;
+		}, false);
+	}
+	
+	window.addEventListener('resize', onWindowResize, false);
+
 	/*
-	// Fullscreen API
+	// Fullscreen API (optional)
 	document.addEventListener("click", function() {
 		
 		if ( !document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement ) 
@@ -394,38 +438,71 @@ function initTHREEjs()
 	blueNoiseTexture.generateMipmaps = false;
 
 
-	// setup scene/demo-specific objects, variables, and data
+	// setup scene/demo-specific objects, variables, GUI elements, and data
 	initSceneData();
+
+	pixel_ResolutionController.setValue(pixelRatio);
 
 
 	// setup screen-size quad geometry and shaders....
 
 	// this full-screen quad mesh performs the path tracing operations and produces a screen-sized image
 	pathTracingGeometry = new THREE.PlaneBufferGeometry(2, 2);
-	pathTracingUniforms = {
 
-		tPreviousTexture: { type: "t", value: screenCopyRenderTarget.texture },
-		tBlueNoiseTexture: { type: "t", value: blueNoiseTexture },
+	pathTracingUniforms.tPreviousTexture = { type: "t", value: screenCopyRenderTarget.texture };
+	pathTracingUniforms.tBlueNoiseTexture = { type: "t", value: blueNoiseTexture };
 
-		uCameraIsMoving: { type: "b1", value: false },
+	pathTracingUniforms.uCameraMatrix = { type: "m4", value: new THREE.Matrix4() };
 
-		uEPS_intersect: { type: "f", value: EPS_intersect },
-		uTime: { type: "f", value: 0.0 },
-		uSampleCounter: { type: "f", value: 0.0 },
-		uPreviousSampleCount: { type: "f", value: 1.0 },
-		uFrameCounter: { type: "f", value: 1.0 },
-		uULen: { type: "f", value: 1.0 },
-		uVLen: { type: "f", value: 1.0 },
-		uApertureSize: { type: "f", value: apertureSize },
-		uFocusDistance: { type: "f", value: focusDistance },
+	pathTracingUniforms.uResolution = { type: "v2", value: new THREE.Vector2() };
+	pathTracingUniforms.uRandomVec2 = { type: "v2", value: new THREE.Vector2() };
 
-		uResolution: { type: "v2", value: new THREE.Vector2() },
-		uRandomVec2: { type: "v2", value: new THREE.Vector2() },
+	pathTracingUniforms.uEPS_intersect = { type: "f", value: EPS_intersect };
+	pathTracingUniforms.uTime = { type: "f", value: 0.0 };
+	pathTracingUniforms.uSampleCounter = { type: "f", value: 0.0 };
+	pathTracingUniforms.uPreviousSampleCount = { type: "f", value: 1.0 };
+	pathTracingUniforms.uFrameCounter = { type: "f", value: 1.0 };
+	pathTracingUniforms.uULen = { type: "f", value: 1.0 };
+	pathTracingUniforms.uVLen = { type: "f", value: 1.0 };
+	pathTracingUniforms.uApertureSize = { type: "f", value: apertureSize };
+	pathTracingUniforms.uFocusDistance = { type: "f", value: focusDistance };
 
-		uCameraMatrix: { type: "m4", value: new THREE.Matrix4() }
+	pathTracingUniforms.uCameraIsMoving = { type: "b1", value: false };
+
+
+	pathTracingDefines = {
+		//NUMBER_OF_TRIANGLES: total_number_of_triangles
 	};
 
-	initPathTracingShaders();
+	// load vertex and fragment shader files that are used in the pathTracing material, mesh and scene
+	fileLoader.load('shaders/common_PathTracing_Vertex.glsl', function (vertexShaderText)
+	{
+		pathTracingVertexShader = vertexShaderText;
+
+		fileLoader.load('shaders/' + demoFragmentShaderFileName, function (fragmentShaderText)
+		{
+
+			pathTracingFragmentShader = fragmentShaderText;
+
+			pathTracingMaterial = new THREE.ShaderMaterial({
+				uniforms: pathTracingUniforms,
+				defines: pathTracingDefines,
+				vertexShader: pathTracingVertexShader,
+				fragmentShader: pathTracingFragmentShader,
+				depthTest: false,
+				depthWrite: false
+			});
+
+			pathTracingMesh = new THREE.Mesh(pathTracingGeometry, pathTracingMaterial);
+			pathTracingScene.add(pathTracingMesh);
+
+			// the following keeps the large scene ShaderMaterial quad right in front 
+			//   of the camera at all times. This is necessary because without it, the scene 
+			//   quad will fall out of view and get clipped when the camera rotates past 180 degrees.
+			worldCamera.add(pathTracingMesh);
+
+		});
+	});
 
 
 	// this full-screen quad mesh copies the image output of the pathtracing shader and feeds it back in to that shader as a 'previousTexture'
@@ -500,6 +577,14 @@ function animate()
 
 	// reset flags
 	cameraIsMoving = false;
+
+	// if GUI has been used, update
+	if (needChangePixelResolution)
+	{
+		pixelRatio = pixel_ResolutionController.getValue();
+		onWindowResize();
+		needChangePixelResolution = false;
+	}
 
 	if (windowIsBeingResized)
 	{
