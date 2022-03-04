@@ -1,60 +1,33 @@
 // scene/demo-specific variables go here
-var earthRadius = 6360;
-var atmosphereRadius = 6420;
-var altitude = 2000.0;
-var sunAngle = 5.1;
-var sunDirection = new THREE.Vector3();
-var cameraWithinAtmosphere = true;
-var UniverseUp_Y_Vec = new THREE.Vector3(0,1,0);
-//var UniverseToCam_Z_Vec = new THREE.Vector3(0,0,1);
-var centerOfEarthToCameraVec = new THREE.Vector3();
-var cameraDistFromCenterOfEarth = 0.0;
-var amountToMoveCamera = 0.0;
-var canUpdateCameraAtmosphereOrientation = true;
-var canUpdateCameraSpaceOrientation = true;
-var waterLevel = 0.0;
-var cameraUnderWater = false;
-var camPosToggle = false;
-var timePauseToggle = false;
+let earthRadius = 6360; // in Km
+let atmosphereRadius = 6420; // in Km
+let altitude = 2000; // in Km
+let sunAngle = 5.1;
+let sunDirection = new THREE.Vector3();
+let cameraWithinAtmosphere = true;
+let UniverseUp_Y_Vec = new THREE.Vector3(0,1,0);
+let centerOfEarthToCameraVec = new THREE.Vector3();
+let cameraDistFromCenterOfEarth = 0.0;
+let amountToMoveCamera = 0.0;
+let canUpdateCameraAtmosphereOrientation = true;
+let canUpdateCameraSpaceOrientation = true;
+let waterLevel = 0.0;
+let cameraUnderWater = false;
+let camPosToggle = false;
+let timePauseToggle = false;
+
+let cameraViewpoint_PositionController, cameraViewpoint_PositionObject;
+let needChangeCameraViewpoint = false;
+let timePaused_ToggleController, timePaused_ToggleObject;
+let needChangeTimePausedToggle = false;
 
 
-function toggleCameraPos() {
-
-	camPosToggle = !camPosToggle;
+// called automatically from within initTHREEjs() function (located in InitCommon.js file)
+function initSceneData() 
+{
 	
-	if (camPosToggle) {
-		// camera on planet surface
-		cameraControlsObject.position.set(-100, 0, earthRadius + 2.0); // in Km
-		sunAngle = 0.5;
-		canUpdateCameraAtmosphereOrientation = true;
-		document.getElementById("cameraPosButton").innerHTML = "Teleport to Space";
-	}	
-	else {
-		// camera in space
-		cameraControlsObject.position.set(0, 0, earthRadius + 5000.0); // in Km
-		sunAngle = 0.0;
-		canUpdateCameraSpaceOrientation = true;
-		document.getElementById("cameraPosButton").innerHTML = "Teleport to Surface";
-	}
+	demoFragmentShaderFileName = 'Planet_Rendering_Fragment.glsl';
 
-}
-
-function toggleTimePause() {
-
-	timePauseToggle = !timePauseToggle;
-
-	if (timePauseToggle) {
-		document.getElementById("timePauseButton").innerHTML = "Resume Time";
-	}	
-	else {
-		document.getElementById("timePauseButton").innerHTML = "Pause Time";
-	}
-
-}
-
-// called automatically from within initTHREEjs() function
-function initSceneData() {
-	
 	// scene/demo-specific three.js objects setup goes here
 	sceneIsDynamic = true;
 	cameraFlightSpeed = 300;
@@ -73,6 +46,30 @@ function initSceneData() {
 	cameraControlsObject.position.set(0, 0, earthRadius + 5000.0); // in Km
 	cameraControlsYawObject.rotation.y = 0.0;
 	cameraControlsPitchObject.rotation.x = 0.0;
+
+	// In addition to the default GUI on all demos, add any special GUI elements that this particular demo requires
+	
+	cameraViewpoint_PositionObject = {
+		'Teleport To Surface' : handleCameraViewpointPositionChange
+	};
+
+	timePaused_ToggleObject = {
+		'Pause Time': handleTimePausedToggleChange
+	};
+	
+	function handleCameraViewpointPositionChange()
+	{
+		needChangeCameraViewpoint = true;
+	}
+
+	function handleTimePausedToggleChange()
+	{
+		needChangeTimePausedToggle = true;
+	}
+
+	cameraViewpoint_PositionController = gui.add(cameraViewpoint_PositionObject, 'Teleport To Surface');
+	timePaused_ToggleController = gui.add(timePaused_ToggleObject, 'Pause Time');
+	
 	
 	PerlinNoiseTexture = new THREE.TextureLoader().load( 'textures/perlin256.png' );
 	PerlinNoiseTexture.wrapS = THREE.RepeatWrapping;
@@ -82,13 +79,6 @@ function initSceneData() {
 	PerlinNoiseTexture.magFilter = THREE.LinearFilter;
 	PerlinNoiseTexture.generateMipmaps = false;
 
-} // end function initSceneData()
-
-
-
-// called automatically from within initTHREEjs() function
-function initPathTracingShaders() {
- 
 	// scene/demo-specific uniforms go here	
 	pathTracingUniforms.t_PerlinNoise = { type: "t", value: PerlinNoiseTexture };
 	pathTracingUniforms.uCameraWithinAtmosphere = { type: "b1", value: cameraWithinAtmosphere };
@@ -98,56 +88,56 @@ function initPathTracingShaders() {
 	pathTracingUniforms.uCameraFrameRight = { type: "v3", value: new THREE.Vector3() };
 	pathTracingUniforms.uCameraFrameForward = { type: "v3", value: new THREE.Vector3() };
 	pathTracingUniforms.uCameraFrameUp = { type: "v3", value: new THREE.Vector3() };
+
+} // end function initSceneData()
+
+
+
+
+// called automatically from within the animate() function (located in InitCommon.js file)
+function updateVariablesAndUniforms() 
+{
 	
+	if (needChangeCameraViewpoint)
+	{
+		camPosToggle = !camPosToggle;
 
-	pathTracingDefines = {
-		//NUMBER_OF_TRIANGLES: total_number_of_triangles
-	};
+		if (camPosToggle) 
+		{
+			// move camera to planet surface
+			cameraControlsObject.position.set(-100, 0, earthRadius + 2); // in Km
+			sunAngle = 0.5;
+			canUpdateCameraAtmosphereOrientation = true;
+			cameraViewpoint_PositionController.name('Teleport to Space');
+		}
+		else 
+		{
+			// place camera in space
+			cameraControlsObject.position.set(0, 0, earthRadius + 5000); // in Km
+			sunAngle = 0.0;
+			canUpdateCameraSpaceOrientation = true;
+			cameraViewpoint_PositionController.name('Teleport to Surface');
+		}
 
-	// load vertex and fragment shader files that are used in the pathTracing material, mesh and scene
-	fileLoader.load('shaders/common_PathTracing_Vertex.glsl', function (shaderText) {
-		pathTracingVertexShader = shaderText;
+		needChangeCameraViewpoint = false;
+	}
 
-		createPathTracingMaterial();
-	});
+	if (needChangeTimePausedToggle)
+	{
+		timePauseToggle = !timePauseToggle;
 
-} // end function initPathTracingShaders()
+		if (timePauseToggle)
+		{
+			timePaused_ToggleController.name('Resume Time');
+		}
+		else
+		{
+			timePaused_ToggleController.name('Pause Time');
+		}
 
+		needChangeTimePausedToggle = false;
+	}
 
-// called automatically from within initPathTracingShaders() function above
-function createPathTracingMaterial() {
-
-	fileLoader.load('shaders/Planet_Rendering_Fragment.glsl', function (shaderText) {
-		
-		pathTracingFragmentShader = shaderText;
-
-		pathTracingMaterial = new THREE.ShaderMaterial({
-			uniforms: pathTracingUniforms,
-			defines: pathTracingDefines,
-			vertexShader: pathTracingVertexShader,
-			fragmentShader: pathTracingFragmentShader,
-			depthTest: false,
-			depthWrite: false
-		});
-
-		pathTracingMesh = new THREE.Mesh(pathTracingGeometry, pathTracingMaterial);
-		pathTracingScene.add(pathTracingMesh);
-
-		// the following keeps the large scene ShaderMaterial quad right in front 
-		//   of the camera at all times. This is necessary because without it, the scene 
-		//   quad will fall out of view and get clipped when the camera rotates past 180 degrees.
-		worldCamera.add(pathTracingMesh);
-		
-	});
-
-} // end function createPathTracingMaterial()
-
-
-
-// called automatically from within the animate() function
-function updateVariablesAndUniforms() {
-	
-	// scene/demo-specific variables
 
 	// reset vectors that may have changed
 	cameraControlsObject.updateMatrixWorld(true);
@@ -199,7 +189,8 @@ function updateVariablesAndUniforms() {
 
 		canUpdateCameraAtmosphereOrientation = false;
 	}
-	else { // camera in space
+	else 
+	{ // camera in space
 		cameraWithinAtmosphere = false;
 		canUpdateCameraAtmosphereOrientation = true;
 		oldRotationY = cameraControlsYawObject.rotation.y;
@@ -246,13 +237,15 @@ function updateVariablesAndUniforms() {
 	
 	//INFO
 		     // 1.0 Km
-	if (altitude >= 1.0) { 
+	if (altitude >= 1.0) 
+	{ 
 		cameraInfoElement.innerHTML = "Altitude: " + altitude.toFixed(1) + " Kilometers | " + (altitude * 0.621371).toFixed(1) + " Miles" +
 		" (Water Level = 1 Km)" + "<br>" +
 		"FOV: " + worldCamera.fov + " / Aperture: " + apertureSize.toFixed(2) + " / FocusDistance: " + focusDistance + "<br>" +
 		"Samples: " + sampleCounter;
 	}
-	else {
+	else 
+	{
 		cameraInfoElement.innerHTML = "Altitude: " + Math.floor(1000 * altitude) + " meters | " + Math.floor(1000 * altitude * 3.28084) + " feet" + "<br>" +
 		"FOV: " + worldCamera.fov + " / Aperture: " + apertureSize.toFixed(2) + " / FocusDistance: " + focusDistance + "<br>" +
 		"Samples: " + sampleCounter;
