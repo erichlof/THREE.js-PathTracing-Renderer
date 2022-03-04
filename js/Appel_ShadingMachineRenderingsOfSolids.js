@@ -9,9 +9,6 @@ let F_SkewMatrix = new THREE.Matrix4();
 let uniformScale = 1;
 let lightTexture, medLightTexture, mediumTexture, medDarkTexture, darkTexture;
 
-let gui;
-let ableToEngagePointerLock = true;
-
 let sceneFrom1968Paper_PresetController, sceneFrom1968Paper_PresetObject;
 let needChangeScenePreset = false;
 
@@ -398,10 +395,6 @@ function init_GUI()
 	function handleFParameterKChange() { needChangeFParameterK = true; }
 	
 
-	// since I use the lil-gui.min.js minified version of lil-gui without modern exports, 
-	//'g()' is 'GUI()' ('g' is the shortened version of 'GUI' inside the lil-gui.min.js file)
-	gui = new g(); // same as gui = new GUI();
-
 	// Scene preset
 	sceneFrom1968Paper_PresetController = gui.add(sceneFrom1968Paper_PresetObject, 'Appel1968Scene_Preset', ['Scene 1', 'Scene 2', 'Scene 3', 'Scene 4', 'Scene 5', 'Scene 6']).onChange(handleScenePresetChange);
 
@@ -684,92 +677,15 @@ function init_GUI()
 	handleFShapeTypeChange();
 	handleFParameterKChange();
 
-	gui.domElement.style.userSelect = "none";
-	gui.domElement.style.MozUserSelect = "none";
-
-	window.addEventListener('resize', onWindowResize, false);
-
-	if ('ontouchstart' in window)
-	{
-		mouseControl = false;
-		// if on mobile device, unpause the app because there is no ESC key and no mouse capture to do
-		isPaused = false;
-
-		ableToEngagePointerLock = true;
-
-		mobileJoystickControls = new MobileJoystickControls({
-			//showJoystick: true
-		});
-	}
-
-	if (mouseControl)
-	{
-
-		window.addEventListener('wheel', onMouseWheel, false);
-
-		// window.addEventListener("click", function (event)
-		// {
-		// 	event.preventDefault();
-		// }, false);
-		window.addEventListener("dblclick", function (event)
-		{
-			event.preventDefault();
-		}, false);
-
-		document.body.addEventListener("click", function (event)
-		{
-			if (!ableToEngagePointerLock)
-				return;
-			this.requestPointerLock = this.requestPointerLock || this.mozRequestPointerLock;
-			this.requestPointerLock();
-		}, false);
-
-
-		pointerlockChange = function (event)
-		{
-			if (document.pointerLockElement === document.body ||
-				document.mozPointerLockElement === document.body || document.webkitPointerLockElement === document.body)
-			{
-				document.addEventListener('keydown', onKeyDown, false);
-				document.addEventListener('keyup', onKeyUp, false);
-				isPaused = false;
-			}
-			else
-			{
-				document.removeEventListener('keydown', onKeyDown, false);
-				document.removeEventListener('keyup', onKeyUp, false);
-				isPaused = true;
-			}
-		};
-
-		// Hook pointer lock state change events
-		document.addEventListener('pointerlockchange', pointerlockChange, false);
-		document.addEventListener('mozpointerlockchange', pointerlockChange, false);
-		document.addEventListener('webkitpointerlockchange', pointerlockChange, false);
-
-	}
-
-	if (mouseControl)
-	{
-		gui.domElement.addEventListener("mouseenter", function (event)
-		{
-			ableToEngagePointerLock = false;
-		}, false);
-		gui.domElement.addEventListener("mouseleave", function (event)
-		{
-			ableToEngagePointerLock = true;
-		}, false);
-	}
-
-	initTHREEjs(); // boilerplate: init necessary three.js items and scene/demo-specific objects
-
 } // end function init_GUI()
 
 
 
-// called automatically from within initTHREEjs() function
+// called automatically from within initTHREEjs() function (located in InitCommon.js file)
 function initSceneData()
 {
+	demoFragmentShaderFileName = 'Appel_ShadingRenderingsOfSolids_Fragment.glsl';
+
 	// scene/demo-specific three.js objects setup goes here
 	sceneIsDynamic = false;
 	cameraFlightSpeed = 100;
@@ -838,13 +754,9 @@ function initSceneData()
 	darkTexture.magFilter = THREE.NearestFilter;
 	darkTexture.generateMipmaps = false;
 
-} // end function initSceneData()
 
+	init_GUI();
 
-
-// called automatically from within initTHREEjs() function
-function initPathTracingShaders()
-{
 
 	// scene/demo-specific uniforms go here
 	pathTracingUniforms.tLightTexture = { type: "t", value: lightTexture };
@@ -877,60 +789,15 @@ function initPathTracingShaders()
 	pathTracingUniforms.uCSG_ShapeE_InvMatrix = { type: "m4", value: new THREE.Matrix4() };
 	pathTracingUniforms.uCSG_ShapeF_InvMatrix = { type: "m4", value: new THREE.Matrix4() };
 
-
-	pathTracingDefines = {
-		//NUMBER_OF_TRIANGLES: total_number_of_triangles
-	};
-
-	// load vertex and fragment shader files that are used in the pathTracing material, mesh and scene
-	fileLoader.load('shaders/common_PathTracing_Vertex.glsl', function (shaderText)
-	{
-		pathTracingVertexShader = shaderText;
-
-		createPathTracingMaterial();
-	});
-
-} // end function initPathTracingShaders()
-
-
-// called automatically from within initPathTracingShaders() function above
-function createPathTracingMaterial()
-{
-
-	fileLoader.load('shaders/Appel_ShadingRenderingsOfSolids_Fragment.glsl', function (shaderText)
-	{
-
-		pathTracingFragmentShader = shaderText;
-
-		pathTracingMaterial = new THREE.ShaderMaterial({
-			uniforms: pathTracingUniforms,
-			defines: pathTracingDefines,
-			vertexShader: pathTracingVertexShader,
-			fragmentShader: pathTracingFragmentShader,
-			depthTest: false,
-			depthWrite: false
-		});
-
-		pathTracingMesh = new THREE.Mesh(pathTracingGeometry, pathTracingMaterial);
-		pathTracingScene.add(pathTracingMesh);
-
-		// the following keeps the large scene ShaderMaterial quad right in front 
-		//   of the camera at all times. This is necessary because without it, the scene 
-		//   quad will fall out of view and get clipped when the camera rotates past 180 degrees.
-		worldCamera.add(pathTracingMesh);
-
-	});
-
-} // end function createPathTracingMaterial()
+} // end function initSceneData()
 
 
 
-// called automatically from within the animate() function
+
+
+// called automatically from within the animate() function (located in InitCommon.js file)
 function updateVariablesAndUniforms()
 {
-
-	
-
 	// Scene preset
 	if (needChangeScenePreset)
 	{
@@ -978,7 +845,7 @@ function updateVariablesAndUniforms()
 			transformB_ScaleUniformController.setValue(20); // default - will be overwritten by the following statements
 			transformB_ScaleXController.setValue(20); transformB_ScaleYController.setValue(20); transformB_ScaleZController.setValue(30);
 			transformB_RotationXController.setValue(0); transformB_RotationYController.setValue(0); transformB_RotationZController.setValue(0);
-			transformB_SkewX_YController.setValue(-0.55); transformB_SkewX_ZController.setValue(0);
+			transformB_SkewX_YController.setValue(-0.5); transformB_SkewX_ZController.setValue(0);
 			transformB_SkewY_XController.setValue(0); transformB_SkewY_ZController.setValue(0);
 			transformB_SkewZ_XController.setValue(0); transformB_SkewZ_YController.setValue(0);
 
@@ -2218,4 +2085,4 @@ function updateVariablesAndUniforms()
 
 
 
-init_GUI(); // first init GUI, then init app and start animating
+init(); // init app and start animating
