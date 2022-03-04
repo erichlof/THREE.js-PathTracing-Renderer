@@ -1,155 +1,31 @@
 // scene/demo-specific variables go here
-var modelMesh;
-var modelScale = 1.0;
-var modelPositionOffset = new THREE.Vector3();
-var albedoTexture;
-var total_number_of_triangles = 0;
-var triangle_array;
-var triangleMaterialMarkers = [];
-var pathTracingMaterialList = [];
-var uniqueMaterialTextures = [];
-var meshList = [];
-var geoList = [];
-var triangleDataTexture;
-var aabb_array;
-var aabbDataTexture;
-var totalWork;
-var vp0 = new THREE.Vector3();
-var vp1 = new THREE.Vector3();
-var vp2 = new THREE.Vector3();
-var vn0 = new THREE.Vector3();
-var vn1 = new THREE.Vector3();
-var vn2 = new THREE.Vector3();
-var vt0 = new THREE.Vector2();
-var vt1 = new THREE.Vector2();
-var vt2 = new THREE.Vector2();
+let modelMesh;
+let modelScale = 1.0;
+let modelPositionOffset = new THREE.Vector3();
+let albedoTexture;
+let total_number_of_triangles = 0;
+let triangle_array;
+let triangleMaterialMarkers = [];
+let pathTracingMaterialList = [];
+let uniqueMaterialTextures = [];
+let meshList = [];
+let geoList = [];
+let triangleDataTexture;
+let aabb_array;
+let aabbDataTexture;
+let totalWork;
+let vp0 = new THREE.Vector3();
+let vp1 = new THREE.Vector3();
+let vp2 = new THREE.Vector3();
+let vn0 = new THREE.Vector3();
+let vn1 = new THREE.Vector3();
+let vn2 = new THREE.Vector3();
+let vt0 = new THREE.Vector2();
+let vt1 = new THREE.Vector2();
+let vt2 = new THREE.Vector2();
 
-var gui;
-var ableToEngagePointerLock = true;
-var BVH_LevelObject, BVH_LevelController;
-var changeBVH_Level = false;
-
-function init_GUI() 
-{
-
-	BVH_LevelObject = {
-		BVH_NodeDepth: 2
-	};
-
-	function BVH_LevelChanger() 
-	{
-		changeBVH_Level = true;
-	}
-
-	// since I use the lil-gui.min.js minified version of lil-gui without modern exports, 
-	//'g()' is 'GUI()' ('g' is the shortened version of 'GUI' inside the lil-gui.min.js file)
-	gui = new g(); // same as gui = new GUI();
-	
-	BVH_LevelController = gui.add( BVH_LevelObject, 'BVH_NodeDepth', 0, 27, 1 ).onChange( BVH_LevelChanger );
-	
-	BVH_LevelChanger();
-
-	gui.domElement.style.userSelect = "none";
-	gui.domElement.style.MozUserSelect = "none";
-	
-	window.addEventListener('resize', onWindowResize, false);
-
-	if ( 'ontouchstart' in window ) 
-	{
-		mouseControl = false;
-		// if on mobile device, unpause the app because there is no ESC key and no mouse capture to do
-		isPaused = false;
-		
-		ableToEngagePointerLock = true;
-
-		mobileJoystickControls = new MobileJoystickControls ({
-			//showJoystick: true
-		});	
-	}
-
-	if (mouseControl) 
-	{
-
-		window.addEventListener( 'wheel', onMouseWheel, false );
-
-		// window.addEventListener("click", function(event) 
-		// {
-		//         event.preventDefault();	
-		// }, false);
-		window.addEventListener("dblclick", function(event) 
-		{
-			event.preventDefault();	
-		}, false);
-		
-		document.body.addEventListener("click", function(event) 
-		{
-			if (!ableToEngagePointerLock)
-				return;
-			this.requestPointerLock = this.requestPointerLock || this.mozRequestPointerLock;
-			this.requestPointerLock();
-		}, false);
-
-
-		pointerlockChange = function (event)
-		{
-			if (document.pointerLockElement === document.body ||
-				document.mozPointerLockElement === document.body || document.webkitPointerLockElement === document.body)
-			{
-				document.addEventListener('keydown', onKeyDown, false);
-				document.addEventListener('keyup', onKeyUp, false);
-				isPaused = false;
-			}
-			else
-			{
-				document.removeEventListener('keydown', onKeyDown, false);
-				document.removeEventListener('keyup', onKeyUp, false);
-				isPaused = true;
-			}
-		};
-
-		// Hook pointer lock state change events
-		document.addEventListener( 'pointerlockchange', pointerlockChange, false );
-		document.addEventListener( 'mozpointerlockchange', pointerlockChange, false );
-		document.addEventListener( 'webkitpointerlockchange', pointerlockChange, false );
-
-	}
-
-	if (mouseControl) 
-	{
-		gui.domElement.addEventListener("mouseenter", function(event) 
-		{
-				ableToEngagePointerLock = false;	
-		}, false);
-		gui.domElement.addEventListener("mouseleave", function(event) 
-		{
-				ableToEngagePointerLock = true;
-		}, false);
-	}
-
-	/*
-	// Fullscreen API
-	document.addEventListener("click", function() {
-		
-		if ( !document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement ) {
-
-			if (document.documentElement.requestFullscreen) {
-				document.documentElement.requestFullscreen();
-				
-			} else if (document.documentElement.mozRequestFullScreen) {
-				document.documentElement.mozRequestFullScreen();
-			
-			} else if (document.documentElement.webkitRequestFullscreen) {
-				document.documentElement.webkitRequestFullscreen();
-			
-			}
-
-		}
-	});
-	*/
-
-	initTHREEjs(); // boilerplate: init necessary three.js items and scene/demo-specific objects
-
-} // end function init_GUI()
+let BVH_LevelObject, BVH_LevelController;
+let changeBVH_Level = false;
 
 
 function MaterialObject() 
@@ -168,7 +44,7 @@ function MaterialObject()
 function load_GLTF_Model() 
 {
 
-	var gltfLoader = new THREE.GLTFLoader();
+	let gltfLoader = new THREE.GLTFLoader();
 
 	//gltfLoader.load("models/StanfordBunny.glb", function( meshGroup ) // Triangles: 30,338
 	gltfLoader.load("models/StanfordDragon.glb", function( meshGroup ) // Triangles: 100,000
@@ -256,8 +132,8 @@ function load_GLTF_Model()
 		modelScale = 3.0;
 		modelPositionOffset.set(0, 33.2, -40);
 		
-		// now that the models have been loaded, we can init (with GUI for this demo)
-		init_GUI();
+		// now that the models have been loaded, we can init
+		init();
 
 	});
 
@@ -265,9 +141,11 @@ function load_GLTF_Model()
 
 
 
-// called automatically from within initTHREEjs() function
+// called automatically from within initTHREEjs() function (located in InitCommon.js file)
 function initSceneData() 
 {
+	demoFragmentShaderFileName = 'BVH_Visualizer_Fragment.glsl';
+
 	// scene/demo-specific three.js objects setup goes here
 	sceneIsDynamic = false;
 	cameraFlightSpeed = 60;
@@ -298,22 +176,22 @@ function initSceneData()
 	// 2048 = width of texture, 2048 = height of texture, 4 = r,g,b, and a components
 
 	
-	var triangle_b_box_min = new THREE.Vector3();
-	var triangle_b_box_max = new THREE.Vector3();
-	var triangle_b_box_centroid = new THREE.Vector3();
+	let triangle_b_box_min = new THREE.Vector3();
+	let triangle_b_box_max = new THREE.Vector3();
+	let triangle_b_box_centroid = new THREE.Vector3();
 	
 
-	var vpa = new Float32Array(modelMesh.geometry.attributes.position.array);
-	var vna = new Float32Array(modelMesh.geometry.attributes.normal.array);
-	var vta = null;
-	var modelHasUVs = false;
+	let vpa = new Float32Array(modelMesh.geometry.attributes.position.array);
+	let vna = new Float32Array(modelMesh.geometry.attributes.normal.array);
+	let vta = null;
+	let modelHasUVs = false;
 	if (modelMesh.geometry.attributes.uv !== undefined) 
 	{
 		vta = new Float32Array(modelMesh.geometry.attributes.uv.array);
 		modelHasUVs = true;
 	}
 		
-	var materialNumber = 0;
+	let materialNumber = 0;
 
 	for (let i = 0; i < total_number_of_triangles; i++) 
 	{
@@ -477,68 +355,33 @@ function initSceneData()
 	aabbDataTexture.generateMipmaps = false;
 	aabbDataTexture.needsUpdate = true;
 
-} // end function initSceneData()
+
+	// In addition to the default GUI on all demos, add any special GUI elements that this particular demo requires
+
+	BVH_LevelObject = {
+		BVH_NodeDepth: 2
+	};
+
+	function BVH_LevelChanger() 
+	{
+		changeBVH_Level = true;
+	}
+
+	BVH_LevelController = gui.add(BVH_LevelObject, 'BVH_NodeDepth', 0, 27, 1).onChange(BVH_LevelChanger);
+
+	BVH_LevelChanger();
 
 
-
-// called automatically from within initTHREEjs() function
-function initPathTracingShaders() 
-{
- 
 	// scene/demo-specific uniforms go here
 	pathTracingUniforms.tTriangleTexture = { type: "t", value: triangleDataTexture };
 	pathTracingUniforms.tAABBTexture = { type: "t", value: aabbDataTexture };
 	pathTracingUniforms.uBVH_NodeLevel = { type: "f", value: 0.0 };
-	
 
-	pathTracingDefines = {
-		//NUMBER_OF_TRIANGLES: total_number_of_triangles
-	};
-
-	// load vertex and fragment shader files that are used in the pathTracing material, mesh and scene
-	fileLoader.load('shaders/common_PathTracing_Vertex.glsl', function (shaderText) 
-	{
-		pathTracingVertexShader = shaderText;
-
-		createPathTracingMaterial();
-	});
-
-} // end function initPathTracingShaders()
-
-
-// called automatically from within initPathTracingShaders() function above
-function createPathTracingMaterial() 
-{
-
-	fileLoader.load('shaders/BVH_Visualizer_Fragment.glsl', function (shaderText) 
-	{
-		
-		pathTracingFragmentShader = shaderText;
-
-		pathTracingMaterial = new THREE.ShaderMaterial({
-			uniforms: pathTracingUniforms,
-			defines: pathTracingDefines,
-			vertexShader: pathTracingVertexShader,
-			fragmentShader: pathTracingFragmentShader,
-			depthTest: false,
-			depthWrite: false
-		});
-
-		pathTracingMesh = new THREE.Mesh(pathTracingGeometry, pathTracingMaterial);
-		pathTracingScene.add(pathTracingMesh);
-
-		// the following keeps the large scene ShaderMaterial quad right in front 
-		//   of the camera at all times. This is necessary because without it, the scene 
-		//   quad will fall out of view and get clipped when the camera rotates past 180 degrees.
-		worldCamera.add(pathTracingMesh);
-		
-	});
-
-} // end function createPathTracingMaterial()
+} // end function initSceneData()
 
 
 
-// called automatically from within the animate() function
+// called automatically from within the animate() function (located in InitCommon.js file)
 function updateVariablesAndUniforms() 
 {
 	
