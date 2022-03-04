@@ -4,9 +4,6 @@ let A_SkewMatrix = new THREE.Matrix4();
 let B_SkewMatrix = new THREE.Matrix4();
 let uniformScale = 1;
 
-let gui;
-let ableToEngagePointerLock = true;
-
 let csgOperation_TypeController, csgOperation_TypeObject;
 
 let transformA_Folder;
@@ -88,216 +85,74 @@ let matColor;
 
 function init_GUI()
 {
-	csgOperation_TypeObject = {
-		CSG_Operation: 'Union (A + B)'
-	};
+	csgOperation_TypeObject = { CSG_Operation: 'Union (A + B)' };
 
 	// SHAPE A
-	transformA_PositionXObject = {
-		positionX: -12
-	}
-	transformA_PositionYObject = {
-		positionY: -5
-	}
-	transformA_PositionZObject = {
-		positionZ: -5
-	}
-	transformA_ScaleUniformObject = {
-		uniformScale: 20
-	}
-	transformA_ScaleXObject = {
-		scaleX: 20
-	}
-	transformA_ScaleYObject = {
-		scaleY: 20
-	}
-	transformA_ScaleZObject = {
-		scaleZ: 20
-	}
-	transformA_SkewX_YObject = {
-		skewX_Y: 0
-	}
-	transformA_SkewX_ZObject = {
-		skewX_Z: 0
-	}
-	transformA_SkewY_XObject = {
-		skewY_X: 0
-	}
-	transformA_SkewY_ZObject = {
-		skewY_Z: 0
-	}
-	transformA_SkewZ_XObject = {
-		skewZ_X: 0
-	}
-	transformA_SkewZ_YObject = {
-		skewZ_Y: 0
-	}
-	transformA_RotationXObject = {
-		rotationX: 0
-	}
-	transformA_RotationYObject = {
-		rotationY: 0
-	}
-	transformA_RotationZObject = {
-		rotationZ: 0
-	}
-	shapeA_TypeObject = {
-		A_Shape: 'Sphere'
-	};
-	parameterA_kObject = {
-		A_kParameter: 2
-	};
-	materialA_TypeObject = {
-		A_matType: 'Transparent Refractive'
-	};
-	materialA_ColorObject = {
-		A_matColor: [0, 1, 0]
-	};
+	transformA_PositionXObject = { positionX: -12 };
+	transformA_PositionYObject = { positionY: -5 };
+	transformA_PositionZObject = { positionZ: -5 };
+	transformA_ScaleUniformObject = { uniformScale: 20 };
+	transformA_ScaleXObject = { scaleX: 20 };
+	transformA_ScaleYObject = { scaleY: 20 };
+	transformA_ScaleZObject = { scaleZ: 20 };
+	transformA_SkewX_YObject = { skewX_Y: 0 };
+	transformA_SkewX_ZObject = { skewX_Z: 0 };
+	transformA_SkewY_XObject = { skewY_X: 0 };
+	transformA_SkewY_ZObject = { skewY_Z: 0 };
+	transformA_SkewZ_XObject = { skewZ_X: 0 };
+	transformA_SkewZ_YObject = { skewZ_Y: 0 };
+	transformA_RotationXObject = { rotationX: 0 };
+	transformA_RotationYObject = { rotationY: 0 };
+	transformA_RotationZObject = { rotationZ: 0 };
+	shapeA_TypeObject = { A_Shape: 'Sphere' };
+	parameterA_kObject = { A_kParameter: 2 };
+	materialA_TypeObject = { A_matType: 'Transparent Refractive' };
+	materialA_ColorObject = { A_matColor: [0, 1, 0] };
 
 	// SHAPE B
-	transformB_PositionXObject = {
-		positionX: 0
-	}
-	transformB_PositionYObject = {
-		positionY: -5
-	}
-	transformB_PositionZObject = {
-		positionZ: -10
-	}
-	transformB_ScaleUniformObject = {
-		uniformScale: 17
-	}
-	transformB_ScaleXObject = {
-		scaleX: 17
-	}
-	transformB_ScaleYObject = {
-		scaleY: 17
-	}
-	transformB_ScaleZObject = {
-		scaleZ: 17
-	}
-	transformB_SkewX_YObject = {
-		skewX_Y: 0
-	}
-	transformB_SkewX_ZObject = {
-		skewX_Z: 0
-	}
-	transformB_SkewY_XObject = {
-		skewY_X: 0
-	}
-	transformB_SkewY_ZObject = {
-		skewY_Z: 0
-	}
-	transformB_SkewZ_XObject = {
-		skewZ_X: 0
-	}
-	transformB_SkewZ_YObject = {
-		skewZ_Y: 0
-	}
-	transformB_RotationXObject = {
-		rotationX: 0
-	}
-	transformB_RotationYObject = {
-		rotationY: 0
-	}
-	transformB_RotationZObject = {
-		rotationZ: 0
-	}
-	shapeB_TypeObject = {
-		B_Shape: 'Box'
-	};
-	parameterB_kObject = {
-		B_kParameter: 2
-	};
-	materialB_TypeObject = {
-		B_matType: 'ClearCoat Diffuse'
-	};
-	materialB_ColorObject = {
-		B_matColor: [1, 0, 1]
-	};
+	transformB_PositionXObject = { positionX: 0 };
+	transformB_PositionYObject = { positionY: -5 };
+	transformB_PositionZObject = { positionZ: -10 };
+	transformB_ScaleUniformObject = { uniformScale: 17 };
+	transformB_ScaleXObject = { scaleX: 17 };
+	transformB_ScaleYObject = { scaleY: 17 };
+	transformB_ScaleZObject = { scaleZ: 17 };
+	transformB_SkewX_YObject = { skewX_Y: 0 };
+	transformB_SkewX_ZObject = { skewX_Z: 0 };
+	transformB_SkewY_XObject = { skewY_X: 0 };
+	transformB_SkewY_ZObject = { skewY_Z: 0 };
+	transformB_SkewZ_XObject = { skewZ_X: 0 };
+	transformB_SkewZ_YObject = { skewZ_Y: 0 };
+	transformB_RotationXObject = { rotationX: 0 };
+	transformB_RotationYObject = { rotationY: 0 };
+	transformB_RotationZObject = { rotationZ: 0 };
+	shapeB_TypeObject = { B_Shape: 'Box' };
+	parameterB_kObject = { B_kParameter: 2 };
+	materialB_TypeObject = { B_matType: 'ClearCoat Diffuse' };
+	materialB_ColorObject = { B_matColor: [1, 0, 1] };
 
-	function handleOperationTypeChange()
-	{
-		needChangeOperationType = true;
-	}
+	function handleOperationTypeChange() { needChangeOperationType = true; }
 
-	function handleAPositionChange()
-	{
-		needChangeAPosition = true;
-	}
-	function handleAScaleUniformChange()
-	{
-		needChangeAScaleUniform = true;
-	}
-	function handleAScaleChange()
-	{
-		needChangeAScale = true;
-	}
-	function handleASkewChange()
-	{
-		needChangeASkew = true;
-	}
-	function handleARotationChange()
-	{
-		needChangeARotation = true;
-	}
-	function handleShapeATypeChange()
-	{
-		needChangeShapeAType = true;
-	}
-	function handleAParameterKChange()
-	{
-		needChangeParameterAk = true;
-	}
-	function handleMaterialATypeChange()
-	{
-		needChangeMaterialAType = true;
-	}
-	function handleMaterialAColorChange()
-	{
-		needChangeMaterialAColor = true;
-	}
+	function handleAPositionChange() { needChangeAPosition = true; }
+	function handleAScaleUniformChange() { needChangeAScaleUniform = true; }
+	function handleAScaleChange() { needChangeAScale = true; }
+	function handleASkewChange() { needChangeASkew = true; }
+	function handleARotationChange() { needChangeARotation = true; }
+	function handleShapeATypeChange() { needChangeShapeAType = true; }
+	function handleAParameterKChange() { needChangeParameterAk = true; }
+	function handleMaterialATypeChange() { needChangeMaterialAType = true; }
+	function handleMaterialAColorChange() { needChangeMaterialAColor = true; }
 
-	function handleBPositionChange()
-	{
-		needChangeBPosition = true;
-	}
-	function handleBScaleUniformChange()
-	{
-		needChangeBScaleUniform = true;
-	}
-	function handleBScaleChange()
-	{
-		needChangeBScale = true;
-	}
-	function handleBSkewChange()
-	{
-		needChangeBSkew = true;
-	}
-	function handleBRotationChange()
-	{
-		needChangeBRotation = true;
-	}
-	function handleShapeBTypeChange()
-	{
-		needChangeShapeBType = true;
-	}
-	function handleBParameterKChange()
-	{
-		needChangeParameterBk = true;
-	}
-	function handleMaterialBTypeChange()
-	{
-		needChangeMaterialBType = true;
-	}
-	function handleMaterialBColorChange()
-	{
-		needChangeMaterialBColor = true;
-	}
+	function handleBPositionChange() { needChangeBPosition = true; }
+	function handleBScaleUniformChange() { needChangeBScaleUniform = true; }
+	function handleBScaleChange() { needChangeBScale = true; }
+	function handleBSkewChange() { needChangeBSkew = true; }
+	function handleBRotationChange() { needChangeBRotation = true; }
+	function handleShapeBTypeChange() { needChangeShapeBType = true; }
+	function handleBParameterKChange() { needChangeParameterBk = true; }
+	function handleMaterialBTypeChange() { needChangeMaterialBType = true; }
+	function handleMaterialBColorChange() { needChangeMaterialBColor = true; }
 
-	// since I use the lil-gui.min.js minified version of lil-gui without modern exports, 
-	//'g()' is 'GUI()' ('g' is the shortened version of 'GUI' inside the lil-gui.min.js file)
-	gui = new g(); // same as gui = new GUI();
 
 	csgOperation_TypeController = gui.add(csgOperation_TypeObject, 'CSG_Operation', ['Union (A + B)', 'Difference (A - B)',
 		'Intersection (A ^ B)']).onChange(handleOperationTypeChange);
@@ -401,92 +256,15 @@ function init_GUI()
 	handleMaterialBTypeChange();
 	handleMaterialBColorChange();
 
-	gui.domElement.style.userSelect = "none";
-	gui.domElement.style.MozUserSelect = "none";
-
-	window.addEventListener('resize', onWindowResize, false);
-
-	if ('ontouchstart' in window)
-	{
-		mouseControl = false;
-		// if on mobile device, unpause the app because there is no ESC key and no mouse capture to do
-		isPaused = false;
-
-		ableToEngagePointerLock = true;
-
-		mobileJoystickControls = new MobileJoystickControls({
-			//showJoystick: true
-		});
-	}
-
-	if (mouseControl)
-	{
-
-		window.addEventListener('wheel', onMouseWheel, false);
-
-		// window.addEventListener("click", function (event)
-		// {
-		// 	event.preventDefault();
-		// }, false);
-		window.addEventListener("dblclick", function (event)
-		{
-			event.preventDefault();
-		}, false);
-
-		document.body.addEventListener("click", function (event)
-		{
-			if (!ableToEngagePointerLock)
-				return;
-			this.requestPointerLock = this.requestPointerLock || this.mozRequestPointerLock;
-			this.requestPointerLock();
-		}, false);
-
-
-		pointerlockChange = function (event)
-		{
-			if (document.pointerLockElement === document.body ||
-				document.mozPointerLockElement === document.body || document.webkitPointerLockElement === document.body)
-			{
-				document.addEventListener('keydown', onKeyDown, false);
-				document.addEventListener('keyup', onKeyUp, false);
-				isPaused = false;
-			}
-			else
-			{
-				document.removeEventListener('keydown', onKeyDown, false);
-				document.removeEventListener('keyup', onKeyUp, false);
-				isPaused = true;
-			}
-		};
-
-		// Hook pointer lock state change events
-		document.addEventListener('pointerlockchange', pointerlockChange, false);
-		document.addEventListener('mozpointerlockchange', pointerlockChange, false);
-		document.addEventListener('webkitpointerlockchange', pointerlockChange, false);
-
-	}
-
-	if (mouseControl)
-	{
-		gui.domElement.addEventListener("mouseenter", function (event)
-		{
-			ableToEngagePointerLock = false;
-		}, false);
-		gui.domElement.addEventListener("mouseleave", function (event)
-		{
-			ableToEngagePointerLock = true;
-		}, false);
-	}
-
-	initTHREEjs(); // boilerplate: init necessary three.js items and scene/demo-specific objects
-
 } // end function init_GUI()
 
 
 
-// called automatically from within initTHREEjs() function
+// called automatically from within initTHREEjs() function (located in InitCommon.js file)
 function initSceneData()
 {
+	demoFragmentShaderFileName = 'Constructive_Solid_Geometry_Fragment.glsl';
+
 	// scene/demo-specific three.js objects setup goes here
 	sceneIsDynamic = false;
 	cameraFlightSpeed = 100;
@@ -513,13 +291,9 @@ function initSceneData()
 	pathTracingScene.add(CSG_shapeA);
 	pathTracingScene.add(CSG_shapeB);
 
-} // end function initSceneData()
 
+	init_GUI();
 
-
-// called automatically from within initTHREEjs() function
-function initPathTracingShaders()
-{
 
 	// scene/demo-specific uniforms go here
 	pathTracingUniforms.uCSG_OperationType = { type: "i", value: 0 };
@@ -533,56 +307,14 @@ function initPathTracingShaders()
 	pathTracingUniforms.uMaterialBColor = { type: "v3", value: new THREE.Color(1.0, 0.0, 1.0) };
 	pathTracingUniforms.uCSG_ShapeA_InvMatrix = { type: "m4", value: new THREE.Matrix4() };
 	pathTracingUniforms.uCSG_ShapeB_InvMatrix = { type: "m4", value: new THREE.Matrix4() };
-	
 
-	pathTracingDefines = {
-		//NUMBER_OF_TRIANGLES: total_number_of_triangles
-	};
-
-	// load vertex and fragment shader files that are used in the pathTracing material, mesh and scene
-	fileLoader.load('shaders/common_PathTracing_Vertex.glsl', function (shaderText)
-	{
-		pathTracingVertexShader = shaderText;
-
-		createPathTracingMaterial();
-	});
-
-} // end function initPathTracingShaders()
-
-
-// called automatically from within initPathTracingShaders() function above
-function createPathTracingMaterial()
-{
-
-	fileLoader.load('shaders/Constructive_Solid_Geometry_Fragment.glsl', function (shaderText)
-	{
-
-		pathTracingFragmentShader = shaderText;
-
-		pathTracingMaterial = new THREE.ShaderMaterial({
-			uniforms: pathTracingUniforms,
-			defines: pathTracingDefines,
-			vertexShader: pathTracingVertexShader,
-			fragmentShader: pathTracingFragmentShader,
-			depthTest: false,
-			depthWrite: false
-		});
-
-		pathTracingMesh = new THREE.Mesh(pathTracingGeometry, pathTracingMaterial);
-		pathTracingScene.add(pathTracingMesh);
-
-		// the following keeps the large scene ShaderMaterial quad right in front 
-		//   of the camera at all times. This is necessary because without it, the scene 
-		//   quad will fall out of view and get clipped when the camera rotates past 180 degrees.
-		worldCamera.add(pathTracingMesh);
-
-	});
-
-} // end function createPathTracingMaterial()
+} // end function initSceneData()
 
 
 
-// called automatically from within the animate() function
+
+
+// called automatically from within the animate() function (located in InitCommon.js file)
 function updateVariablesAndUniforms()
 {
 
@@ -1056,4 +788,4 @@ function updateVariablesAndUniforms()
 
 
 
-init_GUI(); // first init GUI, then init app and start animating
+init(); // init app and start animating
