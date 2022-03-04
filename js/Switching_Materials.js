@@ -1,19 +1,42 @@
 // scene/demo-specific variables go here
-var gui;
-var ableToEngagePointerLock = true;
-var material_TypeObject, material_ColorObject;
-var material_LTypeController, material_LColorController;
-var material_RTypeController, material_RColorController;
-var matType = 0;
-var matColor;
-var changeLeftSphereMaterialType = false;
-var changeRightSphereMaterialType = false;
-var changeLeftSphereMaterialColor = false;
-var changeRightSphereMaterialColor = false;
+let material_TypeObject, material_ColorObject;
+let material_LTypeController, material_LColorController;
+let material_RTypeController, material_RColorController;
+let matType = 0;
+let matColor;
+let changeLeftSphereMaterialType = false;
+let changeRightSphereMaterialType = false;
+let changeLeftSphereMaterialColor = false;
+let changeRightSphereMaterialColor = false;
 
 
-function init_GUI() 
+
+// called automatically from within initTHREEjs() function (located in InitCommon.js file)
+function initSceneData() 
 {
+	demoFragmentShaderFileName = 'Switching_Materials_Fragment.glsl';
+
+	// scene/demo-specific three.js objects setup goes here
+	sceneIsDynamic = false;
+	cameraFlightSpeed = 300;
+
+	// pixelRatio is resolution - range: 0.5(half resolution) to 1.0(full resolution)
+	pixelRatio = mouseControl ? 0.75 : 1.0;
+
+	EPS_intersect = 0.01;
+
+	// set camera's field of view
+	worldCamera.fov = 50;
+	focusDistance = 530.0;
+
+	// position and orient camera
+	cameraControlsObject.position.set(278, 170, 320);
+	///cameraControlsYawObject.rotation.y = 0.0;
+	// look slightly upward
+	cameraControlsPitchObject.rotation.x = 0.005;
+
+
+	// In addition to the default GUI on all demos, add any special GUI elements that this particular demo requires
 
 	material_TypeObject = {
 		LSphereMaterial: 4,
@@ -41,209 +64,28 @@ function init_GUI()
 		changeRightSphereMaterialColor = true;
 	}
 
-	// since I use the lil-gui.min.js minified version of lil-gui without modern exports, 
-	//'g()' is 'GUI()' ('g' is the shortened version of 'GUI' inside the lil-gui.min.js file)
-	gui = new g(); // same as gui = new GUI();
-	
-	material_LTypeController = gui.add( material_TypeObject, 'LSphereMaterial', 1, 7, 1 ).onChange( leftMatTypeChanger );
-	material_RTypeController = gui.add( material_TypeObject, 'RSphereMaterial', 1, 7, 1 ).onChange( rightMatTypeChanger );
-	material_LColorController = gui.addColor( material_ColorObject, 'LSphereColor' ).onChange( leftMatColorChanger );
-	material_RColorController = gui.addColor( material_ColorObject, 'RSphereColor' ).onChange( rightMatColorChanger );
+	material_LTypeController = gui.add(material_TypeObject, 'LSphereMaterial', 1, 7, 1).onChange(leftMatTypeChanger);
+	material_RTypeController = gui.add(material_TypeObject, 'RSphereMaterial', 1, 7, 1).onChange(rightMatTypeChanger);
+	material_LColorController = gui.addColor(material_ColorObject, 'LSphereColor').onChange(leftMatColorChanger);
+	material_RColorController = gui.addColor(material_ColorObject, 'RSphereColor').onChange(rightMatColorChanger);
 
 	leftMatTypeChanger();
 	rightMatTypeChanger();
 	leftMatColorChanger();
 	rightMatColorChanger();
 
-	gui.domElement.style.userSelect = "none";
-	gui.domElement.style.MozUserSelect = "none";
-	
-	window.addEventListener('resize', onWindowResize, false);
 
-	if ( 'ontouchstart' in window ) 
-	{
-		mouseControl = false;
-		// if on mobile device, unpause the app because there is no ESC key and no mouse capture to do
-		isPaused = false;
-		
-		ableToEngagePointerLock = true;
-
-		mobileJoystickControls = new MobileJoystickControls ({
-			//showJoystick: true
-		});	
-	}
-
-	if (mouseControl) 
-	{
-
-		window.addEventListener( 'wheel', onMouseWheel, false );
-
-		// window.addEventListener("click", function(event) 
-		// {
-		// 	event.preventDefault();	
-		// }, false);
-		window.addEventListener("dblclick", function(event) 
-		{
-			event.preventDefault();	
-		}, false);
-		
-		document.body.addEventListener("click", function(event) 
-		{
-			if (!ableToEngagePointerLock)
-				return;
-			this.requestPointerLock = this.requestPointerLock || this.mozRequestPointerLock;
-			this.requestPointerLock();
-		}, false);
-
-
-		pointerlockChange = function (event)
-		{
-			if (document.pointerLockElement === document.body ||
-				document.mozPointerLockElement === document.body || document.webkitPointerLockElement === document.body)
-			{
-				document.addEventListener('keydown', onKeyDown, false);
-				document.addEventListener('keyup', onKeyUp, false);
-				isPaused = false;
-			}
-			else
-			{
-				document.removeEventListener('keydown', onKeyDown, false);
-				document.removeEventListener('keyup', onKeyUp, false);
-				isPaused = true;
-			}
-		};
-
-		// Hook pointer lock state change events
-		document.addEventListener( 'pointerlockchange', pointerlockChange, false );
-		document.addEventListener( 'mozpointerlockchange', pointerlockChange, false );
-		document.addEventListener( 'webkitpointerlockchange', pointerlockChange, false );
-
-	}
-
-	if (mouseControl) 
-	{
-		gui.domElement.addEventListener("mouseenter", function(event) 
-		{
-				ableToEngagePointerLock = false;	
-		}, false);
-		gui.domElement.addEventListener("mouseleave", function(event) 
-		{
-				ableToEngagePointerLock = true;
-		}, false);
-	}
-
-	/*
-	// Fullscreen API
-	document.addEventListener("click", function() {
-		
-		if ( !document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement ) {
-
-			if (document.documentElement.requestFullscreen) {
-				document.documentElement.requestFullscreen();
-				
-			} else if (document.documentElement.mozRequestFullScreen) {
-				document.documentElement.mozRequestFullScreen();
-			
-			} else if (document.documentElement.webkitRequestFullscreen) {
-				document.documentElement.webkitRequestFullscreen();
-			
-			}
-
-		}
-	});
-	*/
-
-	initTHREEjs(); // boilerplate: init necessary three.js items and scene/demo-specific objects
-
-} // end function init_GUI()
-
-
-
-// called automatically from within initTHREEjs() function
-function initSceneData() 
-{
-	// scene/demo-specific three.js objects setup goes here
-	sceneIsDynamic = false;
-	cameraFlightSpeed = 300;
-
-	// pixelRatio is resolution - range: 0.5(half resolution) to 1.0(full resolution)
-	pixelRatio = mouseControl ? 0.75 : 1.0;
-
-	EPS_intersect = 0.01;
-
-	// set camera's field of view
-	worldCamera.fov = 50;
-	focusDistance = 530.0;
-
-	// position and orient camera
-	cameraControlsObject.position.set(278, 170, 320);
-	///cameraControlsYawObject.rotation.y = 0.0;
-	// look slightly upward
-	cameraControlsPitchObject.rotation.x = 0.005;
-
-} // end function initSceneData()
-
-
-
-// called automatically from within initTHREEjs() function
-function initPathTracingShaders() 
-{
- 
 	// scene/demo-specific uniforms go here
 	pathTracingUniforms.uLeftSphereMaterialType = { type: "f", value: 0.0 };
 	pathTracingUniforms.uRightSphereMaterialType = { type: "f", value: 0.0 };
 	pathTracingUniforms.uLeftSphereColor = { type: "v3", value: new THREE.Color() };
 	pathTracingUniforms.uRightSphereColor = { type: "v3", value: new THREE.Color() };
-	
-		
-	pathTracingDefines = {
-		//NUMBER_OF_TRIANGLES: total_number_of_triangles
-	};
 
-	// load vertex and fragment shader files that are used in the pathTracing material, mesh and scene
-	fileLoader.load('shaders/common_PathTracing_Vertex.glsl', function (shaderText) 
-	{
-		pathTracingVertexShader = shaderText;
-
-		createPathTracingMaterial();
-	});
-
-} // end function initPathTracingShaders()
-
-
-// called automatically from within initPathTracingShaders() function above
-function createPathTracingMaterial() 
-{
-
-	fileLoader.load('shaders/Switching_Materials_Fragment.glsl', function (shaderText) 
-	{
-		
-		pathTracingFragmentShader = shaderText;
-
-		pathTracingMaterial = new THREE.ShaderMaterial({
-			uniforms: pathTracingUniforms,
-			defines: pathTracingDefines,
-			vertexShader: pathTracingVertexShader,
-			fragmentShader: pathTracingFragmentShader,
-			depthTest: false,
-			depthWrite: false
-		});
-
-		pathTracingMesh = new THREE.Mesh(pathTracingGeometry, pathTracingMaterial);
-		pathTracingScene.add(pathTracingMesh);
-
-		// the following keeps the large scene ShaderMaterial quad right in front 
-		//   of the camera at all times. This is necessary because without it, the scene 
-		//   quad will fall out of view and get clipped when the camera rotates past 180 degrees.
-		worldCamera.add(pathTracingMesh);
-		
-	});
-
-} // end function createPathTracingMaterial()
+} // end function initSceneData()
 
 
 
-// called automatically from within the animate() function
+// called automatically from within the animate() function (located in InitCommon.js file)
 function updateVariablesAndUniforms() 
 {
 	
@@ -374,4 +216,4 @@ function updateVariablesAndUniforms()
 
 
 
-init_GUI(); // init app and start animating
+init(); // init app and start animating
