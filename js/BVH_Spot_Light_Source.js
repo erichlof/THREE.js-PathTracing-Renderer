@@ -1,28 +1,28 @@
 // scene/demo-specific variables go here
-var modelMesh;
-var modelScale = 1.0;
-var modelPositionOffset = new THREE.Vector3();
-var albedoTexture;
-var total_number_of_triangles = 0;
-var triangle_array;
-var triangleMaterialMarkers = [];
-var pathTracingMaterialList = [];
-var uniqueMaterialTextures = [];
-var meshList = [];
-var geoList = [];
-var triangleDataTexture;
-var aabb_array;
-var aabbDataTexture;
-var totalWork;
-var vp0 = new THREE.Vector3();
-var vp1 = new THREE.Vector3();
-var vp2 = new THREE.Vector3();
-var vn0 = new THREE.Vector3();
-var vn1 = new THREE.Vector3();
-var vn2 = new THREE.Vector3();
-var vt0 = new THREE.Vector2();
-var vt1 = new THREE.Vector2();
-var vt2 = new THREE.Vector2();
+let modelMesh;
+let modelScale = 1.0;
+let modelPositionOffset = new THREE.Vector3();
+let albedoTexture;
+let total_number_of_triangles = 0;
+let triangle_array;
+let triangleMaterialMarkers = [];
+let pathTracingMaterialList = [];
+let uniqueMaterialTextures = [];
+let meshList = [];
+let geoList = [];
+let triangleDataTexture;
+let aabb_array;
+let aabbDataTexture;
+let totalWork;
+let vp0 = new THREE.Vector3();
+let vp1 = new THREE.Vector3();
+let vp2 = new THREE.Vector3();
+let vn0 = new THREE.Vector3();
+let vn1 = new THREE.Vector3();
+let vn2 = new THREE.Vector3();
+let vt0 = new THREE.Vector2();
+let vt1 = new THREE.Vector2();
+let vt2 = new THREE.Vector2();
 
 
 function MaterialObject() 
@@ -41,7 +41,7 @@ function MaterialObject()
 function load_GLTF_Model() 
 {
 
-	var gltfLoader = new THREE.GLTFLoader();
+	let gltfLoader = new THREE.GLTFLoader();
 
 	gltfLoader.load("models/StanfordBunny.glb", function( meshGroup ) // Triangles: 30,338
 	{
@@ -125,7 +125,7 @@ function load_GLTF_Model()
 		modelScale = 0.04;
 		modelPositionOffset.set(0, 27.6, -40);
 		
-		// now that the models have been loaded, we can init 
+		// now that the model has been loaded, we can init 
 		init();
 
 	});
@@ -134,9 +134,11 @@ function load_GLTF_Model()
 
 
 
-// called automatically from within initTHREEjs() function
+// called automatically from within initTHREEjs() function (located in InitCommon.js file)
 function initSceneData() 
 {
+	demoFragmentShaderFileName = 'BVH_Spot_Light_Source_Fragment.glsl';
+	
 	// scene/demo-specific three.js objects setup goes here
 	sceneIsDynamic = false;
 	cameraFlightSpeed = 60;
@@ -168,22 +170,22 @@ function initSceneData()
 	// 2048 = width of texture, 2048 = height of texture, 4 = r,g,b, and a components
 
 	
-	var triangle_b_box_min = new THREE.Vector3();
-	var triangle_b_box_max = new THREE.Vector3();
-	var triangle_b_box_centroid = new THREE.Vector3();
+	let triangle_b_box_min = new THREE.Vector3();
+	let triangle_b_box_max = new THREE.Vector3();
+	let triangle_b_box_centroid = new THREE.Vector3();
 	
 
-	var vpa = new Float32Array(modelMesh.geometry.attributes.position.array);
-	var vna = new Float32Array(modelMesh.geometry.attributes.normal.array);
-	var vta = null;
-	var modelHasUVs = false;
+	let vpa = new Float32Array(modelMesh.geometry.attributes.position.array);
+	let vna = new Float32Array(modelMesh.geometry.attributes.normal.array);
+	let vta = null;
+	let modelHasUVs = false;
 	if (modelMesh.geometry.attributes.uv !== undefined) 
 	{
 		vta = new Float32Array(modelMesh.geometry.attributes.uv.array);
 		modelHasUVs = true;
 	}
 		
-	var materialNumber = 0;
+	let materialNumber = 0;
 
 	for (let i = 0; i < total_number_of_triangles; i++) 
 	{
@@ -347,67 +349,16 @@ function initSceneData()
 	aabbDataTexture.generateMipmaps = false;
 	aabbDataTexture.needsUpdate = true;
 
+
+	// scene/demo-specific uniforms go here
+	pathTracingUniforms.tTriangleTexture = { type: "t", value: triangleDataTexture };
+	pathTracingUniforms.tAABBTexture = { type: "t", value: aabbDataTexture };
+
 } // end function initSceneData()
 
 
 
-// called automatically from within initTHREEjs() function
-function initPathTracingShaders() 
-{
- 
-	// scene/demo-specific uniforms go here
-	pathTracingUniforms.tTriangleTexture = { type: "t", value: triangleDataTexture };
-	pathTracingUniforms.tAABBTexture = { type: "t", value: aabbDataTexture };
-	
-
-	pathTracingDefines = {
-		//NUMBER_OF_TRIANGLES: total_number_of_triangles
-	};
-
-	// load vertex and fragment shader files that are used in the pathTracing material, mesh and scene
-	fileLoader.load('shaders/common_PathTracing_Vertex.glsl', function (shaderText) 
-	{
-		pathTracingVertexShader = shaderText;
-
-		createPathTracingMaterial();
-	});
-
-} // end function initPathTracingShaders()
-
-
-// called automatically from within initPathTracingShaders() function above
-function createPathTracingMaterial() 
-{
-
-	fileLoader.load('shaders/BVH_Spot_Light_Source_Fragment.glsl', function (shaderText) 
-	{
-		
-		pathTracingFragmentShader = shaderText;
-
-		pathTracingMaterial = new THREE.ShaderMaterial({
-			uniforms: pathTracingUniforms,
-			defines: pathTracingDefines,
-			vertexShader: pathTracingVertexShader,
-			fragmentShader: pathTracingFragmentShader,
-			depthTest: false,
-			depthWrite: false
-		});
-
-		pathTracingMesh = new THREE.Mesh(pathTracingGeometry, pathTracingMaterial);
-		pathTracingScene.add(pathTracingMesh);
-
-		// the following keeps the large scene ShaderMaterial quad right in front 
-		//   of the camera at all times. This is necessary because without it, the scene 
-		//   quad will fall out of view and get clipped when the camera rotates past 180 degrees.
-		worldCamera.add(pathTracingMesh);
-		
-	});
-
-} // end function createPathTracingMaterial()
-
-
-
-// called automatically from within the animate() function
+// called automatically from within the animate() function (located in InitCommon.js file)
 function updateVariablesAndUniforms() 
 {
 	// INFO
