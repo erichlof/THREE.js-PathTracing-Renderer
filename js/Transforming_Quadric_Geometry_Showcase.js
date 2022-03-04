@@ -1,24 +1,26 @@
 // scene/demo-specific variables go here
 
-var ellipsoidTranslate, cylinderTranslate, coneTranslate, paraboloidTranslate, hyperboloidTranslate, hyperbolicParaboloidTranslate;
-var ellipsoidRotate, cylinderRotate, coneRotate, paraboloidRotate, hyperboloidRotate, hyperbolicParaboloidRotate;
-var ellipsoidScale, cylinderScale, coneScale, paraboloidScale, hyperboloidScale, hyperbolicParaboloidScale;
-var ellipsoidClip, cylinderClip, coneClip, paraboloidClip, hyperboloidClip, hyperbolicParaboloidClip;
+let ellipsoidTranslate, cylinderTranslate, coneTranslate, paraboloidTranslate, hyperboloidTranslate, hyperbolicParaboloidTranslate;
+let ellipsoidRotate, cylinderRotate, coneRotate, paraboloidRotate, hyperboloidRotate, hyperbolicParaboloidRotate;
+let ellipsoidScale, cylinderScale, coneScale, paraboloidScale, hyperboloidScale, hyperbolicParaboloidScale;
+let ellipsoidClip, cylinderClip, coneClip, paraboloidClip, hyperboloidClip, hyperbolicParaboloidClip;
 
-var ellipsoidTranslateAngle, cylinderTranslateAngle, coneTranslateAngle, paraboloidTranslateAngle, hyperboloidTranslateAngle, hyperbolicParaboloidTranslateAngle;
-var ellipsoidRotateAngle, cylinderRotateAngle, coneRotateAngle, paraboloidRotateAngle, hyperboloidRotateAngle, hyperbolicParaboloidRotateAngle;
-var ellipsoidScaleAngle, cylinderScaleAngle, coneScaleAngle, paraboloidScaleAngle, hyperboloidScaleAngle, hyperbolicParaboloidScaleAngle;
+let ellipsoidTranslateAngle, cylinderTranslateAngle, coneTranslateAngle, paraboloidTranslateAngle, hyperboloidTranslateAngle, hyperbolicParaboloidTranslateAngle;
+let ellipsoidRotateAngle, cylinderRotateAngle, coneRotateAngle, paraboloidRotateAngle, hyperboloidRotateAngle, hyperbolicParaboloidRotateAngle;
+let ellipsoidScaleAngle, cylinderScaleAngle, coneScaleAngle, paraboloidScaleAngle, hyperboloidScaleAngle, hyperbolicParaboloidScaleAngle;
 
-var spacing = 50;
-var baseXPos = 200;
-var baseYPos = 50;
-var baseZPos = -200;
-var posXOffset = 25;
+let spacing = 50;
+let baseXPos = 200;
+let baseYPos = 50;
+let baseZPos = -200;
+let posXOffset = 25;
 
 
-// called automatically from within initTHREEjs() function
+// called automatically from within initTHREEjs() function (located in InitCommon.js file)
 function initSceneData()
 {
+	demoFragmentShaderFileName = 'Transforming_Quadric_Geometry_Showcase_Fragment.glsl';
+
 	// scene/demo-specific three.js objects setup goes here
 	sceneIsDynamic = true;
 	cameraFlightSpeed = 60;
@@ -173,13 +175,7 @@ function initSceneData()
 		ellipsoidScaleAngle = cylinderScaleAngle = coneScaleAngle = paraboloidScaleAngle = hyperboloidScaleAngle = hyperbolicParaboloidScaleAngle =
 		ellipsoidClipAngle = cylinderClipAngle = coneClipAngle = paraboloidClipAngle = hyperboloidClipAngle = hyperbolicParaboloidClipAngle = 0;
 
-} // end function initSceneData()
-
-
-
-// called automatically from within initTHREEjs() function
-function initPathTracingShaders()
-{
+	
 	// scene/demo-specific uniforms go here
 	pathTracingUniforms.uEllipsoidTranslateInvMatrix = { type: "m4", value: new THREE.Matrix4() };
 	pathTracingUniforms.uEllipsoidRotateInvMatrix = { type: "m4", value: new THREE.Matrix4() };
@@ -206,55 +202,11 @@ function initPathTracingShaders()
 	pathTracingUniforms.uHyperbolicParaboloidScaleInvMatrix = { type: "m4", value: new THREE.Matrix4() };
 	pathTracingUniforms.uHyperbolicParaboloidClipInvMatrix = { type: "m4", value: new THREE.Matrix4() };
 
-	
-	pathTracingDefines = {
-		//NUMBER_OF_TRIANGLES: total_number_of_triangles
-	};
-
-	// load vertex and fragment shader files that are used in the pathTracing material, mesh and scene
-	fileLoader.load('shaders/common_PathTracing_Vertex.glsl', function (shaderText)
-	{
-		pathTracingVertexShader = shaderText;
-
-		createPathTracingMaterial();
-	});
-
-} // end function initPathTracingShaders()
-
-
-// called automatically from within initPathTracingShaders() function above
-function createPathTracingMaterial()
-{
-
-	fileLoader.load('shaders/Transforming_Quadric_Geometry_Showcase_Fragment.glsl', function (shaderText)
-	{
-
-		pathTracingFragmentShader = shaderText;
-
-		pathTracingMaterial = new THREE.ShaderMaterial({
-			uniforms: pathTracingUniforms,
-			defines: pathTracingDefines,
-			vertexShader: pathTracingVertexShader,
-			fragmentShader: pathTracingFragmentShader,
-			depthTest: false,
-			depthWrite: false
-		});
-
-		pathTracingMesh = new THREE.Mesh(pathTracingGeometry, pathTracingMaterial);
-		pathTracingScene.add(pathTracingMesh);
-
-		// the following keeps the large scene ShaderMaterial quad right in front 
-		//   of the camera at all times. This is necessary because without it, the scene 
-		//   quad will fall out of view and get clipped when the camera rotates past 180 degrees.
-		worldCamera.add(pathTracingMesh);
-
-	});
-
-} // end function createPathTracingMaterial()
+} // end function initSceneData()
 
 
 
-// called automatically from within the animate() function
+// called automatically from within the animate() function (located in InitCommon.js file)
 function updateVariablesAndUniforms()
 {
 
