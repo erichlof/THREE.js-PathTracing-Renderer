@@ -244,9 +244,9 @@ vec3 terrain_calcNormal( vec3 pos, float t )
 {
 	vec3 eps = vec3(uEPS_intersect, 0.0, 0.0);
 	
-	return normalize( vec3( lookup_Normal(pos-eps.xyy) - lookup_Normal(pos+eps.xyy),
-			  	eps.x * 2.0,
-			  	lookup_Normal(pos-eps.yyx) - lookup_Normal(pos+eps.yyx) ) );
+	return vec3( lookup_Normal(pos-eps.xyy) - lookup_Normal(pos+eps.xyy),
+		     eps.x * 2.0,
+		     lookup_Normal(pos-eps.yyx) - lookup_Normal(pos+eps.yyx) ) ;
 }
 
 bool isLightSourceVisible( vec3 pos, vec3 n, vec3 dirToLight)
@@ -349,7 +349,7 @@ float SceneIntersect( bool checkWater )
 		float dy = eps * 2.0; // (the water wave height is a function of x and z, not dependent on y)
 		float dz = getOceanWaterHeight_Detail(hitPos - vec3(0,0,eps)) - getOceanWaterHeight_Detail(hitPos + vec3(0,0,eps));
 		
-		hitNormal = normalize(vec3(dx,dy,dz));
+		hitNormal = vec3(dx,dy,dz);
 		hitEmission = vec3(0);
 		hitColor = vec3(0.6, 1.0, 1.0);
 		hitType = REFR;
@@ -424,7 +424,7 @@ vec3 CalculateRadiance()
 		
 		
 		// useful data 
-		n = hitNormal;
+		n = normalize(hitNormal);
                 nl = dot(n, rayDirection) < 0.0 ? n : -n;
 		x = rayOrigin + rayDirection * t;
 		
