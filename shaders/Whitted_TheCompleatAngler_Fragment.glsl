@@ -37,10 +37,10 @@ Rectangle rectangles[N_RECTANGLES];
 
 vec3 perturbNormal(vec3 nl, vec2 normalScale, vec2 uv)
 {
-	
+	// note: incoming vec3 nl is assumed to be normalized
         vec3 S = normalize( cross( abs(nl.y) < 0.9 ? vec3(0, 1, 0) : vec3(1, 0, 0), nl ) );
         vec3 T = cross(nl, S);
-        vec3 N = normalize( nl );
+        vec3 N = nl;
 	// invert S, T when the UV direction is backwards (from mirrored faces),
 	// otherwise it will do the normal mapping backwards.
 	vec3 NfromST = cross( S, T );
@@ -52,7 +52,7 @@ vec3 perturbNormal(vec3 nl, vec2 normalScale, vec2 uv)
         mat3 tsn = mat3( S, T, N );
 
 	vec3 mapN = texture(tTileNormalMapTexture, uv).xyz * 2.0 - 1.0;
-	mapN = normalize(mapN);
+	//mapN = normalize(mapN);
         mapN.xy *= normalScale;
         
         return normalize( tsn * mapN );
@@ -73,7 +73,7 @@ float SceneIntersect()
 		if (d < t)
 		{
 			t = d;
-			hitNormal = normalize((rayOrigin + rayDirection * t) - spheres[i].position);
+			hitNormal = (rayOrigin + rayDirection * t) - spheres[i].position;
 			hitEmission = spheres[i].emission;
 			hitColor = spheres[i].color;
 			hitType = spheres[i].type;
@@ -84,7 +84,7 @@ float SceneIntersect()
 	if (d < t)
 	{
                 t = d;
-                hitNormal = normalize(rectangles[0].normal);
+                hitNormal = rectangles[0].normal;
                 hitEmission = rectangles[0].emission;
                 hitColor = rectangles[0].color;
                 hitType = rectangles[0].type;
@@ -164,7 +164,7 @@ vec3 CalculateRadiance()
 
 		// useful data 
 		n = normalize(hitNormal);
-                nl = dot(n, rayDirection) < 0.0 ? normalize(n) : normalize(-n);
+                nl = dot(n, rayDirection) < 0.0 ? n : -n;
 		x = rayOrigin + rayDirection * t;
 
 		    
@@ -179,7 +179,7 @@ vec3 CalculateRadiance()
 				accumCol += hitColor * 0.8;
 			else accumCol += hitColor;
 
-                        rayDirection = normalize(dirToLight); // shadow ray
+                        rayDirection = dirToLight; // shadow ray
 			rayOrigin = x + nl * uEPS_intersect;
 
                         sampleLight = true;
@@ -194,7 +194,6 @@ vec3 CalculateRadiance()
                         sphereUV *= 2.0;
 
 			nl = perturbNormal(nl, vec2(-0.5, 0.5), sphereUV);
-			nl = normalize(nl);
 
                         // temporarily treat as diffuse, apply typical NdotL lighting 
                         accumCol += hitColor * max(0.05, dot(nl, dirToLight));
