@@ -312,7 +312,7 @@ float SceneIntersect( bool checkOcean )
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(normal);
+		hitNormal = normal;
 		hitEmission = vec3(0);
 		hitColor = openCylinders[0].color;
 		hitType = WOOD;
@@ -324,7 +324,7 @@ float SceneIntersect( bool checkOcean )
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(normal);
+		hitNormal = normal;
 		hitEmission = vec3(0);
 		hitColor = openCylinders[0].color;
 		hitType = WOOD;
@@ -336,7 +336,7 @@ float SceneIntersect( bool checkOcean )
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(normal);
+		hitNormal = normal;
 		hitEmission = vec3(0);
 		hitColor = openCylinders[0].color;
 		hitType = WOOD;
@@ -348,7 +348,7 @@ float SceneIntersect( bool checkOcean )
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(normal);
+		hitNormal = normal;
 		hitEmission = vec3(0);
 		hitColor = openCylinders[0].color;
 		hitType = WOOD;
@@ -363,7 +363,7 @@ float SceneIntersect( bool checkOcean )
 		if (d < t)
 		{
 			t = d;
-			hitNormal = normalize(quads[i].normal);
+			hitNormal = quads[i].normal;
 			hitEmission = quads[i].emission;
 			hitColor = quads[i].color;
 			hitType = quads[i].type;
@@ -384,8 +384,7 @@ float SceneIntersect( bool checkOcean )
 		t = d;
 		
 		// transfom normal back into world space
-		normal = normalize(normal);
-		hitNormal = normalize(transpose(mat3(uTallBoxInvMatrix)) * normal);
+		hitNormal = transpose(mat3(uTallBoxInvMatrix)) * normal;
 		hitEmission = boxes[0].emission;
 		hitColor = boxes[0].color;
 		hitType = boxes[0].type;
@@ -405,8 +404,7 @@ float SceneIntersect( bool checkOcean )
 		t = d;
 		
 		// transfom normal back into world space
-		normal = normalize(normal);
-		hitNormal = normalize(transpose(mat3(uShortBoxInvMatrix)) * normal);
+		hitNormal = transpose(mat3(uShortBoxInvMatrix)) * normal;
 		hitEmission = boxes[1].emission;
 		hitColor = boxes[1].color;
 		hitType = boxes[1].type;
@@ -457,7 +455,7 @@ float SceneIntersect( bool checkOcean )
 		dy = eps * 2.0; // (the water wave height is a function of x and z, not dependent on y)
 		dz = getOceanWaterHeight_Detail(hitWorldSpace - vec3(0,0,eps)) - getOceanWaterHeight_Detail(hitWorldSpace + vec3(0,0,eps));
 		
-		hitNormal = normalize(vec3(dx,dy,dz));
+		hitNormal = vec3(dx,dy,dz);
 		hitEmission = vec3(0);
 		hitColor = vec3(0.6, 1.0, 1.0);
 		hitType = REFR;
@@ -593,7 +591,7 @@ vec3 CalculateRadiance(out vec3 objectNormal, out vec3 objectColor, out float ob
 		
 		// useful data 
 		n = normalize(hitNormal);
-                nl = dot(n, rayDirection) < 0.0 ? normalize(n) : normalize(-n);
+                nl = dot(n, rayDirection) < 0.0 ? n : -n;
 		x = rayOrigin + rayDirection * t;
 			
 		if (bounces == 0)
