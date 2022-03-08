@@ -154,7 +154,7 @@ float CSG_BoxIntersect( vec3 minCorner, vec3 maxCorner, vec3 rayOrigin, vec3 ray
 float CSG_PlaneIntersect( vec4 pla, vec3 rayOrigin, vec3 rayDirection, out vec3 n1, out vec3 n2, out float far )
 //--------------------------------------------------------------------------------------------------------------
 {
-	vec3 n = normalize(pla.xyz);
+	vec3 n = pla.xyz;
 	float denom = dot(n, rayDirection);
 	far = INFINITY;
 	// uncomment if single-sided plane is desired
@@ -732,7 +732,7 @@ float SceneIntersect( )
 		if (d < t)
 		{
 			t = d;
-			hitNormal = normalize(quads[i].normal);
+			hitNormal = quads[i].normal;
 			hitEmission = quads[i].emission;
 			hitColor = quads[i].color;
 			hitType = quads[i].type;
@@ -747,7 +747,7 @@ float SceneIntersect( )
 		t = d;
 		//n = (rayOrigin + rayDirection * d) - spheres[0].position;
 		n = vec3(0,1,0);
-		hitNormal = normalize(n);
+		hitNormal = n;
 		hitEmission = spheres[0].emission;
 		hitColor = spheres[0].color;
 		hitType = spheres[0].type;
@@ -761,7 +761,7 @@ float SceneIntersect( )
 		if (d < t)
 		{
 			t = d;
-			hitNormal = normalize(planes[i].pla.xyz);
+			hitNormal = planes[i].pla.xyz;
 			hitEmission = planes[i].emission;
 			hitColor = planes[i].color;
 			hitType = planes[i].type;
@@ -778,7 +778,7 @@ float SceneIntersect( )
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(n);
+		hitNormal = n;
 		hitEmission = vec3(0);
 		hitColor = vec3(0.0,0.01,0.0);
 		hitType = REFR;
@@ -793,7 +793,7 @@ float SceneIntersect( )
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(n);
+		hitNormal = n;
 		hitEmission = vec3(0);
 		hitColor = vec3(0.971519, 0.959915, 0.915324) * 0.8; // silver
 		hitType = SPEC;
@@ -807,7 +807,7 @@ float SceneIntersect( )
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(n);
+		hitNormal = n;
 		hitEmission = vec3(0);
 		hitColor = vec3(0.955008, 0.637427, 0.538163); // copper
 		hitType = SPEC;
@@ -821,7 +821,7 @@ float SceneIntersect( )
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(n);
+		hitNormal = n;
 		hitEmission = vec3(0);
 		hitColor = vec3(1.000000, 0.765557, 0.336057); // gold
 		hitType = SPEC;
@@ -837,7 +837,7 @@ float SceneIntersect( )
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(n);
+		hitNormal = n;
 		hitEmission = vec3(0);
 		hitColor = vec3(0.9);
 		hitType = COAT;
@@ -853,7 +853,7 @@ float SceneIntersect( )
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(n);
+		hitNormal = n;
 		hitEmission = leftWallPlane.emission;
 		hitColor = leftWallPlane.color;
 		hitType = leftWallPlane.type;
@@ -868,7 +868,7 @@ float SceneIntersect( )
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(n);
+		hitNormal = n;
 		hitEmission = vec3(0);
 		hitColor = vec3(1.0,0.5,0.8);
 		hitType = COAT;
@@ -882,7 +882,7 @@ float SceneIntersect( )
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(n);
+		hitNormal = n;
 		hitEmission = vec3(0);
 		hitColor = vec3(1.0,0.5,0.8);
 		hitType = COAT;
@@ -935,7 +935,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 		// useful data 
 		n = normalize(hitNormal);
-                nl = dot(n, rayDirection) < 0.0 ? normalize(n) : normalize(-n);
+                nl = dot(n, rayDirection) < 0.0 ? n : -n;
 		x = rayOrigin + rayDirection * t;
 
 		if (bounces == 0)
