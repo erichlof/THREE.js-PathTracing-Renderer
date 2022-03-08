@@ -115,10 +115,10 @@ float SceneIntersect( )
 	else 
 		ConicalPrism_CSG_Intersect( uA_kParameter, rObjOrigin, rObjDirection, A_t0, A_t1, A_n0, A_n1 );
 	
-	n = normalize(A_n0);
-	A_n0 = normalize(transpose(mat3(uCSG_ShapeA_InvMatrix)) * n);
-	n = normalize(A_n1);
-	A_n1 = normalize(transpose(mat3(uCSG_ShapeA_InvMatrix)) * n);
+	n = (A_n0);
+	A_n0 = (transpose(mat3(uCSG_ShapeA_InvMatrix)) * n);
+	n = (A_n1);
+	A_n1 = (transpose(mat3(uCSG_ShapeA_InvMatrix)) * n);
 	
 
 	// SHAPE B
@@ -131,10 +131,10 @@ float SceneIntersect( )
 	else 
 		ConicalPrism_CSG_Intersect( uB_kParameter, rObjOrigin, rObjDirection, B_t0, B_t1, B_n0, B_n1 );
 	
-	n = normalize(B_n0);
-	B_n0 = normalize(transpose(mat3(uCSG_ShapeB_InvMatrix)) * n);
-	n = normalize(B_n1);
-	B_n1 = normalize(transpose(mat3(uCSG_ShapeB_InvMatrix)) * n);
+	n = (B_n0);
+	B_n0 = (transpose(mat3(uCSG_ShapeB_InvMatrix)) * n);
+	n = (B_n1);
+	B_n1 = (transpose(mat3(uCSG_ShapeB_InvMatrix)) * n);
 
 	
 	A_color0 = A_color1 = vec3(1,0,0);
@@ -181,10 +181,10 @@ float SceneIntersect( )
 	else 
 		ConicalPrism_CSG_Intersect( uC_kParameter, rObjOrigin, rObjDirection, C_t0, C_t1, C_n0, C_n1 );
 	
-	n = normalize(C_n0);
-	C_n0 = normalize(transpose(mat3(uCSG_ShapeC_InvMatrix)) * n);
-	n = normalize(C_n1);
-	C_n1 = normalize(transpose(mat3(uCSG_ShapeC_InvMatrix)) * n);
+	n = (C_n0);
+	C_n0 = (transpose(mat3(uCSG_ShapeC_InvMatrix)) * n);
+	n = (C_n1);
+	C_n1 = (transpose(mat3(uCSG_ShapeC_InvMatrix)) * n);
 
 	C_color0 = C_color1 = vec3(0,0,1);
 	C_type0 = C_type1 = DIFF;
@@ -226,10 +226,10 @@ float SceneIntersect( )
 	else 
 		ConicalPrism_CSG_Intersect( uD_kParameter, rObjOrigin, rObjDirection, D_t0, D_t1, D_n0, D_n1 );
 	
-	n = normalize(D_n0);
-	D_n0 = normalize(transpose(mat3(uCSG_ShapeD_InvMatrix)) * n);
-	n = normalize(D_n1);
-	D_n1 = normalize(transpose(mat3(uCSG_ShapeD_InvMatrix)) * n);
+	n = (D_n0);
+	D_n0 = (transpose(mat3(uCSG_ShapeD_InvMatrix)) * n);
+	n = (D_n1);
+	D_n1 = (transpose(mat3(uCSG_ShapeD_InvMatrix)) * n);
 
 	D_color0 = D_color1 = vec3(1,1,0);
 	D_type0 = D_type1 = DIFF;
@@ -271,10 +271,10 @@ float SceneIntersect( )
 	else 
 		ConicalPrism_CSG_Intersect( uE_kParameter, rObjOrigin, rObjDirection, E_t0, E_t1, E_n0, E_n1 );
 	
-	n = normalize(E_n0);
-	E_n0 = normalize(transpose(mat3(uCSG_ShapeE_InvMatrix)) * n);
-	n = normalize(E_n1);
-	E_n1 = normalize(transpose(mat3(uCSG_ShapeE_InvMatrix)) * n);
+	n = (E_n0);
+	E_n0 = (transpose(mat3(uCSG_ShapeE_InvMatrix)) * n);
+	n = (E_n1);
+	E_n1 = (transpose(mat3(uCSG_ShapeE_InvMatrix)) * n);
 
 	E_color0 = E_color1 = vec3(0,1,1);
 	E_type0 = E_type1 = DIFF;
@@ -316,10 +316,10 @@ float SceneIntersect( )
 	else 
 		ConicalPrism_CSG_Intersect( uF_kParameter, rObjOrigin, rObjDirection, F_t0, F_t1, F_n0, F_n1 );
 	
-	n = normalize(F_n0);
-	F_n0 = normalize(transpose(mat3(uCSG_ShapeF_InvMatrix)) * n);
-	n = normalize(F_n1);
-	F_n1 = normalize(transpose(mat3(uCSG_ShapeF_InvMatrix)) * n);
+	n = (F_n0);
+	F_n0 = (transpose(mat3(uCSG_ShapeF_InvMatrix)) * n);
+	n = (F_n1);
+	F_n1 = (transpose(mat3(uCSG_ShapeF_InvMatrix)) * n);
 
 	F_color0 = F_color1 = vec3(1,0,1);
 	F_type0 = F_type1 = DIFF;
@@ -453,7 +453,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 		// useful data 
 		n = normalize(hitNormal);
-		nl = dot(n, rayDirection) < 0.0 ? normalize(n) : normalize(-n);
+                nl = dot(n, rayDirection) < 0.0 ? n : -n;
 		x = rayOrigin + rayDirection * t;
 
 		if (bounces == 0)
