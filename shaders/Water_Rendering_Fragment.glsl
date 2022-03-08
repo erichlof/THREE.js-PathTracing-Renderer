@@ -79,7 +79,7 @@ float SceneIntersect( bool checkWater )
 		if (d < t)
 		{
 			t = d;
-			hitNormal = normalize( quads[i].normal );
+			hitNormal = quads[i].normal;
 			hitEmission = quads[i].emission;
 			hitColor = quads[i].color;
 			hitType = quads[i].type;
@@ -98,8 +98,7 @@ float SceneIntersect( bool checkWater )
 	{	
 		t = d;
 		// transfom normal back into world space
-		normal = normalize(normal);
-		hitNormal = normalize(transpose(mat3(uTallBoxInvMatrix)) * normal);
+		hitNormal = transpose(mat3(uTallBoxInvMatrix)) * normal;
 		hitEmission = boxes[0].emission;
 		hitColor = boxes[0].color;
 		hitType = boxes[0].type;
@@ -117,8 +116,7 @@ float SceneIntersect( bool checkWater )
 	{	
 		t = d;
 		// transfom normal back into world space
-		normal = normalize(normal);
-		hitNormal = normalize(transpose(mat3(uShortBoxInvMatrix)) * normal);
+		hitNormal = transpose(mat3(uShortBoxInvMatrix)) * normal;
 		hitEmission = boxes[1].emission;
 		hitColor = boxes[1].color;
 		hitType = boxes[1].type;
@@ -167,7 +165,7 @@ float SceneIntersect( bool checkWater )
 		float dy = eps * 2.0; // (the water wave height is a function of x and z, not dependent on y)
 		float dz = getWaterWaveHeight(hitWorldSpace - vec3(0,0,eps)) - getWaterWaveHeight(hitWorldSpace + vec3(0,0,eps));
 		
-		hitNormal = normalize(vec3(dx,dy,dz));
+		hitNormal = vec3(dx,dy,dz);
 		hitEmission = vec3(0);
 		hitColor = WATER_COLOR;
 		hitType = REFR;
@@ -219,7 +217,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 		// useful data 
 		n = normalize(hitNormal);
-                nl = dot(n, rayDirection) < 0.0 ? n : normalize(-n);
+                nl = dot(n, rayDirection) < 0.0 ? n : -n;
 		x = rayOrigin + rayDirection * t;
 
 		if (bounces == 0)
