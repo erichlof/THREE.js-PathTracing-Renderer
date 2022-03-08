@@ -103,7 +103,7 @@ float SceneIntersect( )
 		if (d < t)
 		{
 			t = d;
-			hitNormal = normalize(quads[i].normal);
+			hitNormal = quads[i].normal;
 			hitEmission = quads[i].emission;
 			hitColor = quads[i].color;
 			hitType = quads[i].type;
@@ -144,10 +144,10 @@ float SceneIntersect( )
 	else //if (uShapeAType == 12)
 		HyperbolicPrism2Sheets_CSG_Intersect( uA_kParameter, rObjOrigin, rObjDirection, A_t0, A_t1, A_n0, A_n1 );
 
-	n = normalize(A_n0);
-	A_n0 = normalize(transpose(mat3(uCSG_ShapeA_InvMatrix)) * n);
-	n = normalize(A_n1);
-	A_n1 = normalize(transpose(mat3(uCSG_ShapeA_InvMatrix)) * n);
+	n = (A_n0);
+	A_n0 = (transpose(mat3(uCSG_ShapeA_InvMatrix)) * n);
+	n = (A_n1);
+	A_n1 = (transpose(mat3(uCSG_ShapeA_InvMatrix)) * n);
 	
 
 	// SHAPE B
@@ -181,10 +181,10 @@ float SceneIntersect( )
 	else //if (uShapeBType == 12)
 		HyperbolicPrism2Sheets_CSG_Intersect( uB_kParameter, rObjOrigin, rObjDirection, B_t0, B_t1, B_n0, B_n1 );
 
-	n = normalize(B_n0);
-	B_n0 = normalize(transpose(mat3(uCSG_ShapeB_InvMatrix)) * n);
-	n = normalize(B_n1);
-	B_n1 = normalize(transpose(mat3(uCSG_ShapeB_InvMatrix)) * n);
+	n = (B_n0);
+	B_n0 = (transpose(mat3(uCSG_ShapeB_InvMatrix)) * n);
+	n = (B_n1);
+	B_n1 = (transpose(mat3(uCSG_ShapeB_InvMatrix)) * n);
 
 	
 	A_color0 = A_color1 = uMaterialAColor;
@@ -213,7 +213,7 @@ float SceneIntersect( )
 	if (t0 > 0.0 && t0 < t)
 	{
 		t = t0;
-		hitNormal = normalize(n0);
+		hitNormal = n0;
 		hitEmission = vec3(0);
 		hitColor = color0;
 		hitType = type0;
@@ -222,7 +222,7 @@ float SceneIntersect( )
 	else if (t1 > 0.0 && t1 < t)
 	{
 		t = t1;
-		hitNormal = normalize(n1);
+		hitNormal = n1;
 		hitEmission = vec3(0);
 		hitColor = color1;
 		hitType = type1;
@@ -269,7 +269,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 		// useful data 
 		n = normalize(hitNormal);
-                nl = dot(n, rayDirection) < 0.0 ? normalize(n) : normalize(-n);
+                nl = dot(n, rayDirection) < 0.0 ? n : -n;
 		x = rayOrigin + rayDirection * t;
 
 		if (bounces == 0)
