@@ -110,7 +110,7 @@ float SceneIntersect( )
 		if (d < t)
 		{
 			t = d;
-			hitNormal = normalize(quads[i].normal);
+			hitNormal = quads[i].normal;
 			hitEmission = quads[i].emission;
 			hitColor = quads[i].color;
 			hitType = quads[i].type;
@@ -133,7 +133,7 @@ float SceneIntersect( )
 		t = d;
 		intersectionPoint = rayOrigin + rayDirection * t;
 		tempNormal = (intersectionPoint - (spheres[0].position + offset));
-		hitNormal = normalize(tempNormal);
+		hitNormal = tempNormal;
 		hitEmission = spheres[0].emission;
 		hitColor = spheres[0].color;
 		hitType = spheres[0].type;
@@ -154,7 +154,7 @@ float SceneIntersect( )
 		t = d;
 		intersectionPoint = rayOrigin + rayDirection * t;
 		tempNormal = (intersectionPoint - (spheres[1].position + offset));
-		hitNormal = normalize(tempNormal);
+		hitNormal = tempNormal;
 		hitEmission = spheres[1].emission;
 		hitColor = spheres[1].color;
 		hitType = spheres[1].type;
@@ -171,7 +171,7 @@ float SceneIntersect( )
 		t = d;
 		intersectionPoint = rayOrigin + rayDirection * t;
 		tempNormal = (intersectionPoint - (spheres[2].position + offset));
-		hitNormal = normalize(tempNormal);
+		hitNormal = tempNormal;
 		hitEmission = spheres[2].emission;
 		hitColor = spheres[2].color;
 		hitType = spheres[2].type;
@@ -201,8 +201,8 @@ float SceneIntersect( )
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(n);
-		hitNormal = normalize(vec3( transpose(m) * vec4(hitNormal, 0.0) ));
+		hitNormal = n;
+		hitNormal = vec3( transpose(m) * vec4(hitNormal, 0.0) );
 		hitEmission = boxes[0].emission;
 		hitColor = boxes[0].color;
 		hitType = boxes[0].type;
@@ -251,7 +251,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 		// useful data 
 		n = normalize(hitNormal);
-                nl = dot(n, rayDirection) < 0.0 ? normalize(n) : normalize(-n);
+                nl = dot(n, rayDirection) < 0.0 ? n : -n;
 		x = rayOrigin + rayDirection * t;
 
 		if (bounces == 0)
