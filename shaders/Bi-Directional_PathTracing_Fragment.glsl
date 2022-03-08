@@ -232,7 +232,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	vec3 lightNormal = vec3(0,1,0);
 	if (randChoose >= 1.0)
 		lightNormal = spotlightDir;
-	lightNormal = normalize(lightNormal);
+	
 	vec3 lightDir = randomCosWeightedDirectionInHemisphere(lightNormal);
 	vec3 lightHitPos = lightChoice.position + lightDir;
 	vec3 lightHitEmission = lightChoice.emission;
@@ -257,7 +257,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 	// light trace
 	rayOrigin = lightChoice.position;
-	rayDirection = normalize(lightDir);
+	rayDirection = lightDir;
 	rayOrigin += rayDirection * lightChoice.radius;
 	t = SceneIntersect();
 	if (hitType == DIFF)
@@ -286,7 +286,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 		// useful data 
 		n = normalize(hitNormal);
-                nl = dot(n, rayDirection) < 0.0 ? normalize(n) : normalize(-n);
+                nl = dot(n, rayDirection) < 0.0 ? n : -n;
 		x = rayOrigin + rayDirection * t;
 
 		if (bounces == 0)
@@ -324,7 +324,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			
 			if (ableToJoinPaths)
 			{
-				weight = max(0.0, dot(normalize(hitNormal), -rayDirection));
+				weight = max(0.0, dot(n, -rayDirection));
 				accumCol = mask * lightHitEmission * weight;
 				pixelSharpness = 0.0;
 			}
