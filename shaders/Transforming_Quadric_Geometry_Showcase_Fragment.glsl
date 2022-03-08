@@ -89,7 +89,7 @@ float SceneIntersect()
 		if (d < t)
 		{
 			t = d;
-			hitNormal = normalize((rayOrigin + rayDirection * t) - spheres[i].position);
+			hitNormal = (rayOrigin + rayDirection * t) - spheres[i].position;
 			hitEmission = spheres[i].emission;
 			hitColor = spheres[i].color;
 			hitType = spheres[i].type;
@@ -108,7 +108,7 @@ float SceneIntersect()
 	{
 		t = d;
 		//vec3 ellipsoidPos = vec3(-uEllipsoidTranslateInvMatrix[3][0], -uEllipsoidTranslateInvMatrix[3][1], -uEllipsoidTranslateInvMatrix[3][2]);
-		hitNormal = normalize(transpose(mat3(uEllipsoidTranslateInvMatrix)) * n);
+		hitNormal = transpose(mat3(uEllipsoidTranslateInvMatrix)) * n;
 		//hitEmission = vec3(0);
 		hitColor = vec3(0.0, 0.3, 1.0);
 		hitType = SPEC;
@@ -124,7 +124,7 @@ float SceneIntersect()
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(transpose(mat3(uEllipsoidRotateInvMatrix)) * n);
+		hitNormal = transpose(mat3(uEllipsoidRotateInvMatrix)) * n;
 		//hitEmission = vec3(0);
 		hitColor = vec3(0.0, 0.3, 1.0);
 		hitType = REFR;
@@ -140,7 +140,7 @@ float SceneIntersect()
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(transpose(mat3(uEllipsoidScaleInvMatrix)) * n);
+		hitNormal = transpose(mat3(uEllipsoidScaleInvMatrix)) * n;
 		//hitEmission = vec3(0);
 		hitColor = vec3(0.0, 0.3, 1.0);
 		hitType = DIFF;
@@ -156,7 +156,7 @@ float SceneIntersect()
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(transpose(mat3(uEllipsoidClipInvMatrix)) * n);
+		hitNormal = transpose(mat3(uEllipsoidClipInvMatrix)) * n;
 		//hitEmission = vec3(0);
 		hitColor = vec3(0.0, 0.3, 1.0);
 		hitType = COAT;
@@ -172,7 +172,7 @@ float SceneIntersect()
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(transpose(mat3(uCylinderTranslateInvMatrix)) * n);
+		hitNormal = transpose(mat3(uCylinderTranslateInvMatrix)) * n;
 		//hitEmission = vec3(0);
 		hitColor = vec3(1.0, 0.0, 0.0);
 		hitType = SPEC;
@@ -188,7 +188,7 @@ float SceneIntersect()
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(transpose(mat3(uCylinderRotateInvMatrix)) * n);
+		hitNormal = transpose(mat3(uCylinderRotateInvMatrix)) * n;
 		//hitEmission = vec3(0);
 		hitColor = vec3(1.0, 0.0, 0.0);
 		hitType = REFR;
@@ -204,7 +204,7 @@ float SceneIntersect()
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(transpose(mat3(uCylinderScaleInvMatrix)) * n);
+		hitNormal = transpose(mat3(uCylinderScaleInvMatrix)) * n;
 		//hitEmission = vec3(0);
 		hitColor = vec3(1.0, 0.0, 0.0);
 		hitType = DIFF;
@@ -220,7 +220,7 @@ float SceneIntersect()
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(transpose(mat3(uCylinderClipInvMatrix)) * n);
+		hitNormal = transpose(mat3(uCylinderClipInvMatrix)) * n;
 		//hitEmission = vec3(0);
 		hitColor = vec3(1.0, 0.0, 0.0);
 		hitType = COAT;
@@ -236,7 +236,7 @@ float SceneIntersect()
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(transpose(mat3(uConeTranslateInvMatrix)) * n);
+		hitNormal = transpose(mat3(uConeTranslateInvMatrix)) * n;
 		//hitEmission = vec3(0);
 		hitColor = vec3(1.0, 0.2, 0.0);
 		hitType = SPEC;
@@ -252,7 +252,7 @@ float SceneIntersect()
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(transpose(mat3(uConeRotateInvMatrix)) * n);
+		hitNormal = transpose(mat3(uConeRotateInvMatrix)) * n;
 		//hitEmission = vec3(0);
 		hitColor = vec3(1.0, 0.2, 0.0);
 		hitType = REFR;
@@ -268,7 +268,7 @@ float SceneIntersect()
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(transpose(mat3(uConeScaleInvMatrix)) * n);
+		hitNormal = transpose(mat3(uConeScaleInvMatrix)) * n;
 		//hitEmission = vec3(0);
 		hitColor = vec3(1.0, 0.2, 0.0);
 		hitType = DIFF;
@@ -284,7 +284,7 @@ float SceneIntersect()
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(transpose(mat3(uConeClipInvMatrix)) * n);
+		hitNormal = transpose(mat3(uConeClipInvMatrix)) * n;
 		//hitEmission = vec3(0);
 		hitColor = vec3(1.0, 0.2, 0.0);
 		hitType = COAT;
@@ -300,7 +300,7 @@ float SceneIntersect()
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(transpose(mat3(uParaboloidTranslateInvMatrix)) * n);
+		hitNormal = transpose(mat3(uParaboloidTranslateInvMatrix)) * n;
 		//hitEmission = vec3(0);
 		hitColor = vec3(1.0, 0.0, 1.0);
 		hitType = SPEC;
@@ -316,7 +316,7 @@ float SceneIntersect()
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(transpose(mat3(uParaboloidRotateInvMatrix)) * n);
+		hitNormal = transpose(mat3(uParaboloidRotateInvMatrix)) * n;
 		//hitEmission = vec3(0);
 		hitColor = vec3(1.0, 0.0, 1.0);
 		hitType = REFR;
@@ -332,7 +332,7 @@ float SceneIntersect()
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(transpose(mat3(uParaboloidScaleInvMatrix)) * n);
+		hitNormal = transpose(mat3(uParaboloidScaleInvMatrix)) * n;
 		//hitEmission = vec3(0);
 		hitColor = vec3(1.0, 0.0, 1.0);
 		hitType = DIFF;
@@ -348,7 +348,7 @@ float SceneIntersect()
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(transpose(mat3(uParaboloidClipInvMatrix)) * n);
+		hitNormal = transpose(mat3(uParaboloidClipInvMatrix)) * n;
 		//hitEmission = vec3(0);
 		hitColor = vec3(1.0, 0.0, 1.0);
 		hitType = COAT;
@@ -364,7 +364,7 @@ float SceneIntersect()
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(transpose(mat3(uHyperboloidTranslateInvMatrix)) * n);
+		hitNormal = transpose(mat3(uHyperboloidTranslateInvMatrix)) * n;
 		//hitEmission = vec3(0);
 		hitColor = vec3(1.0, 1.0, 0.0);
 		hitType = SPEC;
@@ -380,7 +380,7 @@ float SceneIntersect()
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(transpose(mat3(uHyperboloidRotateInvMatrix)) * n);
+		hitNormal = transpose(mat3(uHyperboloidRotateInvMatrix)) * n;
 		//hitEmission = vec3(0);
 		hitColor = vec3(1.0, 1.0, 0.0);
 		hitType = REFR;
@@ -396,7 +396,7 @@ float SceneIntersect()
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(transpose(mat3(uHyperboloidScaleInvMatrix)) * n);
+		hitNormal = transpose(mat3(uHyperboloidScaleInvMatrix)) * n;
 		//hitEmission = vec3(0);
 		hitColor = vec3(1.0, 1.0, 0.0);
 		hitType = DIFF;
@@ -412,7 +412,7 @@ float SceneIntersect()
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(transpose(mat3(uHyperboloidClipInvMatrix)) * n);
+		hitNormal = transpose(mat3(uHyperboloidClipInvMatrix)) * n;
 		//hitEmission = vec3(0);
 		hitColor = vec3(1.0, 1.0, 0.0);
 		hitType = COAT;
@@ -428,7 +428,7 @@ float SceneIntersect()
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(transpose(mat3(uHyperbolicParaboloidTranslateInvMatrix)) * n);
+		hitNormal = transpose(mat3(uHyperbolicParaboloidTranslateInvMatrix)) * n;
 		//hitEmission = vec3(0);
 		hitColor = vec3(0.0, 1.0, 0.0);
 		hitType = SPEC;
@@ -444,7 +444,7 @@ float SceneIntersect()
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(transpose(mat3(uHyperbolicParaboloidRotateInvMatrix)) * n);
+		hitNormal = transpose(mat3(uHyperbolicParaboloidRotateInvMatrix)) * n;
 		//hitEmission = vec3(0);
 		hitColor = vec3(0.0, 1.0, 0.0);
 		hitType = REFR;
@@ -460,7 +460,7 @@ float SceneIntersect()
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(transpose(mat3(uHyperbolicParaboloidScaleInvMatrix)) * n);
+		hitNormal = transpose(mat3(uHyperbolicParaboloidScaleInvMatrix)) * n;
 		//hitEmission = vec3(0);
 		hitColor = vec3(0.0, 1.0, 0.0);
 		hitType = DIFF;
@@ -476,7 +476,7 @@ float SceneIntersect()
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(transpose(mat3(uHyperbolicParaboloidClipInvMatrix)) * n);
+		hitNormal = transpose(mat3(uHyperbolicParaboloidClipInvMatrix)) * n;
 		//hitEmission = vec3(0);
 		hitColor = vec3(0.0, 1.0, 0.0);
 		hitType = COAT;
@@ -535,7 +535,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 		// useful data 
 		n = normalize(hitNormal);
-                nl = dot(n, rayDirection) < 0.0 ? normalize(n) : normalize(-n);
+                nl = dot(n, rayDirection) < 0.0 ? n : -n;
 		x = rayOrigin + rayDirection * t;
 
 		if (bounces == 0)
