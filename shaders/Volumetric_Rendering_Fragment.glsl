@@ -47,7 +47,7 @@ float SceneIntersect( vec3 rOrigin, vec3 rDirection, out vec3 hitNormal, out vec
 		if (d < t)
 		{
 			t = d;
-			hitNormal = normalize((rOrigin + rDirection * t) - spheres[i].position);
+			hitNormal = (rOrigin + rDirection * t) - spheres[i].position;
 			hitEmission = spheres[i].emission;
 			hitColor = spheres[i].color;
 			hitType = spheres[i].type;
@@ -62,7 +62,7 @@ float SceneIntersect( vec3 rOrigin, vec3 rDirection, out vec3 hitNormal, out vec
 		if (d < t)
 		{
 			t = d;
-			hitNormal = normalize( quads[i].normal );
+			hitNormal = quads[i].normal;
 			hitEmission = quads[i].emission;
 			hitColor = quads[i].color;
 			hitType = quads[i].type;
@@ -126,6 +126,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	vec3 lightVec;
 	vec3 particlePos;
 	vec3 tdir;
+	vec3 x, n, nl;
 	
 	float nc, nt, ratioIoR, Re, Tr;
 	float P, RP, TP;
@@ -188,9 +189,9 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 
 		// useful data 
-		vec3 n = normalize(eHitNormal);
-                vec3 nl = dot(n, rayDirection) < 0.0 ? normalize(n) : normalize(-n);
-		vec3 x = rayOrigin + rayDirection * t;
+		n = normalize(eHitNormal);
+                nl = dot(n, rayDirection) < 0.0 ? n : -n;
+		x = rayOrigin + rayDirection * t;
 
 		if (diffuseCount == 0)
 		{
@@ -359,9 +360,9 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			break;
 		
 		// useful data 
-		vec3 n = normalize(eHitNormal);
-		vec3 nl = dot(n, rayDirection) < 0.0 ? normalize(n) : normalize(-n);
-		vec3 x = rayOrigin + rayDirection * t;
+		n = normalize(eHitNormal);
+                nl = dot(n, rayDirection) < 0.0 ? n : -n;
+		x = rayOrigin + rayDirection * t;
 
 		if (eHitType == REFR)  // Ideal dielectric REFRACTION
 		{
