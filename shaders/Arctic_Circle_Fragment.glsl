@@ -112,9 +112,9 @@ vec3 terrain_calcNormal( vec3 pos, float t )
 {
 	vec3 eps = vec3(uEPS_intersect, 0.0, 0.0);
 	
-	return normalize( vec3( lookup_Normal(pos-eps.xyy) - lookup_Normal(pos+eps.xyy),
-			  	eps.x * 2.0,
-			  	lookup_Normal(pos-eps.yyx) - lookup_Normal(pos+eps.yyx) ) );
+	return vec3( lookup_Normal(pos-eps.xyy) - lookup_Normal(pos+eps.xyy),
+		     eps.x * 2.0,
+		     lookup_Normal(pos-eps.yyx) - lookup_Normal(pos+eps.yyx) ) ;
 }
 
 bool isLightSourceVisible( vec3 pos, vec3 n, vec3 dirToLight)
@@ -213,9 +213,9 @@ vec3 ocean_calcNormal( vec3 pos, float t )
 {
 	vec3 eps = vec3(1.0, 0.0, 0.0);
 	
-	return normalize( vec3( getOceanWaterHeight_Detail(pos-eps.xyy) - getOceanWaterHeight_Detail(pos+eps.xyy),
-			  	eps.x * 2.0,
-			  	getOceanWaterHeight_Detail(pos-eps.yyx) - getOceanWaterHeight_Detail(pos+eps.yyx) ) );
+	return vec3( getOceanWaterHeight_Detail(pos-eps.xyy) - getOceanWaterHeight_Detail(pos+eps.xyy),
+		     eps.x * 2.0,
+		     getOceanWaterHeight_Detail(pos-eps.yyx) - getOceanWaterHeight_Detail(pos+eps.yyx) );
 }
 
 
@@ -368,7 +368,7 @@ vec3 CalculateRadiance()
 		
 		
 		// useful data 
-		n = hitNormal;
+		n = normalize(hitNormal);
                 nl = dot(n, rayDirection) < 0.0 ? n : -n;
 		x = rayOrigin + rayDirection * t;
 		
