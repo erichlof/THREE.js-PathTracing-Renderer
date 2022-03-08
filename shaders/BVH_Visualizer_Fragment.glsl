@@ -125,7 +125,7 @@ float SceneIntersect( out bool finalIsRayExiting )
 		if (d < t)
 		{
 			t = d;
-			hitNormal = normalize(normal);
+			hitNormal = normal;
 			hitEmission = boxes[i].emission;
 			hitColor = boxes[i].color;
 			hitType = boxes[i].type;
@@ -303,7 +303,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		
 		// useful data 
 		n = normalize(hitNormal);
-                nl = dot(n, rayDirection) < 0.0 ? normalize(n) : normalize(-n);
+                nl = dot(n, rayDirection) < 0.0 ? n : -n;
 		x = rayOrigin + rayDirection * t;
 
 		if (bounces == 0)
