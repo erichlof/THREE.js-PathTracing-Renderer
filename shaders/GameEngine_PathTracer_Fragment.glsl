@@ -94,7 +94,7 @@ float SceneIntersect(out bool finalIsRayExiting)
 		if (d < t)
 		{
 			t = d;
-			hitNormal = normalize((rayOrigin + rayDirection * t) - spheres[i].position);
+			hitNormal = (rayOrigin + rayDirection * t) - spheres[i].position;
 			hitEmission = spheres[i].emission;
 			hitColor = spheres[i].color;
 			hitType = spheres[i].type;
@@ -109,7 +109,7 @@ float SceneIntersect(out bool finalIsRayExiting)
 		if (d < t)
 		{
 			t = d;
-			hitNormal = normalize(n);
+			hitNormal = n;
 			hitEmission = boxes[i].emission;
 			hitColor = boxes[i].color;
 			hitType = boxes[i].type;
@@ -123,8 +123,8 @@ float SceneIntersect(out bool finalIsRayExiting)
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize( ((rayOrigin + rayDirection * t) - 
-			ellipsoids[0].position) / (ellipsoids[0].radii * ellipsoids[0].radii) );
+		hitNormal = ((rayOrigin + rayDirection * t) - 
+			ellipsoids[0].position) / (ellipsoids[0].radii * ellipsoids[0].radii);
 		hitEmission = ellipsoids[0].emission;
 		hitColor = ellipsoids[0].color;
 		hitType = ellipsoids[0].type;
@@ -136,7 +136,7 @@ float SceneIntersect(out bool finalIsRayExiting)
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(n);
+		hitNormal = n;
 		hitEmission = paraboloids[0].emission;
 		hitColor = paraboloids[0].color;
 		hitType = paraboloids[0].type;
@@ -148,7 +148,7 @@ float SceneIntersect(out bool finalIsRayExiting)
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(n);
+		hitNormal = n;
 		hitEmission = openCylinders[0].emission;
 		hitColor = openCylinders[0].color;
 		hitType = openCylinders[0].type;
@@ -160,7 +160,7 @@ float SceneIntersect(out bool finalIsRayExiting)
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(n);
+		hitNormal = n;
 		hitEmission = cappedCylinders[0].emission;
 		hitColor = cappedCylinders[0].color;
 		hitType = cappedCylinders[0].type;
@@ -172,7 +172,7 @@ float SceneIntersect(out bool finalIsRayExiting)
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(n);
+		hitNormal = n;
 		hitEmission = cones[0].emission;
 		hitColor = cones[0].color;
 		hitType = cones[0].type;
@@ -184,7 +184,7 @@ float SceneIntersect(out bool finalIsRayExiting)
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(n);
+		hitNormal = n;
 		hitEmission = capsules[0].emission;
 		hitColor = capsules[0].color;
 		hitType = capsules[0].type;
@@ -204,7 +204,7 @@ float SceneIntersect(out bool finalIsRayExiting)
 		vec3 hit = rObjOrigin + rObjDirection * t;
 		n = calcNormal_Torus(hit);
 		// transfom normal back into world space
-		hitNormal = normalize(transpose(mat3(uTorusInvMatrix)) * n);
+		hitNormal = transpose(mat3(uTorusInvMatrix)) * n;
 		hitEmission = torii[0].emission;
 		hitColor = torii[0].color;
 		hitType = torii[0].type;
@@ -261,7 +261,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 		// useful data 
 		n = normalize(hitNormal);
-                nl = dot(n, rayDirection) < 0.0 ? normalize(n) : normalize(-n);
+                nl = dot(n, rayDirection) < 0.0 ? n : -n;
 		x = rayOrigin + rayDirection * t;
 
 		if (bounces == 0)
