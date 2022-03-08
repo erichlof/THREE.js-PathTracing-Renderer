@@ -64,7 +64,7 @@ float SceneIntersect( )
 		if (d < t)
 		{
 			t = d;
-			hitNormal = normalize((rayOrigin + rayDirection * t) - spheres[i].position);
+			hitNormal = (rayOrigin + rayDirection * t) - spheres[i].position;
 			hitEmission = spheres[i].emission;
 			hitColor = spheres[i].color;
 			hitType = spheres[i].type;
@@ -79,7 +79,7 @@ float SceneIntersect( )
 		if (d < t)
 		{
 			t = d;
-			hitNormal = normalize( ((rayOrigin + rayDirection * t) - ellipsoids[i].position) / (ellipsoids[i].radii * ellipsoids[i].radii) );
+			hitNormal = ((rayOrigin + rayDirection * t) - ellipsoids[i].position) / (ellipsoids[i].radii * ellipsoids[i].radii);
 			hitEmission = ellipsoids[i].emission;
 			hitColor = ellipsoids[i].color;
 			hitType = ellipsoids[i].type;
@@ -95,7 +95,7 @@ float SceneIntersect( )
 		if (d < t)
 		{
 			t = d;
-			hitNormal = normalize(n);
+			hitNormal = n;
 			hitEmission = boxes[i].emission;
 			hitColor = boxes[i].color;
 			hitType = boxes[i].type;
@@ -110,7 +110,7 @@ float SceneIntersect( )
 		if (d < t)
 		{
 			t = d;
-			hitNormal = normalize(rectangles[i].normal);
+			hitNormal = rectangles[i].normal;
 			hitEmission = rectangles[i].emission;
 			hitColor = rectangles[i].color;
 			hitType = rectangles[i].type;
@@ -196,7 +196,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 		// useful data 
 		n = normalize(hitNormal);
-                nl = dot(n, rayDirection) < 0.0 ? normalize(n) : normalize(-n);
+                nl = dot(n, rayDirection) < 0.0 ? n : -n;
 		x = rayOrigin + rayDirection * t;
 
 		if (bounces == 0)
@@ -353,9 +353,9 @@ void SetupScene(void)
 	boxes[4] = Box( vec3( -80,   0, -10), vec3( -40, 10,  30), z, diffuseColor, DIFF);//Short Box Platform Left Near
 	boxes[5] = Box( vec3(-500, -10,-500), vec3( 500,  0, 500), z, vec3(1.0, 0.55, 0.07), DIFF);//Yellowish Large Floor Box
 
-	rectangles[0] = Rectangle( vec3( 10, 200,  50), normalize(vec3( 0, -1,  0)),  6.0,  6.0, L1, z, LIGHT);// Area Light Rect Overhead 
-	rectangles[1] = Rectangle( vec3(200, 110,  70), normalize(vec3(-1,  0,  0)), 13.0, 13.0, L2, z, LIGHT);// Area Light Rect Right
-	rectangles[2] = Rectangle( vec3(-10, 220,-200), normalize(vec3( 0, -1,  0)), 10.0, 10.0, L3, z, LIGHT);// Area Light Rect Far
+	rectangles[0] = Rectangle( vec3( 10, 200,  50), vec3( 0, -1,  0),  6.0,  6.0, L1, z, LIGHT);// Area Light Rect Overhead 
+	rectangles[1] = Rectangle( vec3(200, 110,  70), vec3(-1,  0,  0), 13.0, 13.0, L2, z, LIGHT);// Area Light Rect Right
+	rectangles[2] = Rectangle( vec3(-10, 220,-200), vec3( 0, -1,  0), 10.0, 10.0, L3, z, LIGHT);// Area Light Rect Far
 }
 
 
