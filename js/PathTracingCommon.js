@@ -2197,10 +2197,10 @@ vec3 calcNormal_Torus( in vec3 pos )
 {
 	// epsilon = a small number
 	vec2 e = vec2(1.0,-1.0)*0.5773*0.0002;
-	return normalize( e.xyy*map_Torus( pos + e.xyy ) + 
-			  e.yyx*map_Torus( pos + e.yyx ) + 
-			  e.yxy*map_Torus( pos + e.yxy ) + 
-			  e.xxx*map_Torus( pos + e.xxx ) );
+	return ( e.xyy*map_Torus( pos + e.xyy ) + 
+		 e.yyx*map_Torus( pos + e.yyx ) + 
+		 e.yxy*map_Torus( pos + e.yxy ) + 
+		 e.xxx*map_Torus( pos + e.xxx ) );
 }
 /* 
 Thanks to koiava for the ray marching strategy! https://www.shadertoy.com/user/koiava 
@@ -2430,22 +2430,26 @@ float RayleighPhase(float cosTheta)
 {
 	return THREE_OVER_SIXTEENPI * (1.0 + (cosTheta * cosTheta));
 }
+
 float hgPhase(float cosTheta, float g)
 {
         float g2 = g * g;
         float inverse = 1.0 / pow(max(0.0, 1.0 - 2.0 * g * cosTheta + g2), 1.5);
 	return ONE_OVER_FOURPI * ((1.0 - g2) * inverse);
 }
+
 vec3 totalMie()
 {
 	float c = (0.2 * TURBIDITY) * 10E-18;
 	return 0.434 * c * MIE_CONST;
 }
+
 float SunIntensity(float zenithAngleCos)
 {
 	zenithAngleCos = clamp( zenithAngleCos, -1.0, 1.0 );
 	return SUN_POWER * max( 0.0, 1.0 - pow( E, -( ( CUTOFF_ANGLE - acos( zenithAngleCos ) ) / STEEPNESS ) ) );
 }
+
 vec3 Get_Sky_Color(vec3 rayDir)
 {
 	vec3 viewDirection = normalize(rayDir);
@@ -2520,6 +2524,7 @@ float rng()
     	uint  n = 1103515245U * ( (q.x) ^ (q.y >> 3U) );
 	return float(n) * (1.0 / float(0xffffffffU));
 }
+
 vec3 randomSphereDirection()
 {
     	float up = rng() * 2.0 - 1.0; // range: -1 to +1
@@ -2527,6 +2532,7 @@ vec3 randomSphereDirection()
 	float around = rng() * TWO_PI;
 	return normalize(vec3(cos(around) * over, up, sin(around) * over));	
 }
+
 vec3 randomDirectionInHemisphere(vec3 nl)
 {
 	float r = rng();
@@ -2539,6 +2545,7 @@ vec3 randomDirectionInHemisphere(vec3 nl)
 	vec3 V = cross(nl, U);
 	return normalize(x * U + y * V + z * nl);
 }
+
 vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 {
 	float r = sqrt(rng());
@@ -2550,6 +2557,24 @@ vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 	vec3 V = cross(nl, U);
 	return normalize(x * U + y * V + z * nl);
 }
+
+/* vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
+{
+	float r = sqrt(rng());
+	float phi = rng() * TWO_PI;
+	float x = r * cos(phi);
+	float y = r * sin(phi);
+	float z = sqrt(1.0 - x*x - y*y);
+	// the following is from "Building an Orthonormal Basis, Revisited" http://jcgt.org/published/0006/01/01/
+	//float signf = nl.z >= 0.0 ? 1.0 : -1.0;
+	float signf = step(0.0, nl.z) * 2.0 - 1.0;
+	float a = -1.0 / (signf + nl.z);
+	float b = nl.x * nl.y * a;
+	vec3 T = vec3( 1.0 + signf * nl.x * nl.x * a, signf * b, -signf * nl.x );
+	vec3 B = vec3( b, signf + nl.y * nl.y * a, -nl.y );
+	
+	return normalize(x * T + y * B + z * nl);
+} */
 
 // #define N_POINTS 32.0
 // vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
