@@ -217,7 +217,7 @@ vec3 terrain_calcNormal( vec3 pos, float t )
 
 	vec3 xVec = normalize(xPos - xNeg);
 	vec3 zVec = normalize(zPos - zNeg); 
-	return normalize(cross(zVec, xVec));
+	return (cross(zVec, xVec));
 }
 
 bool terrain_isSunVisible( vec3 pos, vec3 n, vec3 dirToLight)
@@ -363,7 +363,7 @@ vec3 water_calcNormal( vec3 pos, float t )
 	
 	vec3 xVec = normalize(xPos - xNeg);
 	vec3 zVec = normalize(zPos - zNeg); 
-	return normalize(cross(zVec, xVec));
+	return (cross(zVec, xVec));
 }
 
 float WaterIntersect()
@@ -403,7 +403,7 @@ float SceneIntersect( bool checkWater )
 		if (d < t)
 		{
 			t = d;
-			hitNormal = normalize((rayOrigin + rayDirection * t) - spheres[i].position);
+			hitNormal = (rayOrigin + rayDirection * t) - spheres[i].position;
 			hitEmission = spheres[i].emission;
 			hitColor = spheres[i].color;
 			hitType = spheres[i].type;
@@ -557,7 +557,7 @@ vec3 CalculateRadiance()
 
 		
 		// useful data 
-		n = hitNormal;
+		n = normalize(hitNormal);
                 nl = dot(n, rayDirection) < 0.0 ? n : -n;
 		x = rayOrigin + rayDirection * t;
 
