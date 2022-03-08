@@ -135,7 +135,7 @@ float SceneIntersect( out bool isRayExiting )
 		if (d < t)
 		{
 			t = d;
-			hitNormal = normalize(normal);
+			hitNormal = normal;
 			hitEmission = boxes[i].emission;
 			hitColor = boxes[i].color;
 			hitType = boxes[i].type;
@@ -148,7 +148,7 @@ float SceneIntersect( out bool isRayExiting )
 	if (d < t)
 	{
 		t = d;
-		hitNormal = dot(diskNormal, rayDirection) <= 0.0 ? normalize(diskNormal) : normalize(diskNormal * -1.0);
+		hitNormal = dot(diskNormal, rayDirection) <= 0.0 ? diskNormal : -diskNormal;
 		hitEmission = diskEmission;
 		hitPos = rayOrigin + rayDirection * t;
 		toLightBulb = normalize(spheres[1].position - hitPos);
@@ -171,7 +171,7 @@ float SceneIntersect( out bool isRayExiting )
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(normal);
+		hitNormal = normal;
 		hitEmission = openCylinderEmission;
 		hitPos = rayOrigin + rayDirection * t;
 		toLightBulb = normalize(spheres[1].position - hitPos);
@@ -311,7 +311,7 @@ float SceneIntersect( out bool isRayExiting )
 		
 		// interpolated normal using triangle intersection's uv's
 		triangleW = 1.0 - triangleU - triangleV;
-		hitNormal = normalize(triangleW * vec3(vd2.yzw) + triangleU * vec3(vd3.xyz) + triangleV * vec3(vd3.w, vd4.xy));
+		hitNormal = (triangleW * vec3(vd2.yzw) + triangleU * vec3(vd3.xyz) + triangleV * vec3(vd3.w, vd4.xy));
 		hitEmission = vec3(1, 0, 1); // use this if hitType will be LIGHT
 		hitColor = vd6.yzw;
 		hitUV = triangleW * vec2(vd4.zw) + triangleU * vec2(vd5.xy) + triangleV * vec2(vd5.zw);
@@ -377,7 +377,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 		// useful data 
 		n = normalize(hitNormal);
-                nl = dot(n, rayDirection) < 0.0 ? normalize(n) : normalize(-n);
+                nl = dot(n, rayDirection) < 0.0 ? n : -n;
 		x = rayOrigin + rayDirection * t;
 
 		if (bounces == 0)
