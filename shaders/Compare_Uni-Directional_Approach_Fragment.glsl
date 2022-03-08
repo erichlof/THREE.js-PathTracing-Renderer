@@ -47,7 +47,7 @@ float SceneIntersect( )
 		if (d < t)
 		{
 			t = d;
-			hitNormal = normalize(quads[i].normal);
+			hitNormal = quads[i].normal;
 			hitEmission = quads[i].emission;
 			hitColor = quads[i].color;
 			hitType = quads[i].type;
@@ -60,7 +60,7 @@ float SceneIntersect( )
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(normal);
+		hitNormal = normal;
 		hitEmission = boxes[2].emission;
 		hitColor = boxes[2].color;
 		hitType = boxes[2].type;
@@ -79,8 +79,8 @@ float SceneIntersect( )
 		t = d;
 		
 		// transfom normal back into world space
-		normal = normalize(normal);
-		hitNormal = normalize(transpose(mat3(uTallBoxInvMatrix)) * normal);
+		normal = normal;
+		hitNormal = transpose(mat3(uTallBoxInvMatrix)) * normal;
 		hitEmission = boxes[0].emission;
 		hitColor = boxes[0].color;
 		hitType = boxes[0].type;
@@ -99,8 +99,8 @@ float SceneIntersect( )
 		t = d;
 		
 		// transfom normal back into world space
-		normal = normalize(normal);
-		hitNormal = normalize(transpose(mat3(uShortBoxInvMatrix)) * normal);
+		normal = normal;
+		hitNormal = transpose(mat3(uShortBoxInvMatrix)) * normal;
 		hitEmission = boxes[1].emission;
 		hitColor = boxes[1].color;
 		hitType = boxes[1].type;
@@ -140,7 +140,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		
 		// useful data 
 		n = normalize(hitNormal);
-                nl = dot(n, rayDirection) < 0.0 ? normalize(n) : normalize(-n);
+                nl = dot(n, rayDirection) < 0.0 ? n : -n;
 		x = rayOrigin + rayDirection * t;
 
 		// if (diffuseCount == 0)
