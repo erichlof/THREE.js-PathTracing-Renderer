@@ -70,10 +70,10 @@ Box boxes[N_BOXES];
 
 vec3 perturbNormal(vec3 nl, vec2 normalScale, vec2 uv)
 {
-	
+	// note: incoming vec3 nl is assumed to be normalized
         vec3 S = normalize( cross( abs(nl.y) < 0.9 ? vec3(0, 1, 0) : vec3(1, 0, 0), nl ) );
         vec3 T = cross(nl, S);
-        vec3 N = normalize( nl );
+        vec3 N = nl;
 	// invert S, T when the UV direction is backwards (from mirrored faces),
 	// otherwise it will do the normal mapping backwards.
 	vec3 NfromST = cross( S, T );
@@ -85,7 +85,7 @@ vec3 perturbNormal(vec3 nl, vec2 normalScale, vec2 uv)
         mat3 tsn = mat3( S, T, N );
 
 	vec3 mapN = texture(tNormalMap, uv).xyz * 2.0 - 1.0;
-	mapN = normalize(mapN);
+	//mapN = normalize(mapN);
         mapN.xy *= normalScale;
         
         return normalize( tsn * mapN );
@@ -167,7 +167,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out bool isRayExiting, 
 		if (d < t)
 		{
 			t = d;
-			hitNormal = normalize(normal);
+			hitNormal = normal;
 			hitEmission = boxes[i].emission;
 			hitColor = boxes[i].color;
 			hitType = boxes[i].type;
@@ -180,7 +180,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out bool isRayExiting, 
 	if (d < t)
 	{
 		t = d;
-		hitNormal = dot(diskNormal, rayDirection) <= 0.0 ? normalize(diskNormal) : normalize(diskNormal * -1.0);
+		hitNormal = dot(diskNormal, rayDirection) <= 0.0 ? diskNormal : -diskNormal;
 		hitEmission = diskEmission;
 		hitPos = rayOrigin + rayDirection * t;
 		toLightBulb = normalize(spheres[1].position - hitPos);
@@ -203,7 +203,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out bool isRayExiting, 
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(normal);
+		hitNormal = normal;
 		hitEmission = openCylinderEmission;
 		hitPos = rayOrigin + rayDirection * t;
 		toLightBulb = normalize(spheres[1].position - hitPos);
@@ -353,7 +353,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out bool isRayExiting, 
 		normal = perturbNormal(normal, vec2(1.0, 1.0), hitUV);
 
 		// transform normal back into world space
-		hitNormal = normalize(transpose(mat3(uGLTF_Model_InvMatrix)) * normal);
+		hitNormal = transpose(mat3(uGLTF_Model_InvMatrix)) * normal;
 		hitEmission = vec3(1, 0, 1); // use this if intersec.type will be LIGHT
 		hitColor = vd6.yzw;
 		
@@ -422,7 +422,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 		// useful data 
 		n = normalize(hitNormal);
-                nl = dot(n, rayDirection) < 0.0 ? normalize(n) : normalize(-n);
+                nl = dot(n, rayDirection) < 0.0 ? n : -n;
 		x = rayOrigin + rayDirection * t;
 
 		if (bounces == 0)
