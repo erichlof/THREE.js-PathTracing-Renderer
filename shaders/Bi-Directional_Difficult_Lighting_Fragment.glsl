@@ -64,10 +64,10 @@ Box boxes[N_BOXES];
 
 vec3 perturbNormal(vec3 nl, vec2 normalScale, vec2 uv)
 {
-	
+	// note: incoming vec3 nl is assumed to be normalized
         vec3 S = normalize( cross( abs(nl.y) < 0.9 ? vec3(0, 1, 0) : vec3(1, 0, 0), nl ) );
         vec3 T = cross(nl, S);
-        vec3 N = normalize( nl );
+        vec3 N = nl;
 	// invert S, T when the UV direction is backwards (from mirrored faces),
 	// otherwise it will do the normal mapping backwards.
 	vec3 NfromST = cross( S, T );
@@ -79,7 +79,7 @@ vec3 perturbNormal(vec3 nl, vec2 normalScale, vec2 uv)
         mat3 tsn = mat3( S, T, N );
 
 	vec3 mapN = texture(tHammeredMetalNormalMapTexture, uv).xyz * 2.0 - 1.0;
-	mapN = normalize(mapN);
+	//mapN = normalize(mapN);
         mapN.xy *= normalScale;
         
         return normalize( tsn * mapN );
@@ -155,7 +155,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, bool checkModels )
 			}
 			
 			t = d;
-			hitNormal = normalize( quads[i].normal );
+			hitNormal = quads[i].normal;
 			hitEmission = quads[i].emission;
 			hitColor = quads[i].color;
 			hitType = quads[i].type;
@@ -171,7 +171,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, bool checkModels )
 		if (d < t)
 		{
 			t = d;
-			hitNormal = normalize(normal);
+			hitNormal = normal;
 			hitEmission = boxes[i].emission;
 			hitColor = boxes[i].color;
 			hitType = boxes[i].type;
@@ -193,7 +193,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, bool checkModels )
 		t = d;
 		
 		// transfom normal back into world space
-		hitNormal = normalize(transpose(mat3(uDoorObjectInvMatrix)) * normal);
+		hitNormal = transpose(mat3(uDoorObjectInvMatrix)) * normal;
 		hitEmission = boxes[9].emission;
 		hitColor = boxes[9].color;
 		hitType = boxes[9].type;
@@ -208,7 +208,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, bool checkModels )
 		if (d < t)
 		{
 			t = d;
-			hitNormal = normalize(normal);
+			hitNormal = normal;
 			hitEmission = openCylinders[i].emission;
 			hitColor = openCylinders[i].color;
 			hitType = openCylinders[i].type;
@@ -225,8 +225,8 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, bool checkModels )
 		{
 			t = d;
 
-			normal = normalize((rObjOrigin + rObjDirection * t) - spheres[i].position);
-			hitNormal = normalize(transpose(mat3(uDoorObjectInvMatrix)) * normal);
+			normal = (rObjOrigin + rObjDirection * t) - spheres[i].position;
+			hitNormal = transpose(mat3(uDoorObjectInvMatrix)) * normal;
 			hitEmission = spheres[i].emission;
 			hitColor = spheres[i].color;
 			hitType = spheres[i].type;
@@ -547,11 +547,11 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, bool checkModels )
 
 	
 		// face normal for flat-shaded polygon look
-		//hitNormal = normalize( cross(vec3(vd0.w, vd1.xy) - vec3(vd0.xyz), vec3(vd1.zw, vd2.x) - vec3(vd0.xyz)) );
+		//hitNormal = ( cross(vec3(vd0.w, vd1.xy) - vec3(vd0.xyz), vec3(vd1.zw, vd2.x) - vec3(vd0.xyz)) );
 		
 		// interpolated normal using triangle intersection's uv's
 		triangleW = 1.0 - triangleU - triangleV;
-		hitNormal = normalize(triangleW * vec3(vd2.yzw) + triangleU * vec3(vd3.xyz) + triangleV * vec3(vd3.w, vd4.xy));
+		hitNormal = (triangleW * vec3(vd2.yzw) + triangleU * vec3(vd3.xyz) + triangleV * vec3(vd3.w, vd4.xy));
 		hitEmission = vec3(1, 0, 1); // use this if intersec.type will be LIGHT
 		//hitColor = vd6.yzw;
 		hitUV = triangleW * vec2(vd4.zw) + triangleU * vec2(vd5.xy) + triangleV * vec2(vd5.zw);
@@ -628,7 +628,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	randPointOnLight.y = mix(quads[0].v0.y, quads[0].v3.y, rng());
 	randPointOnLight.z = quads[0].v0.z;
 	vec3 lightHitPos = randPointOnLight;
-	vec3 lightNormal = normalize(quads[0].normal);
+	vec3 lightNormal = quads[0].normal;
 	
 	rayDirection = randomCosWeightedDirectionInHemisphere(lightNormal);
 	rayOrigin = randPointOnLight + lightNormal * uEPS_intersect; // move light ray out to prevent self-intersection with light
@@ -664,7 +664,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		
 		// useful data 
 		n = normalize(hitNormal);
-                nl = dot(n, rayDirection) < 0.0 ? normalize(n) : normalize(-n);
+                nl = dot(n, rayDirection) < 0.0 ? n : -n;
 		x = rayOrigin + rayDirection * t;
 
 		if (bounces == 0)
@@ -692,7 +692,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			
 			if (ableToJoinPaths)
 			{
-				weight = max(0.0, dot(normalize(hitNormal), -rayDirection));
+				weight = max(0.0, dot(n, -rayDirection));
 				accumCol = mask * lightHitEmission * weight;
 			}
 
