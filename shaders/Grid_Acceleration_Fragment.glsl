@@ -46,7 +46,7 @@ bool rayAABBIntersection( vec3 rayOrigin, vec3 rayDirection, vec3 aabbMin, vec3 
 
 vec3 getTriangleNormal(vec3 v0, vec3 v1, vec3 v2) 
 {
-	return normalize(cross(v1 - v0, v2 - v0));
+	return cross(v1 - v0, v2 - v0);
 }
 
 
@@ -175,8 +175,6 @@ bool processVoxel(vec3 rayOrigin, vec3 rayDirection, vec3 p, out float t, out ve
 
 bool processVoxelsOnLine(vec3 rayOrigin, vec3 rayDirection, vec3 p0, vec3 p1, out float t, out vec3 normal) 
 {
-	rayDirection = normalize(rayDirection);
-
 	float tMaxX, tMaxY, tMaxZ, tDeltaX, tDeltaY, tDeltaZ;
 	ivec3 voxel;  
 
@@ -272,15 +270,16 @@ vec3 getColor()
 	if (!rayIntersectsDisplacement(rayOrigin, rayDirection, t, n)) 
 		return vec3(0); 
 	
+	n = normalize(n);
 	vec3 p = rayOrigin + rayDirection * t;
-	vec3 normal = dot(rayDirection, n) < 0.0 ? normalize(n) : normalize(-n);
+	vec3 normal = dot(rayDirection, n) < 0.0 ? n : -n;
 
 	vec3 lc = normalize(vec3(1.0, 1.0, 1.0));
 
 	float dotNL = dot(normal, lc);
 	if (dotNL < 0.0) 
 		return vec3(0.01); //fake indirect
-	vec3 shadowRayDirection = normalize(lc);
+	vec3 shadowRayDirection = lc;
 	vec3 shadowRayOrigin = p + normal * 0.01;
 
 	if (!rayIntersectsDisplacement(shadowRayOrigin, shadowRayDirection, t, n)) 
