@@ -57,7 +57,7 @@ float SceneIntersect( )
 		if (d < t)
 		{
 			t = d;
-			hitNormal = normalize((rayOrigin + rayDirection * t) - spheres[i].position);
+			hitNormal = (rayOrigin + rayDirection * t) - spheres[i].position;
 			hitEmission = spheres[i].emission;
 			hitColor = spheres[i].color;
                         hitType = spheres[i].type;
@@ -72,7 +72,7 @@ float SceneIntersect( )
 		if (d < t)
 		{
 			t = d;
-			hitNormal = normalize(quads[i].normal);
+			hitNormal = quads[i].normal;
 			hitEmission = quads[i].emission;
 			hitColor = quads[i].color;
 			hitType = quads[i].type;
@@ -127,7 +127,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 		// useful data 
 		n = normalize(hitNormal);
-                nl = dot(n, rayDirection) < 0.0 ? normalize(n) : normalize(-n);
+                nl = dot(n, rayDirection) < 0.0 ? n : -n;
 		x = rayOrigin + rayDirection * t;
 
 		if (bounces == 0)
@@ -366,7 +366,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			{
 				mask *= exp(-absorptionCoefficient * t);
 				
-				rayDirection = normalize(rayDirection);
+				rayDirection = rayDirection;
 				rayOrigin = x + rayDirection * scatteringDistance;
 				continue;
 			}
@@ -434,7 +434,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			{
 				mask *= exp(-absorptionCoefficient * t);
 
-				rayDirection = normalize(rayDirection);
+				rayDirection = rayDirection;
 				rayOrigin = x + rayDirection * scatteringDistance;
 				continue;
 			}
