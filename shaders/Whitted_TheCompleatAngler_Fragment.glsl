@@ -322,28 +322,27 @@ void main( void )
         // perform path tracing and get resulting pixel color
         vec3 pixelColor = CalculateRadiance();
         
-	vec4 previousImage = texelFetch(tPreviousTexture, ivec2(gl_FragCoord.xy), 0);
-	vec3 previousColor = previousImage.rgb;
+	vec3 previousColor = texelFetch(tPreviousTexture, ivec2(gl_FragCoord.xy), 0).rgb;
 
         
-	if (uCameraIsMoving)// || previousImage.a > 0.0)
+	if (uCameraIsMoving)
 	{
                 previousColor *= 0.5; // motion-blur trail amount (old image)
                 pixelColor *= 0.5; // brightness of new image (noisy)
         }
 	else
 	{
-                previousColor *= 0.5; // motion-blur trail amount (old image)
-                pixelColor *= 0.5; // brightness of new image (noisy)
+                previousColor *= 0.6; // motion-blur trail amount (old image)
+                pixelColor *= 0.4; // brightness of new image (noisy)
         }
 
 	// if current raytraced pixel didn't return any color value, just use the previous frame's pixel color
-	if (pixelColor == vec3(0.0))
+	/* if (pixelColor == vec3(0.0))
 	{
 		pixelColor = previousColor;
 		previousColor *= 0.5;
 		pixelColor *= 0.5;
-	}
+	} */
         
-        pc_fragColor = vec4( pixelColor + previousColor, 1.0);		
+        pc_fragColor = vec4( pixelColor + previousColor, 1.01);		
 }
