@@ -57,6 +57,9 @@ let useGenericInput = true;
 let EPS_intersect;
 let blueNoiseTexture;
 let useToneMapping = true;
+let pixelEdgeSharpness = 1.0;
+let edgeSharpenSpeed = 0.05;
+let filterDecaySpeed = 0.0002;
 
 let gui;
 let ableToEngagePointerLock = true;
@@ -534,8 +537,12 @@ function initTHREEjs()
 	screenOutputGeometry = new THREE.PlaneBufferGeometry(2, 2);
 
 	screenOutputUniforms = {
-		uOneOverSampleCounter: { type: "f", value: 0.0 },
 		tPathTracedImageTexture: { type: "t", value: pathTracingRenderTarget.texture },
+		uSampleCounter: { type: "f", value: 0.0 },
+		uOneOverSampleCounter: { type: "f", value: 0.0 },
+		uPixelEdgeSharpness: { type: "f", value: pixelEdgeSharpness },
+		uEdgeSharpenSpeed: { type: "f", value: edgeSharpenSpeed },
+		uFilterDecaySpeed: { type: "f", value: filterDecaySpeed },
 		uSceneIsDynamic: { type: "b1", value: sceneIsDynamic },
 		uUseToneMapping: { type: "b1", value: useToneMapping }
 	};
@@ -850,9 +857,10 @@ function animate()
 	worldCamera.updateMatrixWorld(true);
 	pathTracingUniforms.uCameraMatrix.value.copy(worldCamera.matrixWorld);
 
+	screenOutputUniforms.uSampleCounter.value = sampleCounter;
 	// PROGRESSIVE SAMPLE WEIGHT (reduces intensity of each successive animation frame's image)
 	screenOutputUniforms.uOneOverSampleCounter.value = 1.0 / sampleCounter;
-
+	
 
 	// RENDERING in 3 steps
 
