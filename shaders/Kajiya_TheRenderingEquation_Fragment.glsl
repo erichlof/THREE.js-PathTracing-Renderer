@@ -183,8 +183,8 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		
 		if (t == INFINITY)
 		{
-			pixelSharpness = diffuseCount == 0 ? 1.0 : 0.0;
-
+			///pixelSharpness = diffuseCount == 0 ? 1.01 : 0.0;
+			
 			skyColor = mix(vec3(0), vec3(0.004, 0.0, 0.04), clamp(exp(rayDirection.y * -15.0), 0.0, 1.0));
 			
 			if (bounceIsSpecular || sampleLight)
@@ -226,6 +226,9 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		    
                 if (hitType == DIFF ) // Ideal DIFFUSE reflection
 		{
+			if (diffuseCount == 0)	
+				objectColor = hitColor;
+
 			diffuseCount++;
 
 			mask *= hitColor;
@@ -255,12 +258,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		
 		if (hitType == REFR)  // Ideal dielectric REFRACTION
 		{
-			if (diffuseCount == 0 && !uCameraIsMoving )
-				pixelSharpness = 1.01;
-			else if (diffuseCount > 0)
-				pixelSharpness = 0.0;
-			else
-				pixelSharpness = -1.0;
+			pixelSharpness = diffuseCount == 0 ? -1.0 : pixelSharpness;
 
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
