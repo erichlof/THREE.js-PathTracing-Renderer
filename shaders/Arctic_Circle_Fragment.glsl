@@ -580,5 +580,5 @@ void main( void )
 		pixelColor *= 0.5;
 	}
 	
-	pc_fragColor = vec4( pixelColor + previousColor, 1.0 );	
+	pc_fragColor = vec4( pixelColor + previousColor, 1.01 );	
 }
