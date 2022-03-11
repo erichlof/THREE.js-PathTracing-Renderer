@@ -30,10 +30,11 @@ function initSceneData()
 
 	// scene/demo-specific three.js objects setup goes here
 	sceneIsDynamic = true;
+	
 	cameraFlightSpeed = 300;
 
 	// pixelRatio is resolution - range: 0.5(half resolution) to 1.0(full resolution)
-	pixelRatio = mouseControl ? 0.7 : 0.7;
+	pixelRatio = mouseControl ? 0.7 : 0.7; // less demanding on battery-powered mobile devices
 
 	EPS_intersect = 0.002;
 
