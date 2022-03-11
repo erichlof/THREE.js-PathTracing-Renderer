@@ -12,6 +12,7 @@ function initSceneData()
 
 	// scene/demo-specific three.js objects setup goes here
 	sceneIsDynamic = true;
+	
 	cameraFlightSpeed = 300;
 
 	// pixelRatio is resolution - range: 0.5(half resolution) to 1.0(full resolution)
