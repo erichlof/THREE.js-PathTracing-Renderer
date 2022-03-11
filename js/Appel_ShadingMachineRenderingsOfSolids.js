@@ -688,6 +688,7 @@ function initSceneData()
 
 	// scene/demo-specific three.js objects setup goes here
 	sceneIsDynamic = false;
+	
 	cameraFlightSpeed = 100;
 
 	// This is a classic black and white digital plotter scene, so we don't have light source values exceeding 1.0.
