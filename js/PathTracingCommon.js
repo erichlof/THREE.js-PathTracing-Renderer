@@ -2560,6 +2560,8 @@ vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 
 /* vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 {
+	float nx = nl.x; float ny = nl.y; float nz = nl.z;
+
 	float r = sqrt(rng());
 	float phi = rng() * TWO_PI;
 	float x = r * cos(phi);
@@ -2567,11 +2569,11 @@ vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 	float z = sqrt(1.0 - x*x - y*y);
 	// the following is from "Building an Orthonormal Basis, Revisited" http://jcgt.org/published/0006/01/01/
 	//float signf = nl.z >= 0.0 ? 1.0 : -1.0;
-	float signf = step(0.0, nl.z) * 2.0 - 1.0;
-	float a = -1.0 / (signf + nl.z);
-	float b = nl.x * nl.y * a;
-	vec3 T = vec3( 1.0 + signf * nl.x * nl.x * a, signf * b, -signf * nl.x );
-	vec3 B = vec3( b, signf + nl.y * nl.y * a, -nl.y );
+	float signf = step(0.0, nz) * 2.0 - 1.0;
+	float a = -1.0 / (signf + nz);
+	float b = nx * ny * a;
+	vec3 T = vec3( 1.0 + signf * nx * nx * a, signf * b, -signf * nx );
+	vec3 B = vec3( b, signf + ny * ny * a, -ny );
 	
 	return normalize(x * T + y * B + z * nl);
 } */
@@ -2723,13 +2725,9 @@ void main( void )
 
 	// rand() produces higher FPS and almost immediate convergence, but may have very slight jagged diagonal edges on higher frequency color patterns, i.e. checkerboards.
 	// rng() has a little less FPS on mobile, and a little more noisy initially, but eventually converges on perfect anti-aliased edges - use this if 'beauty-render' is desired.
-	vec2 pixelOffset;
-	pixelOffset = uFrameCounter < 150.0 ? vec2( tentFilter(rand()), tentFilter(rand()) ) :
-					      vec2( tentFilter(rng()), tentFilter(rng()) );
+	vec2 pixelOffset = uFrameCounter < 150.0 ? vec2( tentFilter(rand()), tentFilter(rand()) ) :
+					      	   vec2( tentFilter(rng()), tentFilter(rng()) );
 	
-	pixelOffset *= uCameraIsMoving ? 0.2 : 1.0;
-		
-
 	// we must map pixelPos into the range -1.0 to +1.0
 	vec2 pixelPos = ((gl_FragCoord.xy + pixelOffset) / uResolution) * 2.0 - 1.0;
 	vec3 rayDir = normalize( pixelPos.x * camRight * uULen + pixelPos.y * camUp * uVLen + camForward );
@@ -2804,23 +2802,19 @@ void main( void )
 		currentPixel.rgb *= 0.5;
 	}
 
-	currentPixel.a = 0.0;
 
 	if (colorDifference >= 1.0 || normalDifference >= 1.0 || objectDifference >= 1.0)
 		pixelSharpness = 1.01;
 
 
-	// Eventually, all edge-containing pixels' .a (alpha channel) values will converge to 1.01, which keeps them from getting blurred by the box-blur filter, thus retaining sharpness.
-	if (pixelSharpness == 1.01)
-		currentPixel.a = 1.01;
-	if (pixelSharpness == -1.0)
-		currentPixel.a = -1.0;
+	currentPixel.a = pixelSharpness;
 
+	// Eventually, all edge-containing pixels' .a (alpha channel) values will converge to 1.01, which keeps them from getting blurred by the box-blur filter, thus retaining sharpness.
 	if (previousPixel.a == 1.01)
 		currentPixel.a = 1.01;
+
 	// if (previousPixel.a == -1.0)
 	// 	currentPixel.a = 0.0;
-
 
 	pc_fragColor = vec4(previousPixel.rgb + currentPixel.rgb, currentPixel.a);
 }
