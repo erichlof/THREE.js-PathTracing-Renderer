@@ -437,12 +437,11 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		{	
 			if (diffuseCount == 0)
 				pixelSharpness = 1.01;
-			else pixelSharpness = 0.0;
 			
 			if (bounceIsSpecular)
 			{
 				if (bounces == 0) // looking directly at light
-					accumCol = mask * clamp(hitEmission, 0.0, 20.0);
+					accumCol = mask * clamp(hitEmission, 0.0, 10.0);
 				else if (bounces == 1) // single bounce reflection or refraction
 					accumCol = mask * clamp(hitEmission, 0.0, 20.0);
 				else // caustic
@@ -550,12 +549,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
                 if (hitType == REFR)  // Ideal dielectric REFRACTION
 		{
-			if (diffuseCount == 0 && !coatTypeIntersected && !uCameraIsMoving )
-				pixelSharpness = 1.01;
-			else if (diffuseCount > 0)
-				pixelSharpness = 0.0;
-			else
-				pixelSharpness = -1.0;
+			pixelSharpness = diffuseCount == 0 ? -1.0 : pixelSharpness;
 
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
@@ -787,25 +781,19 @@ void main( void )
 		currentPixel.rgb *= 0.5;
 	}
 
-	currentPixel.a = 0.0;
 	if (colorDifference >= 1.0 || normalDifference >= 1.0 || objectDifference >= 1.0)
 		pixelSharpness = 1.01;
 
-	
-	// Eventually, all edge-containing pixels' .a (alpha channel) values will converge to 1.01, which keeps them from getting blurred by the box-blur filter, thus retaining sharpness.
+	currentPixel.a = pixelSharpness;
+
+	// makes sharp edges more stable
 	if (previousPixel.a == 1.01)
 		currentPixel.a = 1.01;
-	// for dynamic scenes
-	if (previousPixel.a == 1.01 && rng() < 0.1)
-		currentPixel.a = 1.0;
-	if (previousPixel.a == -1.0)
-		currentPixel.a = 0.0;
 
-	if (pixelSharpness == 1.01)
-		currentPixel.a = 1.01;
-	if (pixelSharpness == -1.0)
-		currentPixel.a = -1.0;
-	
+	// for dynamic scenes (to clear out old, dark, sharp pixel trails left behind from moving objects)
+	if (previousPixel.a == 1.01 && rng() < 0.05)
+		currentPixel.a = 1.0;
+
 	
 	pc_fragColor = vec4(previousPixel.rgb + currentPixel.rgb, currentPixel.a);
 }
