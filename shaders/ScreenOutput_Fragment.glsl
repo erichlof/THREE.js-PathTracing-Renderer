@@ -2,10 +2,14 @@ precision highp float;
 precision highp int;
 precision highp sampler2D;
 
+uniform sampler2D tPathTracedImageTexture;
+uniform float uSampleCounter;
+uniform float uOneOverSampleCounter;
+uniform float uPixelEdgeSharpness;
+uniform float uEdgeSharpenSpeed;
+uniform float uFilterDecaySpeed;
 uniform bool uSceneIsDynamic;
 uniform bool uUseToneMapping;
-uniform float uOneOverSampleCounter;
-uniform sampler2D tPathTracedImageTexture;
 
 
 void main()
@@ -198,7 +202,7 @@ void main()
 	m9[7] = m25[17];
 	m9[8] = m25[18];
 
-	if (centerPixel.a > 0.0 || centerPixel.a == -1.0)
+	if (centerPixel.a == -1.0)
 	{
 		// reset variables
 		centerPixel = m9[4];
@@ -259,24 +263,34 @@ void main()
 
 		filteredPixelColor /= float(count);
 
-	} // end if (centerPixel.a > 0.0)
+	} // end if (centerPixel.a == -1.0)
 
-
-	// gives sharper edges between surface areas of differing colors,
-	// and to edges/boundries of area light sources (spheres, quads, etc.)
-	if (centerPixel.a == 1.01) 
+	
+	if ( !uSceneIsDynamic ) // static scene
 	{
-		filteredPixelColor = mix(centerPixel.rgb, filteredPixelColor, uOneOverSampleCounter);
-
-		filteredPixelColor = uSceneIsDynamic ? mix(centerPixel.rgb, filteredPixelColor, 0.75) : filteredPixelColor;
-
-		filteredPixelColor = (uOneOverSampleCounter < 0.01) ? centerPixel.rgb : filteredPixelColor;
+		// fast progressive convergence from filtered (blurred) pixels to their original sharp center pixel colors  
+		if (uSampleCounter > 1.0) // is camera still?
+		{
+			if (centerPixel.a == 1.01) // 1.01 means pixel is on an edge, must get sharper quickest
+				filteredPixelColor = mix(filteredPixelColor, centerPixel.rgb, clamp(uSampleCounter * uEdgeSharpenSpeed, 0.0, 1.0));
+			else if (centerPixel.a == -1.0) // -1.0 means glass / transparent surfaces, must get sharper fairly quickly
+				filteredPixelColor = mix(filteredPixelColor, centerPixel.rgb, clamp(uSampleCounter * 0.01, 0.0, 1.0));
+			else // else this is a diffuse surface, so we can take our time converging. That way, there will be minimal noise 
+				filteredPixelColor = mix(filteredPixelColor, centerPixel.rgb, clamp(uSampleCounter * uFilterDecaySpeed, 0.0, 1.0));
+		} // else camera is moving
+		else if (centerPixel.a == 1.01) // 1.01 means pixel is on an edge, must remain sharper
+		{
+			filteredPixelColor = mix(filteredPixelColor, centerPixel.rgb, 0.5);
+		}
 	}
-
-	// after 2000 samples, we can safely disable all noise filtering / blurring
-	filteredPixelColor = (uOneOverSampleCounter < 0.0005) ? centerPixel.rgb : filteredPixelColor;
-
-
+	else // scene is dynamic
+	{
+		if (centerPixel.a == 1.01) // 1.01 means pixel is on an edge, must remain sharper
+		{
+			filteredPixelColor = mix(filteredPixelColor, centerPixel.rgb, uPixelEdgeSharpness);
+		}
+	}
+	
 	// final filteredPixelColor processing ////////////////////////////////////
 
 	// average accumulation buffer
