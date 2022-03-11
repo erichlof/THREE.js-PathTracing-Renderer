@@ -276,10 +276,6 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		
 		if (hitType == LIGHT)
 		{	
-			if (diffuseCount == 0)
-				pixelSharpness = 1.01;
-			else pixelSharpness = 0.0;
-			
 			if (bounceIsSpecular || sampleLight)
 				accumCol = mask * hitEmission;
 			// reached a light, so we can exit
@@ -346,10 +342,6 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		
 		if (hitType == REFR)  // Ideal dielectric REFRACTION
 		{
-			// use the following simplified check if scene is dynamic
-			if (bounces == 0)
-				pixelSharpness = -1.0;
-
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
 			Re = calcFresnelReflectance(rayDirection, n, nc, nt, ratioIoR);
