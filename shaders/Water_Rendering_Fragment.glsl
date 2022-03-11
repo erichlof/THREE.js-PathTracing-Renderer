@@ -236,7 +236,6 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		{	
 			if (diffuseCount == 0)
 				pixelSharpness = 1.01;
-			else pixelSharpness = 0.0;
 
 			if (sampleLight || bounceIsSpecular)
 				accumCol = mask * hitEmission;
@@ -307,9 +306,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 		if (hitType == REFR)  // Ideal dielectric REFRACTION
 		{
-			// use the following simplified check if scene is dynamic
-			if (diffuseCount == 0)
-				pixelSharpness = -1.0;
+			pixelSharpness = diffuseCount == 0 ? -1.0 : pixelSharpness;
 
 			nc = 1.0; // IOR of Air
 			nt = 1.33; // IOR of Water
@@ -404,7 +401,7 @@ void main( void )
 	randVec4 = vec4(0); // samples and holds the RGBA blueNoise texture value for this pixel
 	randVec4 = texelFetch(tBlueNoiseTexture, ivec2(mod(gl_FragCoord.xy + floor(uRandomVec2 * 256.0), 256.0)), 0);
 	
-	vec2 pixelOffset = vec2( tentFilter(rand()), tentFilter(rand()) ) * 0.5;
+	vec2 pixelOffset = vec2( tentFilter(rand()), tentFilter(rand()) ) * 1.0;
 
 	// we must map pixelPos into the range -1.0 to +1.0
 	vec2 pixelPos = ((gl_FragCoord.xy + pixelOffset) / uResolution) * 2.0 - 1.0;
@@ -482,20 +479,15 @@ void main( void )
 	if (colorDifference >= 1.0 || normalDifference >= 1.0 || objectDifference >= 1.0)
 		pixelSharpness = 1.01;
 	
+	currentPixel.a = pixelSharpness;
 
-	// Eventually, all edge-containing pixels' .a (alpha channel) values will converge to 1.01, which keeps them from getting blurred by the box-blur filter, thus retaining sharpness.
+	// makes sharp edges more stable
 	if (previousPixel.a == 1.01)
 		currentPixel.a = 1.01;
-	// for dynamic scenes
+
+	// for dynamic scenes (to clear out old, dark, sharp pixel trails left behind from moving objects)
 	if (previousPixel.a == 1.01 && rng() < 0.05)
 		currentPixel.a = 1.0;
-	if (previousPixel.a == -1.0)
-		currentPixel.a = 0.0;
-
-	if (pixelSharpness == 1.01)
-		currentPixel.a = 1.01;
-	if (pixelSharpness == -1.0)
-		currentPixel.a = -1.0;
 
 	
 	pc_fragColor = vec4(previousPixel.rgb + currentPixel.rgb, currentPixel.a);
