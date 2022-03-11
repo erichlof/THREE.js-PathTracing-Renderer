@@ -953,7 +953,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		
 		if (hitType == LIGHT)
 		{	
-			if (diffuseCount == 0 && bounces < 2)
+			if (diffuseCount == 0)
 				pixelSharpness = 1.01;
 
 			if (bounceIsSpecular || sampleLight)
@@ -1009,12 +1009,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		
 		if (hitType == REFR)  // Ideal dielectric REFRACTION
 		{
-			if (diffuseCount == 0 && !coatTypeIntersected && !uCameraIsMoving )
-				pixelSharpness = 1.01;
-			else if (diffuseCount > 0)
-				pixelSharpness = 0.0;
-			else
-				pixelSharpness = -1.0;
+			pixelSharpness = diffuseCount == 0 ? -1.0 : pixelSharpness;
 
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
@@ -1081,9 +1076,6 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			
 			if (diffuseCount == 0 && rand() < P)
 			{
-				// if (bounces == 0)
-				// 	pixelSharpness = uFrameCounter > 200.0 ? 1.01 : -1.0;
-
 				mask *= RP;
 				mask *= maskFactor;
 				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
