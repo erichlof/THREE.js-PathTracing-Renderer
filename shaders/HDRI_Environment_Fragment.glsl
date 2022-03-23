@@ -383,7 +383,14 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			
 			if (bounceIsSpecular)
 			{
-				pixelSharpness = 1.01;
+				if (coatTypeIntersected)
+				{
+					if (dot(rayDirection, uSunDirectionVector) > 0.998)
+					pixelSharpness = 1.01;
+				}
+				else
+					pixelSharpness = 1.01;
+
 				
 				if (dot(rayDirection, uSunDirectionVector) > 0.8)
 				{
