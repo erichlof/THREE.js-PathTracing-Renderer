@@ -410,16 +410,16 @@ function updateVariablesAndUniforms()
 		{
 			pathTracingUniforms.uModelPosition.value.set(0, 27.6, -40);
 			pathTracingUniforms.uModelScale.value = 0.04;
-			pathTracingUniforms.uLeafModelScale.value = 0.01;
-			leafModel_ScaleController.setValue(0.01);
+			pathTracingUniforms.uLeafModelScale.value = 0.005;
+			leafModel_ScaleController.setValue(0.005);
 			pathTracingUniforms.uLeafAABBVolumeScale.value = 0.000005;
 		}
 		else if (gltfModel_SelectionController.getValue() == 'Stanford Dragon')
 		{
 			pathTracingUniforms.uModelPosition.value.set(0, 28, -40);
 			pathTracingUniforms.uModelScale.value = 2.0;
-			pathTracingUniforms.uLeafModelScale.value = 0.007;
-			leafModel_ScaleController.setValue(0.007);
+			pathTracingUniforms.uLeafModelScale.value = 0.004;
+			leafModel_ScaleController.setValue(0.004);
 			pathTracingUniforms.uLeafAABBVolumeScale.value = 0.00006;
 		}
 
