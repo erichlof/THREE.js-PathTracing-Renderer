@@ -21,7 +21,8 @@ vec3 rayOrigin, rayDirection;
 vec3 hitNormal, hitEmission, hitColor;
 vec2 hitUV;
 float hitObjectID, hitOpacity;
-int hitType, hitAlbedoTextureID;
+int hitType = -100;
+int hitAlbedoTextureID;
 
 struct Plane { vec4 pla; vec3 emission; vec3 color; int type; };
 
