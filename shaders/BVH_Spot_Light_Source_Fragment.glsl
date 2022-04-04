@@ -24,7 +24,7 @@ vec3 rayOrigin, rayDirection;
 vec3 hitNormal, hitEmission, hitColor;
 vec2 hitUV;
 float hitObjectID;
-int hitType;
+int hitType = -100;
 
 float diskRadius;
 vec3 diskPos, diskNormal, diskEmission, diskColor;
