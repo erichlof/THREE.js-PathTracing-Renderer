@@ -114,11 +114,11 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	// recorded intersection data (from eye):
 	vec3 eHitNormal, eHitEmission, eHitColor;
 	float eHitObjectID;
-	int eHitType;
+	int eHitType = -100; // note: make sure to initialize this to a nonsense type id number!
 	// recorded intersection data (from volumetric particle):
 	vec3 vHitNormal, vHitEmission, vHitColor;
 	float vHitObjectID;
-	int vHitType;
+	int vHitType = -100; // note: make sure to initialize this to a nonsense type id number!
 
 	vec3 accumCol = vec3(0.0);
         vec3 mask = vec3(1.0);
