@@ -22,7 +22,7 @@ vec3 rayOrigin, rayDirection;
 vec3 hitNormal, hitEmission, hitColor;
 vec2 hitUV;
 float hitObjectID;
-int hitType;
+int hitType = -100;
 
 
 vec3 displacementVolumeMin = vec3(-DISP_MAP_SEGMENTS * 0.5, 0.0, -DISP_MAP_SEGMENTS * 0.5);
