@@ -31,7 +31,7 @@ vec3 rayOrigin, rayDirection;
 vec3 hitNormal, hitEmission, hitColor;
 vec2 hitUV;
 int hitTextureID;
-int hitType;
+int hitType = -100;
 
 float diskRadius;
 vec3 diskPos, diskNormal, diskEmission, diskColor;
