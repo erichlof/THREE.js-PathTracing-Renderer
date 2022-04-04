@@ -27,7 +27,7 @@ vec3 rayOrigin, rayDirection;
 vec3 hitNormal, hitEmission, hitColor;
 vec2 hitUV;
 float hitObjectID;
-int hitType;
+int hitType = -100;
 
 struct OpenCylinder { float radius; vec3 pos1; vec3 pos2; vec3 emission; vec3 color; int type; };
 struct Quad { vec3 normal; vec3 v0; vec3 v1; vec3 v2; vec3 v3; vec3 emission; vec3 color; int type; };
