@@ -33,7 +33,7 @@ vec3 rayOrigin, rayDirection;
 // recorded intersection data:
 vec3 hitNormal, hitEmission, hitColor;
 vec2 hitUV;
-int hitType;
+int hitType = -100;
 float hitObjectID;
 bool hitIsModel;
 
