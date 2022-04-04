@@ -19,7 +19,7 @@ vec3 rayOrigin, rayDirection;
 vec3 hitNormal, hitEmission, hitColor;
 vec2 hitUV;
 float hitObjectID;
-int hitType;
+int hitType = -100;
 
 
 struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; int type; };
