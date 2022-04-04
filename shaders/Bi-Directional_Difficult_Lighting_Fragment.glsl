@@ -30,7 +30,7 @@ vec2 hitUV;
 float hitRoughness;
 float hitObjectID;
 int hitTextureID;
-int hitType;
+int hitType = -100;
 bool hitIsModel;
 
 struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; float roughness; int type; bool isModel; };
