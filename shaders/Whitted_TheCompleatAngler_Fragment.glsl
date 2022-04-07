@@ -38,7 +38,7 @@ Rectangle rectangles[N_RECTANGLES];
 vec3 perturbNormal(vec3 nl, vec2 normalScale, vec2 uv)
 {
 	// note: incoming vec3 nl is assumed to be normalized
-        vec3 S = normalize( cross( abs(nl.y) < 0.9 ? vec3(0, 1, 0) : vec3(1, 0, 0), nl ) );
+        vec3 S = normalize( cross( abs(nl.y) < 0.9 ? vec3(0, 1, 0) : vec3(0, 0, 1), nl ) );
         vec3 T = cross(nl, S);
         vec3 N = nl;
 	// invert S, T when the UV direction is backwards (from mirrored faces),
@@ -269,7 +269,7 @@ void SetupScene(void)
 
 	//spheres[1] = Sphere( 27.0, yellowSpherePos, z, vec3(1.0, 0.8, 0.0), SPEC);//yellow reflective sphere
 	
-	rectangles[0] = Rectangle( vec3(100, 0, -100), vec3(0, 1, 0), 400.0, 200.0, z, vec3(1), CHECK);// Checkerboard Ground plane 
+	rectangles[0] = Rectangle( vec3(100, 0, -100), vec3(0, 1, 0), 200.0, 400.0, z, vec3(1), CHECK);// Checkerboard Ground plane 
 }
 
 //#include <pathtracing_main>
