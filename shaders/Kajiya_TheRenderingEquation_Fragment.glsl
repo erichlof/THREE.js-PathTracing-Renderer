@@ -126,12 +126,11 @@ float SceneIntersect( )
 
 vec3 sampleRectangleLight(vec3 x, vec3 nl, Rectangle light, out float weight)
 {
-	vec3 u = normalize(cross( abs(light.normal.y) < 0.9 ? vec3(0, 1, 0) : vec3(0, 0, 1), light.normal));
-	vec3 v = cross(light.normal, u);
+	vec3 U = normalize(cross( abs(light.normal.y) < 0.9 ? vec3(0, 1, 0) : vec3(0, 0, 1), light.normal));
+	vec3 V = cross(light.normal, U);
 	vec3 randPointOnLight = light.position;
-
-	randPointOnLight += mix(u * -light.radiusU * 0.9, u * light.radiusU * 0.9, rng());
-	randPointOnLight += mix(v * -light.radiusV * 0.9, v * light.radiusV * 0.9, rng());
+	randPointOnLight += U * light.radiusU * (rng() * 2.0 - 1.0) * 0.9;
+	randPointOnLight += V * light.radiusV * (rng() * 2.0 - 1.0) * 0.9;
 	
 	vec3 dirToLight = randPointOnLight - x;
 	float r2 = (light.radiusU * 2.0) * (light.radiusV * 2.0);
