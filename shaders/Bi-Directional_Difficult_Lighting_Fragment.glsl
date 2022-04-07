@@ -65,7 +65,7 @@ Box boxes[N_BOXES];
 vec3 perturbNormal(vec3 nl, vec2 normalScale, vec2 uv)
 {
 	// note: incoming vec3 nl is assumed to be normalized
-        vec3 S = normalize( cross( abs(nl.y) < 0.9 ? vec3(0, 1, 0) : vec3(1, 0, 0), nl ) );
+        vec3 S = normalize( cross( abs(nl.y) < 0.9 ? vec3(0, 1, 0) : vec3(0, 0, 1), nl ) );
         vec3 T = cross(nl, S);
         vec3 N = nl;
 	// invert S, T when the UV direction is backwards (from mirrored faces),
