@@ -235,7 +235,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			bounceIsSpecular = false;
 
 			
-			if (diffuseCount == 1 && rng() < 0.5)
+			if (diffuseCount == 1 && rand() < 0.5)
 			{
 				mask *= 2.0;
 				// choose random Diffuse sample vector
@@ -267,8 +267,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
                 	RP = Re / P;
                 	TP = Tr / (1.0 - P);
 			
-			// rng() is slightly faster than rand() on this sphere pyramid stack
-			if (diffuseCount == 0 && rng() < P)
+			if (diffuseCount == 0 && rand() < P)
 			{
 				mask *= RP;
 				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
