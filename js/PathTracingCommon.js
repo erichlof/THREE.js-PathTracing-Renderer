@@ -27,6 +27,7 @@ in vec2 vUv;
 #define ONE_OVER_THREE   0.33333333333333333
 #define E                2.71828182845904524
 #define INFINITY         1000000.0
+#define QUADRIC_EPSILON  0.00001
 #define SPOT_LIGHT -2
 #define POINT_LIGHT -1
 #define LIGHT 0
@@ -211,64 +212,104 @@ float SphereIntersect( float rad, vec3 pos, vec3 rayOrigin, vec3 rayDirection )
 }
 `;
 
-/* THREE.ShaderChunk[ 'pathtracing_quadric_intersect' ] = `
+THREE.ShaderChunk[ 'pathtracing_quadric_intersect' ] = `
+
+/* const mat4 ellipsoid = mat4(
+    	1, 0, 0, 0,
+    	0, 1, 0, 0,
+    	0, 0, 1, 0,
+    	0, 0, 0,-1
+);
+
 const mat4 cylinder = mat4(
-    1, 0, 0, 0,
-    0, 1, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, -0.25
+    	1, 0, 0, 0,
+    	0, 0, 0, 0,
+    	0, 0, 1, 0,
+    	0, 0, 0,-1
 );
 
-const mat4 sphere = mat4(
-    4, 0, 0, 0,
-    0, 4, 0, 0,
-    0, 0, 4, 0,
-    0, 0, 0, -1
+const mat4 cone = mat4(
+    	1, 0, 0, 0,
+    	0,-1, 0, 0,
+    	0, 0, 1, 0,
+    	0, 0, 0, 0
 );
 
-const mat4 ellipticParaboloid = mat4(
-    4, 0, 0, 0,
-    0, 4, 0, 0,
-    0, 0, 0, 1,
-    0, 0, 1, 0
+const mat4 paraboloid = mat4(
+    	1, 0, 0, 0,
+    	0, 0, 0, 0.25,
+    	0, 0, 1, 0,
+    	0, 0.25, 0,-0.5
+);
+
+const mat4 hyperboloid_oneSheet = mat4(
+    	1, 0, 0, 0,
+    	0, -0.95, 0, 0,
+    	0, 0, 1, 0,
+    	0, 0, 0, -0.05
+);
+
+const mat4 hyperboloid_twoSheets = mat4(
+    	1, 0, 0, 0,
+    	0, -1, 0, 0,
+    	0, 0, 1, 0,
+    	0, 0, 0, 0.01
 );
 
 const mat4 hyperbolicParaboloid = mat4(
-    4, 0, 0, 0,
-    0, -4, 0, 0,
-    0, 0, 0, 1,
-    0, 0, 1, 0
+       -1, 0, 0, 0,
+    	0, 0, 0, 0.5,
+    	0, 0, 1, 0,
+    	0, 0.5, 0, 0
 );
 
-const mat4 circularCone = mat4(
-    4, 0, 0, 0,
-    0, -4, 0, 0,
-    0, 0, 4, 0,
-    0, 0, 0, 0
-);
-
-const mat4 quadraticPlane = mat4(
-    1, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 1, 0,
-    0, 1, 0, 0
-);
-
-const mat4 hyperbolicPlane = mat4(
-    1, 0, 0, 0,
-    0, 0, 0, 2,
-    0, 0, 0, 0,
-    0, 2, 0, 0
+const mat4 parabolicPlane = mat4(
+    	1, 0, 0, 0,
+    	0, 0, 0, 1,
+    	0, 0, 1, 0,
+    	0, 1, 0, 0
 );
 
 const mat4 intersectingPlanes = mat4(
-    0, 1, 0, 0,
-    1, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0
+    	0, 0, 0, 0,
+    	0, 0, 1, 0,
+    	0, 1, 0, 0,
+    	0, 0, 0, 0
 );
 
-`; */
+const mat4 warpedPlanes = mat4(
+    	0, 1, 1, 0,
+    	1, 0, 0, 1,
+    	1, 0, 0, 0,
+    	0, 1, 0, 0
+); */
+
+
+float QuadricIntersect(mat4 shape, vec4 ro, vec4 rd) 
+{
+	vec4 rda = shape * rd;
+    	vec4 roa = shape * ro;
+	vec3 hitPoint;
+    
+    	// quadratic coefficients
+    	float a = dot(rd, rda);
+    	float b = dot(ro, rda) + dot(rd, roa);
+    	float c = dot(ro, roa);
+	
+	float t0, t1;
+	solveQuadratic(a, b, c, t0, t1);
+
+	hitPoint = ro.xyz + rd.xyz * t0;
+	if ( t0 > 0.0 && all(greaterThanEqual(hitPoint, vec3(-1.0 - QUADRIC_EPSILON))) && all(lessThanEqual(hitPoint, vec3(1.0 + QUADRIC_EPSILON))) )
+		return t0;
+	hitPoint = ro.xyz + rd.xyz * t1;
+	if ( t1 > 0.0 && all(greaterThanEqual(hitPoint, vec3(-1.0 - QUADRIC_EPSILON))) && all(lessThanEqual(hitPoint, vec3(1.0 + QUADRIC_EPSILON))) )
+		return t1;
+	
+	return INFINITY;
+}
+
+`;
 
 THREE.ShaderChunk[ 'pathtracing_sphere_csg_intersect' ] = `
 //------------------------------------------------------------------------------------------------------------
