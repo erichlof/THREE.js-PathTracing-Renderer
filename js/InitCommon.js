@@ -462,9 +462,9 @@ function initTHREEjs()
 
 	pathTracingUniforms.uEPS_intersect = { type: "f", value: EPS_intersect };
 	pathTracingUniforms.uTime = { type: "f", value: 0.0 };
-	pathTracingUniforms.uSampleCounter = { type: "f", value: 0.0 };
+	pathTracingUniforms.uSampleCounter = { type: "f", value: 0.0 }; //0.0
 	pathTracingUniforms.uPreviousSampleCount = { type: "f", value: 1.0 };
-	pathTracingUniforms.uFrameCounter = { type: "f", value: 1.0 };
+	pathTracingUniforms.uFrameCounter = { type: "f", value: 1.0 }; //1.0
 	pathTracingUniforms.uULen = { type: "f", value: 1.0 };
 	pathTracingUniforms.uVLen = { type: "f", value: 1.0 };
 	pathTracingUniforms.uApertureSize = { type: "f", value: apertureSize };
@@ -750,74 +750,73 @@ function animate()
 			}
 		} // end if (!isPaused)
 
-		
-		
-		if (increaseFOV)
-		{
-			worldCamera.fov++;
-			if (worldCamera.fov > 150)
-				worldCamera.fov = 150;
-			fovScale = worldCamera.fov * 0.5 * (Math.PI / 180.0);
-			pathTracingUniforms.uVLen.value = Math.tan(fovScale);
-			pathTracingUniforms.uULen.value = pathTracingUniforms.uVLen.value * worldCamera.aspect;
-
-			cameraIsMoving = true;
-			increaseFOV = false;
-		}
-		if (decreaseFOV)
-		{
-			worldCamera.fov--;
-			if (worldCamera.fov < 1)
-				worldCamera.fov = 1;
-			fovScale = worldCamera.fov * 0.5 * (Math.PI / 180.0);
-			pathTracingUniforms.uVLen.value = Math.tan(fovScale);
-			pathTracingUniforms.uULen.value = pathTracingUniforms.uVLen.value * worldCamera.aspect;
-
-			cameraIsMoving = true;
-			decreaseFOV = false;
-		}
-
-		if (increaseFocusDist)
-		{
-			focusDistance += 1;
-			pathTracingUniforms.uFocusDistance.value = focusDistance;
-			cameraIsMoving = true;
-			increaseFocusDist = false;
-		}
-		if (decreaseFocusDist)
-		{
-			focusDistance -= 1;
-			if (focusDistance < 1)
-				focusDistance = 1;
-			pathTracingUniforms.uFocusDistance.value = focusDistance;
-			cameraIsMoving = true;
-			decreaseFocusDist = false;
-		}
-
-		if (increaseAperture)
-		{
-			apertureSize += 0.1;
-			if (apertureSize > 100.0)
-				apertureSize = 100.0;
-			pathTracingUniforms.uApertureSize.value = apertureSize;
-			cameraIsMoving = true;
-			increaseAperture = false;
-		}
-		if (decreaseAperture)
-		{
-			apertureSize -= 0.1;
-			if (apertureSize < 0.0)
-				apertureSize = 0.0;
-			pathTracingUniforms.uApertureSize.value = apertureSize;
-			cameraIsMoving = true;
-			decreaseAperture = false;
-		}
-
 	} // end if (useGenericInput)
 
-
+	
 	// update scene/demo-specific input(if custom), variables and uniforms every animation frame
 	updateVariablesAndUniforms();
+
+
+	if (increaseFOV)
+	{
+		worldCamera.fov++;
+		if (worldCamera.fov > 150)
+			worldCamera.fov = 150;
+		fovScale = worldCamera.fov * 0.5 * (Math.PI / 180.0);
+		pathTracingUniforms.uVLen.value = Math.tan(fovScale);
+		pathTracingUniforms.uULen.value = pathTracingUniforms.uVLen.value * worldCamera.aspect;
+
+		cameraIsMoving = true;
+		increaseFOV = false;
+	}
+	if (decreaseFOV)
+	{
+		worldCamera.fov--;
+		if (worldCamera.fov < 1)
+			worldCamera.fov = 1;
+		fovScale = worldCamera.fov * 0.5 * (Math.PI / 180.0);
+		pathTracingUniforms.uVLen.value = Math.tan(fovScale);
+		pathTracingUniforms.uULen.value = pathTracingUniforms.uVLen.value * worldCamera.aspect;
+
+		cameraIsMoving = true;
+		decreaseFOV = false;
+	}
+
+	if (increaseFocusDist)
+	{
+		focusDistance += 1;
+		pathTracingUniforms.uFocusDistance.value = focusDistance;
+		cameraIsMoving = true;
+		increaseFocusDist = false;
+	}
+	if (decreaseFocusDist)
+	{
+		focusDistance -= 1;
+		if (focusDistance < 1)
+			focusDistance = 1;
+		pathTracingUniforms.uFocusDistance.value = focusDistance;
+		cameraIsMoving = true;
+		decreaseFocusDist = false;
+	}
+
+	if (increaseAperture)
+	{
+		apertureSize += 0.1;
+		if (apertureSize > 100.0)
+			apertureSize = 100.0;
+		pathTracingUniforms.uApertureSize.value = apertureSize;
+		cameraIsMoving = true;
+		increaseAperture = false;
+	}
+	if (decreaseAperture)
+	{
+		apertureSize -= 0.1;
+		if (apertureSize < 0.0)
+			apertureSize = 0.0;
+		pathTracingUniforms.uApertureSize.value = apertureSize;
+		cameraIsMoving = true;
+		decreaseAperture = false;
+	}
 
 	// now update uniforms that are common to all scenes
 	if (!cameraIsMoving)
