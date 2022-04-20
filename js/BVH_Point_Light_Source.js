@@ -298,9 +298,7 @@ function initSceneData()
 		triangle_b_box_min.copy(triangle_b_box_min.min(vp2));
 		triangle_b_box_max.copy(triangle_b_box_max.max(vp2));
 
-		triangle_b_box_centroid.set((triangle_b_box_min.x + triangle_b_box_max.x) * 0.5,
-			(triangle_b_box_min.y + triangle_b_box_max.y) * 0.5,
-			(triangle_b_box_min.z + triangle_b_box_max.z) * 0.5);
+		triangle_b_box_centroid.copy(triangle_b_box_min).add(triangle_b_box_max).multiplyScalar(0.5);
 
 		aabb_array[9 * i + 0] = triangle_b_box_min.x;
 		aabb_array[9 * i + 1] = triangle_b_box_min.y;
