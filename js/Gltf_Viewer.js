@@ -601,9 +601,7 @@ async function prepareGeometryForPT(meshList, pathTracingMaterialList, triangleM
 		triangle_b_box_min.copy(triangle_b_box_min.min(vp2));
 		triangle_b_box_max.copy(triangle_b_box_max.max(vp2));
 
-		triangle_b_box_centroid.set((triangle_b_box_min.x + triangle_b_box_max.x) * 0.5,
-			(triangle_b_box_min.y + triangle_b_box_max.y) * 0.5,
-			(triangle_b_box_min.z + triangle_b_box_max.z) * 0.5);
+		triangle_b_box_centroid.copy(triangle_b_box_min).add(triangle_b_box_max).multiplyScalar(0.5);
 
 		aabb_array[9 * i + 0] = triangle_b_box_min.x;
 		aabb_array[9 * i + 1] = triangle_b_box_min.y;
@@ -626,24 +624,6 @@ async function prepareGeometryForPT(meshList, pathTracingMaterialList, triangleM
 	//console.log(buildnodes);
 
 
-
-	// NOTE: the folowing loop is only required with SAH builder (with FAST builder, it is handled within the Build_Iterative() function)
-	// Copy the buildnodes array into the aabb_array
-	for (let n = 0; n < buildnodes.length; n++) {
-
-		// slot 0
-		aabb_array[8 * n + 0] = buildnodes[n].idLeftChild;  // r or x component
-		aabb_array[8 * n + 1] = buildnodes[n].minCorner.x;  // g or y component
-		aabb_array[8 * n + 2] = buildnodes[n].minCorner.y;  // b or z component
-		aabb_array[8 * n + 3] = buildnodes[n].minCorner.z;  // a or w component
-
-		// slot 1
-		aabb_array[8 * n + 4] = buildnodes[n].idRightChild; // r or x component
-		aabb_array[8 * n + 5] = buildnodes[n].maxCorner.x;  // g or y component
-		aabb_array[8 * n + 6] = buildnodes[n].maxCorner.y;  // b or z component
-		aabb_array[8 * n + 7] = buildnodes[n].maxCorner.z;  // a or w component
-
-	}
 
 	let triangleDataTexture = new THREE.DataTexture(triangle_array,
 		2048,
