@@ -21,7 +21,7 @@ vec3 rayOrigin, rayDirection;
 vec3 hitNormal, hitEmission, hitColor;
 vec2 hitUV;
 float hitObjectID, hitOpacity;
-int hitType = -100;
+int hitType = -100; 
 int hitAlbedoTextureID;
 
 struct Plane { vec4 pla; vec3 emission; vec3 color; int type; };
@@ -93,7 +93,7 @@ float SceneIntersect( )
 	if (d < t)
 	{
 		t = d;
-		hitNormal = normalize(plane.pla.xyz);
+		hitNormal = (plane.pla.xyz);
 		hitEmission = plane.emission;
 		hitColor = plane.color;
 		hitType = plane.type;
@@ -125,8 +125,7 @@ float SceneIntersect( )
                 }
 		skip = false; // reset skip
 		
-		// SAH builder specific x >= 0.0 (with FAST builder, opposite applies, x < 0.0 is inner node)
-		if (currentBoxNodeData0.x >= 0.0) // >= 0.0 signifies an inner node (for SAH builder)
+		if (currentBoxNodeData0.x < 0.0) // // < 0.0 signifies an inner node 
 		{
 			GetBoxNodeData(currentStackData.x + 1.0, nodeAData0, nodeAData1);
 			GetBoxNodeData(currentBoxNodeData1.x, nodeBData0, nodeBData1);
@@ -165,16 +164,14 @@ float SceneIntersect( )
 			}
 
 			continue;
-		} // end if (currentBoxNodeData0.x >= 0.0) // inner node (for SAH builder)
+		} // end if (currentBoxNodeData0.x < 0.0) // inner node
 
 
 		// else this is a leaf
 
 		// each triangle's data is encoded in 8 rgba(or xyzw) texture slots
 		
-		// SAH builder specific
-		id = 8.0 * (-currentBoxNodeData0.x - 1.0); // (for SAH builder)
-		//id = 8.0 * currentBoxNodeData0.x; // (for FAST builder)
+		id = 8.0 * currentBoxNodeData0.x;
 
 		uv0 = ivec2( mod(id + 0.0, 2048.0), (id + 0.0) * INV_TEXTURE_WIDTH );
 		uv1 = ivec2( mod(id + 1.0, 2048.0), (id + 1.0) * INV_TEXTURE_WIDTH );
@@ -219,11 +216,11 @@ float SceneIntersect( )
 		vd7 = texelFetch(tTriangleTexture, uv7, 0);
 
 		// face normal for flat-shaded polygon look
-		//hitNormal = normalize( cross(vec3(vd0.w, vd1.xy) - vec3(vd0.xyz), vec3(vd1.zw, vd2.x) - vec3(vd0.xyz)) );
+		//hitNormal = ( cross(vec3(vd0.w, vd1.xy) - vec3(vd0.xyz), vec3(vd1.zw, vd2.x) - vec3(vd0.xyz)) );
 
 		// interpolated normal using triangle intersection's uv's
 		triangleW = 1.0 - triangleU - triangleV;
-		hitNormal = normalize(triangleW * vec3(vd2.yzw) + triangleU * vec3(vd3.xyz) + triangleV * vec3(vd3.w, vd4.xy));
+		hitNormal = (triangleW * vec3(vd2.yzw) + triangleU * vec3(vd3.xyz) + triangleV * vec3(vd3.w, vd4.xy));
 		hitEmission = vec3(1, 0, 1); // use this if hitType will be LIGHT
 		hitColor = vd6.yzw;
 		hitOpacity = vd7.y;
@@ -327,7 +324,7 @@ vec3 CalculateRadiance()
 
 		// useful data
 		vec3 n = normalize(hitNormal);
-		vec3 nl = dot(n, rayDirection) < 0.0 ? normalize(n) : normalize(-n);
+		vec3 nl = dot(n, rayDirection) < 0.0 ? n : -n;
 		vec3 x = rayOrigin + rayDirection * t;
 
 		if (hitType == DIFF) // Ideal DIFFUSE reflection
