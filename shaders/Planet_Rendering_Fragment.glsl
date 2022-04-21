@@ -104,8 +104,8 @@ vec3 computeIncidentLight(vec3 rayOrigin, vec3 rayDirection, float tmin, float t
 	if (!PlanetSphereIntersect(rayOrigin, rayDirection, ATMOSPHERE_RADIUS, vec3(0), t0, t1) || t1 < 0.0) return vec3(0); 
 	if (t0 > tmin && t0 > 0.0) tmin = t0; 
 	if (t1 < tmax) tmax = t1; 
-	int numSamples = 16; 
-	int numSamplesLight = 8; 
+	int numSamples = 16;//16; 
+	int numSamplesLight = 16;//8; 
 	float segmentLength = (tmax - tmin) / float(numSamples); 
 	float tCurrent = tmin; 
 	vec3 sumR = vec3(0); // rayleigh contribution
@@ -116,7 +116,7 @@ vec3 computeIncidentLight(vec3 rayOrigin, vec3 rayDirection, float tmin, float t
 	float phaseR = 3.0 / (16.0 * PI) * (1.0 + mu * mu); 
 	float g = 0.76; 
 	float phaseM = 3.0 / (8.0 * PI) * ((1.0 - g * g) * (1.0 + mu * mu)) / ((2.0 + g * g) * pow(max(0.0, 1.0 + g * g - 2.0 * g * mu), 1.5)); 
-    	for (int i = 0; i < 16; ++i)
+    	for (int i = 0; i < numSamples; ++i)
 	{ 
 		vec3 samplePosition = rayOrigin + (tCurrent + segmentLength * 0.5) * rayDirection; 
 		float height = length(samplePosition) - EARTH_RADIUS; 
@@ -133,7 +133,7 @@ vec3 computeIncidentLight(vec3 rayOrigin, vec3 rayDirection, float tmin, float t
 		float opticalDepthLightR = 0.0;
 		float opticalDepthLightM = 0.0; 
 		int jCounter = 0; 
-		for (int j = 0; j < 8; ++j)
+		for (int j = 0; j < numSamplesLight; ++j)
 		{ 
 			vec3 samplePositionLight = samplePosition + (tCurrentLight + segmentLengthLight * 0.5) * uSunDirection; 
 			float heightLight = length(samplePositionLight) - EARTH_RADIUS; 
@@ -582,15 +582,15 @@ vec3 CalculateRadiance()
 			{
 				vec2 uv;
 				vec3 mn = hitNormal;
-				uv.x = (1.0 + atan(mn.z, mn.x) / PI) * 0.5;
-				uv.y = acos(mn.y) / PI;
+				uv.x = atan(-n.z, n.x) * ONE_OVER_TWO_PI + 0.5;
+				uv.y = asin(clamp(-n.y, -1.0, 1.0)) * ONE_OVER_PI + 0.5;
 				uv.x *= 1.3;
 				float rockNoise = clamp(texture(t_PerlinNoise, uv).x, 0.0, 1.0);
 				hitColor = clamp(hitColor * rockNoise, 0.0, 1.0);
 				vec3 sampleSkyCol = computeIncidentLight(rayOrigin, rayDirection, 0.0, tMax);
 				mask = mix(hitColor, sampleSkyCol, clamp(0.7 * (sampleSkyCol.r + sampleSkyCol.b), 0.0, 1.0));
 						// * max(0.0, dot(nl, uSunDirection)); // for moon phases
-
+				hitColor = mask;
 				accumCol = mask;
 				break;
 			}
