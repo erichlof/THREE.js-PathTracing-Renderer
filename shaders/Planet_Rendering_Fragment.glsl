@@ -105,7 +105,7 @@ vec3 computeIncidentLight(vec3 rayOrigin, vec3 rayDirection, float tmin, float t
 	if (t0 > tmin && t0 > 0.0) tmin = t0; 
 	if (t1 < tmax) tmax = t1; 
 	int numSamples = 16;//16; 
-	int numSamplesLight = 16;//8; 
+	int numSamplesLight = 8;//8; 
 	float segmentLength = (tmax - tmin) / float(numSamples); 
 	float tCurrent = tmin; 
 	vec3 sumR = vec3(0); // rayleigh contribution
