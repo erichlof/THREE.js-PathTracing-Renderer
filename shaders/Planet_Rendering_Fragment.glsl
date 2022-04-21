@@ -741,7 +741,7 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0); // no color value, black        
-        vec3 L1 = vec3(1.0, 0.9, 0.8) * 8.0;// Sun Light
+        vec3 L1 = vec3(1.0, 0.9, 0.8) * 5.0;// Sun Light
 	spheres[0] = Sphere( 100.0, cameraPosition +  uSunDirection * 5000.0, L1, z, LIGHT);//Sun
 	spheres[1] = Sphere( 150.0, cameraPosition + -uSunDirection * 5000.0, z, vec3(1), DIFF);//Moon	
 }
