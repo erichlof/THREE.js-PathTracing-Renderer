@@ -69,6 +69,8 @@ let gui;
 let ableToEngagePointerLock = true;
 let pixel_ResolutionController, pixel_ResolutionObject;
 let needChangePixelResolution = false;
+let orthographicCamera_ToggleController, orthographicCamera_ToggleObject;
+let currentlyUsingOrthographicCamera = false;
 
 // the following variables will be used to calculate rotations and directions from the camera
 let cameraDirectionVector = new THREE.Vector3(); //for moving where the camera is looking
@@ -234,27 +236,8 @@ function onWindowResize(event)
 
 function init()
 {
-	// default GUI elements for all demos
 
-	pixel_ResolutionObject = {
-		pixel_Resolution: 0.5 // will be set by each demo's js file
-	}
-
-	function handlePixelResolutionChange()
-	{
-		needChangePixelResolution = true;
-	}
-
-	// since I use the lil-gui.min.js minified version of lil-gui without modern exports, 
-	//'g()' is 'GUI()' ('g' is the shortened version of 'GUI' inside the lil-gui.min.js file)
-	gui = new g(); // same as gui = new GUI();
-
-	pixel_ResolutionController = gui.add(pixel_ResolutionObject, 'pixel_Resolution', 0.5, 1.0, 0.05).onChange(handlePixelResolutionChange);
-
-	gui.domElement.style.userSelect = "none";
-	gui.domElement.style.MozUserSelect = "none";
-
-	
+	window.addEventListener('resize', onWindowResize, false);
 
 	if ('ontouchstart' in window) 
 	{
@@ -269,8 +252,52 @@ function init()
 		});
 	}
 
+	// default GUI elements for all demos
+
+	pixel_ResolutionObject = {
+		pixel_Resolution: 0.5 // will be set by each demo's js file
+	}
+	orthographicCamera_ToggleObject = {
+		Orthographic_Camera: false
+	}
+
+	function handlePixelResolutionChange()
+	{
+		needChangePixelResolution = true;
+	}
+	function handleCameraProjectionChange()
+	{
+		if (!currentlyUsingOrthographicCamera)
+			changeToOrthographicCamera = true;
+		else if (currentlyUsingOrthographicCamera)
+			changeToPerspectiveCamera = true;
+		// toggle boolean flag
+		currentlyUsingOrthographicCamera = !currentlyUsingOrthographicCamera;
+	}
+
+	// since I use the lil-gui.min.js minified version of lil-gui without modern exports, 
+	//'g()' is 'GUI()' ('g' is the shortened version of 'GUI' inside the lil-gui.min.js file)
+	gui = new g(); // same as gui = new GUI();
+
+	pixel_ResolutionController = gui.add(pixel_ResolutionObject, 'pixel_Resolution', 0.5, 1.0, 0.05).onChange(handlePixelResolutionChange);
+	if (!mouseControl)
+		orthographicCamera_ToggleController = gui.add(orthographicCamera_ToggleObject, 'Orthographic_Camera', false).onChange(handleCameraProjectionChange);
+
+	gui.domElement.style.userSelect = "none";
+	gui.domElement.style.MozUserSelect = "none";
+
+	
 	if (mouseControl) 
 	{
+
+		gui.domElement.addEventListener("mouseenter", function (event) 
+		{
+			ableToEngagePointerLock = false;
+		}, false);
+		gui.domElement.addEventListener("mouseleave", function (event) 
+		{
+			ableToEngagePointerLock = true;
+		}, false);
 
 		window.addEventListener('wheel', onMouseWheel, false);
 
@@ -314,42 +341,23 @@ function init()
 		document.addEventListener('mozpointerlockchange', pointerlockChange, false);
 		document.addEventListener('webkitpointerlockchange', pointerlockChange, false);
 
-	}
+	} // end if (mouseControl)
 
-	if (mouseControl) 
+
+	/* // Fullscreen API (optional)
+	document.addEventListener("click", function() 
 	{
-		gui.domElement.addEventListener("mouseenter", function (event) 
-		{
-			ableToEngagePointerLock = false;
-		}, false);
-		gui.domElement.addEventListener("mouseleave", function (event) 
-		{
-			ableToEngagePointerLock = true;
-		}, false);
-	}
-	
-	window.addEventListener('resize', onWindowResize, false);
-
-	/*
-	// Fullscreen API (optional)
-	document.addEventListener("click", function() {
-		
 		if ( !document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement ) 
 		{
 			if (document.documentElement.requestFullscreen) 
-			{
 				document.documentElement.requestFullscreen();	
-			} 
 			else if (document.documentElement.mozRequestFullScreen) 
-			{
 				document.documentElement.mozRequestFullScreen();
-			} else if (document.documentElement.webkitRequestFullscreen) 
-			{
+			else if (document.documentElement.webkitRequestFullscreen) 
 				document.documentElement.webkitRequestFullscreen();
-			}
 		}
-	});
-	*/
+	}); */
+	
 
 	initTHREEjs(); // boilerplate: init necessary three.js items and scene/demo-specific objects
 
@@ -855,7 +863,7 @@ function animate()
 		fovScale = worldCamera.fov * 0.5 * (Math.PI / 180.0);
 		pathTracingUniforms.uVLen.value = Math.tan(fovScale);
 		pathTracingUniforms.uULen.value = pathTracingUniforms.uVLen.value * worldCamera.aspect;
-		
+
 		pathTracingUniforms.uUseOrthographicCamera.value = false;
 		cameraIsMoving = true;
 		changeToPerspectiveCamera = false;
