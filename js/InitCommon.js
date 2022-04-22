@@ -57,6 +57,10 @@ let useGenericInput = true;
 let EPS_intersect;
 let blueNoiseTexture;
 let useToneMapping = true;
+let canPress_O = true;
+let canPress_P = true;
+let changeToOrthographicCamera = false;
+let changeToPerspectiveCamera = false;
 let pixelEdgeSharpness = 1.0;
 let edgeSharpenSpeed = 0.05;
 let filterDecaySpeed = 0.0002;
@@ -471,6 +475,7 @@ function initTHREEjs()
 	pathTracingUniforms.uFocusDistance = { type: "f", value: focusDistance };
 
 	pathTracingUniforms.uCameraIsMoving = { type: "b1", value: false };
+	pathTracingUniforms.uUseOrthographicCamera = { type: "b1", value: false };
 
 
 	pathTracingDefines = {
@@ -748,11 +753,27 @@ function animate()
 			{
 				decreaseAperture = true;
 			}
+			if (keyPressed('o') && canPress_O)
+			{
+				changeToOrthographicCamera = true;
+				canPress_O = false;
+			}
+			if (!keyPressed('o'))
+				canPress_O = true;
+
+			if (keyPressed('p') && canPress_P)
+			{
+				changeToPerspectiveCamera = true;
+				canPress_P = false;
+			}
+			if (!keyPressed('p'))
+				canPress_P = true;
 		} // end if (!isPaused)
 
 	} // end if (useGenericInput)
 
 	
+		
 	// update scene/demo-specific input(if custom), variables and uniforms every animation frame
 	updateVariablesAndUniforms();
 
@@ -760,8 +781,8 @@ function animate()
 	if (increaseFOV)
 	{
 		worldCamera.fov++;
-		if (worldCamera.fov > 150)
-			worldCamera.fov = 150;
+		if (worldCamera.fov > 179)
+			worldCamera.fov = 179;
 		fovScale = worldCamera.fov * 0.5 * (Math.PI / 180.0);
 		pathTracingUniforms.uVLen.value = Math.tan(fovScale);
 		pathTracingUniforms.uULen.value = pathTracingUniforms.uVLen.value * worldCamera.aspect;
@@ -816,6 +837,28 @@ function animate()
 		pathTracingUniforms.uApertureSize.value = apertureSize;
 		cameraIsMoving = true;
 		decreaseAperture = false;
+	}
+	if (changeToOrthographicCamera)
+	{
+		worldCamera.fov = 60;
+		fovScale = worldCamera.fov * 0.5 * (Math.PI / 180.0);
+		pathTracingUniforms.uVLen.value = Math.tan(fovScale);
+		pathTracingUniforms.uULen.value = pathTracingUniforms.uVLen.value * worldCamera.aspect;
+
+		pathTracingUniforms.uUseOrthographicCamera.value = true;
+		cameraIsMoving = true;
+		changeToOrthographicCamera = false;
+	}
+	if (changeToPerspectiveCamera)
+	{
+		worldCamera.fov = 60;
+		fovScale = worldCamera.fov * 0.5 * (Math.PI / 180.0);
+		pathTracingUniforms.uVLen.value = Math.tan(fovScale);
+		pathTracingUniforms.uULen.value = pathTracingUniforms.uVLen.value * worldCamera.aspect;
+		
+		pathTracingUniforms.uUseOrthographicCamera.value = false;
+		cameraIsMoving = true;
+		changeToPerspectiveCamera = false;
 	}
 
 	// now update uniforms that are common to all scenes
