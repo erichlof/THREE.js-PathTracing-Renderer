@@ -60,6 +60,7 @@ let blueNoiseTexture;
 let useToneMapping = true;
 let canPress_O = true;
 let canPress_P = true;
+let allowOrthographicCamera = true;
 let changeToOrthographicCamera = false;
 let changeToPerspectiveCamera = false;
 let pixelEdgeSharpness = 1.0;
@@ -458,6 +459,12 @@ function initTHREEjs()
 	initSceneData();
 
 	pixel_ResolutionController.setValue(pixelRatio);
+	if (!allowOrthographicCamera && !mouseControl)
+	{
+		orthographicCamera_ToggleController.domElement.hidden = true;
+		orthographicCamera_ToggleController.domElement.remove();
+	}
+		
 
 
 	// setup screen-size quad geometry and shaders....
@@ -847,7 +854,7 @@ function animate()
 		cameraIsMoving = true;
 		decreaseAperture = false;
 	}
-	if (changeToOrthographicCamera)
+	if (allowOrthographicCamera && changeToOrthographicCamera)
 	{
 		storedFOV = worldCamera.fov; // save current perspective camera's FOV
 
@@ -860,7 +867,7 @@ function animate()
 		cameraIsMoving = true;
 		changeToOrthographicCamera = false;
 	}
-	if (changeToPerspectiveCamera)
+	if (allowOrthographicCamera && changeToPerspectiveCamera)
 	{
 		worldCamera.fov = storedFOV; // return to prior perspective camera's FOV
 		fovScale = worldCamera.fov * 0.5 * (Math.PI / 180.0);
