@@ -22,6 +22,7 @@ let sceneIsDynamic = false;
 let cameraFlightSpeed = 60;
 let cameraRotationSpeed = 1;
 let fovScale;
+let storedFOV = 0;
 let increaseFOV = false;
 let decreaseFOV = false;
 let dollyCameraIn = false;
@@ -848,7 +849,9 @@ function animate()
 	}
 	if (changeToOrthographicCamera)
 	{
-		worldCamera.fov = 60;
+		storedFOV = worldCamera.fov; // save current perspective camera's FOV
+
+		worldCamera.fov = 60; // good default for Ortho camera - lets user see most of the scene
 		fovScale = worldCamera.fov * 0.5 * (Math.PI / 180.0);
 		pathTracingUniforms.uVLen.value = Math.tan(fovScale);
 		pathTracingUniforms.uULen.value = pathTracingUniforms.uVLen.value * worldCamera.aspect;
@@ -859,7 +862,7 @@ function animate()
 	}
 	if (changeToPerspectiveCamera)
 	{
-		worldCamera.fov = 60;
+		worldCamera.fov = storedFOV; // return to prior perspective camera's FOV
 		fovScale = worldCamera.fov * 0.5 * (Math.PI / 180.0);
 		pathTracingUniforms.uVLen.value = Math.tan(fovScale);
 		pathTracingUniforms.uULen.value = pathTracingUniforms.uVLen.value * worldCamera.aspect;
