@@ -860,7 +860,7 @@ function animate()
 	{
 		storedFOV = worldCamera.fov; // save current perspective camera's FOV
 
-		worldCamera.fov = 60; // good default for Ortho camera - lets user see most of the scene
+		worldCamera.fov = 90; // good default for Ortho camera - lets user see most of the scene
 		fovScale = worldCamera.fov * 0.5 * (Math.PI / 180.0);
 		pathTracingUniforms.uVLen.value = Math.tan(fovScale);
 		pathTracingUniforms.uULen.value = pathTracingUniforms.uVLen.value * worldCamera.aspect;
