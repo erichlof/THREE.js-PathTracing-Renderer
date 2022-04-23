@@ -503,7 +503,6 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	bool isRayExiting = false;
 
 
-
         for (int bounces = 0; bounces < 4; bounces++)
 	{
 
@@ -763,8 +762,9 @@ void main( void )
 	// we must map pixelPos into the range -1.0 to +1.0
 	vec2 pixelPos = ((gl_FragCoord.xy + pixelOffset) / uResolution) * 2.0 - 1.0;
 
-        vec3 rayDir = normalize( pixelPos.x * camRight * uULen + pixelPos.y * camUp * uVLen + camForward );
-        
+        vec3 rayDir = uUseOrthographicCamera ? camForward : 
+					       normalize( pixelPos.x * camRight * uULen + pixelPos.y * camUp * uVLen + camForward );
+
         // depth of field
         vec3 focalPoint = uFocusDistance * rayDir;
         float randomAngle = rng() * TWO_PI; // pick random point on aperture
@@ -773,8 +773,10 @@ void main( void )
         // point on aperture to focal point
         vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
         
-        rayOrigin = cameraPosition + randomAperturePos;
+        rayOrigin = uUseOrthographicCamera ? cameraPosition + (camRight * pixelPos.x * uULen * 100.0) + (camUp * pixelPos.y * uVLen * 100.0) + randomAperturePos :
+					     cameraPosition + randomAperturePos;
 	rayDirection = finalRayDir;
+
 
         SetupScene(); 
 
