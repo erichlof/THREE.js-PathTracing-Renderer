@@ -146,10 +146,12 @@ function onMouseWheel(event)
 	if (event.deltaY > 0)
 	{
 		increaseFOV = true;
+		dollyCameraOut = true;
 	} 
 	else if (event.deltaY < 0)
 	{
 		decreaseFOV = true;
+		dollyCameraIn = true;
 	}
 }
 
