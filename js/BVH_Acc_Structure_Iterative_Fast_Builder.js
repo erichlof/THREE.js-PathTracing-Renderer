@@ -8,17 +8,16 @@ https://github.com/erichlof/THREE.js-PathTracing-Renderer
 
 
 let stackptr = 0;
-let workListLength = 0;
 let buildnodes = [];
 let leftWorkLists = [];
 let rightWorkLists = [];
 let parentList = [];
-let currentList;
+let currentList, aabb_array_copy;
 let k, value, side0, side1, side2;
 let bestSplit, goodSplit, okaySplit;
 let bestAxis, goodAxis, okayAxis;
-let leftWorkCounter = 0;
-let rightWorkCounter = 0;
+let leftWorkCount = 0;
+let rightWorkCount = 0;
 let currentMinCorner = new THREE.Vector3();
 let currentMaxCorner = new THREE.Vector3();
 let testMinCorner = new THREE.Vector3();
@@ -31,7 +30,7 @@ let spatialAverage = new THREE.Vector3();
 function BVH_FlatNode()
 {
 	this.idSelf = 0;
-	this.idObject = -1; // negative id means that this is another inner node
+	this.idPrimitive = -1; // a negative primitive id means that this is another inner node
 	this.idRightChild = 0;
 	this.idParent = 0;
 	this.minCorner = new THREE.Vector3();
@@ -39,7 +38,7 @@ function BVH_FlatNode()
 }
 
 
-function BVH_Create_Node(workList, aabb_array, idParent, isLeftBranch)
+function BVH_Create_Node(workList, idParent, isRightBranch)
 {
 
 	// re-initialize bounding box extents 
@@ -57,16 +56,16 @@ function BVH_Create_Node(workList, aabb_array, idParent, isLeftBranch)
 		// create leaf node
 		let flatLeafNode = new BVH_FlatNode();
 		flatLeafNode.idSelf = buildnodes.length;
-		flatLeafNode.idObject = k;
-		flatLeafNode.idRightChild = -1;
+		flatLeafNode.idPrimitive = k; // id of primitive (usually a triangle) that is stored inside this AABB leaf node
+		flatLeafNode.idRightChild = -1; // leaf nodes do not have children
 		flatLeafNode.idParent = idParent;
-		flatLeafNode.minCorner.set(aabb_array[9 * k + 0], aabb_array[9 * k + 1], aabb_array[9 * k + 2]);
-		flatLeafNode.maxCorner.set(aabb_array[9 * k + 3], aabb_array[9 * k + 4], aabb_array[9 * k + 5]);
+		flatLeafNode.minCorner.set(aabb_array_copy[9 * k + 0], aabb_array_copy[9 * k + 1], aabb_array_copy[9 * k + 2]);
+		flatLeafNode.maxCorner.set(aabb_array_copy[9 * k + 3], aabb_array_copy[9 * k + 4], aabb_array_copy[9 * k + 5]);
 		buildnodes.push(flatLeafNode);
 
 		// if this is a right branch, fill in parent's missing link to this right child, 
 		// now that we have assigned this right child an ID
-		if (!isLeftBranch)
+		if (isRightBranch)
 			buildnodes[idParent].idRightChild = flatLeafNode.idSelf;
 
 		return;
@@ -74,31 +73,24 @@ function BVH_Create_Node(workList, aabb_array, idParent, isLeftBranch)
 
 	else if (workList.length > 1)
 	{
-		// this is where the real work happens: we must sort an arbitrary number of primitive aabb's.
+		// this is where the real work happens: we must sort an arbitrary number of primitive (usually triangles) AABBs.
 		// to get a balanced tree, we hope for about half to be placed in left child, half to be placed in right child.
 
-		workListLength = workList.length;
-		// construct bounding box around all of the current workList's triangle AABBs
-		for (let i = 0; i < workListLength; i++)
+		// construct/grow bounding box around all of the current workList's primitive(triangle) AABBs
+		for (let i = 0; i < workList.length; i++)
 		{
 			k = workList[i];
-			testMinCorner.set(aabb_array[9 * k + 0], aabb_array[9 * k + 1], aabb_array[9 * k + 2]);
-			testMaxCorner.set(aabb_array[9 * k + 3], aabb_array[9 * k + 4], aabb_array[9 * k + 5]);
+			testMinCorner.set(aabb_array_copy[9 * k + 0], aabb_array_copy[9 * k + 1], aabb_array_copy[9 * k + 2]);
+			testMaxCorner.set(aabb_array_copy[9 * k + 3], aabb_array_copy[9 * k + 4], aabb_array_copy[9 * k + 5]);
 			currentMinCorner.min(testMinCorner);
 			currentMaxCorner.max(testMaxCorner);
 		}
 
-		// calculate the middle point of the current box (aka 'spatial median')
-		// this simply uses the spatial average of the longest box extent to determine the split plane,
-		// which is very fast and results in a fair-to-good quality, balanced binary tree structure
-		spatialAverage.copy(currentMinCorner).add(currentMaxCorner).multiplyScalar(0.5);
-		
-
-		// create inner node
+		// create an inner node to represent this newly grown bounding box
 		let flatnode = new BVH_FlatNode();
-		flatnode.idSelf = buildnodes.length;
-		flatnode.idObject = -1; // negative id means that this is another inner node
-		flatnode.idRightChild = 0; // missing link will be filled in soon, don't know how deep the left branches will go
+		flatnode.idSelf = buildnodes.length; // its own id matches the number of nodes we've created so far
+		flatnode.idPrimitive = -1; // a negative primitive id means that this is just another inner node (with pointers to children), no triangle
+		flatnode.idRightChild = 0; // missing RightChild link will be filled in soon; don't know how deep the left branches will go while constructing top-to-bottom
 		flatnode.idParent = idParent;
 		flatnode.minCorner.copy(currentMinCorner);
 		flatnode.maxCorner.copy(currentMaxCorner);
@@ -106,13 +98,20 @@ function BVH_Create_Node(workList, aabb_array, idParent, isLeftBranch)
 
 		// if this is a right branch, fill in parent's missing link to this right child, 
 		// now that we have assigned this right child an ID
-		if (!isLeftBranch)
+		if (isRightBranch)
 			buildnodes[idParent].idRightChild = flatnode.idSelf;
 
 
-		side0 = currentMaxCorner.x - currentMinCorner.x; // length bbox along X-axis
-		side1 = currentMaxCorner.y - currentMinCorner.y; // length bbox along Y-axis
-		side2 = currentMaxCorner.z - currentMinCorner.z; // length bbox along Z-axis
+		// Begin Spatial Median split plane determination and primitive AABB sorting
+
+		side0 = currentMaxCorner.x - currentMinCorner.x; // length along X-axis
+		side1 = currentMaxCorner.y - currentMinCorner.y; // length along Y-axis
+		side2 = currentMaxCorner.z - currentMinCorner.z; // length along Z-axis
+
+		// calculate the middle point of this newly-grown bounding box (aka the 'spatial median')
+		// this simply uses the spatial average of the longest box extent to determine the split plane,
+		// which is very fast and results in a fair quality, fairly balanced binary tree structure
+		spatialAverage.copy(currentMinCorner).add(currentMaxCorner).multiplyScalar(0.5);
 
 		// initialize variables
 		bestAxis = 0; goodAxis = 1; okayAxis = 2;
@@ -138,7 +137,7 @@ function BVH_Create_Node(workList, aabb_array, idParent, isLeftBranch)
 				okaySplit = spatialAverage.y;
 			}
 		}
-		else if (side1 > side0 && side1 >= side2)
+		else if (side1 >= side0 && side1 >= side2)
 		{
 			bestAxis = 1;
 			bestSplit = spatialAverage.y;
@@ -157,7 +156,7 @@ function BVH_Create_Node(workList, aabb_array, idParent, isLeftBranch)
 				okaySplit = spatialAverage.x;
 			}
 		}
-		else if (side2 > side0 && side2 > side1)
+		else// if (side2 >= side0 && side2 >= side1)
 		{
 			bestAxis = 2;
 			bestSplit = spatialAverage.z;
@@ -178,19 +177,18 @@ function BVH_Create_Node(workList, aabb_array, idParent, isLeftBranch)
 		}
 
 		// try best axis first, then try the other two if necessary
-		for (let j = 0; j < 3; j++)
+		for (let axis = 0; axis < 3; axis++)
 		{
-			// distribute the triangle AABBs in the left or right child nodes
+			// distribute the triangle AABBs in either the left child or right child
 			// reset counters for the loop coming up
-			leftWorkCounter = 0;
-			rightWorkCounter = 0;
+			leftWorkCount = 0;
+			rightWorkCount = 0;
 
-			workListLength = workList.length;
-			// this loop is to count how many elements we need for the left branch and the right branch
-			for (let i = 0; i < workListLength; i++)
+			// this loop is to count how many elements we will need for the left branch and the right branch
+			for (let i = 0; i < workList.length; i++)
 			{
 				k = workList[i];
-				testCentroid.set(aabb_array[9 * k + 6], aabb_array[9 * k + 7], aabb_array[9 * k + 8]);
+				testCentroid.set(aabb_array_copy[9 * k + 6], aabb_array_copy[9 * k + 7], aabb_array_copy[9 * k + 8]);
 
 				// get bbox center
 				if (bestAxis == 0) value = testCentroid.x; // X-axis
@@ -199,26 +197,26 @@ function BVH_Create_Node(workList, aabb_array, idParent, isLeftBranch)
 
 				if (value < bestSplit)
 				{
-					leftWorkCounter++;
+					leftWorkCount++;
 				} else
 				{
-					rightWorkCounter++;
+					rightWorkCount++;
 				}
 			}
 
-			if (leftWorkCounter > 0 && rightWorkCounter > 0)
+			if (leftWorkCount > 0 && rightWorkCount > 0)
 			{
 				break; // success, move on to the next part
 			}
-			else if (leftWorkCounter == 0 || rightWorkCounter == 0)
+			else// if (leftWorkCount == 0 || rightWorkCount == 0)
 			{
 				// try another axis
-				if (j == 0)
+				if (axis == 0)
 				{
 					bestAxis = goodAxis;
 					bestSplit = goodSplit;
 				}
-				else if (j == 1)
+				else if (axis == 1)
 				{
 					bestAxis = okayAxis;
 					bestSplit = okaySplit;
@@ -227,26 +225,25 @@ function BVH_Create_Node(workList, aabb_array, idParent, isLeftBranch)
 				continue;
 			}
 
-		} // end for (let j = 0; j < 3; j++)
+		} // end for (let axis = 0; axis < 3; axis++)
 
 
-		// if the below if statement is true, then we have successfully sorted the triangle aabb's
-		if (leftWorkCounter > 0 && rightWorkCounter > 0)
+		// if the below if statement is true, then we have successfully sorted the primitive(triangle) AABBs
+		if (leftWorkCount > 0 && rightWorkCount > 0)
 		{
 			// now that the size of each branch is known, we can initialize the left and right arrays
-			leftWorkLists[stackptr] = new Uint32Array(leftWorkCounter);
-			rightWorkLists[stackptr] = new Uint32Array(rightWorkCounter);
+			leftWorkLists[stackptr] = new Uint32Array(leftWorkCount);
+			rightWorkLists[stackptr] = new Uint32Array(rightWorkCount);
 
 			// reset counters for the loop coming up
-			leftWorkCounter = 0;
-			rightWorkCounter = 0;
+			leftWorkCount = 0;
+			rightWorkCount = 0;
 
-			workListLength = workList.length;
-			// populate the current leftWorkLists and rightWorklists
-			for (let i = 0; i < workListLength; i++)
+			// sort the primitives and populate the current leftWorkLists and rightWorklists
+			for (let i = 0; i < workList.length; i++)
 			{
 				k = workList[i];
-				testCentroid.set(aabb_array[9 * k + 6], aabb_array[9 * k + 7], aabb_array[9 * k + 8]);
+				testCentroid.set(aabb_array_copy[9 * k + 6], aabb_array_copy[9 * k + 7], aabb_array_copy[9 * k + 8]);
 
 				// get bbox center
 				if (bestAxis == 0) value = testCentroid.x; // X-axis
@@ -255,65 +252,64 @@ function BVH_Create_Node(workList, aabb_array, idParent, isLeftBranch)
 
 				if (value < bestSplit)
 				{
-					leftWorkLists[stackptr][leftWorkCounter] = k;
-					leftWorkCounter++;
+					leftWorkLists[stackptr][leftWorkCount] = k;
+					leftWorkCount++;
 				} else
 				{
-					rightWorkLists[stackptr][rightWorkCounter] = k;
-					rightWorkCounter++;
+					rightWorkLists[stackptr][rightWorkCount] = k;
+					rightWorkCount++;
 				}
 			}
 
 			return; // success!
 
-		} // end if (leftWorkCounter > 0 && rightWorkCounter > 0)
+		} // end if (leftWorkCount > 0 && rightWorkCount > 0)
 
 
 		// if we reached this point, the builder failed to find a decent splitting plane axis, so
 		// manually populate the current leftWorkLists and rightWorklists.
-		leftWorkCounter = 0;
-		rightWorkCounter = 0;
+		// reset counters to 0
+		leftWorkCount = 0;
+		rightWorkCount = 0;
 
-		workListLength = workList.length;
-		// this loop is to count how many elements we need for the left branch and the right branch
-		for (let i = 0; i < workListLength; i++)
+		// this loop is to count how many elements we will need for the left branch and the right branch
+		for (let i = 0; i < workList.length; i++)
 		{
 			if (i % 2 == 0)
 			{
-				leftWorkCounter++;
+				leftWorkCount++;
 			} else
 			{
-				rightWorkCounter++;
+				rightWorkCount++;
 			}
 		}
 
 		// now that the size of each branch is known, we can initialize the left and right arrays
-		leftWorkLists[stackptr] = new Uint32Array(leftWorkCounter);
-		rightWorkLists[stackptr] = new Uint32Array(rightWorkCounter);
+		leftWorkLists[stackptr] = new Uint32Array(leftWorkCount);
+		rightWorkLists[stackptr] = new Uint32Array(rightWorkCount);
 
 		// reset counters for the loop coming up
-		leftWorkCounter = 0;
-		rightWorkCounter = 0;
+		leftWorkCount = 0;
+		rightWorkCount = 0;
 
-		workListLength = workList.length;
-		for (let i = 0; i < workListLength; i++)
+		for (let i = 0; i < workList.length; i++)
 		{
 			k = workList[i];
 
 			if (i % 2 == 0)
 			{
-				leftWorkLists[stackptr][leftWorkCounter] = k;
-				leftWorkCounter++;
+				leftWorkLists[stackptr][leftWorkCount] = k;
+				leftWorkCount++;
 			} else
 			{
-				rightWorkLists[stackptr][rightWorkCounter] = k;
-				rightWorkCounter++;
+				rightWorkLists[stackptr][rightWorkCount] = k;
+				rightWorkCount++;
 			}
 		}
 
 	} // end else if (workList.length > 1)
 
-} // end function BVH_Create_Node(workList, aabb_array, idParent, isLeftBranch)
+} // end function BVH_Create_Node(workList, idParent, isRightBranch)
 
 
 
@@ -321,6 +317,8 @@ function BVH_Build_Iterative(workList, aabb_array)
 {
 
 	currentList = workList;
+	// save a global copy of the supplied aabb_array, so that it can be used by the various functions in this file
+	aabb_array_copy = new Float32Array(aabb_array);
 
 	// reset BVH builder arrays;
 	buildnodes = [];
@@ -328,12 +326,12 @@ function BVH_Build_Iterative(workList, aabb_array)
 	rightWorkLists = [];
 	parentList = [];
 
+	// initialize variables
 	stackptr = 0;
 
-	parentList.push(buildnodes.length - 1);
-
 	// parent id of -1, meaning this is the root node, which has no parent
-	BVH_Create_Node(currentList, aabb_array, -1, true); // build root node
+	parentList.push(-1);
+	BVH_Create_Node(currentList, -1, false); // build root node
 
 	// build the tree using the "go down left branches until done, then ascend back up right branches" approach
 	while (stackptr > -1)
@@ -350,7 +348,7 @@ function BVH_Build_Iterative(workList, aabb_array)
 			parentList.push(buildnodes.length - 1);
 
 			// build the left node
-			BVH_Create_Node(currentList, aabb_array, buildnodes.length - 1, true);
+			BVH_Create_Node(currentList, buildnodes.length - 1, false);
 		}
 		else
 		{ // right side of tree
@@ -363,7 +361,7 @@ function BVH_Build_Iterative(workList, aabb_array)
 				stackptr++;
 
 				// build the right node
-				BVH_Create_Node(currentList, aabb_array, parentList.pop(), false);
+				BVH_Create_Node(currentList, parentList.pop(), true);
 			}
 			else
 			{
@@ -373,13 +371,12 @@ function BVH_Build_Iterative(workList, aabb_array)
 
 	} // end while (stackptr > -1)
 
-	//console.log(buildnodes);
 
 	// Copy the buildnodes array into the aabb_array
 	for (let n = 0; n < buildnodes.length; n++)
 	{
 		// slot 0
-		aabb_array[8 * n + 0] = buildnodes[n].idObject;     // r or x component
+		aabb_array[8 * n + 0] = buildnodes[n].idPrimitive;  // r or x component
 		aabb_array[8 * n + 1] = buildnodes[n].minCorner.x;  // g or y component
 		aabb_array[8 * n + 2] = buildnodes[n].minCorner.y;  // b or z component
 		aabb_array[8 * n + 3] = buildnodes[n].minCorner.z;  // a or w component
