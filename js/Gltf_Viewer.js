@@ -26,6 +26,10 @@ var sunAngle = Math.PI / 2.5;
 var sampleCounter = 1.0, frameCounter = 1.0;
 var forceUpdate = false, cameraIsMoving = false, cameraRecentlyMoving = false;
 var sceneIsDynamic = false;
+let useToneMapping = true;
+let pixelEdgeSharpness = 1.0;
+let edgeSharpenSpeed = 0.05;
+let filterDecaySpeed = 0.0002;
 // Input variables
 var isPaused = true;
 var oldYawRotation = 0, oldPitchRotation = 0, oldDeltaX = 0, oldDeltaY = 0, newDeltaX = 0, newDeltaY = 0;
@@ -477,8 +481,7 @@ async function prepareGeometryForPT(meshList, pathTracingMaterialList, triangleM
 
 	console.timeEnd("LoadingGltf");
 
-	console.time("BvhGeneration");
-	console.log("BvhGeneration...");
+	
 
 	modelMesh.geometry.rotateY(modelRotationY);
 
@@ -602,6 +605,7 @@ async function prepareGeometryForPT(meshList, pathTracingMaterialList, triangleM
 		triangle_b_box_max.copy(triangle_b_box_max.max(vp2));
 
 		triangle_b_box_centroid.copy(triangle_b_box_min).add(triangle_b_box_max).multiplyScalar(0.5);
+		//triangle_b_box_centroid.copy(vp0).add(vp1).add(vp2).multiplyScalar(0.3333);
 
 		aabb_array[9 * i + 0] = triangle_b_box_min.x;
 		aabb_array[9 * i + 1] = triangle_b_box_min.y;
@@ -617,13 +621,16 @@ async function prepareGeometryForPT(meshList, pathTracingMaterialList, triangleM
 
 	} // end for (let i = 0; i < total_number_of_triangles; i++)
 
+	console.time("BvhGeneration");
+	console.log("BvhGeneration...");
+	
 	// Build the BVH acceleration structure, which places a bounding box ('root' of the tree) around all of the
 	// triangles of the entire mesh, then subdivides each box into 2 smaller boxes.  It continues until it reaches 1 triangle,
 	// which it then designates as a 'leaf'
 	BVH_Build_Iterative(totalWork, aabb_array);
 	//console.log(buildnodes);
 
-
+	console.timeEnd("BvhGeneration");
 
 	let triangleDataTexture = new THREE.DataTexture(triangle_array,
 		2048,
@@ -760,8 +767,14 @@ async function prepareGeometryForPT(meshList, pathTracingMaterialList, triangleM
 
 
 	screenOutputUniforms = {
+		tPathTracedImageTexture: { type: "t", value: null },
+		uSampleCounter: { type: "f", value: 0.0 },
 		uOneOverSampleCounter: { type: "f", value: 0.0 },
-		tPathTracedImageTexture: { type: "t", value: null }
+		uPixelEdgeSharpness: { type: "f", value: pixelEdgeSharpness },
+		uEdgeSharpenSpeed: { type: "f", value: edgeSharpenSpeed },
+		uFilterDecaySpeed: { type: "f", value: filterDecaySpeed },
+		uSceneIsDynamic: { type: "b1", value: sceneIsDynamic },
+		uUseToneMapping: { type: "b1", value: useToneMapping }
 	};
 	let screenOutputFragmentShader = await filePromiseLoader('shaders/ScreenOutput_Fragment.glsl');
 	
@@ -800,7 +813,7 @@ async function prepareGeometryForPT(meshList, pathTracingMaterialList, triangleM
 	});
 	*/
 
-	console.timeEnd("BvhGeneration");
+	
 
 	// Hide loading spinning and show menu
 	loadingSpinner.classList.add("hidden");
@@ -1184,11 +1197,13 @@ function animate() {
 	pathTracingUniforms.uCameraIsMoving.value = cameraIsMoving;
 	pathTracingUniforms.uFrameCounter.value = frameCounter;
 	pathTracingUniforms.uRandomVec2.value.set(Math.random(), Math.random());
+
+	screenOutputUniforms.uSampleCounter.value = sampleCounter;
+	screenOutputUniforms.uOneOverSampleCounter.value = 1.0 / sampleCounter;
 	
 	// CAMERA
 	cameraControlsObject.updateMatrixWorld(true);
 	pathTracingUniforms.uCameraMatrix.value.copy(worldCamera.matrixWorld);
-	screenOutputUniforms.uOneOverSampleCounter.value = 1.0 / sampleCounter;
 
 	samplesSpanEl.innerHTML = `Samples: ${sampleCounter}`;
 
