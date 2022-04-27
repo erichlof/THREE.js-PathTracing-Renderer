@@ -97,7 +97,9 @@ float SceneIntersect( )
 		hitEmission = plane.emission;
 		hitColor = plane.color;
 		hitType = plane.type;
+		hitObjectID = float(objectCount);
 	}
+	objectCount++;
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////
 	// glTF
@@ -227,6 +229,7 @@ float SceneIntersect( )
 		hitUV = triangleW * vec2(vd4.zw) + triangleU * vec2(vd5.xy) + triangleV * vec2(vd5.zw);
 		hitType = int(vd6.x);
 		hitAlbedoTextureID = int(vd7.x);
+		hitObjectID = float(objectCount);
 	}
 
 	return t;
@@ -248,9 +251,9 @@ vec3 Get_HDR_Color(vec3 rayDirection)
 	return texColor;
 }
 
-//-----------------------------------------------------------------------
-vec3 CalculateRadiance()
-//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------------------------------
+vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
+//-----------------------------------------------------------------------------------------------------------------------------
 {
 	vec3 randVec = vec3(rand() * 2.0 - 1.0, rand() * 2.0 - 1.0, rand() * 2.0 - 1.0);
 
@@ -262,13 +265,15 @@ vec3 CalculateRadiance()
 
 	float hitDistance;
 	float nc, nt, ratioIoR, Re, Tr;
+	float P, RP, TP;
 	float weight;
 	float t = INFINITY;
 	float epsIntersect = 0.01;
 	
-	int previousIntersecType = -100;
 	int diffuseCount = 0;
-
+	int previousIntersecType = -100;
+	hitType = -100;
+	
 	bool skyHit = false;
 	bool bounceIsSpecular = true;
 	bool sampleSunLight = false;
@@ -281,8 +286,9 @@ vec3 CalculateRadiance()
 		// ray hits sky first
 		if (t == INFINITY && bounces == 0 )
 		{
-			accumCol = Get_HDR_Color(rayDirection);
+			pixelSharpness = 1.01;
 
+			accumCol = Get_HDR_Color(rayDirection);
 			break;	
 		}
 
@@ -301,7 +307,10 @@ vec3 CalculateRadiance()
 		if (t == INFINITY && previousIntersecType == REFR)
 		{
 	    		if (diffuseCount == 0) // camera looking through glass, hitting the sky
-			    	mask *= Get_HDR_Color(rayDirection);
+			{
+				pixelSharpness = 1.01;
+				mask *= Get_HDR_Color(rayDirection);
+			}	
 			else if (sampleSunLight) // sun rays going through glass, hitting another surface
 				mask *= uSunColor * uSunLightIntensity;
 			else  // sky rays going through glass, hitting another surface
@@ -313,39 +322,47 @@ vec3 CalculateRadiance()
 			break;
 		}
 
-		// other lights, like houselights, could be added to the scene
+		/* // other lights, like houselights, could be added to the scene
 		// if we reached light material, don't spawn any more rays
 		if (hitType == LIGHT)
 		{
 	    		accumCol = mask * hitEmission * 0.5;
 
 			break;
-		}
+		} */
+
+		/* // Since we want fast direct sunlight caustics through windows, we don't use the following early out
+		if (sampleSunLight)
+			break; */
 
 		// useful data
 		vec3 n = normalize(hitNormal);
 		vec3 nl = dot(n, rayDirection) < 0.0 ? n : -n;
 		vec3 x = rayOrigin + rayDirection * t;
 
+		if (bounces == 0)
+		{
+			objectNormal = nl;
+			objectColor = hitColor;
+			objectID = hitObjectID;
+		}
+		if (bounces == 1 && diffuseCount == 0)
+		{
+			objectNormal = nl;
+		}
+
+
+
 		if (hitType == DIFF) // Ideal DIFFUSE reflection
 		{
+			if (diffuseCount == 0)
+				objectColor = hitColor;
+
 			diffuseCount++;
 			previousIntersecType = DIFF;
 
 			mask *= hitColor;
 	    		bounceIsSpecular = false;
-
-			/*
-			// Russian Roulette
-			float p = max(mask.r, max(mask.g, mask.b));
-			if (bounces > 0)
-			{
-				if (rand() < p)
-		    			mask *= 1.0 / p;
-				else
-		    			break;
-			}
-			*/
 
 			if (diffuseCount == 1 && rand() < 0.5)
 			{
@@ -386,15 +403,20 @@ vec3 CalculateRadiance()
 
 		if (hitType == REFR)  // Ideal dielectric REFRACTION
 		{
+			pixelSharpness = diffuseCount == 0 ? -1.0 : pixelSharpness;
 			previousIntersecType = REFR;
 
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
 			Re = calcFresnelReflectance(rayDirection, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
+			P  = 0.25 + (0.5 * Re);
+                	RP = Re / P;
+                	TP = Tr / (1.0 - P);
 
-			if (rand() < Re) // reflect ray from surface
+			if (diffuseCount == 0 && rand() < P)
 			{
+				mask *= RP;
 				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
 				rayOrigin = x + nl * epsIntersect;
 				continue;
@@ -402,7 +424,9 @@ vec3 CalculateRadiance()
 			
 			// transmit ray through surface
 			
-			mask *= 1.0 - (hitColor * hitOpacity);
+			//mask *= 1.0 - (hitColor * hitOpacity);
+			mask *= hitColor;
+			mask *= TP;
 			//tdir = refract(rayDirection, nl, ratioIoR);
 			rayDirection = rayDirection; // TODO using rayDirection instead of tdir, because going through common Glass makes everything spherical from up close...
 			rayOrigin = x + rayDirection * epsIntersect;
@@ -420,76 +444,13 @@ vec3 CalculateRadiance()
 } // end vec3 CalculateRadiance()
 
 
-// tentFilter from Peter Shirley's 'Realistic Ray Tracing (2nd Edition)' book, pg. 60
-float tentFilter(float x)
+//-----------------------------------------------------------------------
+void SetupScene(void)
+//-----------------------------------------------------------------------
 {
-	return (x < 0.5) ? sqrt(2.0 * x) - 1.0 : 1.0 - sqrt(2.0 - (2.0 * x));
-}
-
-
-void main( void )
-{
-	vec3 camRight   = vec3( uCameraMatrix[0][0],  uCameraMatrix[0][1],  uCameraMatrix[0][2]);
-	vec3 camUp      = vec3( uCameraMatrix[1][0],  uCameraMatrix[1][1],  uCameraMatrix[1][2]);
-	vec3 camForward = vec3(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]);
-	// the following is not needed - three.js has a built-in uniform named cameraPosition
-	//vec3 camPos   = vec3( uCameraMatrix[3][0],  uCameraMatrix[3][1],  uCameraMatrix[3][2]);
-	
-	// calculate unique seed for rng() function
-	seed = uvec2(uFrameCounter, uFrameCounter + 1.0) * uvec2(gl_FragCoord);
-	// initialize rand() variables
-	counter = -1.0; // will get incremented by 1 on each call to rand()
-	channel = 0; // the final selected color channel to use for rand() calc (range: 0 to 3, corresponds to R,G,B, or A)
-	randNumber = 0.0; // the final randomly-generated number (range: 0.0 to 1.0)
-	randVec4 = vec4(0); // samples and holds the RGBA blueNoise texture value for this pixel
-	randVec4 = texelFetch(tBlueNoiseTexture, ivec2(mod(gl_FragCoord.xy + floor(uRandomVec2 * 256.0), 256.0)), 0);
-	
-	// rand() produces higher FPS and almost immediate convergence, but may have very slight jagged diagonal edges on higher frequency color patterns, i.e. checkerboards.
-	//vec2 pixelOffset = vec2( tentFilter(rand()), tentFilter(rand()) );
-	// rng() has a little less FPS on mobile, and a little more noisy initially, but eventually converges on perfect anti-aliased edges - use this if 'beauty-render' is desired.
-	vec2 pixelOffset = vec2( tentFilter(rng()), tentFilter(rng()) );
-	
-	// we must map pixelPos into the range -1.0 to +1.0
-	vec2 pixelPos = ((gl_FragCoord.xy + pixelOffset) / uResolution) * 2.0 - 1.0;
-	vec3 rayDir = normalize( pixelPos.x * camRight * uULen + pixelPos.y * camUp * uVLen + camForward );
-	
-	// depth of field
-	vec3 focalPoint = uFocusDistance * rayDir;
-	float randomAngle = rng() * TWO_PI; // pick random point on aperture
-	float randomRadius = rng() * uApertureSize;
-	vec3  randomAperturePos = ( cos(randomAngle) * camRight + sin(randomAngle) * camUp ) * sqrt(randomRadius);
-	// point on aperture to focal point
-	vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
-	
-	rayOrigin = cameraPosition + randomAperturePos;
-	rayDirection = finalRayDir;
-
 	// Add ground plane
 	plane = Plane( vec4(0, 1, 0, 0.0), vec3(0), vec3(0.45), DIFF);
-
-	// perform path tracing and get resulting pixel color
-	vec3 pixelColor = CalculateRadiance();
-
-	vec3 previousColor = texelFetch(tPreviousTexture, ivec2(gl_FragCoord.xy), 0).rgb;
-	
-	if (uFrameCounter == 1.0) // camera just moved after being still
-	{
-		previousColor *= (1.0 / (uPreviousSampleCount * 2.0)); // essentially previousColor *= 0.5, like below
-		pixelColor *= 0.5;
-	}
-	else if (uCameraIsMoving) // camera is currently moving
-	{
-		previousColor *= 0.5; // motion-blur trail amount (old image)
-		pixelColor *= 0.5; // brightness of new image (noisy)
-	}
-
-	// if current raytraced pixel didn't return any color value, just use the previous frame's pixel color
-	if (pixelColor == vec3(0.0))
-	{
-		pixelColor = previousColor;
-		previousColor *= 0.5;
-		pixelColor *= 0.5;
-	}
-	
-	pc_fragColor = vec4( pixelColor + previousColor, 1.0 );	
 }
+
+
+#include <pathtracing_main>
