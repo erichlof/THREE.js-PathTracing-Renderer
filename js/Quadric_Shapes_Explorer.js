@@ -59,7 +59,7 @@ function initSceneData()
 
 	// pixelRatio is resolution - range: 0.5(half resolution) to 1.0(full resolution)
 	pixelRatio = mouseControl ? 0.75 : 0.75;
-	//pixelRatio = 0.5;//for development
+	pixelRatio = 0.5;//for development
 
 	EPS_intersect = 0.01;
 
@@ -120,7 +120,7 @@ function initSceneData()
 
 	quadricShape_PresetController = gui.add(quadricShape_PresetObject, 'Shape_Preset', ['Sphere(Ellipsoid)', 'Cylinder', 'Cone', 
 		'Paraboloid', 'Hyperboloid_1Sheet', 'Hyperboloid_2Sheets', 'HyperbolicParaboloid', 'Plane', 'IntersectingPlanes', 
-		'ParabolicPlane', 'TwistedPlane', 'Shoe-horn']).onChange(handleShapePresetChange);
+		'ParabolicPlane', 'HyperbolicPlanes', 'TwistedPlane', 'Custom_1', 'Custom_2', 'Custom_3']).onChange(handleShapePresetChange);
 
 	
 	transform_Folder = gui.addFolder('Transform').close();
@@ -255,6 +255,13 @@ function updateVariablesAndUniforms()
 			quadricH_ParameterController.setValue(0); quadricI_ParameterController.setValue(0);
 			quadricJ_ParameterController.setValue(0);
 		}
+		else if (quadricShape_PresetController.getValue() == 'HyperbolicPlanes')
+		{
+			quadricA_ParameterController.setValue(1); quadricB_ParameterController.setValue(0); quadricC_ParameterController.setValue(0); quadricD_ParameterController.setValue(0);
+			quadricE_ParameterController.setValue(-1); quadricF_ParameterController.setValue(0); quadricG_ParameterController.setValue(0);
+			quadricH_ParameterController.setValue(0); quadricI_ParameterController.setValue(0);
+			quadricJ_ParameterController.setValue(0.01);
+		}
 		else if (quadricShape_PresetController.getValue() == 'TwistedPlane')
 		{
 			quadricA_ParameterController.setValue(0); quadricB_ParameterController.setValue(0); quadricC_ParameterController.setValue(1); quadricD_ParameterController.setValue(0);
@@ -262,12 +269,26 @@ function updateVariablesAndUniforms()
 			quadricH_ParameterController.setValue(0); quadricI_ParameterController.setValue(0);
 			quadricJ_ParameterController.setValue(0);
 		}
-		else if (quadricShape_PresetController.getValue() == 'Shoe-horn')
+		else if (quadricShape_PresetController.getValue() == 'Custom_1')
 		{
 			quadricA_ParameterController.setValue(1); quadricB_ParameterController.setValue(0); quadricC_ParameterController.setValue(0); quadricD_ParameterController.setValue(0);
 			quadricE_ParameterController.setValue(0); quadricF_ParameterController.setValue(0); quadricG_ParameterController.setValue(-0.25);
 			quadricH_ParameterController.setValue(-1); quadricI_ParameterController.setValue(0);
 			quadricJ_ParameterController.setValue(-0.5);
+		}
+		else if (quadricShape_PresetController.getValue() == 'Custom_2')
+		{
+			quadricA_ParameterController.setValue(1); quadricB_ParameterController.setValue(0); quadricC_ParameterController.setValue(0); quadricD_ParameterController.setValue(0);
+			quadricE_ParameterController.setValue(-1); quadricF_ParameterController.setValue(0); quadricG_ParameterController.setValue(0);
+			quadricH_ParameterController.setValue(0); quadricI_ParameterController.setValue(0.01);
+			quadricJ_ParameterController.setValue(0);
+		}
+		else if (quadricShape_PresetController.getValue() == 'Custom_3')
+		{
+			quadricA_ParameterController.setValue(-1); quadricB_ParameterController.setValue(0); quadricC_ParameterController.setValue(0); quadricD_ParameterController.setValue(0);
+			quadricE_ParameterController.setValue(1); quadricF_ParameterController.setValue(0); quadricG_ParameterController.setValue(0);
+			quadricH_ParameterController.setValue(-0.5); quadricI_ParameterController.setValue(0);
+			quadricJ_ParameterController.setValue(0.5);
 		}
 
 		needChangeQuadricParameter = true;
