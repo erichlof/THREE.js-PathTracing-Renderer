@@ -28,14 +28,12 @@ let transform_SkewZ_XController, transform_SkewZ_XObject;
 let transform_SkewZ_YController, transform_SkewZ_YObject;
 
 
-let quadricA_CoefficientController, quadricB_CoefficientController, quadricC_CoefficientController, quadricD_CoefficientController,
-	quadricE_CoefficientController, quadricF_CoefficientController, quadricG_CoefficientController, quadricH_CoefficientController,
-	quadricI_CoefficientController, quadricJ_CoefficientController, quadricK_CoefficientController, quadricL_CoefficientController,
-	quadricM_CoefficientController, quadricN_CoefficientController, quadricO_CoefficientController, quadricP_CoefficientController;
-let quadricA_CoefficientObject, quadricB_CoefficientObject, quadricC_CoefficientObject, quadricD_CoefficientObject,
-	quadricE_CoefficientObject, quadricF_CoefficientObject, quadricG_CoefficientObject, quadricH_CoefficientObject,
-	quadricI_CoefficientObject, quadricJ_CoefficientObject, quadricK_CoefficientObject, quadricL_CoefficientObject,
-	quadricM_CoefficientObject, quadricN_CoefficientObject, quadricO_CoefficientObject, quadricP_CoefficientObject;
+let quadricA_ParameterController, quadricB_ParameterController, quadricC_ParameterController, quadricD_ParameterController,
+	quadricE_ParameterController, quadricF_ParameterController, quadricG_ParameterController, quadricH_ParameterController,
+	quadricI_ParameterController, quadricJ_ParameterController;
+let quadricA_ParameterObject, quadricB_ParameterObject, quadricC_ParameterObject, quadricD_ParameterObject,
+	quadricE_ParameterObject, quadricF_ParameterObject, quadricG_ParameterObject, quadricH_ParameterObject,
+	quadricI_ParameterObject, quadricJ_ParameterObject;
 
 let needChangePosition = false;
 let needChangeScaleUniform = false;
@@ -43,7 +41,7 @@ let needChangeScale = false;
 let needChangeSkew = false;
 let needChangeRotation = false;
 let needChangeShapePreset = false;
-let needChangeQuadricCoefficient = false;
+let needChangeQuadricParameter = false;
 let wallRadius = 50;
 let shapeRadius = 16;
 let quadricShape;
@@ -60,7 +58,7 @@ function initSceneData()
 	cameraFlightSpeed = 100;
 
 	// pixelRatio is resolution - range: 0.5(half resolution) to 1.0(full resolution)
-	pixelRatio = mouseControl ? 0.75 : 0.8;
+	pixelRatio = mouseControl ? 0.75 : 0.75;
 	//pixelRatio = 0.5;//for development
 
 	EPS_intersect = 0.01;
@@ -101,22 +99,16 @@ function initSceneData()
 	transform_SkewZ_XObject = { skewZ_X: 0 };
 	transform_SkewZ_YObject = { skewZ_Y: 0 };
 
-	quadricA_CoefficientObject = { quadric_A: 1 };
-	quadricB_CoefficientObject = { quadric_B: 0 };
-	quadricC_CoefficientObject = { quadric_C: 0 };
-	quadricD_CoefficientObject = { quadric_D: 0 };
-	quadricE_CoefficientObject = { quadric_E: 0 };
-	quadricF_CoefficientObject = { quadric_F: 1 };
-	quadricG_CoefficientObject = { quadric_G: 0 };
-	quadricH_CoefficientObject = { quadric_H: 0 };
-	quadricI_CoefficientObject = { quadric_I: 0 };
-	quadricJ_CoefficientObject = { quadric_J: 0 };
-	quadricK_CoefficientObject = { quadric_K: 1 };
-	quadricL_CoefficientObject = { quadric_L: 0 };
-	quadricM_CoefficientObject = { quadric_M: 0 };
-	quadricN_CoefficientObject = { quadric_N: 0 };
-	quadricO_CoefficientObject = { quadric_O: 0 };
-	quadricP_CoefficientObject = { quadric_P:-1 };
+	quadricA_ParameterObject = { quadric_A: 1 };
+	quadricB_ParameterObject = { quadric_B: 0 };
+	quadricC_ParameterObject = { quadric_C: 0 };
+	quadricD_ParameterObject = { quadric_D: 0 };
+	quadricE_ParameterObject = { quadric_E: 1 };
+	quadricF_ParameterObject = { quadric_F: 0 };
+	quadricG_ParameterObject = { quadric_G: 0 };
+	quadricH_ParameterObject = { quadric_H: 1 };
+	quadricI_ParameterObject = { quadric_I: 0 };
+	quadricJ_ParameterObject = { quadric_J: 0 };
 
 	function handleShapePresetChange() { needChangeShapePreset = true; }
 	function handlePositionChange() { needChangePosition = true; }
@@ -124,10 +116,11 @@ function initSceneData()
 	function handleScaleChange() { needChangeScale = true; }
 	function handleRotationChange() { needChangeRotation = true; }
 	function handleSkewChange() { needChangeSkew = true; }
-	function handleQuadricCoefficientChange() { needChangeQuadricCoefficient = true; }
+	function handleQuadricParameterChange() { needChangeQuadricParameter = true; }
 
-	quadricShape_PresetController = gui.add(quadricShape_PresetObject, 'Shape_Preset', ['Sphere(Ellipsoid)', 'Cylinder', 'Cone', 'Paraboloid', 'Hyperboloid_1Sheet', 
-		'Hyperboloid_2Sheets', 'HyperbolicParaboloid', 'ParabolicPlane', 'IntersectingPlanes', 'WarpedPlanes']).onChange(handleShapePresetChange);
+	quadricShape_PresetController = gui.add(quadricShape_PresetObject, 'Shape_Preset', ['Sphere(Ellipsoid)', 'Cylinder', 'Cone', 
+		'Paraboloid', 'Hyperboloid_1Sheet', 'Hyperboloid_2Sheets', 'HyperbolicParaboloid', 'Plane', 'IntersectingPlanes', 
+		'ParabolicPlane', 'TwistedPlane', 'Shoe-horn']).onChange(handleShapePresetChange);
 
 	
 	transform_Folder = gui.addFolder('Transform').close();
@@ -157,22 +150,17 @@ function initSceneData()
 	transform_SkewZ_YController = skew_Folder.add(transform_SkewZ_YObject, 'skewZ_Y', -0.9, 0.9, 0.1).onChange(handleSkewChange);
 
 
-	quadricA_CoefficientController = gui.add(quadricA_CoefficientObject, 'quadric_A', -4, 4, 0.02).onChange(handleQuadricCoefficientChange);
-	quadricB_CoefficientController = gui.add(quadricB_CoefficientObject, 'quadric_B', -4, 4, 0.02).onChange(handleQuadricCoefficientChange);
-	quadricC_CoefficientController = gui.add(quadricC_CoefficientObject, 'quadric_C', -4, 4, 0.02).onChange(handleQuadricCoefficientChange);
-	quadricD_CoefficientController = gui.add(quadricD_CoefficientObject, 'quadric_D', -4, 4, 0.02).onChange(handleQuadricCoefficientChange);
-	quadricE_CoefficientController = gui.add(quadricE_CoefficientObject, 'quadric_E', -4, 4, 0.02).onChange(handleQuadricCoefficientChange);
-	quadricF_CoefficientController = gui.add(quadricF_CoefficientObject, 'quadric_F', -4, 4, 0.02).onChange(handleQuadricCoefficientChange);
-	quadricG_CoefficientController = gui.add(quadricG_CoefficientObject, 'quadric_G', -4, 4, 0.02).onChange(handleQuadricCoefficientChange);
-	quadricH_CoefficientController = gui.add(quadricH_CoefficientObject, 'quadric_H', -4, 4, 0.02).onChange(handleQuadricCoefficientChange);
-	quadricI_CoefficientController = gui.add(quadricI_CoefficientObject, 'quadric_I', -4, 4, 0.02).onChange(handleQuadricCoefficientChange);
-	quadricJ_CoefficientController = gui.add(quadricJ_CoefficientObject, 'quadric_J', -4, 4, 0.02).onChange(handleQuadricCoefficientChange);
-	quadricK_CoefficientController = gui.add(quadricK_CoefficientObject, 'quadric_K', -4, 4, 0.02).onChange(handleQuadricCoefficientChange);
-	quadricL_CoefficientController = gui.add(quadricL_CoefficientObject, 'quadric_L', -4, 4, 0.02).onChange(handleQuadricCoefficientChange);
-	quadricM_CoefficientController = gui.add(quadricM_CoefficientObject, 'quadric_M', -4, 4, 0.02).onChange(handleQuadricCoefficientChange);
-	quadricN_CoefficientController = gui.add(quadricN_CoefficientObject, 'quadric_N', -4, 4, 0.02).onChange(handleQuadricCoefficientChange);
-	quadricO_CoefficientController = gui.add(quadricO_CoefficientObject, 'quadric_O', -4, 4, 0.02).onChange(handleQuadricCoefficientChange);
-	quadricP_CoefficientController = gui.add(quadricP_CoefficientObject, 'quadric_P', -4, 4, 0.02).onChange(handleQuadricCoefficientChange);
+	quadricA_ParameterController = gui.add(quadricA_ParameterObject, 'quadric_A', -4, 4, 0.02).onChange(handleQuadricParameterChange);
+	quadricB_ParameterController = gui.add(quadricB_ParameterObject, 'quadric_B', -4, 4, 0.02).onChange(handleQuadricParameterChange);
+	quadricC_ParameterController = gui.add(quadricC_ParameterObject, 'quadric_C', -4, 4, 0.02).onChange(handleQuadricParameterChange);
+	quadricD_ParameterController = gui.add(quadricD_ParameterObject, 'quadric_D', -4, 4, 0.02).onChange(handleQuadricParameterChange);
+	quadricE_ParameterController = gui.add(quadricE_ParameterObject, 'quadric_E', -4, 4, 0.02).onChange(handleQuadricParameterChange);
+	quadricF_ParameterController = gui.add(quadricF_ParameterObject, 'quadric_F', -4, 4, 0.02).onChange(handleQuadricParameterChange);
+	quadricG_ParameterController = gui.add(quadricG_ParameterObject, 'quadric_G', -4, 4, 0.02).onChange(handleQuadricParameterChange);
+	quadricH_ParameterController = gui.add(quadricH_ParameterObject, 'quadric_H', -4, 4, 0.02).onChange(handleQuadricParameterChange);
+	quadricI_ParameterController = gui.add(quadricI_ParameterObject, 'quadric_I', -4, 4, 0.02).onChange(handleQuadricParameterChange);
+	quadricJ_ParameterController = gui.add(quadricJ_ParameterObject, 'quadric_J', -4, 4, 0.02).onChange(handleQuadricParameterChange);
+	
 	
 	// jumpstart some of the gui controller-change handlers so that the pathtracing fragment shader uniforms are correct and up-to-date
 	handleShapePresetChange();
@@ -199,79 +187,90 @@ function updateVariablesAndUniforms()
 	{
 		if (quadricShape_PresetController.getValue() == 'Sphere(Ellipsoid)')
 		{
-			quadricA_CoefficientController.setValue(1); quadricB_CoefficientController.setValue(0); quadricC_CoefficientController.setValue(0); quadricD_CoefficientController.setValue(0);
-			quadricE_CoefficientController.setValue(0); quadricF_CoefficientController.setValue(1); quadricG_CoefficientController.setValue(0); quadricH_CoefficientController.setValue(0);
-			quadricI_CoefficientController.setValue(0); quadricJ_CoefficientController.setValue(0); quadricK_CoefficientController.setValue(1); quadricL_CoefficientController.setValue(0);
-			quadricM_CoefficientController.setValue(0); quadricN_CoefficientController.setValue(0); quadricO_CoefficientController.setValue(0); quadricP_CoefficientController.setValue(-1);
+			quadricA_ParameterController.setValue(1); quadricB_ParameterController.setValue(0); quadricC_ParameterController.setValue(0); quadricD_ParameterController.setValue(0);
+			quadricE_ParameterController.setValue(1); quadricF_ParameterController.setValue(0); quadricG_ParameterController.setValue(0); 
+			quadricH_ParameterController.setValue(1); quadricI_ParameterController.setValue(0); 
+			quadricJ_ParameterController.setValue(-1); 
 		}
 		else if (quadricShape_PresetController.getValue() == 'Cylinder')
 		{
-			quadricA_CoefficientController.setValue(1); quadricB_CoefficientController.setValue(0); quadricC_CoefficientController.setValue(0); quadricD_CoefficientController.setValue(0);
-			quadricE_CoefficientController.setValue(0); quadricF_CoefficientController.setValue(0); quadricG_CoefficientController.setValue(0); quadricH_CoefficientController.setValue(0);
-			quadricI_CoefficientController.setValue(0); quadricJ_CoefficientController.setValue(0); quadricK_CoefficientController.setValue(1); quadricL_CoefficientController.setValue(0);
-			quadricM_CoefficientController.setValue(0); quadricN_CoefficientController.setValue(0); quadricO_CoefficientController.setValue(0); quadricP_CoefficientController.setValue(-1);
+			quadricA_ParameterController.setValue(1); quadricB_ParameterController.setValue(0); quadricC_ParameterController.setValue(0); quadricD_ParameterController.setValue(0);
+			quadricE_ParameterController.setValue(0); quadricF_ParameterController.setValue(0); quadricG_ParameterController.setValue(0);
+			quadricH_ParameterController.setValue(1); quadricI_ParameterController.setValue(0);
+			quadricJ_ParameterController.setValue(-1);
 		}
 		else if (quadricShape_PresetController.getValue() == 'Cone')
 		{
-			quadricA_CoefficientController.setValue(1); quadricB_CoefficientController.setValue(0); quadricC_CoefficientController.setValue(0); quadricD_CoefficientController.setValue(0);
-			quadricE_CoefficientController.setValue(0); quadricF_CoefficientController.setValue(-1); quadricG_CoefficientController.setValue(0); quadricH_CoefficientController.setValue(0);
-			quadricI_CoefficientController.setValue(0); quadricJ_CoefficientController.setValue(0); quadricK_CoefficientController.setValue(1); quadricL_CoefficientController.setValue(0);
-			quadricM_CoefficientController.setValue(0); quadricN_CoefficientController.setValue(0); quadricO_CoefficientController.setValue(0); quadricP_CoefficientController.setValue(0);
+			quadricA_ParameterController.setValue(1); quadricB_ParameterController.setValue(0); quadricC_ParameterController.setValue(0); quadricD_ParameterController.setValue(0);
+			quadricE_ParameterController.setValue(-1); quadricF_ParameterController.setValue(0); quadricG_ParameterController.setValue(0);
+			quadricH_ParameterController.setValue(1); quadricI_ParameterController.setValue(0);
+			quadricJ_ParameterController.setValue(0);
 		}
 		else if (quadricShape_PresetController.getValue() == 'Paraboloid')
 		{
-			quadricA_CoefficientController.setValue(1); quadricB_CoefficientController.setValue(0); quadricC_CoefficientController.setValue(0); quadricD_CoefficientController.setValue(0);
-			quadricE_CoefficientController.setValue(0); quadricF_CoefficientController.setValue(0); quadricG_CoefficientController.setValue(0); quadricH_CoefficientController.setValue(0.25);
-			quadricI_CoefficientController.setValue(0); quadricJ_CoefficientController.setValue(0); quadricK_CoefficientController.setValue(1); quadricL_CoefficientController.setValue(0);
-			quadricM_CoefficientController.setValue(0); quadricN_CoefficientController.setValue(0.25); quadricO_CoefficientController.setValue(0); quadricP_CoefficientController.setValue(-0.5);
+			quadricA_ParameterController.setValue(1); quadricB_ParameterController.setValue(0); quadricC_ParameterController.setValue(0); quadricD_ParameterController.setValue(0);
+			quadricE_ParameterController.setValue(0); quadricF_ParameterController.setValue(0); quadricG_ParameterController.setValue(0.25);
+			quadricH_ParameterController.setValue(1); quadricI_ParameterController.setValue(0);
+			quadricJ_ParameterController.setValue(-0.5);
 		}
 		else if (quadricShape_PresetController.getValue() == 'Hyperboloid_1Sheet')
 		{
-			quadricA_CoefficientController.setValue(1); quadricB_CoefficientController.setValue(0); quadricC_CoefficientController.setValue(0); quadricD_CoefficientController.setValue(0);
-			quadricE_CoefficientController.setValue(0); quadricF_CoefficientController.setValue(-0.95); quadricG_CoefficientController.setValue(0); quadricH_CoefficientController.setValue(0);
-			quadricI_CoefficientController.setValue(0); quadricJ_CoefficientController.setValue(0); quadricK_CoefficientController.setValue(1); quadricL_CoefficientController.setValue(0);
-			quadricM_CoefficientController.setValue(0); quadricN_CoefficientController.setValue(0); quadricO_CoefficientController.setValue(0); quadricP_CoefficientController.setValue(-0.05);
+			quadricA_ParameterController.setValue(1); quadricB_ParameterController.setValue(0); quadricC_ParameterController.setValue(0); quadricD_ParameterController.setValue(0);
+			quadricE_ParameterController.setValue(-0.9); quadricF_ParameterController.setValue(0); quadricG_ParameterController.setValue(0);
+			quadricH_ParameterController.setValue(1); quadricI_ParameterController.setValue(0);
+			quadricJ_ParameterController.setValue(-0.1);
 		}
 		else if (quadricShape_PresetController.getValue() == 'Hyperboloid_2Sheets')
 		{
-			quadricA_CoefficientController.setValue(1); quadricB_CoefficientController.setValue(0); quadricC_CoefficientController.setValue(0); quadricD_CoefficientController.setValue(0);
-			quadricE_CoefficientController.setValue(0); quadricF_CoefficientController.setValue(-1); quadricG_CoefficientController.setValue(0); quadricH_CoefficientController.setValue(0);
-			quadricI_CoefficientController.setValue(0); quadricJ_CoefficientController.setValue(0); quadricK_CoefficientController.setValue(1); quadricL_CoefficientController.setValue(0);
-			quadricM_CoefficientController.setValue(0); quadricN_CoefficientController.setValue(0); quadricO_CoefficientController.setValue(0); quadricP_CoefficientController.setValue(0.01);
+			quadricA_ParameterController.setValue(1); quadricB_ParameterController.setValue(0); quadricC_ParameterController.setValue(0); quadricD_ParameterController.setValue(0);
+			quadricE_ParameterController.setValue(-0.9); quadricF_ParameterController.setValue(0); quadricG_ParameterController.setValue(0);
+			quadricH_ParameterController.setValue(1); quadricI_ParameterController.setValue(0);
+			quadricJ_ParameterController.setValue(0.1);
 		}
 		else if (quadricShape_PresetController.getValue() == 'HyperbolicParaboloid')
 		{
-			quadricA_CoefficientController.setValue(-1); quadricB_CoefficientController.setValue(0); quadricC_CoefficientController.setValue(0); quadricD_CoefficientController.setValue(0);
-			quadricE_CoefficientController.setValue(0); quadricF_CoefficientController.setValue(0); quadricG_CoefficientController.setValue(0); quadricH_CoefficientController.setValue(0.5);
-			quadricI_CoefficientController.setValue(0); quadricJ_CoefficientController.setValue(0); quadricK_CoefficientController.setValue(1); quadricL_CoefficientController.setValue(0);
-			quadricM_CoefficientController.setValue(0); quadricN_CoefficientController.setValue(0.5); quadricO_CoefficientController.setValue(0); quadricP_CoefficientController.setValue(0);
+			quadricA_ParameterController.setValue(-1); quadricB_ParameterController.setValue(0); quadricC_ParameterController.setValue(0); quadricD_ParameterController.setValue(0);
+			quadricE_ParameterController.setValue(0); quadricF_ParameterController.setValue(0); quadricG_ParameterController.setValue(0.5);
+			quadricH_ParameterController.setValue(1); quadricI_ParameterController.setValue(0);
+			quadricJ_ParameterController.setValue(0);
 		}
-		else if (quadricShape_PresetController.getValue() == 'ParabolicPlane')
+		else if (quadricShape_PresetController.getValue() == 'Plane')
 		{
-			quadricA_CoefficientController.setValue(1); quadricB_CoefficientController.setValue(0); quadricC_CoefficientController.setValue(0); quadricD_CoefficientController.setValue(0);
-			quadricE_CoefficientController.setValue(0); quadricF_CoefficientController.setValue(0); quadricG_CoefficientController.setValue(0); quadricH_CoefficientController.setValue(1);
-			quadricI_CoefficientController.setValue(0); quadricJ_CoefficientController.setValue(0); quadricK_CoefficientController.setValue(1); quadricL_CoefficientController.setValue(0);
-			quadricM_CoefficientController.setValue(0); quadricN_CoefficientController.setValue(1); quadricO_CoefficientController.setValue(0); quadricP_CoefficientController.setValue(0);
+			quadricA_ParameterController.setValue(0); quadricB_ParameterController.setValue(0); quadricC_ParameterController.setValue(0); quadricD_ParameterController.setValue(0);
+			quadricE_ParameterController.setValue(1); quadricF_ParameterController.setValue(0); quadricG_ParameterController.setValue(1);
+			quadricH_ParameterController.setValue(0); quadricI_ParameterController.setValue(0);
+			quadricJ_ParameterController.setValue(0);
 		}
 		else if (quadricShape_PresetController.getValue() == 'IntersectingPlanes')
 		{
-			quadricA_CoefficientController.setValue(0); quadricB_CoefficientController.setValue(0); quadricC_CoefficientController.setValue(0); quadricD_CoefficientController.setValue(0);
-			quadricE_CoefficientController.setValue(0); quadricF_CoefficientController.setValue(0); quadricG_CoefficientController.setValue(1); quadricH_CoefficientController.setValue(0);
-			quadricI_CoefficientController.setValue(0); quadricJ_CoefficientController.setValue(1); quadricK_CoefficientController.setValue(0); quadricL_CoefficientController.setValue(0);
-			quadricM_CoefficientController.setValue(0); quadricN_CoefficientController.setValue(0); quadricO_CoefficientController.setValue(0); quadricP_CoefficientController.setValue(0);
+			quadricA_ParameterController.setValue(0); quadricB_ParameterController.setValue(0); quadricC_ParameterController.setValue(1); quadricD_ParameterController.setValue(0);
+			quadricE_ParameterController.setValue(0); quadricF_ParameterController.setValue(0); quadricG_ParameterController.setValue(0);
+			quadricH_ParameterController.setValue(0); quadricI_ParameterController.setValue(0);
+			quadricJ_ParameterController.setValue(0);
 		}
-		else if (quadricShape_PresetController.getValue() == 'WarpedPlanes')
+		else if (quadricShape_PresetController.getValue() == 'ParabolicPlane')
 		{
-			quadricA_CoefficientController.setValue(0); quadricB_CoefficientController.setValue(1); quadricC_CoefficientController.setValue(1); quadricD_CoefficientController.setValue(0);
-			quadricE_CoefficientController.setValue(1); quadricF_CoefficientController.setValue(0); quadricG_CoefficientController.setValue(0); quadricH_CoefficientController.setValue(1);
-			quadricI_CoefficientController.setValue(1); quadricJ_CoefficientController.setValue(0); quadricK_CoefficientController.setValue(0); quadricL_CoefficientController.setValue(0);
-			quadricM_CoefficientController.setValue(0); quadricN_CoefficientController.setValue(1); quadricO_CoefficientController.setValue(0); quadricP_CoefficientController.setValue(0);
+			quadricA_ParameterController.setValue(1); quadricB_ParameterController.setValue(0); quadricC_ParameterController.setValue(0); quadricD_ParameterController.setValue(0);
+			quadricE_ParameterController.setValue(0.001); quadricF_ParameterController.setValue(0); quadricG_ParameterController.setValue(-1);
+			quadricH_ParameterController.setValue(0); quadricI_ParameterController.setValue(0);
+			quadricJ_ParameterController.setValue(0);
+		}
+		else if (quadricShape_PresetController.getValue() == 'TwistedPlane')
+		{
+			quadricA_ParameterController.setValue(0); quadricB_ParameterController.setValue(0); quadricC_ParameterController.setValue(1); quadricD_ParameterController.setValue(0);
+			quadricE_ParameterController.setValue(0); quadricF_ParameterController.setValue(0); quadricG_ParameterController.setValue(1);
+			quadricH_ParameterController.setValue(0); quadricI_ParameterController.setValue(0);
+			quadricJ_ParameterController.setValue(0);
+		}
+		else if (quadricShape_PresetController.getValue() == 'Shoe-horn')
+		{
+			quadricA_ParameterController.setValue(1); quadricB_ParameterController.setValue(0); quadricC_ParameterController.setValue(0); quadricD_ParameterController.setValue(0);
+			quadricE_ParameterController.setValue(0); quadricF_ParameterController.setValue(0); quadricG_ParameterController.setValue(-0.25);
+			quadricH_ParameterController.setValue(-1); quadricI_ParameterController.setValue(0);
+			quadricJ_ParameterController.setValue(-0.5);
 		}
 
-
-		// X shape of intersecting planes -> A: 1, F: -1
-
-		needChangeQuadricCoefficient = true;
+		needChangeQuadricParameter = true;
 		needChangeShapePreset = false;
 	} // end if (needChangeShapePreset)
 
@@ -335,17 +334,22 @@ function updateVariablesAndUniforms()
 
 	
 
-	if (needChangeQuadricCoefficient)
+	if (needChangeQuadricParameter)
 	{
+		// matrix's parameter layout from 2004 paper, 'Ray Tracing Arbitrary Objects on the GPU' by Wood, et al.  
+		// [A] [B] [C] [D]
+		// [B] [E] [F] [G]
+		// [C] [F] [H] [I]
+		// [D] [G] [I] [J]
 		pathTracingUniforms.uQuadricShapePresetMatrix.value.set(
-			quadricA_CoefficientController.getValue(), quadricB_CoefficientController.getValue(), quadricC_CoefficientController.getValue(), quadricD_CoefficientController.getValue(),
-			quadricE_CoefficientController.getValue(), quadricF_CoefficientController.getValue(), quadricG_CoefficientController.getValue(), quadricH_CoefficientController.getValue(),
-			quadricI_CoefficientController.getValue(), quadricJ_CoefficientController.getValue(), quadricK_CoefficientController.getValue(), quadricL_CoefficientController.getValue(),
-			quadricM_CoefficientController.getValue(), quadricN_CoefficientController.getValue(), quadricO_CoefficientController.getValue(), quadricP_CoefficientController.getValue()
+			quadricA_ParameterController.getValue(), quadricB_ParameterController.getValue(), quadricC_ParameterController.getValue(), quadricD_ParameterController.getValue(),
+			quadricB_ParameterController.getValue(), quadricE_ParameterController.getValue(), quadricF_ParameterController.getValue(), quadricG_ParameterController.getValue(),
+			quadricC_ParameterController.getValue(), quadricF_ParameterController.getValue(), quadricH_ParameterController.getValue(), quadricI_ParameterController.getValue(),
+			quadricD_ParameterController.getValue(), quadricG_ParameterController.getValue(), quadricI_ParameterController.getValue(), quadricJ_ParameterController.getValue()
 		);
 
 		cameraIsMoving = true;
-		needChangeQuadricCoefficient = false;
+		needChangeQuadricParameter = false;
 	}
 
 	// QUADRIC SHAPE
