@@ -243,8 +243,8 @@ function updateVariablesAndUniforms()
 		}
 		else if (quadricShape_PresetController.getValue() == 'IntersectingPlanes')
 		{
-			quadricA_ParameterController.setValue(0); quadricB_ParameterController.setValue(0); quadricC_ParameterController.setValue(1); quadricD_ParameterController.setValue(0);
-			quadricE_ParameterController.setValue(0); quadricF_ParameterController.setValue(0); quadricG_ParameterController.setValue(0);
+			quadricA_ParameterController.setValue(0); quadricB_ParameterController.setValue(0); quadricC_ParameterController.setValue(0); quadricD_ParameterController.setValue(0);
+			quadricE_ParameterController.setValue(0); quadricF_ParameterController.setValue(1); quadricG_ParameterController.setValue(0);
 			quadricH_ParameterController.setValue(0); quadricI_ParameterController.setValue(0);
 			quadricJ_ParameterController.setValue(0);
 		}
