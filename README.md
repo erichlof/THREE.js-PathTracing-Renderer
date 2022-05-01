@@ -71,14 +71,15 @@ The following section deals with different techniques in Constructive Solid Geom
 This viewer allows you to easily experiment with different CSG configurations while seeing the results path-traced in real time!  You can select a CSG Operation from the Operations list - Union (A+B), Difference (A-B), or Intersection (A^B).  Briefly, a 'Union' operation means that the outside of shape A is fused with the outside of shape B, creating a new single shape with a single interior volume.  A 'Difference' operation means that shape A is cut out with shape B (shape B by itself will be invisible, but its influence will be visible as a section missing from shape A where the two overlap).  An 'Intersection' operation means that wherever shape A touches shape B, a new shape/volume will be created (the two shapes *must* overlap, otherwise no new shape will be seen).  I added a detailed and fully-featured GUI menu system so that you can easily modify the CSG Operation type, both shapes' Transforms (Position, Scale, Skew, Rotation), both shapes' base geometry (Sphere, Box, Cylinder, Cone, Paraboloid, etc.), their material type (Diffuse, Transparent Refractive, Metal, ClearCoat Diffuse) and their RGB material color. I have spent hours trying various configuration possibilities, which are seemingly endless (ha)!  I hope that you too will have fun experimenting with this viewer and seeing what new shapes you can create!  <br>
 
 All of the following 4 demos feature a large dark glass sculpture in the center of the room, which shows Ellipsoid vs. Sphere CSG. <br>
-Along the back wall, a study in Box vs. Sphere CSG: 
-* [CSG_Museum Demo #1](https://erichlof.github.io/THREE.js-PathTracing-Renderer/CSG_Museum_1.html) <br>
-Along the right wall, a glass-encased monolith, and a study in Sphere vs. Cylinder CSG: 
-* [CSG_Museum Demo #2](https://erichlof.github.io/THREE.js-PathTracing-Renderer/CSG_Museum_2.html) <br>
-Along the wall behind the camera, a study in Ellipsoid vs. Sphere CSG: 
-* [CSG_Museum Demo #3](https://erichlof.github.io/THREE.js-PathTracing-Renderer/CSG_Museum_3.html) <br>
-Along the left wall, a study in Box vs. Cone CSG: 
-* [CSG_Museum Demo #4](https://erichlof.github.io/THREE.js-PathTracing-Renderer/CSG_Museum_4.html) <br>
+
+
+* [CSG_Museum Demo #1](https://erichlof.github.io/THREE.js-PathTracing-Renderer/CSG_Museum_1.html) Along the back wall, a study in Box vs. Sphere CSG <br>
+
+* [CSG_Museum Demo #2](https://erichlof.github.io/THREE.js-PathTracing-Renderer/CSG_Museum_2.html) Along the right wall, a glass-encased monolith, and a study in Sphere vs. Cylinder CSG <br>
+
+* [CSG_Museum Demo #3](https://erichlof.github.io/THREE.js-PathTracing-Renderer/CSG_Museum_3.html) Along the wall behind the camera, a study in Ellipsoid vs. Sphere CSG <br>
+
+* [CSG_Museum Demo #4](https://erichlof.github.io/THREE.js-PathTracing-Renderer/CSG_Museum_4.html) Along the left wall, a study in Box vs. Cone CSG <br>
 
 Important note! - There is a hidden Easter Egg in one of these 4 Museum demo rooms.  Happy hunting!
 
