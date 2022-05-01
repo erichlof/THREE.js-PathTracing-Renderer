@@ -1,6 +1,10 @@
 # THREE.js-PathTracing-Renderer
 Real-time PathTracing with global illumination and progressive rendering, all on top of the Three.js WebGL framework.
 
+<h4>Quick Controls Notes</h4>
+* Desktop: Mouse click anywhere to capture mouse, then the usual Mouse-move and WASD/QZ keys control 1st person camera. Mousewheel to zoom in and out. O and P keys toggle Orthographic and Perspective camera modes. Left/Right arrow keys control camera's aperture size (depth of field blur effect), while Up/Down arrow keys control the Focal point distance from the camera. ESC key to exit and return the mouse pointer.
+* Mobile: Swipe to rotate 1st person camera. The 4 Large Arrow buttons control camera movement. Horizontal pinch to zoom in and out.  Vertical Pinch controls camera's aperture size (depth of field blur effect).  The 2 smaller Up/Down Arrow buttons control the Focal point distance from the camera.  Orthographic camera mode can be turned on/off through the GUI checkbox.   
+
 <h2>LIVE DEMOS</h2>
 
 * [Geometry Showcase Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Geometry_Showcase.html) demonstrating some primitive shapes for ray tracing.  
@@ -144,7 +148,7 @@ The following classic scene rendering comes from later in the same paper by Veac
 
 ![](readme-Images/Veach-DifficultLighting.jpg)
 
-And here is that scene rendered in real-time by the three.js path tracer: Try pressing 'E' and 'R' to open and close the door! <br>
+And here is that scene rendered in real-time by the three.js path tracer: Try moving the GUI slider to open and close the door! <br>
 * [Difficult Lighting Classic Test Scene Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Bi-Directional_Difficult_Lighting.html) <br>
 
 I only had the above images to go on - there are no scene dimensions specifications that I am aware of.  However, I feel that I have captured the essence and purpose of his test scene rooms.  I think Veach would be interested to know that his scenes, which probably took several minutes if not hours to render back in the 1990's, are now rendering real-time in a web browser! :-D
