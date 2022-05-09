@@ -77,10 +77,10 @@ function initSceneData()
 
 
 	// scene/demo-specific uniforms go here
-	pathTracingUniforms.uLeftSphereMaterialType = { type: "f", value: 0.0 };
-	pathTracingUniforms.uRightSphereMaterialType = { type: "f", value: 0.0 };
-	pathTracingUniforms.uLeftSphereColor = { type: "v3", value: new THREE.Color() };
-	pathTracingUniforms.uRightSphereColor = { type: "v3", value: new THREE.Color() };
+	pathTracingUniforms.uLeftSphereMaterialType = { value: 0.0 };
+	pathTracingUniforms.uRightSphereMaterialType = { value: 0.0 };
+	pathTracingUniforms.uLeftSphereColor = { value: new THREE.Color() };
+	pathTracingUniforms.uRightSphereColor = { value: new THREE.Color() };
 
 } // end function initSceneData()
 
