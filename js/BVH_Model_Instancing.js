@@ -378,12 +378,12 @@ function initSceneData()
 
 
 	// scene/demo-specific uniforms go here
-	pathTracingUniforms.tTriangleTexture = { type: "t", value: triangleDataTexture };
-	pathTracingUniforms.tAABBTexture = { type: "t", value: aabbDataTexture };
-	pathTracingUniforms.uModelPosition = { type: "v3", value: new THREE.Vector3() };
-	pathTracingUniforms.uModelScale = { type: "f", value: 1.0 };
-	pathTracingUniforms.uLeafModelScale = { type: "f", value: 1.0 };
-	pathTracingUniforms.uLeafAABBVolumeScale = { type: "f", value: 1.0 };
+	pathTracingUniforms.tTriangleTexture = { value: triangleDataTexture };
+	pathTracingUniforms.tAABBTexture = { value: aabbDataTexture };
+	pathTracingUniforms.uModelPosition = { value: new THREE.Vector3() };
+	pathTracingUniforms.uModelScale = { value: 1.0 };
+	pathTracingUniforms.uLeafModelScale = { value: 1.0 };
+	pathTracingUniforms.uLeafAABBVolumeScale = { value: 1.0 };
 
 } // end function initSceneData()
 
