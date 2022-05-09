@@ -40,7 +40,7 @@ function initSceneData()
 
 
 	// scene/demo-specific uniforms go here
-	pathTracingUniforms.t_PerlinNoise = { type: "t", value: PerlinNoiseTexture };
+	pathTracingUniforms.t_PerlinNoise = { value: PerlinNoiseTexture };
 
 } // end function initSceneData()
 
