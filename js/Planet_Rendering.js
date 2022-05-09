@@ -81,14 +81,14 @@ function initSceneData()
 	PerlinNoiseTexture.generateMipmaps = false;
 
 	// scene/demo-specific uniforms go here	
-	pathTracingUniforms.t_PerlinNoise = { type: "t", value: PerlinNoiseTexture };
-	pathTracingUniforms.uCameraWithinAtmosphere = { type: "b1", value: cameraWithinAtmosphere };
-	pathTracingUniforms.uSunAngle = { type: "f", value: 0.0 };
-	pathTracingUniforms.uCameraUnderWater = { type: "f", value: 0.0 };
-	pathTracingUniforms.uSunDirection = { type: "v3", value: new THREE.Vector3() };
-	pathTracingUniforms.uCameraFrameRight = { type: "v3", value: new THREE.Vector3() };
-	pathTracingUniforms.uCameraFrameForward = { type: "v3", value: new THREE.Vector3() };
-	pathTracingUniforms.uCameraFrameUp = { type: "v3", value: new THREE.Vector3() };
+	pathTracingUniforms.t_PerlinNoise = { value: PerlinNoiseTexture };
+	pathTracingUniforms.uCameraWithinAtmosphere = { value: cameraWithinAtmosphere };
+	pathTracingUniforms.uSunAngle = { value: 0.0 };
+	pathTracingUniforms.uCameraUnderWater = { value: 0.0 };
+	pathTracingUniforms.uSunDirection = { value: new THREE.Vector3() };
+	pathTracingUniforms.uCameraFrameRight = { value: new THREE.Vector3() };
+	pathTracingUniforms.uCameraFrameForward = { value: new THREE.Vector3() };
+	pathTracingUniforms.uCameraFrameUp = { value: new THREE.Vector3() };
 
 } // end function initSceneData()
 
