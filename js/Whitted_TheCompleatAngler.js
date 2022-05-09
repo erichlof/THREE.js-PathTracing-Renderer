@@ -37,7 +37,7 @@ function initSceneData()
 
 
 	// scene/demo-specific uniforms go here
-	pathTracingUniforms.tTileNormalMapTexture = { type: "t", value: tileNormalMapTexture };
+	pathTracingUniforms.tTileNormalMapTexture = { value: tileNormalMapTexture };
 
 } // end function initSceneData()
 
