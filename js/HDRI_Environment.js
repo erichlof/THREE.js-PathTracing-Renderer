@@ -515,14 +515,14 @@ function initSceneData()
 
 
 	// scene/demo-specific uniforms go here
-	pathTracingUniforms.tTriangleTexture = { type: "t", value: triangleDataTexture };
-	pathTracingUniforms.tAABBTexture = { type: "t", value: aabbDataTexture };
-	pathTracingUniforms.tHDRTexture = { type: "t", value: hdrTexture };
-	pathTracingUniforms.uMaterialType = { type: "i", value: 0 };
-	pathTracingUniforms.uHDRI_Exposure = { type: "f", value: 1.0 };
-	pathTracingUniforms.uRoughness = { type: "f", value: 0.0 };
-	pathTracingUniforms.uMaterialColor = { type: "v3", value: new THREE.Color() };
-	pathTracingUniforms.uSunDirectionVector = { type: "v3", value: sunDirectionVector };
+	pathTracingUniforms.tTriangleTexture = { value: triangleDataTexture };
+	pathTracingUniforms.tAABBTexture = { value: aabbDataTexture };
+	pathTracingUniforms.tHDRTexture = { value: hdrTexture };
+	pathTracingUniforms.uMaterialType = { value: 0 };
+	pathTracingUniforms.uHDRI_Exposure = { value: 1.0 };
+	pathTracingUniforms.uRoughness = { value: 0.0 };
+	pathTracingUniforms.uMaterialColor = { value: new THREE.Color() };
+	pathTracingUniforms.uSunDirectionVector = { value: sunDirectionVector };
 
 } // end function initSceneData()
 
