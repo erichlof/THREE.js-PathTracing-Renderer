@@ -63,8 +63,8 @@ function initSceneData()
 
 
 	// scene/demo-specific uniforms go here
-	pathTracingUniforms.uTallBoxInvMatrix = { type: "m4", value: new THREE.Matrix4() };
-	pathTracingUniforms.uShortBoxInvMatrix = { type: "m4", value: new THREE.Matrix4() };
+	pathTracingUniforms.uTallBoxInvMatrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uShortBoxInvMatrix = { value: new THREE.Matrix4() };
 
 } // end function initSceneData()
 
