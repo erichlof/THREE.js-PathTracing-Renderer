@@ -77,8 +77,8 @@ function initSceneData()
 
 
 	// scene/demo-specific uniforms go here
-	pathTracingUniforms.uTorusInvMatrix = { type: "m4", value: new THREE.Matrix4() };
-	pathTracingUniforms.uSamplesPerFrame = { type: "f", value: 4 };
+	pathTracingUniforms.uTorusInvMatrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uSamplesPerFrame = { value: 4 };
 
 } // end function initSceneData()
 
