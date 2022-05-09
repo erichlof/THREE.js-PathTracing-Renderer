@@ -299,17 +299,17 @@ function initSceneData()
 
 
 	// scene/demo-specific uniforms go here
-	pathTracingUniforms.uCSG_OperationType = { type: "i", value: 0 };
-	pathTracingUniforms.uShapeAType = { type: "i", value: 0 };
-	pathTracingUniforms.uMaterialAType = { type: "i", value: 4 };
-	pathTracingUniforms.uShapeBType = { type: "i", value: 0 };
-	pathTracingUniforms.uMaterialBType = { type: "i", value: 1 };
-	pathTracingUniforms.uA_kParameter = { type: "f", value: 2.0 };
-	pathTracingUniforms.uB_kParameter = { type: "f", value: 2.0 };
-	pathTracingUniforms.uMaterialAColor = { type: "v3", value: new THREE.Color(1.0, 1.0, 0.0) };
-	pathTracingUniforms.uMaterialBColor = { type: "v3", value: new THREE.Color(1.0, 0.0, 1.0) };
-	pathTracingUniforms.uCSG_ShapeA_InvMatrix = { type: "m4", value: new THREE.Matrix4() };
-	pathTracingUniforms.uCSG_ShapeB_InvMatrix = { type: "m4", value: new THREE.Matrix4() };
+	pathTracingUniforms.uCSG_OperationType = { value: 0 };
+	pathTracingUniforms.uShapeAType = { value: 0 };
+	pathTracingUniforms.uMaterialAType = { value: 4 };
+	pathTracingUniforms.uShapeBType = { value: 0 };
+	pathTracingUniforms.uMaterialBType = { value: 1 };
+	pathTracingUniforms.uA_kParameter = { value: 2.0 };
+	pathTracingUniforms.uB_kParameter = { value: 2.0 };
+	pathTracingUniforms.uMaterialAColor = { value: new THREE.Color(1.0, 1.0, 0.0) };
+	pathTracingUniforms.uMaterialBColor = { value: new THREE.Color(1.0, 0.0, 1.0) };
+	pathTracingUniforms.uCSG_ShapeA_InvMatrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uCSG_ShapeB_InvMatrix = { value: new THREE.Matrix4() };
 
 } // end function initSceneData()
 
