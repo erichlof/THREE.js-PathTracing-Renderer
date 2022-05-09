@@ -39,10 +39,10 @@ function initSceneData()
 
 
 	// scene/demo-specific uniforms go here
-	pathTracingUniforms.t_PerlinNoise = { type: "t", value: PerlinNoiseTexture };
-	pathTracingUniforms.uCameraUnderWater = { type: "f", value: 0.0 };
-	pathTracingUniforms.uWaterLevel = { type: "f", value: 0.0 };
-	pathTracingUniforms.uSunDirection = { type: "v3", value: new THREE.Vector3() };
+	pathTracingUniforms.t_PerlinNoise = { value: PerlinNoiseTexture };
+	pathTracingUniforms.uCameraUnderWater = { value: 0.0 };
+	pathTracingUniforms.uWaterLevel = { value: 0.0 };
+	pathTracingUniforms.uSunDirection = { value: new THREE.Vector3() };
 
 } // end function initSceneData()
 
