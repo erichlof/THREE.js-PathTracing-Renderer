@@ -58,8 +58,8 @@ function initSceneData()
 
 
 	// scene/demo-specific uniforms go here
-	pathTracingUniforms.uMaterialType = { type: "i", value: 4 };
-	pathTracingUniforms.uMaterialColor = { type: "v3", value: new THREE.Color(0.0, 1.0, 1.0) };
+	pathTracingUniforms.uMaterialType = { value: 4 };
+	pathTracingUniforms.uMaterialColor = { value: new THREE.Color(0.0, 1.0, 1.0) };
 
 } // end function initSceneData()
 
