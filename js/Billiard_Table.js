@@ -60,9 +60,9 @@ function initSceneData()
 
 
 	// scene/demo-specific uniforms go here   
-	pathTracingUniforms.tClothTexture = { type: "t", value: clothTexture };
-	pathTracingUniforms.tDarkWoodTexture = { type: "t", value: darkWoodTexture };
-	pathTracingUniforms.tLightWoodTexture = { type: "t", value: lightWoodTexture };
+	pathTracingUniforms.tClothTexture = { value: clothTexture };
+	pathTracingUniforms.tDarkWoodTexture = { value: darkWoodTexture };
+	pathTracingUniforms.tLightWoodTexture = { value: lightWoodTexture };
 
 } // end function initSceneData()
 
