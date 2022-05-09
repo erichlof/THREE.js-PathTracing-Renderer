@@ -362,14 +362,14 @@ function initSceneData()
 
 
 	// scene/demo-specific uniforms go here
-	pathTracingUniforms.tTriangleTexture = { type: "t", value: triangleDataTexture };
-	pathTracingUniforms.tAABBTexture = { type: "t", value: aabbDataTexture };
-	pathTracingUniforms.tAlbedoMap = { type: "t", value: albedoMap };
-	pathTracingUniforms.tEmissiveMap = { type: "t", value: emissiveMap };
-	pathTracingUniforms.tMetallicRoughnessMap = { type: "t", value: metallicRoughnessMap };
-	pathTracingUniforms.tNormalMap = { type: "t", value: normalMap };
-	pathTracingUniforms.uGLTF_Model_Position = { type: "v3", value: new THREE.Vector3() };
-	pathTracingUniforms.uGLTF_Model_InvMatrix = { type: "m4", value: new THREE.Matrix4() };
+	pathTracingUniforms.tTriangleTexture = { value: triangleDataTexture };
+	pathTracingUniforms.tAABBTexture = { value: aabbDataTexture };
+	pathTracingUniforms.tAlbedoMap = { value: albedoMap };
+	pathTracingUniforms.tEmissiveMap = { value: emissiveMap };
+	pathTracingUniforms.tMetallicRoughnessMap = { value: metallicRoughnessMap };
+	pathTracingUniforms.tNormalMap = { value: normalMap };
+	pathTracingUniforms.uGLTF_Model_Position = { value: new THREE.Vector3() };
+	pathTracingUniforms.uGLTF_Model_InvMatrix = { value: new THREE.Matrix4() };
 
 } // end function initSceneData()
 
