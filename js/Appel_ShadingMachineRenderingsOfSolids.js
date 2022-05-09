@@ -760,35 +760,35 @@ function initSceneData()
 
 
 	// scene/demo-specific uniforms go here
-	pathTracingUniforms.tLightTexture = { type: "t", value: lightTexture };
-	pathTracingUniforms.tMedLightTexture = { type: "t", value: medLightTexture };
-	pathTracingUniforms.tMediumTexture = { type: "t", value: mediumTexture };
-	pathTracingUniforms.tMedDarkTexture = { type: "t", value: medDarkTexture };
-	pathTracingUniforms.tDarkTexture = { type: "t", value: darkTexture };
-	pathTracingUniforms.uCSG_OperationABType = { type: "i", value: 0 };
-	pathTracingUniforms.uCSG_OperationBCType = { type: "i", value: 0 };
-	pathTracingUniforms.uCSG_OperationCDType = { type: "i", value: 0 };
-	pathTracingUniforms.uCSG_OperationDEType = { type: "i", value: 0 };
-	pathTracingUniforms.uCSG_OperationEFType = { type: "i", value: 0 };
-	pathTracingUniforms.uShapeAType = { type: "i", value: 0 };
-	pathTracingUniforms.uShapeBType = { type: "i", value: 0 };
-	pathTracingUniforms.uShapeCType = { type: "i", value: 0 };
-	pathTracingUniforms.uShapeDType = { type: "i", value: 0 };
-	pathTracingUniforms.uShapeEType = { type: "i", value: 0 };
-	pathTracingUniforms.uShapeFType = { type: "i", value: 0 };
-	pathTracingUniforms.uA_kParameter = { type: "f", value: 1.0 };
-	pathTracingUniforms.uB_kParameter = { type: "f", value: 1.0 };
-	pathTracingUniforms.uC_kParameter = { type: "f", value: 1.0 };
-	pathTracingUniforms.uD_kParameter = { type: "f", value: 1.0 };
-	pathTracingUniforms.uE_kParameter = { type: "f", value: 1.0 };
-	pathTracingUniforms.uF_kParameter = { type: "f", value: 1.0 };
-	pathTracingUniforms.uSunDirection = { type: "v3", value: new THREE.Vector3() };
-	pathTracingUniforms.uCSG_ShapeA_InvMatrix = { type: "m4", value: new THREE.Matrix4() };
-	pathTracingUniforms.uCSG_ShapeB_InvMatrix = { type: "m4", value: new THREE.Matrix4() };
-	pathTracingUniforms.uCSG_ShapeC_InvMatrix = { type: "m4", value: new THREE.Matrix4() };
-	pathTracingUniforms.uCSG_ShapeD_InvMatrix = { type: "m4", value: new THREE.Matrix4() };
-	pathTracingUniforms.uCSG_ShapeE_InvMatrix = { type: "m4", value: new THREE.Matrix4() };
-	pathTracingUniforms.uCSG_ShapeF_InvMatrix = { type: "m4", value: new THREE.Matrix4() };
+	pathTracingUniforms.tLightTexture = { value: lightTexture };
+	pathTracingUniforms.tMedLightTexture = { value: medLightTexture };
+	pathTracingUniforms.tMediumTexture = { value: mediumTexture };
+	pathTracingUniforms.tMedDarkTexture = { value: medDarkTexture };
+	pathTracingUniforms.tDarkTexture = { value: darkTexture };
+	pathTracingUniforms.uCSG_OperationABType = { value: 0 };
+	pathTracingUniforms.uCSG_OperationBCType = { value: 0 };
+	pathTracingUniforms.uCSG_OperationCDType = { value: 0 };
+	pathTracingUniforms.uCSG_OperationDEType = { value: 0 };
+	pathTracingUniforms.uCSG_OperationEFType = { value: 0 };
+	pathTracingUniforms.uShapeAType = { value: 0 };
+	pathTracingUniforms.uShapeBType = { value: 0 };
+	pathTracingUniforms.uShapeCType = { value: 0 };
+	pathTracingUniforms.uShapeDType = { value: 0 };
+	pathTracingUniforms.uShapeEType = { value: 0 };
+	pathTracingUniforms.uShapeFType = { value: 0 };
+	pathTracingUniforms.uA_kParameter = { value: 1.0 };
+	pathTracingUniforms.uB_kParameter = { value: 1.0 };
+	pathTracingUniforms.uC_kParameter = { value: 1.0 };
+	pathTracingUniforms.uD_kParameter = { value: 1.0 };
+	pathTracingUniforms.uE_kParameter = { value: 1.0 };
+	pathTracingUniforms.uF_kParameter = { value: 1.0 };
+	pathTracingUniforms.uSunDirection = { value: new THREE.Vector3() };
+	pathTracingUniforms.uCSG_ShapeA_InvMatrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uCSG_ShapeB_InvMatrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uCSG_ShapeC_InvMatrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uCSG_ShapeD_InvMatrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uCSG_ShapeE_InvMatrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uCSG_ShapeF_InvMatrix = { value: new THREE.Matrix4() };
 
 } // end function initSceneData()
 
