@@ -180,30 +180,30 @@ function initSceneData()
 
 	
 	// scene/demo-specific uniforms go here
-	pathTracingUniforms.uEllipsoidTranslateInvMatrix = { type: "m4", value: new THREE.Matrix4() };
-	pathTracingUniforms.uEllipsoidRotateInvMatrix = { type: "m4", value: new THREE.Matrix4() };
-	pathTracingUniforms.uEllipsoidScaleInvMatrix = { type: "m4", value: new THREE.Matrix4() };
-	pathTracingUniforms.uEllipsoidClipInvMatrix = { type: "m4", value: new THREE.Matrix4() };
-	pathTracingUniforms.uCylinderTranslateInvMatrix = { type: "m4", value: new THREE.Matrix4() };
-	pathTracingUniforms.uCylinderRotateInvMatrix = { type: "m4", value: new THREE.Matrix4() };
-	pathTracingUniforms.uCylinderScaleInvMatrix = { type: "m4", value: new THREE.Matrix4() };
-	pathTracingUniforms.uCylinderClipInvMatrix = { type: "m4", value: new THREE.Matrix4() };
-	pathTracingUniforms.uConeTranslateInvMatrix = { type: "m4", value: new THREE.Matrix4() };
-	pathTracingUniforms.uConeRotateInvMatrix = { type: "m4", value: new THREE.Matrix4() };
-	pathTracingUniforms.uConeScaleInvMatrix = { type: "m4", value: new THREE.Matrix4() };
-	pathTracingUniforms.uConeClipInvMatrix = { type: "m4", value: new THREE.Matrix4() };
-	pathTracingUniforms.uParaboloidTranslateInvMatrix = { type: "m4", value: new THREE.Matrix4() };
-	pathTracingUniforms.uParaboloidRotateInvMatrix = { type: "m4", value: new THREE.Matrix4() };
-	pathTracingUniforms.uParaboloidScaleInvMatrix = { type: "m4", value: new THREE.Matrix4() };
-	pathTracingUniforms.uParaboloidClipInvMatrix = { type: "m4", value: new THREE.Matrix4() };
-	pathTracingUniforms.uHyperboloidTranslateInvMatrix = { type: "m4", value: new THREE.Matrix4() };
-	pathTracingUniforms.uHyperboloidRotateInvMatrix = { type: "m4", value: new THREE.Matrix4() };
-	pathTracingUniforms.uHyperboloidScaleInvMatrix = { type: "m4", value: new THREE.Matrix4() };
-	pathTracingUniforms.uHyperboloidClipInvMatrix = { type: "m4", value: new THREE.Matrix4() };
-	pathTracingUniforms.uHyperbolicParaboloidTranslateInvMatrix = { type: "m4", value: new THREE.Matrix4() };
-	pathTracingUniforms.uHyperbolicParaboloidRotateInvMatrix = { type: "m4", value: new THREE.Matrix4() };
-	pathTracingUniforms.uHyperbolicParaboloidScaleInvMatrix = { type: "m4", value: new THREE.Matrix4() };
-	pathTracingUniforms.uHyperbolicParaboloidClipInvMatrix = { type: "m4", value: new THREE.Matrix4() };
+	pathTracingUniforms.uEllipsoidTranslateInvMatrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uEllipsoidRotateInvMatrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uEllipsoidScaleInvMatrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uEllipsoidClipInvMatrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uCylinderTranslateInvMatrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uCylinderRotateInvMatrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uCylinderScaleInvMatrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uCylinderClipInvMatrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uConeTranslateInvMatrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uConeRotateInvMatrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uConeScaleInvMatrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uConeClipInvMatrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uParaboloidTranslateInvMatrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uParaboloidRotateInvMatrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uParaboloidScaleInvMatrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uParaboloidClipInvMatrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uHyperboloidTranslateInvMatrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uHyperboloidRotateInvMatrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uHyperboloidScaleInvMatrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uHyperboloidClipInvMatrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uHyperbolicParaboloidTranslateInvMatrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uHyperbolicParaboloidRotateInvMatrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uHyperbolicParaboloidScaleInvMatrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uHyperbolicParaboloidClipInvMatrix = { value: new THREE.Matrix4() };
 
 } // end function initSceneData()
 
