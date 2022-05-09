@@ -1,8 +1,4 @@
 // scene/demo-specific variables go here
-let hdrPath, hdrTexture, hdrLoader, hdrImgData;
-let hdrImgWidth = 0;
-let hdrImgHeight = 0;
-let highestExponent, highestIndex, brightestPixelX, brightestPixelY; 
 let modelMesh;
 let modelScale = 1.0;
 let modelPositionOffset = new THREE.Vector3();
@@ -28,62 +24,115 @@ let vt0 = new THREE.Vector2();
 let vt1 = new THREE.Vector2();
 let vt2 = new THREE.Vector2();
 
-let HDRI_ExposureObject, material_TypeObject, material_ColorObject, material_RoughnessObject;
-let HDRI_ExposureController, material_TypeController, material_ColorController, material_RoughnessController;
-let changeHDRI_Exposure = false;
-let changeMaterialType = false;
-let changeMaterialColor = false;
-let changeMaterialRoughness = false;
-let matColor;
-let sunDirectionVector = new THREE.Vector3();
-let theta = 0;
-let phi = 0;
-let HDRI_bright_u = 0;
-let HDRI_bright_v = 0;
+let rectangleLight0, rectangleLight1;
+let fog_DensityObject, fog_DensityController;
+let light0_PowerObject, light0_PowerController;
+let light1_PowerObject, light1_PowerController;
+let light0Position_Folder, light0Rotation_Folder;
+let light1Position_Folder, light1Rotation_Folder;
+let light0_PositionXObject, light0_PositionXController;
+let light0_PositionYObject, light0_PositionYController;
+let light0_PositionZObject, light0_PositionZController;
+let light0_RotationXObject, light0_RotationXController;
+let light0_RotationYObject, light0_RotationYController;
+let light0_RotationZObject, light0_RotationZController;
+let light1_PositionXObject, light1_PositionXController;
+let light1_PositionYObject, light1_PositionYController;
+let light1_PositionZObject, light1_PositionZController;
+let light1_RotationXObject, light1_RotationXController;
+let light1_RotationYObject, light1_RotationYController;
+let light1_RotationZObject, light1_RotationZController;
+let needChangeFogDensity = false;
+let needChangeLight0Power = false;
+let needChangeLight1Power = false;
+let needChangeLight0Position = false;
+let needChangeLight0Rotation = false;
+let needChangeLight1Position = false;
+let needChangeLight1Rotation = false;
+
+let cameraZOffset;
 
 
 function init_GUI() 
 {
 
-	HDRI_ExposureObject = {
-		HDRI_Exposure: 1.2
+	fog_DensityObject = {
+		Fog_Density: 0.03038
 	};
-	material_TypeObject = {
-		Material_Type: 3
+	light0_PowerObject = {
+		Light0_Power: 1000
 	};
-	material_ColorObject = {
-		Material_Color: [ 1, 1, 1 ]
+	light1_PowerObject = {
+		Light1_Power: 1000
 	};
-	material_RoughnessObject = {
-		Material_Roughness: 0.0
-	};
-	function HDRI_ExposureChanger() 
-	{
-		changeHDRI_Exposure = true;
-	}
-	function materialTypeChanger() 
-	{
-		changeMaterialType = true;
-	}
-	function materialColorChanger() 
-	{
-		changeMaterialColor = true;
-	}
-	function materialRoughnessChanger() 
-	{
-		changeMaterialRoughness = true;
-	}
+	light0_PositionXObject = { positionX: -100 };
+	light0_PositionYObject = { positionY: 107 };
+	light0_PositionZObject = { positionZ: -5 };
+	light0_RotationXObject = { rotationX: 0 };
+	light0_RotationYObject = { rotationY: 32 };
+	light0_RotationZObject = { rotationZ: 50 };
 
+	light1_PositionXObject = { positionX: -10 };
+	light1_PositionYObject = { positionY: 90 };
+	light1_PositionZObject = { positionZ: -50 };
+	light1_RotationXObject = { rotationX: 0 };
+	light1_RotationYObject = { rotationY: 32 };
+	light1_RotationZObject = { rotationZ: 148 };
 	
-	HDRI_ExposureController = gui.add( HDRI_ExposureObject, 'HDRI_Exposure', 0, 3, 0.05 ).onChange( HDRI_ExposureChanger );
-	material_TypeController = gui.add( material_TypeObject, 'Material_Type', 2, 4, 1 ).onChange( materialTypeChanger );
-	material_ColorController = gui.addColor(material_ColorObject, 'Material_Color').onChange(materialColorChanger);
-	material_RoughnessController = gui.add( material_RoughnessObject, 'Material_Roughness', 0.0, 1.0, 0.01 ).onChange( materialRoughnessChanger );
+	function handleFogDensityChange() 
+	{
+		needChangeFogDensity = true;
+	}
+	function handleLight0PowerChange() {
+		needChangeLight0Power = true;
+	}
+	function handleLight1PowerChange() {
+		needChangeLight1Power = true;
+	}
+	function handleLight0PositionChange() { 
+		needChangeLight0Position = true; 
+	}
+	function handleLight1PositionChange() { 
+		needChangeLight1Position = true; 
+	}
+	function handleLight0RotationChange() {
+		needChangeLight0Rotation = true;
+	}
+	function handleLight1RotationChange() {
+		needChangeLight1Rotation = true;
+	}
 
-	HDRI_ExposureChanger();
-	materialTypeChanger();
-	materialColorChanger();
-	materialRoughnessChanger();
+	fog_DensityController = gui.add( fog_DensityObject, 'Fog_Density', 0.0, 0.2, 0.00001 ).onChange( handleFogDensityChange );
+	light0_PowerController = gui.add(light0_PowerObject, 'Light0_Power', 1, 1000, 1).onChange(handleLight0PowerChange);
+	light1_PowerController = gui.add(light1_PowerObject, 'Light1_Power', 1, 1000, 1).onChange(handleLight1PowerChange);
+	
+	light0Position_Folder = gui.addFolder('Light0_Position');
+	light0_PositionXController = light0Position_Folder.add(light0_PositionXObject, 'positionX', -500, 500, 1).onChange(handleLight0PositionChange);
+	light0_PositionYController = light0Position_Folder.add(light0_PositionYObject, 'positionY', -500, 500, 1).onChange(handleLight0PositionChange);
+	light0_PositionZController = light0Position_Folder.add(light0_PositionZObject, 'positionZ', -500, 500, 1).onChange(handleLight0PositionChange);
+
+	light0Rotation_Folder = gui.addFolder('Light0_Rotation');
+	light0_RotationXController = light0Rotation_Folder.add(light0_RotationXObject, 'rotationX', 0, 359, 1).onChange(handleLight0RotationChange);
+	light0_RotationYController = light0Rotation_Folder.add(light0_RotationYObject, 'rotationY', 0, 359, 1).onChange(handleLight0RotationChange);
+	light0_RotationZController = light0Rotation_Folder.add(light0_RotationZObject, 'rotationZ', 0, 359, 1).onChange(handleLight0RotationChange);
+
+	light1Position_Folder = gui.addFolder('Light1_Position');
+	light1_PositionXController = light1Position_Folder.add(light1_PositionXObject, 'positionX', -500, 500, 1).onChange(handleLight1PositionChange);
+	light1_PositionYController = light1Position_Folder.add(light1_PositionYObject, 'positionY', -500, 500, 1).onChange(handleLight1PositionChange);
+	light1_PositionZController = light1Position_Folder.add(light1_PositionZObject, 'positionZ', -500, 500, 1).onChange(handleLight1PositionChange);
+
+	light1Rotation_Folder = gui.addFolder('Light1_Rotation');
+	light1_RotationXController = light1Rotation_Folder.add(light1_RotationXObject, 'rotationX', 0, 359, 1).onChange(handleLight1RotationChange);
+	light1_RotationYController = light1Rotation_Folder.add(light1_RotationYObject, 'rotationY', 0, 359, 1).onChange(handleLight1RotationChange);
+	light1_RotationZController = light1Rotation_Folder.add(light1_RotationZObject, 'rotationZ', 0, 359, 1).onChange(handleLight1RotationChange);
+
+	handleFogDensityChange();
+	handleLight0PowerChange();
+	handleLight1PowerChange();
+	handleLight0PositionChange();
+	handleLight0RotationChange();
+	handleLight1PositionChange();
+	handleLight1RotationChange();
 
 } // end function init_GUI()
 
@@ -106,10 +155,11 @@ function load_GLTF_Model()
 
 	let gltfLoader = new THREE.GLTFLoader();
 
-	gltfLoader.load("models/StanfordDragon.glb", function( meshGroup ) // Triangles: 100,000
+	//gltfLoader.load("models/StanfordDragon.glb", function( meshGroup ) // Triangles: 100,000
 	// if you choose to load in the different models below, scroll down and change the *GLTF model settings* for this particular model
-	//gltfLoader.load("models/TronTank.gltf", function( meshGroup ) // Triangles: 17,533
+	//gltfLoader.load("models/Classic 1982 TRON Light Cycle.gltf", function( meshGroup ) // Triangles: 17,533
 	//gltfLoader.load("models/StanfordBunny.glb", function( meshGroup ) // Triangles: 30,338
+	gltfLoader.load("models/david.gltf", function (meshGroup)
 	{
 	
 		if (meshGroup.scene) 
@@ -141,12 +191,16 @@ function load_GLTF_Model()
 			geoList.push(meshList[i].geometry);
 		}
 
+		
+
 		modelMesh.geometry = THREE.BufferGeometryUtils.mergeBufferGeometries(geoList);
 		
 		if (modelMesh.geometry.index)
 			modelMesh.geometry = modelMesh.geometry.toNonIndexed();
 
 		modelMesh.geometry.center();
+
+		
 		
 		for (let i = 1; i < triangleMaterialMarkers.length; i++) 
 		{
@@ -188,17 +242,17 @@ function load_GLTF_Model()
 		// ********* different GLTF Model Settings **********
 
 		// settings for StanfordDragon model
-		modelScale = 2.0;
-		modelPositionOffset.set(0, 28, -40);
+		// modelScale = 2.0;
+		// modelPositionOffset.set(0, 28, -40);
 		
 		// settings for TronTank model
-		// modelScale = 3.0;
+		// modelScale = 10.0;
 		// modelMesh.geometry.rotateX(-Math.PI * 0.5);
 		// modelPositionOffset.set(-60, 20, -30);
 
-		// settings for StanfordBunny model
-		//modelScale = 0.04;
-		//modelPositionOffset.set(0, 28, -40);
+		// settings for the David sculpture model
+		modelScale = 0.04;
+		modelPositionOffset.set(0, 0, 0);
 
 		// now that the model has loaded, we can init the app
 		init();
@@ -215,25 +269,37 @@ function initSceneData()
 
 	// scene/demo-specific three.js objects setup goes here
 	sceneIsDynamic = false;
-	
-	cameraFlightSpeed = 60;
+
+	// tell the engine that we will use our own custom camera controls
+	useGenericInput = false;
+	//cameraFlightSpeed = 60;
 
 	// pixelRatio is resolution - range: 0.5(half resolution) to 1.0(full resolution)
 	pixelRatio = mouseControl ? 0.75 : 0.7; // less demanding on battery-powered mobile devices
+	//pixelRatio = 0.5;
 
 	EPS_intersect = 0.001;
 
 	// set camera's field of view
-	worldCamera.fov = 60;
-	focusDistance = 80.0;
+	worldCamera.fov = 50;
+	
+	cameraZOffset = 45; // how much the camera will be pulled back from its look-at target
+	focusDistance = cameraZOffset;
 
-	// position and orient camera
-	cameraControlsObject.position.set(0, 30, 40);
-	// look slightly downward
-	//cameraControlsPitchObject.rotation.x = -0.2;
+	cameraControlsPitchObject.rotation.x = 0.252;
+	cameraControlsYawObject.rotation.y = 0.5856;
+
+	cameraControlsObject.position.copy(modelPositionOffset);
+	cameraControlsObject.position.y += 40;
+	
+	worldCamera.position.set(0, 0, cameraZOffset);
 
 
+	rectangleLight0 = new THREE.Object3D();
+	rectangleLight1 = new THREE.Object3D();
 
+	pathTracingScene.add(rectangleLight0);
+	pathTracingScene.add(rectangleLight1);
 	
 	total_number_of_triangles = modelMesh.geometry.attributes.position.array.length / 9;
 	console.log("Triangle count:" + total_number_of_triangles);
@@ -251,7 +317,11 @@ function initSceneData()
 	let triangle_b_box_max = new THREE.Vector3();
 	let triangle_b_box_centroid = new THREE.Vector3();
 	
-
+	if (modelMesh.geometry.attributes.normal === undefined)
+	{
+		modelMesh.geometry.computeVertexNormals();
+	}
+	
 	let vpa = new Float32Array(modelMesh.geometry.attributes.position.array);
 	let vna = new Float32Array(modelMesh.geometry.attributes.normal.array);
 	let vta = null;
@@ -425,106 +495,19 @@ function initSceneData()
 	aabbDataTexture.needsUpdate = true;
 
 
-	hdrLoader = new THREE.RGBELoader();
-	// override THREE's default of HalfFloatType (full float precision needed in brightest pixel calculations below)
-	hdrLoader.type = THREE.FloatType;
-
-	hdrPath = 'textures/symmetrical_garden_2k.hdr';
-	//hdrPath = 'textures/cloud_layers_2k.hdr';
-	//hdrPath = 'textures/delta_2_2k.hdr';
-	//hdrPath = 'textures/kiara_5_noon_2k.hdr';
-	//hdrPath = 'textures/noon_grass_2k.hdr';
-
-	hdrTexture = hdrLoader.load( hdrPath, function ( texture, textureData ) 
-	{
-		texture.encoding = THREE.LinearEncoding;
-		texture.minFilter = THREE.LinearFilter;
-		texture.magFilter = THREE.LinearFilter;
-		texture.generateMipmaps = false;
-		texture.flipY = false;
-
-		hdrImgWidth = texture.image.width;
-		hdrImgHeight = texture.image.height;
-		hdrImgData = texture.image.data;
-		let dataLength = hdrImgData.length;
-		let red, green, blue;
-
-		let texel = 0;
-		let max = 0;
-		for (let i = 0; i < dataLength; i += 4)
-		{
-			red = hdrImgData[i + 0];
-			green = hdrImgData[i + 1];
-			blue = hdrImgData[i + 2];
-
-			if (max < red)
-			{
-				texel = i;
-				max = red;
-			}
-			if (max < green)
-			{
-				texel = i;
-				max = green;
-			}
-			if (max < blue)
-			{
-				texel = i;
-				max = blue;
-			}
-		}
-
-		console.log("brightest texel index: " + texel + " | max luminance value: " + max);
-		// the raw flat array has 4 elements (R,G,B,A) for every single pixel, but we just want the index of the brightest pixel
-		// so divide the brightest pixel array index by 4, in order to get back to the '0 to hdrImgWidth*hdrImgHeight' range
-		texel /= 4;
-
-		// map this texel's 1D array index into 2D (x and y) coordinates
-		brightestPixelX = texel % hdrImgWidth;
-		brightestPixelY = Math.floor(texel / hdrImgWidth);
-
-		console.log("brightestPixelX: " + brightestPixelX + " brightestPixelY: " + brightestPixelY); // for debug
-
-		/*  
-		HDRI image dimensions: (hdrImgWidth x hdrImgHeight)
-		center of brightest pixel location: (brightestPixelX, brightestPixelY) 
-
-		now normalize into float (u,v) texture coords, range: (0.0-1.0, 0.0-1.0)
-		HDRI_bright_u = brightestPixelX / hdrImgWidth
-		HDRI_bright_v = brightestPixelY / hdrImgHeight
-		
-		Must map these brightest-light texture location(u, v) coordinates to Spherical coordinates(phi, theta):
-		phi   = HDRI_bright_v * PI   note: V is used for phi
-		theta = HDRI_bright_u * 2PI  note: U is used for theta
-
-		lastly, convert Spherical coordinates into 3D Cartesian coordinates(x, y, z):
-		sunDirectionVector.setFromSphericalCoords(1, phi, theta);
-		*/
-
-		HDRI_bright_u = brightestPixelX / hdrImgWidth;
-		HDRI_bright_v = brightestPixelY / hdrImgHeight;
-		
-		phi = HDRI_bright_v * Math.PI; // use 'v'
-		theta = HDRI_bright_u * 2 * Math.PI; // use 'u'
-
-		sunDirectionVector.setFromSphericalCoords(1, phi, theta); // 1 = radius of 1, or unit sphere
-		// finally, x must be negated, I believe because of three.js' R-handed coordinate system
-		sunDirectionVector.x *= -1;
-	} );
-
-
 	init_GUI();
 
 
 	// scene/demo-specific uniforms go here
-	pathTracingUniforms.tTriangleTexture = { type: "t", value: triangleDataTexture };
-	pathTracingUniforms.tAABBTexture = { type: "t", value: aabbDataTexture };
-	pathTracingUniforms.tHDRTexture = { type: "t", value: hdrTexture };
-	pathTracingUniforms.uMaterialType = { type: "i", value: 0 };
-	pathTracingUniforms.uHDRI_Exposure = { type: "f", value: 1.0 };
-	pathTracingUniforms.uRoughness = { type: "f", value: 0.0 };
-	pathTracingUniforms.uMaterialColor = { type: "v3", value: new THREE.Color() };
-	pathTracingUniforms.uSunDirectionVector = { type: "v3", value: sunDirectionVector };
+	pathTracingUniforms.tTriangleTexture = { value: triangleDataTexture };
+	pathTracingUniforms.tAABBTexture = { value: aabbDataTexture };
+	pathTracingUniforms.uLight0_Matrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uLight1_Matrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uLight0_InvMatrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uLight1_InvMatrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uFogDensity = { value: 0.0 };
+	pathTracingUniforms.uLight0Power = { value: 0.0 };
+	pathTracingUniforms.uLight1Power = { value: 0.0 };
 
 } // end function initSceneData()
 
@@ -534,37 +517,157 @@ function initSceneData()
 // called automatically from within the animate() function (located in InitCommon.js file)
 function updateVariablesAndUniforms()
 {
+
+
+	if ((keyPressed('a') || button1Pressed) && !(keyPressed('d') || button2Pressed))
+	{
+		cameraControlsObject.position.sub(cameraRightVector.multiplyScalar(cameraFlightSpeed * frameTime));
+		cameraIsMoving = true;
+	}
+	if ((keyPressed('d') || button2Pressed) && !(keyPressed('a') || button1Pressed))
+	{
+		cameraControlsObject.position.add(cameraRightVector.multiplyScalar(cameraFlightSpeed * frameTime));
+		cameraIsMoving = true;
+	}
+	if (keyPressed('w') && !keyPressed('s'))
+	{
+		cameraControlsObject.position.add(cameraUpVector.multiplyScalar(cameraFlightSpeed * frameTime));
+		cameraIsMoving = true;
+	}
+	if (keyPressed('s') && !keyPressed('w'))
+	{
+		cameraControlsObject.position.sub(cameraUpVector.multiplyScalar(cameraFlightSpeed * frameTime));
+		cameraIsMoving = true;
+	}
+
+	if ((keyPressed('up') || button5Pressed) && !(keyPressed('down') || button6Pressed))
+	{
+		increaseFocusDist = true;
+	}
+	if ((keyPressed('down') || button6Pressed) && !(keyPressed('up') || button5Pressed))
+	{
+		decreaseFocusDist = true;
+	}
+	if (keyPressed('right') && !keyPressed('left'))
+	{
+		increaseAperture = true;
+	}
+	if (keyPressed('left') && !keyPressed('right'))
+	{
+		decreaseAperture = true;
+	}
+
+	if (keyPressed('period') && !keyPressed('comma'))
+	{
+		increaseFOV = true;
+	}
+	if (keyPressed('comma') && !keyPressed('period'))
+	{
+		decreaseFOV = true;
+	}
+	if (keyPressed('o') && canPress_O)
+	{
+		changeToOrthographicCamera = true;
+		canPress_O = false;
+	}
+	if (!keyPressed('o'))
+		canPress_O = true;
+
+	if (keyPressed('p') && canPress_P)
+	{
+		changeToPerspectiveCamera = true;
+		canPress_P = false;
+	}
+	if (!keyPressed('p'))
+		canPress_P = true;
+
+
+	if (dollyCameraIn) 
+	{
+		cameraZOffset -= 1;
+		if (cameraZOffset < 0)
+			cameraZOffset = 0;
+		worldCamera.position.set(0, 0, cameraZOffset);
+		cameraIsMoving = true;
+		dollyCameraIn = false;
+	}
+	if (dollyCameraOut) 
+	{
+		cameraZOffset += 1;
+		if (cameraZOffset > 1000)
+			cameraZOffset = 1000;
+		worldCamera.position.set(0, 0, cameraZOffset);
+		cameraIsMoving = true;
+		dollyCameraOut = false;
+	}
 	
-	if (changeHDRI_Exposure) 
+
+	if (needChangeFogDensity) 
 	{
-		renderer.toneMappingExposure = HDRI_ExposureController.getValue();
-		pathTracingUniforms.uHDRI_Exposure.value = HDRI_ExposureController.getValue();
+		pathTracingUniforms.uFogDensity.value = fog_DensityController.getValue();
 		cameraIsMoving = true;
-		changeHDRI_Exposure = false;
-	}
-	
-	if (changeMaterialType) 
-	{
-		pathTracingUniforms.uMaterialType.value = material_TypeController.getValue();
-		cameraIsMoving = true;
-		changeMaterialType = false;
+		needChangeFogDensity = false;
 	}
 
-	if (changeMaterialColor) 
+	if (needChangeLight0Power) 
 	{
-		matColor = material_ColorController.getValue();
-		pathTracingUniforms.uMaterialColor.value.setRGB(matColor[0], matColor[1], matColor[2]);
-
+		pathTracingUniforms.uLight0Power.value = light0_PowerController.getValue();
 		cameraIsMoving = true;
-		changeMaterialColor = false;
+		needChangeLight0Power = false;
 	}
 
-	if (changeMaterialRoughness) 
+	if (needChangeLight1Power) 
 	{
-		pathTracingUniforms.uRoughness.value = material_RoughnessController.getValue();
+		pathTracingUniforms.uLight1Power.value = light1_PowerController.getValue();
 		cameraIsMoving = true;
-		changeMaterialRoughness = false;
+		needChangeLight1Power = false;
 	}
+
+	if (needChangeLight0Position) 
+	{
+		rectangleLight0.position.set(light0_PositionXController.getValue(),
+			light0_PositionYController.getValue(),
+			light0_PositionZController.getValue());
+
+		cameraIsMoving = true;
+		needChangeLight0Position = false;
+	}
+
+	if (needChangeLight0Rotation) 
+	{
+		rectangleLight0.rotation.set(THREE.MathUtils.degToRad(light0_RotationXController.getValue()),
+			THREE.MathUtils.degToRad(light0_RotationYController.getValue()),
+			THREE.MathUtils.degToRad(light0_RotationZController.getValue()));
+
+		cameraIsMoving = true;
+		needChangeLight0Rotation = false;
+	}
+
+	if (needChangeLight1Position) 
+	{
+		rectangleLight1.position.set(light1_PositionXController.getValue(),
+			light1_PositionYController.getValue(),
+			light1_PositionZController.getValue());
+
+		cameraIsMoving = true;
+		needChangeLight1Position = false;
+	}
+
+	if (needChangeLight1Rotation) 
+	{
+		rectangleLight1.rotation.set(THREE.MathUtils.degToRad(light1_RotationXController.getValue()),
+			THREE.MathUtils.degToRad(light1_RotationYController.getValue()),
+			THREE.MathUtils.degToRad(light1_RotationZController.getValue()));
+
+		cameraIsMoving = true;
+		needChangeLight1Rotation = false;
+	}
+
+	pathTracingUniforms.uLight0_Matrix.value.copy(rectangleLight0.matrixWorld);
+	pathTracingUniforms.uLight0_InvMatrix.value.copy(rectangleLight0.matrixWorld).invert();
+
+	pathTracingUniforms.uLight1_Matrix.value.copy(rectangleLight1.matrixWorld);
+	pathTracingUniforms.uLight1_InvMatrix.value.copy(rectangleLight1.matrixWorld).invert();
 
 	// INFO   
 	cameraInfoElement.innerHTML = "FOV: " + worldCamera.fov + " / Aperture: " + apertureSize.toFixed(2) +
