@@ -517,14 +517,14 @@ function initSceneData()
 
 
 	// scene/demo-specific uniforms go here
-	pathTracingUniforms.tTriangleTexture = { type: "t", value: triangleDataTexture };
-	pathTracingUniforms.tAABBTexture = { type: "t", value: aabbDataTexture };
-	pathTracingUniforms.tHDRTexture = { type: "t", value: hdrTexture };
-	pathTracingUniforms.tAlbedoTextures = { type: "t", value: uniqueMaterialTextures };
-	pathTracingUniforms.uSkyLightIntensity = { type: "f", value: skyLightIntensity };
-	pathTracingUniforms.uSunLightIntensity = { type: "f", value: sunLightIntensity };
-	pathTracingUniforms.uSunColor = { type: "v3", value: new THREE.Color().fromArray(sunColor.map(x => x)) };
-	pathTracingUniforms.uSunDirection = { type: "v3", value: new THREE.Vector3() };
+	pathTracingUniforms.tTriangleTexture = { value: triangleDataTexture };
+	pathTracingUniforms.tAABBTexture = { value: aabbDataTexture };
+	pathTracingUniforms.tHDRTexture = { value: hdrTexture };
+	pathTracingUniforms.tAlbedoTextures = { value: uniqueMaterialTextures };
+	pathTracingUniforms.uSkyLightIntensity = { value: skyLightIntensity };
+	pathTracingUniforms.uSunLightIntensity = { value: sunLightIntensity };
+	pathTracingUniforms.uSunColor = { value: new THREE.Color().fromArray(sunColor.map(x => x)) };
+	pathTracingUniforms.uSunDirection = { value: new THREE.Vector3() };
 
 	// jumpstart the gui variables so that when the demo starts, all the uniforms are up to date
 	hdrExposureChanged = skyLightIntensityChanged = sunAngleChanged = 
