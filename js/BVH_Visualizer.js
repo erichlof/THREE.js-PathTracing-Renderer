@@ -372,9 +372,9 @@ function initSceneData()
 
 
 	// scene/demo-specific uniforms go here
-	pathTracingUniforms.tTriangleTexture = { type: "t", value: triangleDataTexture };
-	pathTracingUniforms.tAABBTexture = { type: "t", value: aabbDataTexture };
-	pathTracingUniforms.uBVH_NodeLevel = { type: "f", value: 0.0 };
+	pathTracingUniforms.tTriangleTexture = { value: triangleDataTexture };
+	pathTracingUniforms.tAABBTexture = { value: aabbDataTexture };
+	pathTracingUniforms.uBVH_NodeLevel = { value: 0.0 };
 
 } // end function initSceneData()
 
