@@ -382,14 +382,14 @@ function initSceneData()
 	door_OpenCloseController = gui.add(door_OpenCloseObject, 'Door_Open_Close', 3.27, 6.28, 0.01).onChange(handleDoorOpenCloseChange);
 
 	// scene/demo-specific uniforms go here    
-	pathTracingUniforms.tTriangleTexture = { type: "t", value: triangleDataTexture };
-	pathTracingUniforms.tAABBTexture = { type: "t", value: aabbDataTexture };
-	pathTracingUniforms.tPaintingTexture = { type: "t", value: paintingTexture };
-	pathTracingUniforms.tDarkWoodTexture = { type: "t", value: darkWoodTexture };
-	pathTracingUniforms.tLightWoodTexture = { type: "t", value: lightWoodTexture };
-	pathTracingUniforms.tMarbleTexture = { type: "t", value: marbleTexture };
-	pathTracingUniforms.tHammeredMetalNormalMapTexture = { type: "t", value: hammeredMetalNormalMapTexture };
-	pathTracingUniforms.uDoorObjectInvMatrix = { type: "m4", value: new THREE.Matrix4() };
+	pathTracingUniforms.tTriangleTexture = { value: triangleDataTexture };
+	pathTracingUniforms.tAABBTexture = { value: aabbDataTexture };
+	pathTracingUniforms.tPaintingTexture = { value: paintingTexture };
+	pathTracingUniforms.tDarkWoodTexture = { value: darkWoodTexture };
+	pathTracingUniforms.tLightWoodTexture = { value: lightWoodTexture };
+	pathTracingUniforms.tMarbleTexture = { value: marbleTexture };
+	pathTracingUniforms.tHammeredMetalNormalMapTexture = { value: hammeredMetalNormalMapTexture };
+	pathTracingUniforms.uDoorObjectInvMatrix = { value: new THREE.Matrix4() };
 
 } // end function initSceneData()
 
