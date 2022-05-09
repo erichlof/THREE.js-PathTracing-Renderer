@@ -88,9 +88,9 @@ function initSceneData()
 	cameraRotation_SpeedController = gui.add(cameraRotation_SpeedObject, 'cameraRotationSpeed', 0.0001, 2.0, 0.0001).onChange(handleCameraRotationSpeedChange);
 
 	// scene/demo-specific uniforms go here
-	pathTracingUniforms.uTorusInvMatrix = { type: "m4", value: new THREE.Matrix4() };
-	pathTracingUniforms.uSamplesPerFrame = { type: "f", value: 4 };
-	pathTracingUniforms.uPreviousFrameBlendWeight = { type: "f", value: 0.5 };
+	pathTracingUniforms.uTorusInvMatrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uSamplesPerFrame = { value: 4 };
+	pathTracingUniforms.uPreviousFrameBlendWeight = { value: 0.5 };
 
 } // end function initSceneData()
 
