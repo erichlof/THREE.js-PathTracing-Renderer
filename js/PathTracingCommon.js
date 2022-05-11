@@ -215,76 +215,15 @@ float SphereIntersect( float rad, vec3 pos, vec3 rayOrigin, vec3 rayDirection )
 
 THREE.ShaderChunk[ 'pathtracing_quadric_intersect' ] = `
 
-/* const mat4 ellipsoid = mat4(
-    	1, 0, 0, 0,
-    	0, 1, 0, 0,
-    	0, 0, 1, 0,
-    	0, 0, 0,-1
-);
-
-const mat4 cylinder = mat4(
-    	1, 0, 0, 0,
-    	0, 0, 0, 0,
-    	0, 0, 1, 0,
-    	0, 0, 0,-1
-);
-
-const mat4 cone = mat4(
-    	1, 0, 0, 0,
-    	0,-1, 0, 0,
-    	0, 0, 1, 0,
-    	0, 0, 0, 0
-);
-
-const mat4 paraboloid = mat4(
-    	1, 0, 0, 0,
-    	0, 0, 0, 0.25,
-    	0, 0, 1, 0,
-    	0, 0.25, 0,-0.5
-);
-
-const mat4 hyperboloid_oneSheet = mat4(
-    	1, 0, 0, 0,
-    	0, -0.95, 0, 0,
-    	0, 0, 1, 0,
-    	0, 0, 0, -0.05
-);
-
-const mat4 hyperboloid_twoSheets = mat4(
-    	1, 0, 0, 0,
-    	0, -1, 0, 0,
-    	0, 0, 1, 0,
-    	0, 0, 0, 0.01
-);
-
-const mat4 hyperbolicParaboloid = mat4(
-       -1, 0, 0, 0,
-    	0, 0, 0, 0.5,
-    	0, 0, 1, 0,
-    	0, 0.5, 0, 0
-);
-
-const mat4 parabolicPlane = mat4(
-    	1, 0, 0, 0,
-    	0, 0, 0, 1,
-    	0, 0, 1, 0,
-    	0, 1, 0, 0
-);
-
-const mat4 intersectingPlanes = mat4(
-    	0, 0, 0, 0,
-    	0, 0, 1, 0,
-    	0, 1, 0, 0,
-    	0, 0, 0, 0
-);
-
-const mat4 warpedPlanes = mat4(
-    	0, 1, 1, 0,
-    	1, 0, 0, 1,
-    	1, 0, 0, 0,
-    	0, 1, 0, 0
-); */
-
+/*
+The Quadric shape Parameters (A-J) are stored in a 4x4 matrix (a 'mat4' in GLSL).
+Following the technique found in the 2004 paper, "Ray Tracing Arbitrary Objects on the GPU" by Wood, et al.,
+the parameter layout is:
+mat4 shape = mat4(A, B, C, D,
+		  B, E, F, G,
+		  C, F, H, I,
+		  D, G, I, J);
+*/
 
 float QuadricIntersect(mat4 shape, vec4 ro, vec4 rd) 
 {
@@ -300,9 +239,11 @@ float QuadricIntersect(mat4 shape, vec4 ro, vec4 rd)
 	float t0, t1;
 	solveQuadratic(a, b, c, t0, t1);
 
+	// restrict valid intersections to be inside unit bounding box vec3(-1,-1,-1) to vec3(+1,+1,+1)
 	hitPoint = ro.xyz + rd.xyz * t0;
 	if ( t0 > 0.0 && all(greaterThanEqual(hitPoint, vec3(-1.0 - QUADRIC_EPSILON))) && all(lessThanEqual(hitPoint, vec3(1.0 + QUADRIC_EPSILON))) )
 		return t0;
+		
 	hitPoint = ro.xyz + rd.xyz * t1;
 	if ( t1 > 0.0 && all(greaterThanEqual(hitPoint, vec3(-1.0 - QUADRIC_EPSILON))) && all(lessThanEqual(hitPoint, vec3(1.0 + QUADRIC_EPSILON))) )
 		return t1;
@@ -2637,31 +2578,46 @@ vec3 randomSphereDirection()
 	return normalize(vec3(cos(around) * over, up, sin(around) * over));	
 }
 
-vec3 randomDirectionInHemisphere(vec3 nl)
+vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 {
-	float r = rng();
+	float r0 = sqrt(rng());
 	float phi = rng() * TWO_PI;
-	float x = r * cos(phi);
-	float y = r * sin(phi);
-	float z = sqrt(1.0 - x*x - y*y);
+	float x = r0 * cos(phi);
+	float y = r0 * sin(phi);
+	float z = sqrt(1.0 - r0 * r0);
 	
 	vec3 U = normalize( cross( abs(nl.y) < 0.9 ? vec3(0, 1, 0) : vec3(0, 0, 1), nl ) );
 	vec3 V = cross(nl, U);
 	return normalize(x * U + y * V + z * nl);
 }
 
-vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
+vec3 randomDirectionInSpecularLobe(vec3 reflectionDir, float roughness)
 {
-	float r = sqrt(rng());
+	float cosThetaMax = cos(roughness);
+	float r0 = rng();
+	float cosTheta = (1.0 - r0) + r0 * cosThetaMax;
+	float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
 	float phi = rng() * TWO_PI;
-	float x = r * cos(phi);
-	float y = r * sin(phi);
-	float z = sqrt(1.0 - x*x - y*y);
-	
-	vec3 U = normalize( cross( abs(nl.y) < 0.9 ? vec3(0, 1, 0) : vec3(0, 0, 1), nl ) );
-	vec3 V = cross(nl, U);
-	return normalize(x * U + y * V + z * nl);
+	float x = cos(phi) * sinTheta;
+	float y = sin(phi) * sinTheta;
+
+	vec3 U = normalize( cross( abs(reflectionDir.y) < 0.9 ? vec3(0, 1, 0) : vec3(0, 0, 1), reflectionDir ) );
+	vec3 V = cross(reflectionDir, U);
+	return normalize( mix(reflectionDir, normalize(x * U + y * V + cosTheta * reflectionDir), roughness ) );
 }
+
+/* vec3 randomDirectionInPhongSpecular(vec3 reflectionDir, float shininess)
+{
+	float cosTheta = pow(rng(), 1.0 / (2.0 + shininess));
+	float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
+	float phi = rng() * TWO_PI;
+	float x = sinTheta * cos(phi);
+	float y = sinTheta * sin(phi);
+
+	vec3 U = normalize( cross( abs(reflectionDir.y) < 0.9 ? vec3(0, 1, 0) : vec3(0, 0, 1), reflectionDir ) );
+	vec3 V = cross(reflectionDir, U);
+	return normalize(x * U + y * V + cosTheta * reflectionDir);
+} */
 
 /* vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 {
@@ -2671,7 +2627,7 @@ vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 	float phi = rng() * TWO_PI;
 	float x = r * cos(phi);
 	float y = r * sin(phi);
-	float z = sqrt(1.0 - x*x - y*y);
+	float z = sqrt(1.0 - r * r);
 	// the following is from "Building an Orthonormal Basis, Revisited" http://jcgt.org/published/0006/01/01/
 	//float signf = nl.z >= 0.0 ? 1.0 : -1.0;
 	float signf = step(0.0, nz) * 2.0 - 1.0;
@@ -2688,11 +2644,11 @@ vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 {
 	float i = N_POINTS * rng();
 			// the Golden angle in radians
-	float theta = mod(i * 2.39996322972865332, TWO_PI);
+	float phi = mod(i * 2.39996322972865332, TWO_PI);
 	float r = sqrt(i / N_POINTS); // sqrt pushes points outward to prevent clumping in center of disk
-	float x = r * cos(theta);
-	float y = r * sin(theta);
-	float z = sqrt(1.0 - x*x - y*y); // used for projecting XY disk points outward along Z axis
+	float x = r * cos(phi);
+	float y = r * sin(phi);
+	float z = sqrt(1.0 - r * r);
 	
 	vec3 U = normalize( cross( abs(nl.y) < 0.9 ? vec3(0, 1, 0) : vec3(0, 0, 1), nl ) );
 	vec3 V = cross(nl, U);
@@ -2707,33 +2663,6 @@ vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 	return normalize(nl + vec3(sqrt(1.0 - theta * theta) * vec2(cos(phi), sin(phi)), theta));
 } */
 
-/* vec3 randomDirectionInPhongSpecular(vec3 reflectionDir, float roughness)
-{
-	float phi = rng() * TWO_PI;
-	roughness = clamp(roughness, 0.0, 1.0);
-	roughness = mix(13.0, 0.0, sqrt(roughness));
-	float exponent = exp(roughness) + 1.0;
-	//weight = (exponent + 2.0) / (exponent + 1.0);
-	float cosTheta = pow(rng(), 1.0 / (exponent + 1.0));
-	float radius = sqrt(max(0.0, 1.0 - cosTheta * cosTheta));
-
-	vec3 u = normalize( cross( abs(reflectionDir.x) > 0.1 ? vec3(0, 1, 0) : vec3(1, 0, 0), reflectionDir ) );
-	vec3 v = cross(reflectionDir, u);
-	return normalize(u * cos(phi) * radius + v * sin(phi) * radius + reflectionDir * cosTheta);
-} */
-
-vec3 randomDirectionInSpecularLobe(vec3 reflectionDir, float roughness)
-{
-	float r = sqrt(rng());
-	float phi = rng() * TWO_PI;
-	float x = r * cos(phi);
-	float y = r * sin(phi);
-	float z = sqrt(1.0 - x*x - y*y);
-	
-	vec3 U = normalize( cross( abs(reflectionDir.y) < 0.9 ? vec3(0, 1, 0) : vec3(0, 0, 1), reflectionDir ) );
-	vec3 V = cross(reflectionDir, U);
-	return normalize( mix(reflectionDir, x * U + y * V + z * reflectionDir, roughness * sqrt(roughness)) );
-}
 `;
 
 
@@ -2742,9 +2671,9 @@ vec3 sampleSphereLight(vec3 x, vec3 nl, Sphere light, out float weight)
 {
 	vec3 dirToLight = (light.position - x); // no normalize (for distance calc below)
 	float cos_alpha_max = sqrt(1.0 - clamp((light.radius * light.radius) / dot(dirToLight, dirToLight), 0.0, 1.0));
-	
-	float cos_alpha = mix( cos_alpha_max, 1.0, rng() ); // 1.0 + (rng() * (cos_alpha_max - 1.0));
-	// * 0.75 below ensures shadow rays don't miss the light, due to shader float precision
+	float r0 = rng();
+	float cos_alpha = 1.0 - r0 + r0 * cos_alpha_max;//mix( cos_alpha_max, 1.0, rng() );
+	// * 0.75 below ensures shadow rays don't miss smaller sphere lights, due to shader float precision
 	float sin_alpha = sqrt(max(0.0, 1.0 - cos_alpha * cos_alpha)) * 0.75; 
 	float phi = rng() * TWO_PI;
 	dirToLight = normalize(dirToLight);
@@ -2803,7 +2732,7 @@ float calcFresnelReflectance(vec3 rayDirection, vec3 n, float etai, float etat, 
 
 THREE.ShaderChunk[ 'pathtracing_main' ] = `
 // tentFilter from Peter Shirley's 'Realistic Ray Tracing (2nd Edition)' book, pg. 60
-float tentFilter(float x)
+float tentFilter(float x) // input: x: a random float(0.0 to 1.0), output: a filtered float (-1.0 to +1.0)
 {
 	return (x < 0.5) ? sqrt(2.0 * x) - 1.0 : 1.0 - sqrt(2.0 - (2.0 * x));
 }
@@ -2830,9 +2759,9 @@ void main( void )
 	vec2 pixelOffset = uFrameCounter < 150.0 ? vec2( tentFilter(rand()), tentFilter(rand()) ) :
 					      	   vec2( tentFilter(rng()), tentFilter(rng()) );
 	
-	// we must map pixelPos into the range -1.0 to +1.0
+	// we must map pixelPos into the range -1.0 to +1.0: (-1.0,-1.0) is bottom-left screen corner, (1.0,1.0) is top-right
 	vec2 pixelPos = ((gl_FragCoord.xy + pixelOffset) / uResolution) * 2.0 - 1.0;
-	 
+
 	vec3 rayDir = uUseOrthographicCamera ? camForward : 
 					       normalize( pixelPos.x * camRight * uULen + pixelPos.y * camUp * uVLen + camForward );
 
@@ -2846,8 +2775,8 @@ void main( void )
 
 	rayOrigin = uUseOrthographicCamera ? cameraPosition + (camRight * pixelPos.x * uULen * 100.0) + (camUp * pixelPos.y * uVLen * 100.0) + randomAperturePos :
 					     cameraPosition + randomAperturePos;
-
 	rayDirection = finalRayDir;
+	
 
 	SetupScene();
 
@@ -2916,7 +2845,6 @@ void main( void )
 	// Eventually, all edge-containing pixels' .a (alpha channel) values will converge to 1.01, which keeps them from getting blurred by the box-blur filter, thus retaining sharpness.
 	if (previousPixel.a == 1.01)
 		currentPixel.a = 1.01;
-
 
 	pc_fragColor = vec4(previousPixel.rgb + currentPixel.rgb, currentPixel.a);
 }
