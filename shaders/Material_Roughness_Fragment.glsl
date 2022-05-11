@@ -85,7 +85,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	float P, RP, TP;
 	float weight;
 	float thickness = 0.05;
-	float previousIntersectionRoughness = 0.0;
+	float firstIntersectionRoughness = 0.0;
 
 	int diffuseCount = 0;
 
@@ -116,6 +116,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 		if (bounces == 0)
 		{
+			firstIntersectionRoughness = hitRoughness;
 			objectNormal = nl;
 			objectColor = hitColor;
 			objectID = hitObjectID;
@@ -124,7 +125,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		
 		if (hitType == LIGHT)
 		{	
-			pixelSharpness = diffuseCount == 0 && previousIntersectionRoughness < 0.5 ? 1.01 : 0.0;
+			pixelSharpness = diffuseCount == 0 && firstIntersectionRoughness < 0.1 ? 1.01 : 0.0;
 
 			if (bounceIsSpecular || sampleLight)
 				accumCol = mask * hitEmission;
@@ -147,7 +148,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				hitColor = checkCol0 * q + checkCol1 * (1.0 - q);	
 			}
 
-			if (diffuseCount == 0 && !coatTypeIntersected && previousIntersectionRoughness < 0.4)	
+			if (diffuseCount == 0 && !coatTypeIntersected && firstIntersectionRoughness < 0.4)	
 				objectColor = hitColor;
 
 			diffuseCount++;
@@ -179,23 +180,43 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		
 		if (hitType == SPEC)  // Ideal SPECULAR reflection
 		{
-			previousIntersectionRoughness = hitRoughness;
-
 			mask *= hitColor;
-			rayDirection = reflect(rayDirection, nl);
-			rayDirection = randomDirectionInSpecularLobe(rayDirection, hitRoughness);
+
+			if (diffuseCount == 0 && rand() >= hitRoughness)
+			{
+				rayDirection = reflect(rayDirection, nl); // reflect ray from metal surface
+				rayDirection = randomDirectionInSpecularLobe(rayDirection, hitRoughness * sqrt(hitRoughness));
+				rayOrigin = x + nl * uEPS_intersect;
+				continue;
+			}
+
+			diffuseCount++;
+			
+			bounceIsSpecular = false;
+
+			if (diffuseCount == 1 && rand() < 0.5)
+			{
+				mask *= 2.0;
+				// choose random Diffuse sample vector
+				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
+				rayOrigin = x + nl * uEPS_intersect;
+				continue;
+			}
+			
+			dirToLight = sampleSphereLight(x, nl, lightChoice, weight);
+			mask *= diffuseCount == 1 ? 2.0 : 1.0;
+			mask *= weight * N_LIGHTS;
+			
+			rayDirection = dirToLight;
 			rayOrigin = x + nl * uEPS_intersect;
 
-			// if (diffuseCount == 1)
-			// 	bounceIsSpecular = true; // turn on mirror caustics
+			sampleLight = true;
 			continue;
 		}
 		
 		if (hitType == REFR)  // Ideal dielectric REFRACTION
 		{
 			pixelSharpness = diffuseCount == 0 ? -1.0 : pixelSharpness;
-
-			previousIntersectionRoughness = hitRoughness;
 
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
@@ -209,7 +230,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			{
 				mask *= RP;
 				
-				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
+				rayDirection = reflect(rayDirection, nl); // reflect ray from dielectric surface
 				rayDirection = randomDirectionInSpecularLobe(rayDirection, hitRoughness);
 				rayOrigin = x + nl * uEPS_intersect;
 				continue;
@@ -227,7 +248,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			
 			tdir = refract(rayDirection, nl, ratioIoR);
 			rayDirection = tdir;
-			rayDirection = randomDirectionInSpecularLobe(rayDirection, hitRoughness * hitRoughness);
+			rayDirection = randomDirectionInSpecularLobe(rayDirection, hitRoughness * sqrt(hitRoughness));
 			rayOrigin = x - nl * uEPS_intersect;
 
 			if (diffuseCount == 1)
@@ -239,7 +260,6 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		
 		if (hitType == COAT)  // Diffuse object underneath with ClearCoat on top
 		{
-			previousIntersectionRoughness = hitRoughness;
 			coatTypeIntersected = true;
 
 			nc = 1.0; // IOR of Air
@@ -253,7 +273,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			if (diffuseCount == 0 && rand() < P)
 			{
 				mask *= RP;
-				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
+				rayDirection = reflect(rayDirection, nl); // reflect ray from clearCoat surface
 				rayDirection = randomDirectionInSpecularLobe(rayDirection, hitRoughness);
 				rayOrigin = x + nl * uEPS_intersect;
 				continue;
@@ -289,8 +309,6 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 		if (hitType == METALCOAT)  // Metal object underneath with ClearCoat on top
 		{
-			previousIntersectionRoughness = hitRoughness;
-
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of Clear Coat
 			Re = calcFresnelReflectance(rayDirection, nl, nc, nt, ratioIoR);
@@ -302,7 +320,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			if (diffuseCount == 0 && rand() < P)
 			{
 				mask *= RP;
-				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
+				rayDirection = reflect(rayDirection, nl); // reflect ray from clearCoat surface
 				rayOrigin = x + nl * uEPS_intersect;
 				continue;
 			}
@@ -310,10 +328,35 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			mask *= TP;
 			mask *= hitColor;
                         
-			rayDirection = reflect(rayDirection, nl);
-			rayDirection = randomDirectionInSpecularLobe(rayDirection, hitRoughness);
+			if (diffuseCount == 0 && rand() >= hitRoughness)
+			{
+				rayDirection = reflect(rayDirection, nl); // reflect ray from metal surface
+				rayDirection = randomDirectionInSpecularLobe(rayDirection, hitRoughness * sqrt(hitRoughness));
+				rayOrigin = x + nl * uEPS_intersect;
+				continue;
+			}
+
+			diffuseCount++;
+			mask /= max(1.0 - hitRoughness, 0.7);
+			bounceIsSpecular = false;
+
+			if (diffuseCount == 1 && rand() < 0.5)
+			{
+				mask *= 2.0;
+				// choose random Diffuse sample vector
+				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
+				rayOrigin = x + nl * uEPS_intersect;
+				continue;
+			}
+			
+			dirToLight = sampleSphereLight(x, nl, lightChoice, weight);
+			mask *= diffuseCount == 1 ? 2.0 : 1.0;
+			mask *= weight * N_LIGHTS;
+			
+			rayDirection = dirToLight;
 			rayOrigin = x + nl * uEPS_intersect;
 
+			sampleLight = true;
 			continue;
                         
 		} //end if (hitType == METALCOAT)
