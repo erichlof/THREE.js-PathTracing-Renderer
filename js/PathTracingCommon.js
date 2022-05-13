@@ -2593,7 +2593,7 @@ vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 
 vec3 randomDirectionInSpecularLobe(vec3 reflectionDir, float roughness)
 {
-	float cosThetaMax = cos(roughness);
+	float cosThetaMax = cos(sqrt(roughness));
 	float r0 = rng();
 	float cosTheta = (1.0 - r0) + r0 * cosThetaMax;
 	float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
@@ -2603,7 +2603,7 @@ vec3 randomDirectionInSpecularLobe(vec3 reflectionDir, float roughness)
 
 	vec3 U = normalize( cross( abs(reflectionDir.y) < 0.9 ? vec3(0, 1, 0) : vec3(0, 0, 1), reflectionDir ) );
 	vec3 V = cross(reflectionDir, U);
-	return normalize( mix(reflectionDir, normalize(x * U + y * V + cosTheta * reflectionDir), roughness ) );
+	return normalize( mix(reflectionDir, (x * U + y * V + cosTheta * reflectionDir), roughness ) );
 }
 
 /* vec3 randomDirectionInPhongSpecular(vec3 reflectionDir, float shininess)
