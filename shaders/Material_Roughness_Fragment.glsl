@@ -185,7 +185,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			if (diffuseCount == 0 && rand() >= hitRoughness)
 			{
 				rayDirection = reflect(rayDirection, nl); // reflect ray from metal surface
-				rayDirection = randomDirectionInSpecularLobe(rayDirection, hitRoughness * sqrt(hitRoughness));
+				rayDirection = randomDirectionInSpecularLobe(rayDirection, hitRoughness);
 				rayOrigin = x + nl * uEPS_intersect;
 				continue;
 			}
@@ -231,7 +231,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				mask *= RP;
 				
 				rayDirection = reflect(rayDirection, nl); // reflect ray from dielectric surface
-				rayDirection = randomDirectionInSpecularLobe(rayDirection, hitRoughness);
+				rayDirection = randomDirectionInSpecularLobe(rayDirection, hitRoughness * hitRoughness);
 				rayOrigin = x + nl * uEPS_intersect;
 				continue;
 			}
@@ -248,7 +248,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			
 			tdir = refract(rayDirection, nl, ratioIoR);
 			rayDirection = tdir;
-			rayDirection = randomDirectionInSpecularLobe(rayDirection, hitRoughness * sqrt(hitRoughness));
+			rayDirection = randomDirectionInSpecularLobe(rayDirection, hitRoughness * hitRoughness);
 			rayOrigin = x - nl * uEPS_intersect;
 
 			if (diffuseCount == 1)
@@ -274,7 +274,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			{
 				mask *= RP;
 				rayDirection = reflect(rayDirection, nl); // reflect ray from clearCoat surface
-				rayDirection = randomDirectionInSpecularLobe(rayDirection, hitRoughness);
+				rayDirection = randomDirectionInSpecularLobe(rayDirection, hitRoughness * hitRoughness);
 				rayOrigin = x + nl * uEPS_intersect;
 				continue;
 			}
@@ -331,7 +331,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			if (diffuseCount == 0 && rand() >= hitRoughness)
 			{
 				rayDirection = reflect(rayDirection, nl); // reflect ray from metal surface
-				rayDirection = randomDirectionInSpecularLobe(rayDirection, hitRoughness * sqrt(hitRoughness));
+				rayDirection = randomDirectionInSpecularLobe(rayDirection, hitRoughness * hitRoughness);
 				rayOrigin = x + nl * uEPS_intersect;
 				continue;
 			}
