@@ -2543,6 +2543,171 @@ vec3 Get_Sky_Color(vec3 rayDir)
 }
 `;
 
+THREE.ShaderChunk[ 'pathtracing_pbr_material_functions' ] = `
+
+/*  All of the following GGX functions come from this great tutorial/resource:
+	http://cwyman.org/code/dxrTutors/tutors/Tutor14/tutorial14.md.html */
+
+
+// The NDF for GGX, see Eqn 19 from 
+//    http://blog.selfshadow.com/publications/s2012-shading-course/hoffman/s2012_pbs_physics_math_notes.pdf
+//
+// This function can be used for "D" in the Cook-Torrance model:  D*G*F / (4*NdotL*NdotV)
+float ggxNormalDistribution(float NdotH, float roughness)
+{
+	float a2 = roughness * roughness;
+	float d = ((NdotH * a2 - NdotH) * NdotH + 1.0);
+	return a2 / max(0.001, (d * d * PI));
+}
+
+// This from Schlick 1994, modified as per Karas in SIGGRAPH 2013 "Physically Based Shading" course
+//
+// This function can be used for "G" in the Cook-Torrance model:  D*G*F / (4*NdotL*NdotV)
+float ggxSchlickMaskingTerm(float NdotL, float NdotV, float roughness)
+{
+	// Karis notes they use alpha / 2 (or roughness^2 / 2)
+	float k = (roughness * roughness) * 0.5;
+
+	// Karis also notes they can use the following equation, but only for analytical lights
+	//float k = (roughness + 1.0) * (roughness + 1.0) / 8.0; 
+
+	// Compute G(v) and G(l).  These equations directly from Schlick 1994
+	float g_v = NdotV / (NdotV * (1.0 - k) + k);
+	float g_l = NdotL / (NdotL * (1.0 - k) + k);
+
+	// Return G(v) * G(l)
+	return g_v * g_l;
+}
+
+// Traditional Schlick approximation to the Fresnel term (also from Schlick 1994)
+//
+// This function can be used for "F" in the Cook-Torrance model:  D*G*F / (4*NdotL*NdotV)
+vec3 schlickFresnel(vec3 f0, float u)
+{
+	float U = 1.0 - u;
+	return f0 + (vec3(1) - f0) * (U * U * U * U * U); // same as  * pow(1.0 - u, 5.0);
+}
+
+// Get a GGX half vector / microfacet normal, sampled according to the distribution computed by
+//     the function ggxNormalDistribution() above.  
+//
+// When using this function to sample, the probability density is pdf = D * NdotH / (4 * HdotV)
+vec3 getGGXMicrofacet(float roughness, vec3 nl)
+{
+	float r0 = rng();
+	// GGX NDF sampling
+	float a2 = roughness * roughness;
+	float cosThetaH = sqrt(max(0.0, (1.0 - r0) / ((a2 - 1.0) * r0 + 1.0)));
+	float sinThetaH = sqrt(max(0.0, 1.0 - cosThetaH * cosThetaH));
+	float phiH = rng() * TWO_PI;
+
+	// Get an orthonormal basis from the normal
+	vec3 T = normalize(cross(nl.yzx, nl));
+	vec3 B = cross(nl, T);
+
+	// Get our GGX NDF sample (i.e., the half vector)
+	return normalize(T * sinThetaH * cos(phiH) + B * sinThetaH * sin(phiH) + nl * cosThetaH);
+}
+
+float luminance(vec3 color)
+{ 
+	//return dot(color, vec3(0.299, 0.587, 0.114));
+	return dot(color, vec3(0.2126, 0.7152, 0.0722));
+}
+// Our material has both a diffuse and a specular lobe.  
+//     With what probability should we sample the diffuse one?
+float probabilityToSampleDiffuse(vec3 difColor, vec3 specColor)
+{
+	float lumDiffuse = max(0.001, luminance(difColor));
+	float lumSpecular = max(0.001, luminance(specColor));
+	return lumDiffuse / (lumDiffuse + lumSpecular);
+}
+
+vec3 ggxDirect(Sphere light, vec3 hitPoint, vec3 N, vec3 difColor, vec3 specColor, float roughness, out vec3 L)
+{
+	vec3 V = -rayDirection;
+	float weight;
+	L = sampleSphereLight(hitPoint, N, light, weight);
+	// Compute our lambertian term (N dot L)
+	float NdotL = clamp(dot(N, L), 0.001, 1.0);
+
+	// Compute half vectors and additional dot products for GGX
+	vec3 H = normalize(V + L);
+	float NdotH = clamp(dot(N, H), 0.001, 1.0);
+	float LdotH = clamp(dot(L, H), 0.001, 1.0);
+	float NdotV = clamp(dot(N, V), 0.001, 1.0);
+
+	// Evaluate terms for our GGX BRDF model
+	float D = ggxNormalDistribution(NdotH, roughness);
+	float G = ggxSchlickMaskingTerm(NdotL, NdotV, roughness);
+	vec3  F = schlickFresnel(specColor, LdotH);
+
+	// Evaluate the Cook-Torrance Microfacet BRDF model
+	//     Cancel out NdotL here & the next eq. to avoid catastrophic numerical precision issues.
+	vec3 ggxTerm = D * G * F / (4.0 * NdotV /* * NdotL */);
+
+	// Compute our final color (combining diffuse lobe plus specular GGX lobe)
+	return (/* NdotL * */ ggxTerm + weight * difColor / PI);
+}
+
+vec3 ggxIndirect(vec3 hitPoint, vec3 N, vec3 difColor, vec3 specColor, float roughness, out vec3 L, inout int diffuseCount)
+{
+	// We have to decide whether we sample our diffuse or specular/ggx lobe.
+	float probDiffuse = probabilityToSampleDiffuse(difColor, specColor);
+	bool chooseDiffuse = rng() < probDiffuse;
+
+	vec3 V = -rayDirection;
+	// We'll need NdotV for both diffuse and specular...
+	float NdotV = clamp(dot(N, V), 0.001, 1.0);
+
+	// If we randomly selected to sample our diffuse lobe...
+	if (chooseDiffuse)
+	{
+		diffuseCount++;
+		// Choose a randomly selected cosine-sampled diffuse ray.
+		L = randomCosWeightedDirectionInHemisphere(N);
+
+		// Check to make sure our randomly selected, normal mapped diffuse ray didn't go below the surface.
+		//if (dot(noNormalN, L) <= 0.0) return vec3(0, 0, 0);
+
+		// Accumulate the color: (NdotL * incomingLight * dif / pi) 
+		// Probability of sampling:  (NdotL / pi) * probDiffuse
+		return difColor / probDiffuse;
+	}
+	// Otherwise we randomly selected to sample our GGX lobe
+	else
+	{
+		// Randomly sample the NDF to get a microfacet in our BRDF to reflect off of
+		vec3 H = getGGXMicrofacet(roughness, N);
+
+		// Compute the outgoing direction based on this (perfectly reflective) microfacet
+		L = reflect(rayDirection, H);
+
+		// Check to make sure our randomly selected, normal mapped diffuse ray didn't go below the surface.
+		//if (dot(noNormalN, L) <= 0.0) return vec3(0, 0, 0);
+
+		// Compute some dot products needed for shading
+		float NdotL = clamp(dot(N, L), 0.001, 1.0);
+		float NdotH = clamp(dot(N, H), 0.001, 1.0);
+		float LdotH = clamp(dot(L, H), 0.001, 1.0);
+
+		// Evaluate our BRDF using a microfacet BRDF model
+		float D = ggxNormalDistribution(NdotH, roughness);        // The GGX normal distribution
+		float G = ggxSchlickMaskingTerm(NdotL, NdotV, roughness); // Use Schlick's masking term approx
+		vec3  F = schlickFresnel(specColor, LdotH);               // Use Schlick's approx to Fresnel
+		vec3  ggxTerm = D * G * F / (4.0 * NdotL * NdotV);        // The Cook-Torrance microfacet BRDF
+
+		// What's the probability of sampling vector H from getGGXMicrofacet()?
+		float  ggxProb = D * NdotH / (4.0 * LdotH);
+
+		// Accumulate the color:  ggx-BRDF * incomingLight * NdotL / probability-of-sampling
+		//    -> Should really simplify the math above.
+		return NdotL * ggxTerm / (ggxProb * (1.0 - probDiffuse));
+	}
+}
+
+`;
+
 THREE.ShaderChunk[ 'pathtracing_random_functions' ] = `
 // globals used in rand() function
 vec4 randVec4; // samples and holds the RGBA blueNoise texture value for this pixel
@@ -2578,32 +2743,32 @@ vec3 randomSphereDirection()
 	return normalize(vec3(cos(around) * over, up, sin(around) * over));	
 }
 
-vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
+/* vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 {
 	float r0 = sqrt(rng());
 	float phi = rng() * TWO_PI;
 	float x = r0 * cos(phi);
 	float y = r0 * sin(phi);
 	float z = sqrt(1.0 - r0 * r0);
-	
-	vec3 U = normalize( cross( abs(nl.y) < 0.9 ? vec3(0, 1, 0) : vec3(0, 0, 1), nl ) );
-	vec3 V = cross(nl, U);
-	return normalize(x * U + y * V + z * nl);
+	vec3 T = normalize(cross(nl.yzx, nl));
+	vec3 B = cross(nl, T);
+	return normalize(T * x + B * y + nl * z);
+} */
+
+//the following alternative skips the creation of tangent and bi-tangent vectors T and B
+vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
+{
+	float z = rng() * 2.0 - 1.0;
+	float phi = rng() * TWO_PI;
+	float r = sqrt(1.0 - z * z);
+    	return normalize(nl + vec3(r * cos(phi), r * sin(phi), z));
 }
 
 vec3 randomDirectionInSpecularLobe(vec3 reflectionDir, float roughness)
 {
-	float cosThetaMax = cos(sqrt(roughness));
-	float r0 = rng();
-	float cosTheta = (1.0 - r0) + r0 * cosThetaMax;
-	float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
-	float phi = rng() * TWO_PI;
-	float x = cos(phi) * sinTheta;
-	float y = sin(phi) * sinTheta;
-
-	vec3 U = normalize( cross( abs(reflectionDir.y) < 0.9 ? vec3(0, 1, 0) : vec3(0, 0, 1), reflectionDir ) );
-	vec3 V = cross(reflectionDir, U);
-	return normalize( mix(reflectionDir, (x * U + y * V + cosTheta * reflectionDir), roughness ) );
+	roughness *= roughness;
+	vec3 cosDiffuseDir = randomCosWeightedDirectionInHemisphere(reflectionDir);
+	return normalize( mix(reflectionDir, cosDiffuseDir, roughness) );
 }
 
 /* vec3 randomDirectionInPhongSpecular(vec3 reflectionDir, float shininess)
@@ -2613,33 +2778,14 @@ vec3 randomDirectionInSpecularLobe(vec3 reflectionDir, float roughness)
 	float phi = rng() * TWO_PI;
 	float x = sinTheta * cos(phi);
 	float y = sinTheta * sin(phi);
-
-	vec3 U = normalize( cross( abs(reflectionDir.y) < 0.9 ? vec3(0, 1, 0) : vec3(0, 0, 1), reflectionDir ) );
-	vec3 V = cross(reflectionDir, U);
-	return normalize(x * U + y * V + cosTheta * reflectionDir);
+	vec3 T = normalize(cross(reflectionDir.yzx, reflectionDir));
+	vec3 B = cross(reflectionDir, T);
+	return normalize(T * x + B * y + reflectionDir * cosTheta);
 } */
 
-/* vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
-{
-	float nx = nl.x; float ny = nl.y; float nz = nl.z;
-
-	float r = sqrt(rng());
-	float phi = rng() * TWO_PI;
-	float x = r * cos(phi);
-	float y = r * sin(phi);
-	float z = sqrt(1.0 - r * r);
-	// the following is from "Building an Orthonormal Basis, Revisited" http://jcgt.org/published/0006/01/01/
-	//float signf = nl.z >= 0.0 ? 1.0 : -1.0;
-	float signf = step(0.0, nz) * 2.0 - 1.0;
-	float a = -1.0 / (signf + nz);
-	float b = nx * ny * a;
-	
-	vec3 T = vec3( 1.0 + signf * nx * nx * a, signf * b, -signf * nx );
-	vec3 B = vec3( b, signf + ny * ny * a, -ny );
-	return normalize(x * T + y * B + z * nl);
-} */
-
-/* #define N_POINTS 64.0 //64.0
+/* 
+// this is my crude attempt at a Fibonacci-spiral sample point pattern on a hemisphere above a diffuse surface
+#define N_POINTS 64.0 //64.0
 vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 {
 	float i = N_POINTS * rng();
@@ -2655,7 +2801,9 @@ vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 	return normalize(x * U + y * V + z * nl);
 } */
 
-/* //the following alternative skips the creation of tangent and bi-tangent vectors u and v 
+/* 
+// like the function several functions above, 
+// the following alternative skips the creation of tangent and bi-tangent vectors T and B 
 vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 {
 	float phi = rng() * TWO_PI;
