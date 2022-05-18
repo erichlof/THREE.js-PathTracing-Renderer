@@ -455,7 +455,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				continue;
 			}
 
-			rayDirection = randomDirectionInSpecularLobe(uSunDirectionVector, 0.05);
+			rayDirection = randomDirectionInSpecularLobe(uSunDirectionVector, 0.07);
 			rayOrigin = x + nl * uEPS_intersect;
 			weight = max(0.0, dot(rayDirection, nl)) * 0.000015; // down-weight directSunLight contribution
 			mask *= diffuseCount == 1 ? 2.0 : 1.0;
@@ -551,7 +551,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				continue;
 			}
 
-			rayDirection = randomDirectionInSpecularLobe(uSunDirectionVector, 0.05);
+			rayDirection = randomDirectionInSpecularLobe(uSunDirectionVector, 0.07);
 			rayOrigin = x + nl * uEPS_intersect;
 			weight = max(0.0, dot(rayDirection, nl)) * 0.000015; // down-weight directSunLight contribution
 			mask *= diffuseCount == 1 ? 2.0 : 1.0;
