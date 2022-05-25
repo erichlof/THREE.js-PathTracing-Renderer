@@ -82,7 +82,7 @@ function initSceneData()
 		needChangeCameraRotationSpeed = true;
 	}
 
-	samplesPerFrame_AmountController = gui.add(samplesPerFrame_AmountObject, 'samplesPerFrame', 1, 20, 1).onChange(handleSamplesPerFrameAmountChange);
+	samplesPerFrame_AmountController = gui.add(samplesPerFrame_AmountObject, 'samplesPerFrame', 1, 100, 1).onChange(handleSamplesPerFrameAmountChange);
 	previousFrameBlend_WeightController = gui.add(previousFrameBlend_WeightObject, 'previousFrameBlendWeight', 0.0, 1.0, 0.01).onChange(handlePreviousFrameBlendWeightChange);
 	cameraFlight_SpeedController = gui.add(cameraFlight_SpeedObject, 'cameraFlightSpeed', 1, 1000, 1).onChange(handleCameraFlightSpeedChange);
 	cameraRotation_SpeedController = gui.add(cameraRotation_SpeedObject, 'cameraRotationSpeed', 0.0001, 2.0, 0.0001).onChange(handleCameraRotationSpeedChange);
