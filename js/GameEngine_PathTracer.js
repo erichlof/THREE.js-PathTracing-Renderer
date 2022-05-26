@@ -22,8 +22,9 @@ function initSceneData()
 	// Torus Object
 	torusObject = new THREE.Object3D();
 	pathTracingScene.add(torusObject);
-	//torusObject.rotation.set(Math.PI * 0.5, 0, 0);
+	
 	torusObject.position.set(-60, 18, 50);
+	torusObject.scale.set(11.5, 11.5, 11.5);
 
 	// set camera's field of view
 	worldCamera.fov = 60;
@@ -51,7 +52,7 @@ function updateVariablesAndUniforms()
 	// TORUS
 	torusRotationAngle += (1.5 * frameTime);
 	torusRotationAngle %= TWO_PI;
-	torusObject.rotation.set(0, torusRotationAngle, Math.PI * 0.5);
+	torusObject.rotation.set(0, torusRotationAngle, 0);
 	torusObject.updateMatrixWorld(true); // 'true' forces immediate matrix update
 	pathTracingUniforms.uTorusInvMatrix.value.copy(torusObject.matrixWorld).invert();
 
