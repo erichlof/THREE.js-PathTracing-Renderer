@@ -40,7 +40,7 @@ struct OpenCylinder { float radius; float height; vec3 position; vec3 emission; 
 struct CappedCylinder { float radius; vec3 cap1pos; vec3 cap2pos; vec3 emission; vec3 color; int type; };
 struct Cone { vec3 pos0; float radius0; vec3 pos1; float radius1; vec3 emission; vec3 color; int type; };
 struct Capsule { vec3 pos0; float radius0; vec3 pos1; float radius1; vec3 emission; vec3 color; int type; };
-struct Torus { float radius0; float radius1; vec3 emission; vec3 color; int type; };
+struct UnitTorus { float parameterK; vec3 emission; vec3 color; int type; };
 struct Box { vec3 minCorner; vec3 maxCorner; vec3 emission; vec3 color; int type; };
 
 Sphere spheres[N_SPHERES];
@@ -50,7 +50,7 @@ OpenCylinder openCylinders[N_OPENCYLINDERS];
 CappedCylinder cappedCylinders[N_CAPPEDCYLINDERS];
 Cone cones[N_CONES];
 Capsule capsules[N_CAPSULES];
-Torus torii[N_TORII];
+UnitTorus torii[N_TORII];
 Box boxes[N_BOXES];
 
 
@@ -59,6 +59,8 @@ Box boxes[N_BOXES];
 #include <pathtracing_calc_fresnel_reflectance>
 
 #include <pathtracing_sphere_intersect>
+
+#include <pathtracing_unit_bounding_sphere_intersect>
 
 #include <pathtracing_ellipsoid_intersect>
 
@@ -72,7 +74,7 @@ Box boxes[N_BOXES];
 
 #include <pathtracing_paraboloid_intersect>
 
-#include <pathtracing_torus_intersect>
+#include <pathtracing_unit_torus_intersect>
 
 #include <pathtracing_box_intersect>
 
@@ -84,10 +86,12 @@ Box boxes[N_BOXES];
 float SceneIntersect(out bool finalIsRayExiting)
 //-------------------------------------------------------------------------------------------------------------------
 {
+	vec3 rObjOrigin, rObjDirection;
 	vec3 n;
-	float d;
+	float d, dt;
 	float t = INFINITY;
 	bool isRayExiting = false;
+	bool insideSphere = false;
 	int objectCount = 0;
 	
 	for (int i = 0; i < N_SPHERES; i++)
@@ -194,23 +198,26 @@ float SceneIntersect(out bool finalIsRayExiting)
 	}
 	objectCount++;
 		
-	vec3 rObjOrigin, rObjDirection;
 	// transform ray into Torus's object space
 	rObjOrigin = vec3( uTorusInvMatrix * vec4(rayOrigin, 1.0) );
 	rObjDirection = vec3( uTorusInvMatrix * vec4(rayDirection, 0.0) );
-	
-	d = TorusIntersect( torii[0].radius0, torii[0].radius1, rObjOrigin, rObjDirection );
-	if (d < t)
+	// first check that the ray hits the bounding sphere around the torus
+	d = UnitBoundingSphereIntersect( rObjOrigin, rObjDirection, insideSphere );
+	if (d < INFINITY)
 	{
-		t = d;
-		vec3 hit = rObjOrigin + rObjDirection * t;
-		n = calcNormal_Torus(hit);
-		// transfom normal back into world space
-		hitNormal = transpose(mat3(uTorusInvMatrix)) * n;
-		hitEmission = torii[0].emission;
-		hitColor = torii[0].color;
-		hitType = torii[0].type;
-		hitObjectID = float(objectCount);
+		d = insideSphere ? 2.0 : d; // for transparent torus, nudge the ray out farther
+		rObjOrigin += rObjDirection * d;
+
+		dt = d + UnitTorusIntersect( rObjOrigin, rObjDirection, torii[0].parameterK, n );
+		if (dt < t)
+		{
+			t = dt;
+			hitNormal = transpose(mat3(uTorusInvMatrix)) * n;
+			hitEmission = torii[0].emission;
+			hitColor = torii[0].color;
+			hitType = torii[0].type;
+			hitObjectID = float(objectCount);
+		}
 	}
 		
 	return t;
@@ -478,7 +485,7 @@ void SetupScene(void)
 	
 	capsules[0] = Capsule( vec3(80,13,15), 10.0, vec3(110,15.8,15), 10.0, z, vec3(1.0,1.0,1.0), COAT);//white Capsule
 	
-	torii[0] = Torus( 10.0, 1.5, z, vec3(0.955008, 0.637427, 0.538163), SPEC);//copper Torus
+	torii[0] = UnitTorus( 0.75, z, vec3(0.955008, 0.637427, 0.538163), SPEC);//copper Torus
 	
 	boxes[0] = Box( vec3(50.0,21.0,-60.0), vec3(100.0,28.0,-130.0), z, vec3(0.2,0.9,0.7), REFR);//Glass Box
 	boxes[1] = Box( vec3(56.0,23.0,-66.0), vec3(94.0,26.0,-124.0), z, vec3(0.0,0.0,0.0), DIFF);//Diffuse Box
