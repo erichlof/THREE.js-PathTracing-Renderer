@@ -19,9 +19,10 @@ function initSceneData()
 	// Torus Object
 	torusObject = new THREE.Object3D();
 	pathTracingScene.add(torusObject);
-	//torusObject.rotation.set(Math.PI * 0.5, 0, 0);
-	torusObject.rotation.set(-0.05, 0, -0.05);
+
+	torusObject.rotation.set((Math.PI * 0.5) - 0.05, -0.05, 0);
 	torusObject.position.set(-60, 6, 50);
+	torusObject.scale.set(11.5, 11.5, 11.5);
 
 	// set camera's field of view
 	worldCamera.fov = 60;
