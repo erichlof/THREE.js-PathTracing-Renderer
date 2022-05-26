@@ -213,6 +213,30 @@ float SphereIntersect( float rad, vec3 pos, vec3 rayOrigin, vec3 rayDirection )
 }
 `;
 
+THREE.ShaderChunk[ 'pathtracing_unit_bounding_sphere_intersect' ] = `
+
+float UnitBoundingSphereIntersect( vec3 ro, vec3 rd, out bool insideSphere )
+{
+	float t0, t1;
+	float a = dot(rd, rd);
+	float b = 2.0 * dot(rd, ro);
+	float c = dot(ro, ro) - (1.01 * 1.01); // - (rad * rad) = - (1.0 * 1.0) = - 1.0 
+	solveQuadratic(a, b, c, t0, t1);
+	if (t0 > 0.0)
+	{
+		insideSphere = false;
+		return t0;
+	}
+	if (t1 > 0.0)
+	{
+		insideSphere = true;
+		return t1;
+	}
+
+	return INFINITY;
+}
+`;
+
 THREE.ShaderChunk[ 'pathtracing_quadric_intersect' ] = `
 
 /*
@@ -2233,11 +2257,195 @@ float HyperbolicParaboloidIntersect( float rad, float height, vec3 pos, vec3 ray
 }
 `;
 
+THREE.ShaderChunk[ 'pathtracing_unit_torus_intersect' ] = `
+
+// This Torus quartic solver from https://www.shadertoy.com/view/ltVfDK by Shadertoy user 'mla'
+
+float sgn(float x) 
+{
+	return x < 0.0 ? -1.0 : 1.0; // Return 1 for x == 0
+}
+
+// Quadratic solver from Kahan
+int quadratic(float A, float B, float C, out vec2 res) 
+{
+	float b = -0.5 * B;
+	float b2 = b * b;
+	float q = b2 - A * C;
+	if (q < 0.0) 
+		return 0;
+
+	float r = b + sgn(b) * sqrt(q);
+	if (r == 0.0) 
+	{
+		res.x = C / A;
+		res.y = -res.x;
+	} 
+	else 
+	{
+		res.x = C / r;
+		res.y = r / A;
+	}
+
+  	return 2;
+}
+
+void eval( float X, float A, float B, float C, float D,
+           out float Q, out float DQ, out float B1, out float C2 ) 
+{
+	float q0 = A * X;
+	B1 = q0 + B;
+	C2 = B1 * X + C;
+	DQ = (q0 + B1) * X + C2;
+	Q = C2 * X + D;
+}
+
+float qcubic1(float B, float C, float D) 
+{  
+	if (abs(C) < 1e-4 && abs(D) < 1e-6) 
+		return 0.0;
+
+	float A = 1.0;
+	float X, b1, c2;
+	if (D == 0.0) 
+	{
+		X = 0.0; 
+		b1 = B; 
+		c2 = C;
+	} 
+	else 
+	{
+		X = -(B / A) / 3.0;
+		float t, r, s, q, dq, x0;
+
+		eval(X, A, B, C, D, q, dq, b1, c2);
+		t = q / A; 
+		r = pow(abs(t), 1.0 / 3.0); 
+		s = sgn(t);
+		t = -dq / A; 
+		if (t > 0.0)
+			r = 1.324718 * max(r, sqrt(t));
+		x0 = X - s * r;
+		if (x0 != X) 
+		{
+			X = x0;
+			for (int i = 0; i < 6; i++) 
+			{
+				eval(X, A, B, C, D, q, dq, b1, c2);
+				if (dq == 0.0) 
+					break;
+				X -= q / dq;
+			}
+			if (abs(A) * X * X > abs(D / X)) 
+			{
+				c2 = -D / X; 
+				b1 = (c2 - C) / X;
+			}
+		}
+	}
+
+	vec2 res;
+	if (quadratic(A, b1, c2, res) != 0) 
+	{
+		X = max(X, res.x);
+		X = max(X, res.y);
+	}
+
+	return X;
+}
+
+// The Lanczos quartic method
+int quartic(float c1, float c2, float c3, float c4, out vec4 res) 
+{
+	float alpha = 0.5 * c1;
+	float A = c2 - alpha * alpha;
+	float B = c3 - alpha * A;
+	float a, b, beta, psi;
+	// Get largest root of cubic
+	psi = qcubic1(2.0 * A - alpha * alpha, A * A + 2.0 * B * alpha - 4.0 * c4, -B * B);
+	a = sqrt(psi);
+	beta = 0.5 * (A + psi);
+	if (psi == 0.0) 
+	{
+		b = sqrt(max(beta * beta -c4, 0.0));
+	} 
+	else 
+	{
+		b = 0.5 * a * (alpha - B / psi);
+	}
+
+	int n1 = quadratic(1.0, alpha + a, beta + b, res.xy);
+	int n2 = quadratic(1.0, alpha - a, beta - b, res.zw); 
+	if (n1 == 0) 
+		res.xy = res.zw;
+
+	return n1 + n2;
+}
+
+
+float UnitTorusIntersect(vec3 ro, vec3 rd, float k, out vec3 n) 
+{
+	rd = normalize(rd);
+	k = mix(0.5, 1.0, k);
+	float torus_R = max(0.0, k); // outer extent of the entire torus/ring
+	float torus_r = max(0.01, 1.0 - k); // thickness of circular 'tubing' part of torus/ring
+	// U*t^2 + V*t + W = 2*r*R*cos(theta)
+	float U = dot(rd, rd);
+	float V = 2.0 * dot(ro, rd);
+	float W = dot(ro, ro) - (torus_R * torus_R + torus_r * torus_r);
+	// A*t^4 + B*t^3 + C*t^2 + D*t + _E = 0
+	//float A = 1.0; //U*U;
+	float B = 2.0 * U * V;
+	float C = V * V + 2.0 * U * W + 4.0 * torus_R * torus_R * rd.z * rd.z;
+	float D = 2.0 * V * W + 8.0 * torus_R * torus_R * ro.z * rd.z;
+	// the constant 'E' was already defined in 'pathtracing_defines_and_uniforms'
+	float _E = W * W + 4.0 * torus_R * torus_R * (ro.z * ro.z - torus_r * torus_r);
+
+	vec4 res = vec4(0);
+	int ns = quartic(B, C, D, _E, res);
+	// Sort results
+	if (ns > 1) 
+	{
+		if (res.x > res.y) res.xy = res.yx;
+	}
+	if (ns > 2) 
+	{
+		if (res.y > res.z) res.yz = res.zy;
+		if (res.x > res.y) res.xy = res.yx;
+	}
+	if (ns > 3) 
+	{
+		if (res.z > res.w) res.zw = res.wz;
+		if (res.y > res.z) res.yz = res.zy;
+		if (res.x > res.y) res.xy = res.yx;
+	}
+  
+	float t = INFINITY;
+	
+	if (res.w > 0.0)
+		t = res.w;
+	if (res.z > 0.0)
+		t = res.z;
+	if (res.y > 0.0)
+		t = res.y;
+	if (res.x > 0.0)
+		t = res.x;
+	
+	vec3 pos = ro + t * rd;
+	n = pos * (dot(pos, pos) - (torus_r * torus_r) - (torus_R * torus_R) * vec3(1, 1,-1));
+	
+  	return t;
+}
+
+`;
+
 THREE.ShaderChunk[ 'pathtracing_torus_intersect' ] = `
+
 float map_Torus( in vec3 pos )
 {
 	return length( vec2(length(pos.xz)-torii[0].radius0,pos.y) )-torii[0].radius1;
 }
+
 vec3 calcNormal_Torus( in vec3 pos )
 {
 	// epsilon = a small number
@@ -2270,90 +2478,7 @@ float TorusIntersect( float rad0, float rad1, vec3 rayOrigin, vec3 rayDirection 
 	
 	return (d<0.001) ? t : INFINITY;
 }
-/*
-// borrowed from iq: https://www.shadertoy.com/view/4sBGDy
-//-----------------------------------------------------------------------------------------
-float TorusIntersect( float rad0, float rad1, vec3 pos, vec3 rayOrigin, vec3 rayDirection )
-//-----------------------------------------------------------------------------------------
-{
-	vec3 rO = rayOrigin - pos;
-	vec3 rD = rayDirection;
-	
-	float Ra2 = rad0*rad0;
-	float ra2 = rad1*rad1;
-	
-	float m = dot(rO,rO);
-	float n = dot(rO,rD);
-		
-	float k = (m - ra2 - Ra2) * 0.5;
-	float a = n;
-	float b = n*n + Ra2*rD.z*rD.z + k;
-	float c = k*n + Ra2*rO.z*rD.z;
-	float d = k*k + Ra2*rO.z*rO.z - Ra2*ra2;
-	
-	float a2 = a * a;
-	float p = -3.0*a2     + 2.0*b;
-	float q =  2.0*a2*a   - 2.0*a*b   + 2.0*c;
-	float r = -3.0*a2*a2 + 4.0*a2*b - 8.0*a*c + 4.0*d;
-	p *= ONE_OVER_THREE;
-	r *= ONE_OVER_THREE;
-	float p2 = p * p;
-	float Q = p2 + r;
-	float R = 3.0*r*p - p2*p - q*q;
-	
-	float h = R*R - Q*Q*Q;
-	float z = 0.0;
-	if( h < 0.0 )
-	{
-		float sQ = sqrt(Q);
-		z = 2.0*sQ*cos( acos(R/(sQ*Q)) * ONE_OVER_THREE );
-	}
-	else
-	{
-		float sQ = pow( sqrt(h) + abs(R), ONE_OVER_THREE );
-		z = sign(R)*abs( sQ + Q/sQ );
-	}
-	
-	z = p - z;
-		
-	float d1 = z   - 3.0*p;
-	float d2 = z*z - 3.0*r;
-	if( abs(d1)<0.5 ) // originally < 0.0001, but this was too precise and caused holes when viewed from the side
-	{
-		if( d2<0.0 ) return INFINITY;
-		d2 = sqrt(d2);
-	}
-	else
-	{
-		if( d1<0.0 ) return INFINITY;
-		d1 = sqrt( d1*0.5 );
-		d2 = q/d1;
-	}
-	
-	float result = INFINITY;
-	float d1SqMinusZ = d1*d1 - z;
-	
-	h = d1SqMinusZ - d2;
-	if( h>0.0 )
-	{
-		h = sqrt(h);
-		float t1 = d1 - h - a;
-		float t2 = d1 + h - a;
-		if( t2>0.0 ) result=t2;
-		if( t1>0.0 ) result=t1;
-	}
-	h = d1SqMinusZ + d2;
-	if( h>0.0 )
-	{
-		h = sqrt(h);
-		float t1 = -d1 - h - a;
-		float t2 = -d1 + h - a;
-		if( t2>0.0 ) result=min(result,t2);
-		if( t1>0.0 ) result=min(result,t1); 
-	}
-	return result;
-}
-*/
+
 `;
 
 THREE.ShaderChunk[ 'pathtracing_quad_intersect' ] = `
