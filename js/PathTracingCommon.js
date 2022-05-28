@@ -2257,168 +2257,185 @@ float HyperbolicParaboloidIntersect( float rad, float height, vec3 pos, vec3 ray
 }
 `;
 
+
 THREE.ShaderChunk[ 'pathtracing_unit_torus_intersect' ] = `
 
-// This Torus quartic solver from https://www.shadertoy.com/view/ltVfDK by Shadertoy user 'mla'
+// The following Torus quartic solver algo/code is from https://www.shadertoy.com/view/ssc3Dn by Shadertoy user 'mla'
 
-float sgn(float x) 
-{
-	return x < 0.0 ? -1.0 : 1.0; // Return 1 for x == 0
+float sgn(float x) {
+  return x < 0.0 ? -1.0: 1.0; // Return 1 for x == 0
+}
+
+float evalquadratic(float x, float A, float B, float C) {
+  return (A*x+B)*x+C;
+}
+
+float evalcubic(float x, float A, float B, float C, float D) {
+  return ((A*x+B)*x+C)*x+D;
 }
 
 // Quadratic solver from Kahan
-int quadratic(float A, float B, float C, out vec2 res) 
-{
-	float b = -0.5 * B;
-	float b2 = b * b;
-	float q = b2 - A * C;
-	if (q < 0.0) 
-		return 0;
-
-	float r = b + sgn(b) * sqrt(q);
-	if (r == 0.0) 
-	{
-		res.x = C / A;
-		res.y = -res.x;
-	} 
-	else 
-	{
-		res.x = C / r;
-		res.y = r / A;
-	}
-
-  	return 2;
+int quadratic(float A, float B, float C, out vec2 res) {
+  float b = -0.5*B, b2 = b*b;
+  float q = b2 - A*C;
+  if (q < 0.0) return 0;
+  float r = b + sgn(b)*sqrt(q);
+  if (r == 0.0) {
+    res[0] = C/A;
+    res[1] = -res[0];
+  } else {
+    res[0] = C/r;
+    res[1] = r/A;
+  }
+  return 2;
 }
 
-void eval( float X, float A, float B, float C, float D,
-           out float Q, out float DQ, out float B1, out float C2 ) 
-{
-	float q0 = A * X;
-	B1 = q0 + B;
-	C2 = B1 * X + C;
-	DQ = (q0 + B1) * X + C2;
-	Q = C2 * X + D;
+// Numerical Recipes algorithm for solving cubic equation
+int cubic(float a, float b, float c, float d, out vec3 res) {
+  if (a == 0.0) {
+    return quadratic(b,c,d,res.xy);
+  }
+  if (d == 0.0) {
+    res.x = 0.0;
+    return 1+quadratic(a,b,c,res.yz);
+  }
+  float tmp = a; a = b/tmp; b = c/tmp; c = d/tmp;
+  // solve x^3 + ax^2 + bx + c = 0
+  float Q = (a*a-3.0*b)/9.0;
+  float R = (2.0*a*a*a - 9.0*a*b + 27.0*c)/54.0;
+  float R2 = R*R, Q3 = Q*Q*Q;
+  if (R2 < Q3) {
+    float X = clamp(R/sqrt(Q3),-1.0,1.0);
+    float theta = acos(X);
+    float S = sqrt(Q); // Q must be positive since 0 <= R2 < Q3
+    res[0] = -2.0*S*cos(theta/3.0)-a/3.0;
+    res[1] = -2.0*S*cos((theta+2.0*PI)/3.0)-a/3.0;
+    res[2] = -2.0*S*cos((theta+4.0*PI)/3.0)-a/3.0;
+    return 3;
+  } else {
+    float alpha = -sgn(R)*pow(abs(R)+sqrt(R2-Q3),0.3333);
+    float beta = alpha == 0.0 ? 0.0 : Q/alpha;
+    res[0] = alpha + beta - a/3.0;
+    return 1;
+  }
 }
 
-float qcubic1(float B, float C, float D) 
-{  
-	if (abs(C) < 1e-4 && abs(D) < 1e-6) 
-		return 0.0;
+/* float qcubic(float B, float C, float D) {
+  vec3 roots;
+  int nroots = cubic(1.0,B,C,D,roots);
+  // Sort into descending order
+  if (nroots > 1 && roots.x < roots.y) roots.xy = roots.yx;
+  if (nroots > 2) {
+    if (roots.y < roots.z) roots.yz = roots.zy;
+    if (roots.x < roots.y) roots.xy = roots.yx;
+  }
+  // And select the largest
+  float psi = roots[0];
+  psi = max(1e-6,psi);
+  // and give a quick polish with Newton-Raphson
+  for (int i = 0; i < 3; i++) {
+    float delta = evalcubic(psi,1.0,B,C,D)/evalquadratic(psi,3.0,2.0*B,C);
+    psi -= delta;
+  }
+  return psi;
+} */
 
-	float A = 1.0;
-	float X, b1, c2;
-	if (D == 0.0) 
-	{
-		X = 0.0; 
-		b1 = B; 
-		c2 = C;
-	} 
-	else 
-	{
-		X = -(B / A) / 3.0;
-		float t, r, s, q, dq, x0;
-
-		eval(X, A, B, C, D, q, dq, b1, c2);
-		t = q / A; 
-		r = pow(abs(t), 1.0 / 3.0); 
-		s = sgn(t);
-		t = -dq / A; 
-		if (t > 0.0)
-			r = 1.324718 * max(r, sqrt(t));
-		x0 = X - s * r;
-		if (x0 != X) 
-		{
-			X = x0;
-			for (int i = 0; i < 6; i++) 
-			{
-				eval(X, A, B, C, D, q, dq, b1, c2);
-				if (dq == 0.0) 
-					break;
-				X -= q / dq;
-			}
-			if (abs(A) * X * X > abs(D / X)) 
-			{
-				c2 = -D / X; 
-				b1 = (c2 - C) / X;
-			}
-		}
-	}
-
-	vec2 res;
-	if (quadratic(A, b1, c2, res) != 0) 
-	{
-		X = max(X, res.x);
-		X = max(X, res.y);
-	}
-
-	return X;
+float qcubic(float B, float C, float D) {
+  vec3 roots;
+  int nroots = cubic(1.0,B,C,D,roots);
+  // Select the largest
+  float psi = roots[0];
+  if (nroots > 1) psi = max(psi,roots[1]);
+  if (nroots > 2) psi = max(psi,roots[2]);
+  
+  // Give a quick polish with Newton-Raphson
+  for (int i = 0; i < 2; i++) {
+    float delta = evalcubic(psi,1.0,B,C,D)/evalquadratic(psi,3.0,2.0*B,C);
+    psi -= delta;
+  }
+  return psi;
 }
 
 // The Lanczos quartic method
-int quartic(float c1, float c2, float c3, float c4, out vec4 res) 
-{
-	float alpha = 0.5 * c1;
-	float A = c2 - alpha * alpha;
-	float B = c3 - alpha * A;
-	float a, b, beta, psi;
-	// Get largest root of cubic
-	psi = qcubic1(2.0 * A - alpha * alpha, A * A + 2.0 * B * alpha - 4.0 * c4, -B * B);
-	a = sqrt(psi);
-	beta = 0.5 * (A + psi);
-	if (psi == 0.0) 
-	{
-		b = sqrt(max(beta * beta -c4, 0.0));
-	} 
-	else 
-	{
-		b = 0.5 * a * (alpha - B / psi);
-	}
+int lquartic(float c1, float c2, float c3, float c4, out vec4 res) {
+  float alpha = 0.5*c1;
+  float A = c2-alpha*alpha;
+  float B = c3-alpha*A;
+  float a,b,beta,psi;
+  psi = qcubic(2.0*A-alpha*alpha, A*A+2.0*B*alpha-4.0*c4, -B*B);
+  // There _should_ be a root >= 0, but sometimes the cubic
+  // solver misses it (probably a double root around zero).
+  psi = max(0.0,psi);
+  a = sqrt(psi);
+  beta = 0.5*(A + psi);
+  if (psi <= 0.0) {
+    b = sqrt(max(beta*beta-c4,0.0));
+  } else {
+    b = 0.5*a*(alpha-B/psi);
+  }
+  int resn = quadratic(1.0,alpha+a,beta+b,res.xy);
+  vec2 tmp;
+  if (quadratic(1.0,alpha-a,beta-b,tmp) != 0) { 
+    res.zw = res.xy;
+    res.xy = tmp;
+    resn += 2;
+  }
+  return resn;
+}
 
-	int n1 = quadratic(1.0, alpha + a, beta + b, res.xy);
-	int n2 = quadratic(1.0, alpha - a, beta - b, res.zw); 
-	if (n1 == 0) 
-		res.xy = res.zw;
-
-	return n1 + n2;
+// Note: the parameter below is renamed '_E', because Euler's number 'E' is already defined in 'pathtracing_defines_and_uniforms'
+int quartic(float A, float B, float C, float D, float _E, out vec4 roots) {
+  int nroots;
+  // Sometimes it's advantageous to solve for the reciprocal (if there
+  // are very large solutions), but this doesn't seem needed here.
+  if (abs(B/A) < abs(D/_E)) {
+    nroots = lquartic(B/A,C/A,D/A,_E/A,roots);
+  } else {
+    nroots = lquartic(D/_E,C/_E,B/_E,A/_E,roots);
+    for (int i = 0; i < nroots; i++) {
+      roots[i] = 1.0/roots[i];
+    }
+  }
+  
+  return nroots;
 }
 
 
 float UnitTorusIntersect(vec3 ro, vec3 rd, float k, out vec3 n) 
 {
-	rd = normalize(rd);
+	// Note: the vec3 rd might not be normalized to unit length of 1, 
+	//  in order to allow for inverse transform of intersecting rays
 	k = mix(0.5, 1.0, k);
 	float torus_R = max(0.0, k); // outer extent of the entire torus/ring
 	float torus_r = max(0.01, 1.0 - k); // thickness of circular 'tubing' part of torus/ring
-	// U*t^2 + V*t + W = 2*r*R*cos(theta)
+	float torusr2 = torus_r * torus_r;
+	float torusR2 = torus_R * torus_R;
+
 	float U = dot(rd, rd);
 	float V = 2.0 * dot(ro, rd);
-	float W = dot(ro, ro) - (torus_R * torus_R + torus_r * torus_r);
+	float W = dot(ro, ro) - (torusR2 + torusr2);
 	// A*t^4 + B*t^3 + C*t^2 + D*t + _E = 0
-	//float A = 1.0; //U*U;
+	float A = U * U;
 	float B = 2.0 * U * V;
-	float C = V * V + 2.0 * U * W + 4.0 * torus_R * torus_R * rd.z * rd.z;
-	float D = 2.0 * V * W + 8.0 * torus_R * torus_R * ro.z * rd.z;
-	// the constant 'E' was already defined in 'pathtracing_defines_and_uniforms'
-	float _E = W * W + 4.0 * torus_R * torus_R * (ro.z * ro.z - torus_r * torus_r);
+	float C = V * V + 2.0 * U * W + 4.0 * torusR2 * rd.z * rd.z;
+	float D = 2.0 * V * W + 8.0 * torusR2 * ro.z * rd.z;
+// Note: the float below is renamed '_E', because Euler's number 'E' is already defined in 'pathtracing_defines_and_uniforms'
+	float _E = W * W + 4.0 * torusR2 * (ro.z * ro.z - torusr2);
 
 	vec4 res = vec4(0);
-	int ns = quartic(B, C, D, _E, res);
-	// Sort results
-	if (ns > 1) 
-	{
-		if (res.x > res.y) res.xy = res.yx;
-	}
-	if (ns > 2) 
-	{
-		if (res.y > res.z) res.yz = res.zy;
-		if (res.x > res.y) res.xy = res.yx;
-	}
-	if (ns > 3) 
-	{
-		if (res.z > res.w) res.zw = res.wz;
-		if (res.y > res.z) res.yz = res.zy;
-		if (res.x > res.y) res.xy = res.yx;
-	}
+	int nr = quartic(A,B,C,D,_E,res);
+	if (nr == 0) return INFINITY;
+  // Sort the roots.
+  if (res.x > res.y) res.xy = res.yx; 
+  if (nr > 2) {
+    if (res.y > res.z) res.yz = res.zy; 
+    if (res.x > res.y) res.xy = res.yx;
+  }
+  if (nr > 3) {
+    if (res.z > res.w) res.zw = res.wz; 
+    if (res.y > res.z) res.yz = res.zy; 
+    if (res.x > res.y) res.xy = res.yx; 
+  }
   
 	float t = INFINITY;
 	
@@ -2432,54 +2449,13 @@ float UnitTorusIntersect(vec3 ro, vec3 rd, float k, out vec3 n)
 		t = res.x;
 	
 	vec3 pos = ro + t * rd;
-	n = pos * (dot(pos, pos) - (torus_r * torus_r) - (torus_R * torus_R) * vec3(1, 1,-1));
+	n = pos * (dot(pos, pos) - torusr2 - torusR2 * vec3(1, 1,-1));
 	
   	return t;
 }
 
 `;
 
-THREE.ShaderChunk[ 'pathtracing_torus_intersect' ] = `
-
-float map_Torus( in vec3 pos )
-{
-	return length( vec2(length(pos.xz)-torii[0].radius0,pos.y) )-torii[0].radius1;
-}
-
-vec3 calcNormal_Torus( in vec3 pos )
-{
-	// epsilon = a small number
-	vec2 e = vec2(1.0,-1.0)*0.5773*0.0002;
-	return ( e.xyy*map_Torus( pos + e.xyy ) + 
-		 e.yyx*map_Torus( pos + e.yyx ) + 
-		 e.yxy*map_Torus( pos + e.yxy ) + 
-		 e.xxx*map_Torus( pos + e.xxx ) );
-}
-/* 
-Thanks to koiava for the ray marching strategy! https://www.shadertoy.com/user/koiava 
-*/
-float TorusIntersect( float rad0, float rad1, vec3 rayOrigin, vec3 rayDirection )
-{	
-	vec3 n;
-	float d = CappedCylinderIntersect( vec3(0,rad1,0), vec3(0,-rad1,0), rad0+rad1, rayOrigin, rayDirection, n );
-	if (d == INFINITY)
-		return INFINITY;
-	
-	vec3 pos = rayOrigin;
-	float t = 0.0;
-	float torusFar = d + (rad0 * 2.0) + (rad1 * 2.0);
-	for (int i = 0; i < 200; i++)
-	{
-		d = map_Torus(pos);
-		if (d < 0.001 || t > torusFar) break;
-		pos += rayDirection * d;
-		t += d;
-	}
-	
-	return (d<0.001) ? t : INFINITY;
-}
-
-`;
 
 THREE.ShaderChunk[ 'pathtracing_quad_intersect' ] = `
 float TriangleIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 rayOrigin, vec3 rayDirection, bool isDoubleSided )
