@@ -2475,7 +2475,11 @@ float UnitTorusIntersect(vec3 ro, vec3 rd, float k, out vec3 n)
 	t = (res.x > 0.0) ? res.x : t;
 		
 	vec3 pos = ro + t * rd;
-	n = pos * (dot(pos, pos) - torusr2 - torusR2 * vec3(1, 1,-1));
+	//n = pos * (dot(pos, pos) - torusr2 - torusR2 * vec3(1, 1,-1));
+
+	float kn = sqrt(torusR2 / dot(pos.xy, pos.xy));
+	pos.xy -= kn * pos.xy;
+	n = pos;
 	
   	return t;
 }
