@@ -5,6 +5,7 @@ let container, stats;
 let controls;
 let pathTracingScene, screenCopyScene, screenOutputScene;
 let pathTracingUniforms = {};
+let pathTracingUniformsGroups = [];
 let screenCopyUniforms, screenOutputUniforms;
 let pathTracingDefines;
 let pathTracingVertexShader, pathTracingFragmentShader;
@@ -512,6 +513,7 @@ function initTHREEjs()
 
 			pathTracingMaterial = new THREE.ShaderMaterial({
 				uniforms: pathTracingUniforms,
+				uniformsGroups: pathTracingUniformsGroups,
 				defines: pathTracingDefines,
 				vertexShader: pathTracingVertexShader,
 				fragmentShader: pathTracingFragmentShader,
