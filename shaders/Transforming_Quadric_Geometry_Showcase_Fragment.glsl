@@ -811,17 +811,17 @@ void main( void )
 	float difference_Nz = fwidth(objectNormal.z);
 	float normalDifference = smoothstep(edge0, edge1, difference_Nx) + smoothstep(edge0, edge1, difference_Ny) + smoothstep(edge0, edge1, difference_Nz);
 
-	edge0 = 0.0;
-	edge1 = 0.5;
-	float difference_obj = abs(dFdx(objectID)) > 0.0 ? 1.0 : 0.0;
-	difference_obj += abs(dFdy(objectID)) > 0.0 ? 1.0 : 0.0;
-	float objectDifference = smoothstep(edge0, edge1, difference_obj);
+	float objectDifference = min(fwidth(objectID), 1.0);
 
-	float difference_col = length(dFdx(objectColor)) > 0.0 ? 1.0 : 0.0;
-	difference_col += length(dFdy(objectColor)) > 0.0 ? 1.0 : 0.0;
-	float colorDifference = smoothstep(edge0, edge1, difference_col);
-	// edge detector (normal and object differences) white-line debug visualization
-	//currentPixel.rgb += 1.0 * vec3(max(normalDifference, objectDifference));
+	float colorDifference = (fwidth(objectColor.r) + fwidth(objectColor.g) + fwidth(objectColor.b)) > 0.0 ? 1.0 : 0.0;
+	// white-line debug visualization for normal difference
+	//currentPixel.rgb += (rng() * 1.5) * vec3(normalDifference);
+	// white-line debug visualization for object difference
+	//currentPixel.rgb += (rng() * 1.5) * vec3(objectDifference);
+	// white-line debug visualization for color difference
+	//currentPixel.rgb += (rng() * 1.5) * vec3(colorDifference);
+	// white-line debug visualization for all 3 differences
+	//currentPixel.rgb += (rng() * 1.5) * vec3( clamp(max(normalDifference, max(objectDifference, colorDifference)), 0.0, 1.0) );
 	
 	vec4 previousPixel = texelFetch(tPreviousTexture, ivec2(gl_FragCoord.xy), 0);
 
