@@ -563,13 +563,10 @@ void main( void )
 	float normalDifference = smoothstep(edge0, edge1, difference_Nx) + smoothstep(edge0, edge1, difference_Ny) + smoothstep(edge0, edge1, difference_Nz);
 	edge0 = 0.0;
 	edge1 = 0.5;
-	float difference_obj = abs(dFdx(objectID)) > 0.0 ? 1.0 : 0.0;
-	difference_obj += abs(dFdy(objectID)) > 0.0 ? 1.0 : 0.0;
-	float objectDifference = smoothstep(edge0, edge1, difference_obj);
-	float difference_col = length(dFdx(objectColor)) > 0.0 ? 1.0 : 0.0;
-	difference_col += length(dFdy(objectColor)) > 0.0 ? 1.0 : 0.0;
-	float colorDifference = smoothstep(edge0, edge1, difference_col);
+	float objectDifference = min(fwidth(objectID), 1.0);
 
+	float colorDifference = (fwidth(objectColor.r) + fwidth(objectColor.g) + fwidth(objectColor.b)) > 0.0 ? 1.0 : 0.0;
+	
 	// edge detector black-line debug visualization
 	if (objectDifference > 0.0 || colorDifference > 0.0 || normalDifference > 0.0)
 		currentPixel.rgb = vec3(0);
