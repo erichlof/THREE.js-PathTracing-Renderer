@@ -2410,20 +2410,7 @@ int lquartic(float c1, float c2, float c3, float c4, out vec4 res)
 // Note: the parameter below is renamed '_E', because Euler's number 'E' is already defined in 'pathtracing_defines_and_uniforms'
 int quartic(float A, float B, float C, float D, float _E, out vec4 roots) 
 {
-	int nroots;
-  	// Sometimes it's advantageous to solve for the reciprocal (if there are very large solutions)
-  	if (abs(B / A) < abs(D /_E)) 
-	{
-    		nroots = lquartic(B / A, C / A, D / A,_E / A, roots);
-  	} 
-	else 
-	{
-    		nroots = lquartic(D /_E, C /_E, B /_E, A /_E, roots);
-    		for (int i = 0; i < nroots; i++) 
-		{
-      			roots[i] = 1.0 / roots[i];
-    		}
-  	}
+    	int nroots = lquartic(B / A, C / A, D / A, _E / A, roots);
   
   	return nroots;
 }
@@ -2449,6 +2436,7 @@ float UnitTorusIntersect(vec3 ro, vec3 rd, float k, out vec3 n)
 	float D = 2.0 * V * W + 8.0 * torusR2 * ro.z * rd.z;
 // Note: the float below is renamed '_E', because Euler's number 'E' is already defined in 'pathtracing_defines_and_uniforms'
 	float _E = W * W + 4.0 * torusR2 * (ro.z * ro.z - torusr2);
+	
 
 	vec4 res = vec4(0);
 	int nr = quartic(A, B, C, D, _E, res);
@@ -2475,11 +2463,11 @@ float UnitTorusIntersect(vec3 ro, vec3 rd, float k, out vec3 n)
 	t = (res.x > 0.0) ? res.x : t;
 		
 	vec3 pos = ro + t * rd;
-	//n = pos * (dot(pos, pos) - torusr2 - torusR2 * vec3(1, 1,-1));
+	n = pos * (dot(pos, pos) - torusr2 - torusR2 * vec3(1, 1,-1));
 
-	float kn = sqrt(torusR2 / dot(pos.xy, pos.xy));
-	pos.xy -= kn * pos.xy;
-	n = pos;
+	// float kn = sqrt(torusR2 / dot(pos.xy, pos.xy));
+	// pos.xy -= kn * pos.xy;
+	// n = pos;
 	
   	return t;
 }
@@ -3079,18 +3067,18 @@ void main( void )
 	float difference_Ny = fwidth(objectNormal.y);
 	float difference_Nz = fwidth(objectNormal.z);
 	float normalDifference = smoothstep(edge0, edge1, difference_Nx) + smoothstep(edge0, edge1, difference_Ny) + smoothstep(edge0, edge1, difference_Nz);
-	edge0 = 0.0;
-	edge1 = 0.5;
-	float difference_obj = abs(dFdx(objectID)) > 0.0 ? 1.0 : 0.0;
-	difference_obj += abs(dFdy(objectID)) > 0.0 ? 1.0 : 0.0;
-	float objectDifference = smoothstep(edge0, edge1, difference_obj);
-	float difference_col = length(dFdx(objectColor)) > 0.0 ? 1.0 : 0.0;
-	difference_col += length(dFdy(objectColor)) > 0.0 ? 1.0 : 0.0;
-	float colorDifference = smoothstep(edge0, edge1, difference_col);
-	// edge detector (normal and object differences) white-line debug visualization
-	//currentPixel.rgb += 1.0 * vec3(max(normalDifference, objectDifference));
-	// edge detector (color difference) white-line debug visualization
-	//currentPixel.rgb += 1.0 * vec3(colorDifference);
+
+	float objectDifference = min(fwidth(objectID), 1.0);
+
+	float colorDifference = (fwidth(objectColor.r) + fwidth(objectColor.g) + fwidth(objectColor.b)) > 0.0 ? 1.0 : 0.0;
+	// white-line debug visualization for normal difference
+	//currentPixel.rgb += (rng() * 1.5) * vec3(normalDifference);
+	// white-line debug visualization for object difference
+	//currentPixel.rgb += (rng() * 1.5) * vec3(objectDifference);
+	// white-line debug visualization for color difference
+	//currentPixel.rgb += (rng() * 1.5) * vec3(colorDifference);
+	// white-line debug visualization for all 3 differences
+	//currentPixel.rgb += (rng() * 1.5) * vec3( clamp(max(normalDifference, max(objectDifference, colorDifference)), 0.0, 1.0) );
 
 	vec4 previousPixel = texelFetch(tPreviousTexture, ivec2(gl_FragCoord.xy), 0);
 
