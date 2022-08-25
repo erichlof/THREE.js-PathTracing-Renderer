@@ -100,31 +100,28 @@ let mouseControl = true;
 let pointerlockChange;
 let fileLoader = new THREE.FileLoader();
 
-const KEYCODE_NAMES = {
-	65: 'a', 66: 'b', 67: 'c', 68: 'd', 69: 'e', 70: 'f', 71: 'g', 72: 'h', 73: 'i', 74: 'j', 75: 'k', 76: 'l', 77: 'm',
-	78: 'n', 79: 'o', 80: 'p', 81: 'q', 82: 'r', 83: 's', 84: 't', 85: 'u', 86: 'v', 87: 'w', 88: 'x', 89: 'y', 90: 'z',
-	37: 'left', 38: 'up', 39: 'right', 40: 'down', 32: 'space', 33: 'pageup', 34: 'pagedown', 9: 'tab',
-	189: 'dash', 187: 'equals', 188: 'comma', 190: 'period', 27: 'escape', 13: 'enter'
-}
+// The following list of keys is not exhaustive, but it should be more than enough to build interactive demos and games
 let KeyboardState = {
-	a: false, b: false, c: false, d: false, e: false, f: false, g: false, h: false, i: false, j: false, k: false, l: false, m: false,
-	n: false, o: false, p: false, q: false, r: false, s: false, t: false, u: false, v: false, w: false, x: false, y: false, z: false,
-	left: false, up: false, right: false, down: false, space: false, pageup: false, pagedown: false, tab: false,
-	dash: false, equals: false, comma: false, period: false, escape: false, enter: false
+	KeyA: false, KeyB: false, KeyC: false, KeyD: false, KeyE: false, KeyF: false, KeyG: false, KeyH: false, KeyI: false, KeyJ: false, KeyK: false, KeyL: false, KeyM: false,
+	KeyN: false, KeyO: false, KeyP: false, KeyQ: false, KeyR: false, KeyS: false, KeyT: false, KeyU: false, KeyV: false, KeyW: false, KeyX: false, KeyY: false, KeyZ: false,
+	ArrowLeft: false, ArrowUp: false, ArrowRight: false, ArrowDown: false, Space: false, Enter: false, PageUp: false, PageDown: false, Tab: false,
+	Minus: false, Equal: false, BracketLeft: false, BracketRight: false, Semicolon: false, Quote: false, Backquote: false,
+	Comma: false, Period: false, ShiftLeft: false, ShiftRight: false, Slash: false, Backslash: false, Backspace: false,
+	Digit1: false, Digit2: false, Digit3: false, Digit4: false, Digit5: false, Digit6: false, Digit7: false, Digit8: false, Digit9: false, Digit0: false
 }
 
 function onKeyDown(event)
 {
 	event.preventDefault();
 	
-	KeyboardState[KEYCODE_NAMES[event.keyCode]] = true;
+	KeyboardState[event.code] = true;
 }
 
 function onKeyUp(event)
 {
 	event.preventDefault();
 	
-	KeyboardState[KEYCODE_NAMES[event.keyCode]] = false;
+	KeyboardState[event.code] = false;
 }
 
 function keyPressed(keyName)
@@ -727,66 +724,66 @@ function animate()
 		
 		if (!isPaused)
 		{
-			if ( (keyPressed('w') || button3Pressed) && !(keyPressed('s') || button4Pressed) )
+			if ((keyPressed('KeyW') || button3Pressed) && !(keyPressed('KeyS') || button4Pressed) )
 			{
 				cameraControlsObject.position.add(cameraDirectionVector.multiplyScalar(cameraFlightSpeed * frameTime));
 				cameraIsMoving = true;
 			}
-			if ( (keyPressed('s') || button4Pressed) && !(keyPressed('w') || button3Pressed) )
+			if ((keyPressed('KeyS') || button4Pressed) && !(keyPressed('KeyW') || button3Pressed) )
 			{
 				cameraControlsObject.position.sub(cameraDirectionVector.multiplyScalar(cameraFlightSpeed * frameTime));
 				cameraIsMoving = true;
 			}
-			if ( (keyPressed('a') || button1Pressed) && !(keyPressed('d') || button2Pressed) )
+			if ((keyPressed('KeyA') || button1Pressed) && !(keyPressed('KeyD') || button2Pressed) )
 			{
 				cameraControlsObject.position.sub(cameraRightVector.multiplyScalar(cameraFlightSpeed * frameTime));
 				cameraIsMoving = true;
 			}
-			if ( (keyPressed('d') || button2Pressed) && !(keyPressed('a') || button1Pressed) )
+			if ( (keyPressed('KeyD') || button2Pressed) && !(keyPressed('KeyA') || button1Pressed) )
 			{
 				cameraControlsObject.position.add(cameraRightVector.multiplyScalar(cameraFlightSpeed * frameTime));
 				cameraIsMoving = true;
 			}
-			if (keyPressed('q') && !keyPressed('z'))
+			if (keyPressed('KeyQ') && !keyPressed('KeyZ'))
 			{
 				cameraControlsObject.position.add(cameraUpVector.multiplyScalar(cameraFlightSpeed * frameTime));
 				cameraIsMoving = true;
 			}
-			if (keyPressed('z') && !keyPressed('q'))
+			if (keyPressed('KeyZ') && !keyPressed('KeyQ'))
 			{
 				cameraControlsObject.position.sub(cameraUpVector.multiplyScalar(cameraFlightSpeed * frameTime));
 				cameraIsMoving = true;
 			}
-			if ( (keyPressed('up') || button5Pressed) && !(keyPressed('down') || button6Pressed) )
+			if ((keyPressed('ArrowUp') || button5Pressed) && !(keyPressed('ArrowDown') || button6Pressed) )
 			{
 				increaseFocusDist = true;
 			}
-			if ( (keyPressed('down') || button6Pressed) && !(keyPressed('up') || button5Pressed) )
+			if ((keyPressed('ArrowDown') || button6Pressed) && !(keyPressed('ArrowUp') || button5Pressed) )
 			{
 				decreaseFocusDist = true;
 			}
-			if (keyPressed('right') && !keyPressed('left'))
+			if (keyPressed('ArrowRight') && !keyPressed('ArrowLeft'))
 			{
 				increaseAperture = true;
 			}
-			if (keyPressed('left') && !keyPressed('right'))
+			if (keyPressed('ArrowLeft') && !keyPressed('ArrowRight'))
 			{
 				decreaseAperture = true;
 			}
-			if (keyPressed('o') && canPress_O)
+			if (keyPressed('KeyO') && canPress_O)
 			{
 				changeToOrthographicCamera = true;
 				canPress_O = false;
 			}
-			if (!keyPressed('o'))
+			if (!keyPressed('KeyO'))
 				canPress_O = true;
 
-			if (keyPressed('p') && canPress_P)
+			if (keyPressed('KeyP') && canPress_P)
 			{
 				changeToPerspectiveCamera = true;
 				canPress_P = false;
 			}
-			if (!keyPressed('p'))
+			if (!keyPressed('KeyP'))
 				canPress_P = true;
 		} // end if (!isPaused)
 
