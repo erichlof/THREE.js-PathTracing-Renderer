@@ -470,7 +470,7 @@ function initTHREEjs()
 	// setup screen-size quad geometry and shaders....
 
 	// this full-screen quad mesh performs the path tracing operations and produces a screen-sized image
-	pathTracingGeometry = new THREE.PlaneBufferGeometry(2, 2);
+	pathTracingGeometry = new THREE.PlaneGeometry(2, 2);
 
 	pathTracingUniforms.tPreviousTexture = { type: "t", value: screenCopyRenderTarget.texture };
 	pathTracingUniforms.tBlueNoiseTexture = { type: "t", value: blueNoiseTexture };
@@ -531,7 +531,7 @@ function initTHREEjs()
 
 
 	// this full-screen quad mesh copies the image output of the pathtracing shader and feeds it back in to that shader as a 'previousTexture'
-	screenCopyGeometry = new THREE.PlaneBufferGeometry(2, 2);
+	screenCopyGeometry = new THREE.PlaneGeometry(2, 2);
 
 	screenCopyUniforms = {
 		tPathTracedImageTexture: { type: "t", value: pathTracingRenderTarget.texture }
@@ -556,7 +556,7 @@ function initTHREEjs()
 
 	// this full-screen quad mesh takes the image output of the path tracing shader (which is a continuous blend of the previous frame and current frame),
 	// and applies gamma correction (which brightens the entire image), and then displays the final accumulated rendering to the screen
-	screenOutputGeometry = new THREE.PlaneBufferGeometry(2, 2);
+	screenOutputGeometry = new THREE.PlaneGeometry(2, 2);
 
 	screenOutputUniforms = {
 		tPathTracedImageTexture: { type: "t", value: pathTracingRenderTarget.texture },
