@@ -240,6 +240,7 @@ function init()
 {
 
 	window.addEventListener('resize', onWindowResize, false);
+	window.addEventListener('orientationchange', onWindowResize, false);
 
 	if ('ontouchstart' in window) 
 	{
