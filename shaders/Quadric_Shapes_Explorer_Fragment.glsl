@@ -11,7 +11,8 @@ uniform vec3 uRightSphereColor;
 uniform float uLeftSphereMaterialType;
 uniform float uRightSphereMaterialType;
 
-#define N_QUADS 6
+#define N_QUADS 1
+#define N_BOXES 1
 
 vec3 rayOrigin, rayDirection;
 // recorded intersection data:
@@ -22,8 +23,10 @@ int hitType = -100;
 
 
 struct Quad { vec3 normal; vec3 v0; vec3 v1; vec3 v2; vec3 v3; vec3 emission; vec3 color; int type; };
+struct Box { vec3 minCorner; vec3 maxCorner; vec3 emission; vec3 color; int type; };
 
 Quad quads[N_QUADS];
+Box boxes[N_BOXES];
 
 
 #include <pathtracing_random_functions>
@@ -36,18 +39,10 @@ Quad quads[N_QUADS];
 
 #include <pathtracing_quad_intersect>
 
+#include <pathtracing_box_interior_intersect>
+
 #include <pathtracing_sample_quad_light>
 
-//mat4 shape = ellipsoid;
-//mat4 shape = cylinder;
-//mat4 shape = cone;
-//mat4 shape = paraboloid;
-//mat4 shape = hyperboloid_oneSheet;
-//mat4 shape = hyperboloid_twoSheets;
-//mat4 shape = hyperbolicParaboloid;
-//mat4 shape = parabolicPlane;
-//mat4 shape = intersectingPlanes;
-//mat4 shape = warpedPlanes;
 
 //---------------------------------------------------------------------------------------
 float SceneIntersect( )
@@ -62,20 +57,40 @@ float SceneIntersect( )
 	hitObjectID = -INFINITY;
 
 	
-	for (int i = 0; i < N_QUADS; i++)
+	d = QuadIntersect( quads[0].v0, quads[0].v1, quads[0].v2, quads[0].v3, rayOrigin, rayDirection, false );
+	if (d < t)
 	{
-		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, rayOrigin, rayDirection, false );
-		if (d < t)
-		{
-			t = d;
-			hitNormal = quads[i].normal;
-			hitEmission = quads[i].emission;
-			hitColor = quads[i].color;
-			hitType = quads[i].type;
-			hitObjectID = float(objectCount);
-		}
-		objectCount++;
+		t = d;
+		hitNormal = quads[0].normal;
+		hitEmission = quads[0].emission;
+		hitColor = quads[0].color;
+		hitType = quads[0].type;
+		hitObjectID = float(objectCount);
 	}
+	objectCount++;
+	
+	d = BoxInteriorIntersect( boxes[0].minCorner, boxes[0].maxCorner, rayOrigin, rayDirection, n );
+	if (d < t && n != vec3(0,0,-1))
+	{
+		t = d;
+		hitNormal = n;
+		hitEmission = boxes[0].emission;
+		hitColor = vec3(1);
+		hitType = DIFF;
+
+		if (n == vec3(1,0,0)) // left wall
+		{
+			hitColor = vec3(0.7, 0.05, 0.05);
+		}
+		else if (n == vec3(-1,0,0)) // right wall
+		{
+			hitColor = vec3(0.05, 0.05, 0.7);
+		}
+		
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+	
 
 	// transform ray into Tall Box's object space
 	rObjOrigin = vec3( uQuadricShapeInvMatrix * vec4(rayOrigin, 1.0) );
@@ -106,7 +121,7 @@ float SceneIntersect( )
 vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
 //-----------------------------------------------------------------------------------------------------------------------------
 {
-	Quad light = quads[5];
+	Quad light = quads[0];
 
 	vec3 accumCol = vec3(0);
 	vec3 mask = vec3(1);
@@ -196,7 +211,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				continue;
 			}
 			
-			dirToLight = sampleQuadLight(x, nl, quads[5], weight);
+			dirToLight = sampleQuadLight(x, nl, quads[0], weight);
 			mask *= diffuseCount == 1 ? 2.0 : 1.0;
 			mask *= weight;
 
@@ -295,7 +310,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				continue;
 			}
 
-			dirToLight = sampleQuadLight(x, nl, quads[5], weight);
+			dirToLight = sampleQuadLight(x, nl, quads[0], weight);
 			mask *= diffuseCount == 1 ? 2.0 : 1.0;
 			mask *= weight;
 			
@@ -325,13 +340,9 @@ void SetupScene(void)
 	float wallRadius = 50.0;
 	float lightRadius = 10.0;
 	
-	quads[0] = Quad( vec3( 0, 0, 1), vec3(-wallRadius,-wallRadius,-wallRadius), vec3( wallRadius,-wallRadius,-wallRadius), vec3( wallRadius, wallRadius,-wallRadius), vec3(-wallRadius, wallRadius,-wallRadius), z, vec3( 1.0,  1.0,  1.0), DIFF);// Back Wall
-	quads[1] = Quad( vec3( 1, 0, 0), vec3(-wallRadius,-wallRadius, wallRadius), vec3(-wallRadius,-wallRadius,-wallRadius), vec3(-wallRadius, wallRadius,-wallRadius), vec3(-wallRadius, wallRadius, wallRadius), z, vec3( 0.7, 0.05, 0.05), DIFF);// Left Wall Red
-	quads[2] = Quad( vec3(-1, 0, 0), vec3( wallRadius,-wallRadius,-wallRadius), vec3( wallRadius,-wallRadius, wallRadius), vec3( wallRadius, wallRadius, wallRadius), vec3( wallRadius, wallRadius,-wallRadius), z, vec3(0.05, 0.05,  0.7), DIFF);// Right Wall Blue
-	quads[3] = Quad( vec3( 0,-1, 0), vec3(-wallRadius, wallRadius,-wallRadius), vec3( wallRadius, wallRadius,-wallRadius), vec3( wallRadius, wallRadius, wallRadius), vec3(-wallRadius, wallRadius, wallRadius), z, vec3( 1.0,  1.0,  1.0), DIFF);// Ceiling
-	quads[4] = Quad( vec3( 0, 1, 0), vec3(-wallRadius,-wallRadius, wallRadius), vec3( wallRadius,-wallRadius, wallRadius), vec3( wallRadius,-wallRadius,-wallRadius), vec3(-wallRadius,-wallRadius,-wallRadius), z, vec3( 1.0,  1.0,  1.0), DIFF);// Floor
+	quads[0] = Quad( vec3(0,-1, 0), vec3(-lightRadius, wallRadius-1.0,-lightRadius), vec3(lightRadius, wallRadius-1.0,-lightRadius), vec3(lightRadius, wallRadius-1.0, lightRadius), vec3(-lightRadius, wallRadius-1.0, lightRadius), L1, z, LIGHT);// Quad Area Light on ceiling
 
-	quads[5] = Quad( vec3( 0,-1, 0), vec3(-lightRadius, wallRadius-1.0,-lightRadius), vec3(lightRadius, wallRadius-1.0,-lightRadius), vec3(lightRadius, wallRadius-1.0, lightRadius), vec3(-lightRadius, wallRadius-1.0, lightRadius), L1, z, LIGHT);// Quad Area Light on ceiling
+	boxes[0] = Box( vec3(-wallRadius), vec3(wallRadius), z, vec3(1), DIFF);// the Cornell Box interior
 }
 
 
