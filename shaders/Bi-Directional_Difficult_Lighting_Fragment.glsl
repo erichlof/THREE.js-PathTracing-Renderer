@@ -20,8 +20,8 @@ uniform mat4 uDoorObjectInvMatrix;
 
 #define N_SPHERES 2
 #define N_OPENCYLINDERS 3
-#define N_QUADS 8
-#define N_BOXES 10
+#define N_QUADS 2
+#define N_BOXES 11
 
 vec3 rayOrigin, rayDirection;
 // recorded intersection data:
@@ -31,7 +31,7 @@ float hitRoughness;
 float hitObjectID;
 int hitTextureID;
 int hitType = -100;
-bool hitIsModel;
+bool hitIsModel = false;
 
 struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; float roughness; int type; bool isModel; };
 struct OpenCylinder { float radius; vec3 pos1; vec3 pos2; vec3 emission; vec3 color; float roughness; int type; bool isModel; };
@@ -57,6 +57,8 @@ Box boxes[N_BOXES];
 #include <pathtracing_box_intersect>
 
 #include <pathtracing_boundingbox_intersect>
+
+#include <pathtracing_box_interior_intersect>
 
 #include <pathtracing_bvhDoubleSidedTriangle_intersect>
 
@@ -116,7 +118,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, bool checkModels )
 	vec4 vd0, vd1, vd2, vd3, vd4, vd5, vd6, vd7;
 
 	vec3 inverseDir = 1.0 / rayDirection;
-	vec3 normal;
+	vec3 normal, n;
 
 	vec2 currentStackData, stackDataA, stackDataB, tmpStackData;
 	ivec2 uv0, uv1, uv2, uv3, uv4, uv5, uv6, uv7;
@@ -139,33 +141,56 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, bool checkModels )
 	bool skip = false;
 	bool triangleLookupNeeded = false;
 	bool isRayExiting = false;
+
 	
-			
-	// ROOM
 	for (int i = 0; i < N_QUADS; i++)
         {
 		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, rayOrigin, rayDirection, true );
 		if (d < t)
 		{
-			if (i == 1) // check back wall quad for door portal opening
-			{
-				vec3 ip = rayOrigin + rayDirection * d;
-				if (ip.x > 180.0 && ip.x < 280.0 && ip.y > -100.0 && ip.y < 90.0)
-					continue;
-			}
-			
 			t = d;
 			hitNormal = quads[i].normal;
 			hitEmission = quads[i].emission;
 			hitColor = quads[i].color;
 			hitType = quads[i].type;
-			hitIsModel = false;
 			hitObjectID = float(objectCount);
 		}
 		objectCount++;
         }
+
+	// ROOM
+	d = BoxInteriorIntersect( boxes[10].minCorner, boxes[10].maxCorner, rayOrigin, rayDirection, n );
+	if (n == vec3(0,0,1)) // check back wall quad for door portal opening
+	{
+		vec3 ip = rayOrigin + rayDirection * d;
+		if (ip.x > 180.0 && ip.x < 280.0 && ip.y > -100.0 && ip.y < 90.0)
+			d = INFINITY;
+	}
+
+	if (d < t)
+	{
+		t = d;
+		hitNormal = n;
+		hitEmission = boxes[10].emission;
+		hitColor = boxes[10].color;
+		hitRoughness = boxes[10].roughness;
+		hitType = boxes[10].type;
 	
-	for (int i = 0; i < N_BOXES - 1; i++)
+		if (n == vec3(0,-1,0)) // ceiling
+		{
+			hitColor = vec3(1);
+		}
+		else if (n == vec3(0,1,0)) // floor
+		{
+			hitColor = vec3(1);
+			hitType = CHECK;
+		}
+		
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+	
+	for (int i = 0; i < N_BOXES - 2; i++)
         {
 		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, rayOrigin, rayDirection, normal, isRayExiting );
 		if (d < t)
@@ -175,7 +200,6 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, bool checkModels )
 			hitEmission = boxes[i].emission;
 			hitColor = boxes[i].color;
 			hitType = boxes[i].type;
-			hitIsModel = false;
 			hitObjectID = float(objectCount);
 		}
 		objectCount++;
@@ -197,7 +221,6 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, bool checkModels )
 		hitEmission = boxes[9].emission;
 		hitColor = boxes[9].color;
 		hitType = boxes[9].type;
-		hitIsModel = false;
 		hitObjectID = float(objectCount);
 	}
 	objectCount++;
@@ -212,7 +235,6 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, bool checkModels )
 			hitEmission = openCylinders[i].emission;
 			hitColor = openCylinders[i].color;
 			hitType = openCylinders[i].type;
-			hitIsModel = false;
 			hitObjectID = float(objectCount);
 		}
 		objectCount++;
@@ -230,7 +252,6 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, bool checkModels )
 			hitEmission = spheres[i].emission;
 			hitColor = spheres[i].color;
 			hitType = spheres[i].type;
-			hitIsModel = false;
 			hitObjectID = float(objectCount);
 		}
 		objectCount++;
@@ -656,7 +677,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	
 	for (int bounces = 0; bounces < 5; bounces++)
 	{
-	
+		
 		t = SceneIntersect(rayOrigin, rayDirection, checkModels);
 		
 		if (t == INFINITY)
@@ -917,15 +938,7 @@ void SetupScene(void)
 	vec3 brassColor = vec3(1.0, 0.7, 0.5) * 0.7;
 	
 	quads[0] = Quad( vec3(0,0,1), vec3( 180,-100,-298.5), vec3( 280,-100,-298.5), vec3( 280,  90,-298.5), vec3( 180,  90,-298.5), L2, z, 0.0, LIGHT, false);// Area Light Quad in doorway
-	
-	quads[1] = Quad( vec3(0,0,1), vec3(-350,-100,-300), vec3( 350,-100,-300), vec3( 350, 150,-300), vec3(-350, 150,-300),  z, wallColor, 0.0,   DIFF, false);// Back Wall (in front of camera, visible at startup)
-	quads[2] = Quad( vec3(0,0,-1), vec3( 350,-100, 200), vec3(-350,-100, 200), vec3(-350, 150, 200), vec3( 350, 150, 200),  z, wallColor, 0.0,   DIFF, false);// Front Wall (behind camera, not visible at startup)
-	quads[3] = Quad( vec3(1,0,0), vec3(-350,-100, 200), vec3(-350,-100,-300), vec3(-350, 150,-300), vec3(-350, 150, 200),  z, wallColor, 0.0,   DIFF, false);// Left Wall
-	quads[4] = Quad( vec3(-1,0,0), vec3( 350,-100,-300), vec3( 350,-100, 200), vec3( 350, 150, 200), vec3( 350, 150,-300),  z, wallColor, 0.0,   DIFF, false);// Right Wall
-	quads[5] = Quad( vec3(0,-1,0), vec3(-350, 150,-300), vec3( 350, 150,-300), vec3( 350, 150, 200), vec3(-350, 150, 200),  z, vec3(1), 0.0,   DIFF, false);// Ceiling
-	quads[6] = Quad( vec3(0,1,0), vec3(-350,-100,-300), vec3(-350,-100, 200), vec3( 350,-100, 200), vec3( 350,-100,-300),  z, vec3(1), 0.0,  CHECK, false);// Floor
-	
-	quads[7] = Quad( vec3(0,0,1), vec3(-55, 20,-295), vec3( 55, 20,-295), vec3( 55, 65,-295), vec3(-55, 65,-295), z, vec3(1.0), 0.0, PAINTING, false);// Wall Painting
+	quads[1] = Quad( vec3(0,0,1), vec3(-55, 20,-295), vec3( 55, 20,-295), vec3( 55, 65,-295), vec3(-55, 65,-295), z, vec3(1.0), 0.0, PAINTING, false);// Wall Painting
 	
 	boxes[0] = Box( vec3(-100,-60,-230), vec3(100,-57,-130), z, vec3(1.0), 0.0, LIGHTWOOD, false);// Table Top
 	boxes[1] = Box( vec3(-90,-100,-150), vec3(-84,-60,-144), z, vec3(0.8, 0.85, 0.9),  0.1, SPEC, false);// Table leg left front
@@ -939,6 +952,7 @@ void SetupScene(void)
 	boxes[7] = Box( vec3( 280,-100,-302), vec3( 288,  98,-299), z, vec3(0.001), 0.3, SPEC, false);// Door Frame right
 	boxes[8] = Box( vec3( 172,  90,-302), vec3( 288,  98,-299), z, vec3(0.001), 0.3, SPEC, false);// Door Frame top
 	boxes[9] = Box( vec3(   0, -94,  -3), vec3( 101,  95,   3), z, vec3(0.7), 0.0, DARKWOOD, false);// Door
+	boxes[10] = Box( vec3(-350,-100,-300), vec3(350,150,200), z, wallColor, 0.0, DIFF, false);// Room walls (box interior)
 	
 	openCylinders[0] = OpenCylinder( 1.5, vec3( 179,  64,-297), vec3( 179,  80,-297), z, brassColor, 0.2, SPEC, false);// Door Hinge upper
 	openCylinders[1] = OpenCylinder( 1.5, vec3( 179,  -8,-297), vec3( 179,   8,-297), z, brassColor, 0.2, SPEC, false);// Door Hinge middle
