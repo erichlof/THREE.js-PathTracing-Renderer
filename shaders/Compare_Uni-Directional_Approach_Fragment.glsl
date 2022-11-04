@@ -7,8 +7,8 @@ uniform mat4 uTallBoxInvMatrix;
 
 #include <pathtracing_uniforms_and_defines>
 
-#define N_QUADS 6
-#define N_BOXES 3
+#define N_QUADS 1
+#define N_BOXES 4
 
 vec3 rayOrigin, rayDirection;
 // recorded intersection data:
@@ -30,32 +30,57 @@ Box boxes[N_BOXES];
 
 #include <pathtracing_box_intersect>
 
+#include <pathtracing_box_interior_intersect>
+
 
 //---------------------------------------------------------------------------------------
 float SceneIntersect( )
 //---------------------------------------------------------------------------------------
 {
-	vec3 normal;
+	vec3 normal, n;
 	vec3 rObjOrigin, rObjDirection;
         float d;
 	float t = INFINITY;
 	bool isRayExiting = false;
+	int objectCount = 0;
 	
-	for (int i = 0; i < N_QUADS; i++)
-        {
-		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, rayOrigin, rayDirection, false );
-		if (d < t)
+	hitObjectID = -INFINITY;
+	
+	d = QuadIntersect( quads[0].v0, quads[0].v1, quads[0].v2, quads[0].v3, rayOrigin, rayDirection, false );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = quads[0].normal;
+		hitEmission = quads[0].emission;
+		hitColor = quads[0].color;
+		hitType = quads[0].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = BoxInteriorIntersect( boxes[3].minCorner, boxes[3].maxCorner, rayOrigin, rayDirection, n );
+	if (d < t && n != vec3(0,0,-1))
+	{
+		t = d;
+		hitNormal = n;
+		hitEmission = boxes[3].emission;
+		hitColor = vec3(1);
+		hitType = DIFF;
+	
+		if (n == vec3(1,0,0)) // left wall
 		{
-			t = d;
-			hitNormal = quads[i].normal;
-			hitEmission = quads[i].emission;
-			hitColor = quads[i].color;
-			hitType = quads[i].type;
-			hitObjectID = 0.0;
+			hitColor = vec3(0.7, 0.12,0.05);
 		}
-        }
+		else if (n == vec3(-1,0,0)) // right wall
+		{
+			hitColor = vec3(0.2, 0.4, 0.36);
+		}
+		
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
 	
-	// LIGHT BLOCKER BOX
+	// LIGHT-BLOCKER THIN BOX
 	d = BoxIntersect( boxes[2].minCorner, boxes[2].maxCorner, rayOrigin, rayDirection, normal, isRayExiting );
 	if (d < t)
 	{
@@ -64,8 +89,9 @@ float SceneIntersect( )
 		hitEmission = boxes[2].emission;
 		hitColor = boxes[2].color;
 		hitType = boxes[2].type;
-		hitObjectID = 1.0;
+		hitObjectID = float(objectCount);
 	}
+	objectCount++;
 	
 	
 	// TALL MIRROR BOX
@@ -84,9 +110,9 @@ float SceneIntersect( )
 		hitEmission = boxes[0].emission;
 		hitColor = boxes[0].color;
 		hitType = boxes[0].type;
-		hitObjectID = 2.0;
+		hitObjectID = float(objectCount);
 	}
-	
+	objectCount++;
 	
 	// SHORT DIFFUSE WHITE BOX
 	// transform ray into Short Box's object space
@@ -104,7 +130,7 @@ float SceneIntersect( )
 		hitEmission = boxes[1].emission;
 		hitColor = boxes[1].color;
 		hitType = boxes[1].type;
-		hitObjectID = 3.0;
+		hitObjectID = float(objectCount);
 	}
 	
 	
@@ -213,17 +239,12 @@ void SetupScene(void)
 	vec3 z  = vec3(0);// No color value, Black
 	vec3 L1 = vec3(1.0, 0.75, 0.4) * 30.0;// Bright Yellowish light
 	
-	quads[0] = Quad( vec3( 0.0, 0.0, 1.0), vec3(  0.0,   0.0,-559.2), vec3(549.6,   0.0,-559.2), vec3(549.6, 548.8,-559.2), vec3(  0.0, 548.8,-559.2),  z, vec3(1),  DIFF);// Back Wall
-	quads[1] = Quad( vec3( 1.0, 0.0, 0.0), vec3(  0.0,   0.0,   0.0), vec3(  0.0,   0.0,-559.2), vec3(  0.0, 548.8,-559.2), vec3(  0.0, 548.8,   0.0),  z, vec3(0.7, 0.12,0.05), DIFF);// Left Wall Red
-	quads[2] = Quad( vec3(-1.0, 0.0, 0.0), vec3(549.6,   0.0,-559.2), vec3(549.6,   0.0,   0.0), vec3(549.6, 548.8,   0.0), vec3(549.6, 548.8,-559.2),  z, vec3(0.2, 0.4, 0.36), DIFF);// Right Wall Green
-	quads[3] = Quad( vec3( 0.0,-1.0, 0.0), vec3(  0.0, 548.8,-559.2), vec3(549.6, 548.8,-559.2), vec3(549.6, 548.8,   0.0), vec3(  0.0, 548.8,   0.0),  z, vec3(1),  DIFF);// Ceiling
-	quads[4] = Quad( vec3( 0.0, 1.0, 0.0), vec3(  0.0,   0.0,   0.0), vec3(549.6,   0.0,   0.0), vec3(549.6,   0.0,-559.2), vec3(  0.0,   0.0,-559.2),  z, vec3(1),  DIFF);// Floor
-	quads[5] = Quad( vec3( 0.0,-1.0, 0.0), vec3(213.0, 548.0,-332.0), vec3(343.0, 548.0,-332.0), vec3(343.0, 548.0,-227.0), vec3(213.0, 548.0,-227.0), L1,       z, LIGHT);// Area Light Rectangle in ceiling
+	quads[0] = Quad( vec3( 0.0,-1.0, 0.0), vec3(213.0, 548.0,-332.0), vec3(343.0, 548.0,-332.0), vec3(343.0, 548.0,-227.0), vec3(213.0, 548.0,-227.0), L1, z, LIGHT);// Area Light Rectangle in ceiling
 	
 	boxes[0] = Box( vec3(-82.0,-170.0, -80.0), vec3(82.0,170.0, 80.0), z, vec3(1), SPEC);// Tall Mirror Box Left
 	boxes[1] = Box( vec3(-86.0, -85.0, -80.0), vec3(86.0, 85.0, 80.0), z, vec3(1), DIFF);// Short Diffuse Box Right
-	
 	boxes[2] = Box( vec3(183.0, 534.0, -362.0), vec3(373.0, 535.0, -197.0), z, vec3(1), DIFF);// Light Blocker Box
+	boxes[3] = Box( vec3(0, 0,-559.2), vec3(549.6, 548.8, 0), z, vec3(1), DIFF);// the Cornell Box interior 
 }
 
 
