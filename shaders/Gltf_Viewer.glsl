@@ -24,16 +24,21 @@ float hitObjectID, hitOpacity;
 int hitType = -100; 
 int hitAlbedoTextureID;
 
-struct Plane { vec4 pla; vec3 emission; vec3 color; int type; };
-
-Plane plane;
+struct Box { vec3 minCorner; vec3 maxCorner; vec3 emission; vec3 color; int type; };
+Box box;
 
 #include <pathtracing_random_functions>
+
 #include <pathtracing_calc_fresnel_reflectance>
+
 #include <pathtracing_sphere_intersect>
-#include <pathtracing_plane_intersect>
+
+#include <pathtracing_box_intersect>
+
 #include <pathtracing_boundingbox_intersect>
+
 #include <pathtracing_bvhTriangle_intersect>
+
 
 vec2 stackLevels[28];
 
@@ -65,7 +70,7 @@ float SceneIntersect( )
 	vec4 vd0, vd1, vd2, vd3, vd4, vd5, vd6, vd7;
 
 	vec3 inverseDir = 1.0 / rayDirection;
-	vec3 normal;
+	vec3 normal, n;
 
 	vec2 currentStackData, stackDataA, stackDataB, tmpStackData;
 	ivec2 uv0, uv1, uv2, uv3, uv4, uv5, uv6, uv7;
@@ -86,20 +91,22 @@ float SceneIntersect( )
 
 	bool skip = false;
 	bool triangleLookupNeeded = false;
+	bool isRayExiting = false;
 
-	
-	// GROUND Plane
-	d = PlaneIntersect( plane.pla, rayOrigin, rayDirection );
+
+	// GROUND Plane (thin, wide box that acts like ground plane)
+	d = BoxIntersect( box.minCorner, box.maxCorner, rayOrigin, rayDirection, n, isRayExiting );
 	if (d < t)
 	{
 		t = d;
-		hitNormal = (plane.pla.xyz);
-		hitEmission = plane.emission;
-		hitColor = plane.color;
-		hitType = plane.type;
+		hitNormal = n;
+		hitEmission = box.emission;
+		hitColor = box.color;
+		hitType = box.type;
 		hitObjectID = float(objectCount);
 	}
 	objectCount++;
+	
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////
 	// glTF
@@ -448,8 +455,8 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 void SetupScene(void)
 //-----------------------------------------------------------------------
 {
-	// Add ground plane
-	plane = Plane( vec4(0, 1, 0, 0.0), vec3(0), vec3(0.45), DIFF);
+	// Add thin box for the ground (acts like ground plane)
+	box = Box( vec3(-100000, -1, -100000), vec3(100000, 0, 100000), vec3(0), vec3(0.45), DIFF);
 }
 
 
