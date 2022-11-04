@@ -5,8 +5,8 @@ precision highp sampler2D;
 #include <pathtracing_uniforms_and_defines>
 
 #define N_SPHERES 3
-#define N_QUADS 6
-#define N_BOXES 1
+#define N_QUADS 1
+#define N_BOXES 2
 
 
 //-----------------------------------------------------------------------
@@ -37,7 +37,10 @@ Box boxes[N_BOXES];
 
 #include <pathtracing_box_intersect>
 
+#include <pathtracing_box_interior_intersect>
+
 #include <pathtracing_sample_quad_light>
+
 
 mat4 makeRotateY(float rot)
 {
@@ -104,20 +107,39 @@ float SceneIntersect( )
 	bool isRayExiting = false;
 	
 
-	for (int i = 0; i < N_QUADS; i++)
-        {
-		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, rayOrigin, rayDirection, false );
-		if (d < t)
+	d = QuadIntersect( quads[0].v0, quads[0].v1, quads[0].v2, quads[0].v3, rayOrigin, rayDirection, false );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = quads[0].normal;
+		hitEmission = quads[0].emission;
+		hitColor = quads[0].color;
+		hitType = quads[0].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+	
+	d = BoxInteriorIntersect( boxes[1].minCorner, boxes[1].maxCorner, rayOrigin, rayDirection, n );
+	if (d < t && n != vec3(0,0,-1))
+	{
+		t = d;
+		hitNormal = n;
+		hitEmission = boxes[1].emission;
+		hitColor = vec3(1);
+		hitType = DIFF;
+
+		if (n == vec3(1,0,0)) // left wall
 		{
-			t = d;
-			hitNormal = quads[i].normal;
-			hitEmission = quads[i].emission;
-			hitColor = quads[i].color;
-			hitType = quads[i].type;
-			hitObjectID = float(objectCount);
+			hitColor = vec3(0.7, 0.05, 0.05);
 		}
-		objectCount++;
-        }
+		else if (n == vec3(-1,0,0)) // right wall
+		{
+			hitColor = vec3(0.05, 0.05, 0.7);
+		}
+		
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
 
 	
 	// Twisted Glass Sphere Left
@@ -217,7 +239,7 @@ float SceneIntersect( )
 vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
 //-----------------------------------------------------------------------------------------------------------------------------
 {
-	Quad light = quads[5];
+	Quad light = quads[0];
 
 	vec3 accumCol = vec3(0);
         vec3 mask = vec3(1);
@@ -302,7 +324,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				continue;
 			}
                         
-			dirToLight = sampleQuadLight(x, nl, quads[5], weight);
+			dirToLight = sampleQuadLight(x, nl, quads[0], weight);
 			mask *= diffuseCount == 1 ? 2.0 : 1.0;
 			mask *= weight;
 
@@ -403,7 +425,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				continue;
 			}
 
-			dirToLight = sampleQuadLight(x, nl, quads[5], weight);
+			dirToLight = sampleQuadLight(x, nl, quads[0], weight);
 			mask *= diffuseCount == 1 ? 2.0 : 1.0;
 			mask *= weight;
 			
@@ -437,15 +459,10 @@ void SetupScene(void)
 	spheres[1] = Sphere( 90.0, vec3(400.0,  91.0, -200.0),  z, vec3(1.0, 1.0, 1.0),  COAT);// Sphere Right
 	spheres[2] = Sphere( 60.0, vec3(450.0, 380.0, -300.0),  z, vec3(1.0, 0.0, 1.0),  DIFF);// Cloud Sphere Top Right
 	
-	boxes[0]  = Box( vec3(-82, -170, -80), vec3(82, 170, 80), z, vec3(1.0, 1.0, 1.0), SPEC);// Tall Mirror Box Left
+	quads[0] = Quad( vec3( 0.0,-1.0, 0.0), vec3(213.0, 548.0,-332.0), vec3(343.0, 548.0,-332.0), vec3(343.0, 548.0,-227.0), vec3(213.0, 548.0,-227.0), L1, z, LIGHT);// Area Light Rectangle in ceiling
 	
-	quads[0] = Quad( vec3( 0.0, 0.0, 1.0), vec3(  0.0,   0.0,-559.2), vec3(549.6,   0.0,-559.2), vec3(549.6, 548.8,-559.2), vec3(  0.0, 548.8,-559.2), z, vec3( 1.0,  1.0,  1.0), DIFF);// Back Wall
-	quads[1] = Quad( vec3( 1.0, 0.0, 0.0), vec3(  0.0,   0.0,   0.0), vec3(  0.0,   0.0,-559.2), vec3(  0.0, 548.8,-559.2), vec3(  0.0, 548.8,   0.0), z, vec3( 0.7, 0.05, 0.05), DIFF);// Left Wall Red
-	quads[2] = Quad( vec3(-1.0, 0.0, 0.0), vec3(549.6,   0.0,-559.2), vec3(549.6,   0.0,   0.0), vec3(549.6, 548.8,   0.0), vec3(549.6, 548.8,-559.2), z, vec3(0.05, 0.05, 0.7 ), DIFF);// Right Wall Blue
-	quads[3] = Quad( vec3( 0.0,-1.0, 0.0), vec3(  0.0, 548.8,-559.2), vec3(549.6, 548.8,-559.2), vec3(549.6, 548.8,   0.0), vec3(  0.0, 548.8,   0.0), z, vec3( 1.0,  1.0,  1.0), DIFF);// Ceiling
-	quads[4] = Quad( vec3( 0.0, 1.0, 0.0), vec3(  0.0,   0.0,   0.0), vec3(549.6,   0.0,   0.0), vec3(549.6,   0.0,-559.2), vec3(  0.0,   0.0,-559.2), z, vec3( 1.0,  1.0,  1.0), DIFF);// Floor
-
-	quads[5] = Quad( vec3( 0.0,-1.0, 0.0), vec3(213.0, 548.0,-332.0), vec3(343.0, 548.0,-332.0), vec3(343.0, 548.0,-227.0), vec3(213.0, 548.0,-227.0), L1, z, LIGHT);// Area Light Rectangle in ceiling	
+	boxes[0] = Box( vec3(-82, -170, -80), vec3(82, 170, 80), z, vec3(1.0, 1.0, 1.0), SPEC);// Tall Mirror Box Left
+	boxes[1] = Box( vec3(0, 0,-559.2), vec3(549.6, 548.8, 0), z, vec3(1), DIFF);// the Cornell Box interior 	
 }
 
 
