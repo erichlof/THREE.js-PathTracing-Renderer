@@ -5,18 +5,17 @@ precision highp sampler2D;
 #include <pathtracing_uniforms_and_defines>
 
 #define N_SPHERES 3
-#define N_QUADS 3
-
+#define N_BOXES 1
 
 //-----------------------------------------------------------------------
 
 vec3 rayOrigin, rayDirection;
 
 struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; int type; };
-struct Quad { vec3 normal; vec3 v0; vec3 v1; vec3 v2; vec3 v3; vec3 emission; vec3 color; int type; };
+struct Box { vec3 minCorner; vec3 maxCorner; vec3 emission; vec3 color; int type; };
 
 Sphere spheres[N_SPHERES];
-Quad quads[N_QUADS];
+Box boxes[N_BOXES];
 
 
 #include <pathtracing_random_functions>
@@ -25,7 +24,7 @@ Quad quads[N_QUADS];
 
 #include <pathtracing_sphere_intersect>
 
-#include <pathtracing_quad_intersect>
+#include <pathtracing_box_interior_intersect>
 
 #include <pathtracing_sample_sphere_light>
 
@@ -34,6 +33,7 @@ Quad quads[N_QUADS];
 float SceneIntersect( vec3 rOrigin, vec3 rDirection, out vec3 hitNormal, out vec3 hitEmission, out vec3 hitColor, out float hitObjectID, out int hitType )
 //------------------------------------------------------------------------------------------------------------------------------------------------------------
 {
+	vec3 n;
 	float d;
 	float t = INFINITY;
 	int objectCount = 0;
@@ -56,20 +56,27 @@ float SceneIntersect( vec3 rOrigin, vec3 rDirection, out vec3 hitNormal, out vec
 		objectCount++;
         }
 	
-	for (int i = 0; i < N_QUADS; i++)
-        {
-		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, rOrigin, rDirection, false );
-		if (d < t)
+	d = BoxInteriorIntersect( boxes[0].minCorner, boxes[0].maxCorner, rayOrigin, rayDirection, n );
+	if (d < t && n != vec3(0,0,-1) && n != vec3(0,1,0) && n != vec3(0,-1,0))
+	{
+		t = d;
+		hitNormal = n;
+		hitEmission = boxes[0].emission;
+		hitColor = vec3(1);
+		hitType = DIFF;
+	
+		if (n == vec3(1,0,0)) // left wall
 		{
-			t = d;
-			hitNormal = quads[i].normal;
-			hitEmission = quads[i].emission;
-			hitColor = quads[i].color;
-			hitType = quads[i].type;
-			hitObjectID = float(objectCount);
+			hitColor = vec3(0.7, 0.05, 0.05);
 		}
-		objectCount++;
-        }
+		else if (n == vec3(-1,0,0)) // right wall
+		{
+			hitColor = vec3(0.05, 0.05, 0.7);
+		}
+		
+		hitObjectID = float(objectCount);
+	}
+	
 	
 	return t;
 } // end float SceneIntersect( vec3 rOrigin, vec3 rDirection, out vec3 hitNormal, out vec3 hitEmission, out vec3 hitColor, out float hitObjectID, out int hitType )
@@ -428,13 +435,8 @@ void SetupScene(void)
 	
 	spheres[1] = Sphere(  90.0, vec3(170.0, 201.0, -200.0),  z, vec3(1.0, 1.0, 1.0),  REFR);// Glass Sphere Left
 	spheres[2] = Sphere(  90.0, vec3(390.0, 250.0, -250.0),  z, vec3(1.0, 1.0, 1.0),  COAT);// ClearCoat Sphere Right
-	
-	quads[0] = Quad( vec3( 0, 0, 1), vec3(  0.0,   0.0,-559.2), vec3(549.6,   0.0,-559.2), vec3(549.6, 548.8,-559.2), vec3(  0.0, 548.8,-559.2), z, vec3( 1.0,  1.0,  1.0), DIFF);// Back Wall
-	quads[1] = Quad( vec3( 1, 0, 0), vec3(  0.0,   0.0,   0.0), vec3(  0.0,   0.0,-559.2), vec3(  0.0, 548.8,-559.2), vec3(  0.0, 548.8,   0.0), z, vec3( 0.7, 0.05, 0.05), DIFF);// Left Wall Red
-	quads[2] = Quad( vec3(-1, 0, 0), vec3(549.6,   0.0,-559.2), vec3(549.6,   0.0,   0.0), vec3(549.6, 548.8,   0.0), vec3(549.6, 548.8,-559.2), z, vec3(0.05, 0.05, 0.7 ), DIFF);// Right Wall Blue
-	//quads[3] = Quad( vec3( 0,-1, 0), vec3(  0.0, 548.8,-559.2), vec3(549.6, 548.8,-559.2), vec3(549.6, 548.8,   0.0), vec3(  0.0, 548.8,   0.0), z, vec3( 1.0,  1.0,  1.0), DIFF);// Ceiling
-	//quads[4] = Quad( vec3( 0, 1, 0), vec3(  0.0,   0.0,   0.0), vec3(549.6,   0.0,   0.0), vec3(549.6,   0.0,-559.2), vec3(  0.0,   0.0,-559.2), z, vec3( 1.0,  1.0,  1.0), DIFF);// Floor
-	
+
+	boxes[0] = Box( vec3(0, 0,-559.2), vec3(549.6, 548.8, 0), z, vec3(1), DIFF);// the Cornell Box interior 
 }
 
 
