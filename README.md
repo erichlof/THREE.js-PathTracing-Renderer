@@ -27,6 +27,8 @@ For comparison, here is a real photograph of the original Cornell Box vs. a rend
 
 * [Water Rendering Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Water_Rendering.html) Renders photo-realistic water and simulates waves at 30-60 FPS. No triangle meshes are needed, as opposed to other traditional engines/renderers. The Cornell Box is rendered using standard path tracing, while the water surface is achieved through ray marching.
 
+* [Light Shaft Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Light_Shafts.html) demonstrates the rendering of volumetric light shafts (a.k.a. 'God rays') which occur when light sources are blocked everywhere except for the lit volume (light shaft).  To be able to see these lit volumes vs. surrounding shadow volumes, there must be participating media like smoke, fog, atmospheric gases, etc.. This scene contains a thin, blueish fog.
+
 <h3>Natural Environment Ray Marching Demos </h3>
 
 * [Terrain Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Terrain_Rendering.html) combines traditional raytracing with raymarching to render stunning outdoor environments in real time!  Land is procedurally generated, can be altered with simple parameters. Total number of triangles processed for these worlds: 2! (for screen size quad) :-)
