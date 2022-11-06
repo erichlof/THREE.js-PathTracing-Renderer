@@ -21,7 +21,7 @@ function initSceneData()
 	focusDistance = 100;
 
 	// position and orient camera
-	cameraControlsObject.position.set(0, 0, 51);
+	cameraControlsObject.position.set(0, 0, 70);
 	///cameraControlsYawObject.rotation.y = 0.0;
 	// look slightly upward
 	cameraControlsPitchObject.rotation.x = 0.005;
