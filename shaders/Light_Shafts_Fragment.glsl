@@ -5,7 +5,8 @@ precision highp sampler2D;
 #include <pathtracing_uniforms_and_defines>
 
 #define N_SPHERES 2
-#define N_QUADS 9
+#define N_QUADS 2
+#define N_BOXES 1
 
 
 //-----------------------------------------------------------------------
@@ -14,9 +15,11 @@ vec3 rayOrigin, rayDirection;
 
 struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; int type; };
 struct Quad { vec3 normal; vec3 v0; vec3 v1; vec3 v2; vec3 v3; vec3 emission; vec3 color; int type; };
+struct Box { vec3 minCorner; vec3 maxCorner; vec3 emission; vec3 color; int type; };
 
 Sphere spheres[N_SPHERES];
 Quad quads[N_QUADS];
+Box boxes[N_BOXES];
 
 
 #include <pathtracing_random_functions>
@@ -24,6 +27,8 @@ Quad quads[N_QUADS];
 #include <pathtracing_calc_fresnel_reflectance>
 
 #include <pathtracing_sphere_intersect>
+
+#include <pathtracing_box_intersect>
 
 #include <pathtracing_quad_intersect>
 
@@ -46,18 +51,96 @@ vec3 sampleQuadLight(vec3 x, vec3 nl, Quad light, out float weight)
 }
 
 
+//----------------------------------------------------------------------------------------------------------------------------------------
+float BoxMissingSidesIntersect( vec3 minCorner, vec3 maxCorner, vec3 rayOrigin, vec3 rayDirection, out vec3 normal, out bool isRayExiting )
+//----------------------------------------------------------------------------------------------------------------------------------------
+{
+	vec3 invDir = 1.0 / rayDirection;
+	vec3 near = (minCorner - rayOrigin) * invDir;
+	vec3 far  = (maxCorner - rayOrigin) * invDir;
+
+	vec3 tmin = min(near, far);
+	vec3 tmax = max(near, far);
+
+	float t0 = max( max(tmin.x, tmin.y), tmin.z);
+	float t1 = min( min(tmax.x, tmax.y), tmax.z);
+
+	if (t0 > t1) return INFINITY;
+
+	vec3 ip;
+	float result = INFINITY;
+	if (t0 > 0.0) // if we are outside the box
+	{
+		normal = -sign(rayDirection) * step(tmin.yzx, tmin) * step(tmin.zxy, tmin);
+		isRayExiting = false;
+		ip = rayOrigin + rayDirection * t0;
+		if (normal == vec3(1,0,0) && abs(ip.y) < 2.0 && abs(ip.z) < 2.0)
+			t0 = INFINITY;
+		if (normal == vec3(0,1,0) || normal == vec3(0,0,1))
+			t0 = INFINITY;
+		result = t0;
+	}
+	if ((t0 < 0.0 || t0 == INFINITY) && t1 > 0.0) // if we are inside the box
+	{
+		normal = -sign(rayDirection) * step(tmax, tmax.yzx) * step(tmax, tmax.zxy);
+		isRayExiting = true;
+		ip = rayOrigin + rayDirection * t1;
+		if (normal == vec3(-1,0,0) && abs(ip.y) < 2.0 && abs(ip.z) < 2.0)
+			t1 = INFINITY;
+		if (normal == vec3(0,-1,0) || normal == vec3(0,0,-1))
+			t1 = INFINITY;
+		result = t1;
+	}
+	return result;
+}
+
+
 
 //------------------------------------------------------------------------------------------------------------------------------------------------------------
 float SceneIntersect( vec3 rOrigin, vec3 rDirection, out vec3 hitNormal, out vec3 hitEmission, out vec3 hitColor, out float hitObjectID, out int hitType )
 //------------------------------------------------------------------------------------------------------------------------------------------------------------
 {
+	vec3 n;
 	float d;
 	float t = INFINITY;
 	int objectCount = 0;
+	bool isRayExiting = false;
 	
 	hitObjectID = -INFINITY;
 
-	
+// NOTE: all intersect functions must use rOrigin/rDirection as parameters instead of the usual 
+//   global rayOrigin/rayDirection!  This is because rOrigin/rDirection might represent a particle shadow ray
+
+	d = BoxMissingSidesIntersect( boxes[0].minCorner, boxes[0].maxCorner, rOrigin, rDirection, n, isRayExiting );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = n;
+		hitEmission = boxes[0].emission;
+		hitColor = vec3(1);
+		hitType = DIFF;
+
+		if (isRayExiting == true && n == vec3(1,0,0)) // left wall
+		{
+			hitColor = vec3(0.7, 0.05, 0.05);
+		}
+		else if (isRayExiting == true && n == vec3(-1,0,0)) // right wall
+		{
+			hitColor = vec3(0.05, 0.05, 0.7);
+		}
+		else if (isRayExiting == false && n == vec3(-1,0,0)) // left wall
+		{
+			hitColor = vec3(0.7, 0.05, 0.05);
+		}
+		else if (isRayExiting == false && n == vec3(1,0,0)) // right wall
+		{
+			hitColor = vec3(0.05, 0.05, 0.7);
+		}
+		
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
 	for (int i = 0; i < N_SPHERES; i++)
 	{
 		d = SphereIntersect( spheres[i].radius, spheres[i].position, rOrigin, rDirection );
@@ -87,6 +170,7 @@ float SceneIntersect( vec3 rOrigin, vec3 rDirection, out vec3 hitNormal, out vec
 		}
 		objectCount++;
 	}
+	
 	
 	return t;
 } // end float SceneIntersect( vec3 rOrigin, vec3 rDirection, out vec3 hitNormal, out vec3 hitEmission, out vec3 hitColor, out float hitObjectID, out int hitType )
@@ -162,8 +246,6 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	bool bounceIsSpecular = true;
 	bool sampleLight = false;
 
-	
-	
 	
 	// depth of 4 is required for higher quality glass refraction
 	for (int bounces = 0; bounces < 4; bounces++)
@@ -260,7 +342,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			
 			if (rng() < 0.5)
 			{
-				chosenLight = quads[8];
+				chosenLight = quads[1];
 				randPointOnLight.x = mix(chosenLight.v0.x, chosenLight.v2.x, clamp(rng(), 0.1, 0.9));
 				randPointOnLight.y = chosenLight.v0.y;
 				randPointOnLight.z = mix(chosenLight.v0.z, chosenLight.v2.z, clamp(rng(), 0.1, 0.9));
@@ -361,7 +443,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			
 			if (rng() < 0.5)
 			{
-				chosenLight = quads[8];
+				chosenLight = quads[1];
 				randPointOnLight.x = mix(chosenLight.v0.x, chosenLight.v2.x, clamp(rng(), 0.1, 0.9));
 				randPointOnLight.y = chosenLight.v0.y;
 				randPointOnLight.z = mix(chosenLight.v0.z, chosenLight.v2.z, clamp(rng(), 0.1, 0.9));
@@ -391,22 +473,15 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0);// No color value, Black        
-	vec3 L1 = vec3(1.0, 1.0, 1.0) * 20.0;
+	vec3 L1 = vec3(1.0, 1.0, 1.0) * 40.0;
 	
-	spheres[0] = Sphere(  10.0, vec3(0, -40, -40), z, vec3(1.0, 1.0, 1.0),  DIFF);// Diffuse Sphere Left
-	spheres[1] = Sphere(  10.0, vec3(30, -40, -40), z, vec3(1.0, 1.0, 0.0),  COAT);// ClearCoat Sphere Right
+	spheres[0] = Sphere( 10.0, vec3( 0,-40,-40), z, vec3(1.0, 1.0, 1.0), DIFF);// Diffuse Sphere Left
+	spheres[1] = Sphere( 10.0, vec3(30,-40,-40), z, vec3(1.0, 1.0, 0.0), COAT);// ClearCoat Sphere Right
 	
-	quads[0] = Quad( vec3(-1, 0, 0), vec3(80, -2,-2), vec3(80, -2, 2), vec3(80, 2, 2), vec3(80, 2, -2), L1, z, LIGHT);// Rectangular Area Light
+	quads[0] = Quad( vec3(-1, 0, 0), vec3(80,-2,-2), vec3(80,-2, 2), vec3(80, 2, 2), vec3(80, 2,-2), L1, z, LIGHT);// Rectangular Area Light
+	quads[1] = Quad( vec3( 0,-1, 0), vec3(-5, 20,-40), vec3(5, 20,-40), vec3(5, 20,-35), vec3(-5, 20,-35), vec3(0.5), z, LIGHT);// Ceiling Rectangular Area Light
 
-	quads[1] = Quad( vec3( 0, 0, 1), vec3(-50, -50,-50), vec3(50, -50,-50), vec3(50, 50,-50), vec3(-50, 50,-50), z, vec3( 1.0,  1.0,  1.0), DIFF);// Back Wall
-	quads[2] = Quad( vec3( 1, 0, 0), vec3(-50, -50, 50), vec3( -50, -50,-50), vec3( -50, 50,-50), vec3( -50, 50, 50), z, vec3( 0.7, 0.05, 0.05), DIFF);// Left Wall Red
-	quads[3] = Quad( vec3(-1, 0, 0), vec3(50, -50,-50), vec3(50, -50, 50), vec3(50, -2, 50), vec3(50, -2, -50), z, vec3(0.05, 0.05, 0.7 ), DIFF);// Right Wall Blue
-	quads[4] = Quad( vec3(-1, 0, 0), vec3(50, 2,-50), vec3(50, 2, 50), vec3(50, 50, 50), vec3(50, 50, -50), z, vec3(0.05, 0.05, 0.7 ), DIFF);// Right Wall Blue
-	quads[5] = Quad( vec3(-1, 0, 0), vec3(50, -50,-50), vec3(50, -50, -2), vec3(50, 50, -2), vec3(50, 50, -50), z, vec3(0.05, 0.05, 0.7 ), DIFF);// Right Wall Blue
-	quads[6] = Quad( vec3(-1, 0, 0), vec3(50, -50, 2), vec3(50, -50, 50), vec3(50, 50, 50), vec3(50, 50, 2), z, vec3(0.05, 0.05, 0.7 ), DIFF);// Right Wall Blue
-	quads[7] = Quad( vec3( 0, 1, 0), vec3(-50, -50, 50), vec3(50, -50, 50), vec3(50, -50, -50), vec3( -50, -50, -50), z, vec3( 1.0,  1.0,  1.0), DIFF);// Floor
-	
-	quads[8] = Quad( vec3( 0,-1, 0), vec3(-5, 20, -40), vec3(5, 20, -40), vec3(5, 20, -35), vec3(-5, 20, -35), vec3(0.5), z, LIGHT);// Ceiling
+	boxes[0] = Box( vec3(-50), vec3(50), z, vec3(1.0, 1.0, 1.0), DIFF);// the Cornell Box interior
 }
 
 
