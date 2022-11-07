@@ -88,7 +88,7 @@ vec3 perturbNormal(vec3 nl, vec2 normalScale, vec2 uv)
 }
 
 
-vec2 stackLevels[28];
+vec2 stackLevels[26];
 
 //vec4 boxNodeData0 corresponds to .x = idTriangle,  .y = aabbMin.x, .z = aabbMin.y, .w = aabbMin.z
 //vec4 boxNodeData1 corresponds to .x = idRightChild .y = aabbMax.x, .z = aabbMax.y, .w = aabbMax.z
@@ -107,9 +107,9 @@ void GetBoxNodeData(const in float i, inout vec4 boxNodeData0, inout vec4 boxNod
 	boxNodeData1 = texelFetch(tAABBTexture, uv1, 0);
 }
 
-// this SceneIntersect() function must take rayOrigin and rayDirection as parameters because they are altered for each teapot
+
 //--------------------------------------------------------------------------------------------------------
-float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, bool checkModels )
+float SceneIntersect( bool checkModels )
 //--------------------------------------------------------------------------------------------------------
 {
 	vec4 currentBoxNodeData0, nodeAData0, nodeBData0, tmpNodeData0;
@@ -142,21 +142,20 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, bool checkModels )
 	bool triangleLookupNeeded = false;
 	bool isRayExiting = false;
 
-	
-	for (int i = 0; i < N_QUADS; i++)
+	for (int i = 0; i < N_BOXES - 2; i++)
         {
-		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, rayOrigin, rayDirection, true );
+		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, rayOrigin, rayDirection, normal, isRayExiting );
 		if (d < t)
 		{
 			t = d;
-			hitNormal = quads[i].normal;
-			hitEmission = quads[i].emission;
-			hitColor = quads[i].color;
-			hitType = quads[i].type;
+			hitNormal = normal;
+			hitEmission = boxes[i].emission;
+			hitColor = boxes[i].color;
+			hitType = boxes[i].type;
 			hitObjectID = float(objectCount);
 		}
 		objectCount++;
-        }
+	}
 
 	// ROOM
 	d = BoxInteriorIntersect( boxes[10].minCorner, boxes[10].maxCorner, rayOrigin, rayDirection, n );
@@ -189,21 +188,38 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, bool checkModels )
 		hitObjectID = float(objectCount);
 	}
 	objectCount++;
+
 	
-	for (int i = 0; i < N_BOXES - 2; i++)
+	for (int i = 0; i < N_QUADS; i++)
         {
-		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, rayOrigin, rayDirection, normal, isRayExiting );
+		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, rayOrigin, rayDirection, true );
+		if (d < t)
+		{
+			t = d;
+			hitNormal = quads[i].normal;
+			hitEmission = quads[i].emission;
+			hitColor = quads[i].color;
+			hitType = quads[i].type;
+			hitObjectID = float(objectCount);
+		}
+		objectCount++;
+        }
+
+	for (int i = 0; i < N_OPENCYLINDERS; i++)
+        {
+		d = OpenCylinderIntersect( openCylinders[i].pos1, openCylinders[i].pos2, openCylinders[i].radius, rayOrigin, rayDirection, normal );
 		if (d < t)
 		{
 			t = d;
 			hitNormal = normal;
-			hitEmission = boxes[i].emission;
-			hitColor = boxes[i].color;
-			hitType = boxes[i].type;
+			hitEmission = openCylinders[i].emission;
+			hitColor = openCylinders[i].color;
+			hitType = openCylinders[i].type;
 			hitObjectID = float(objectCount);
 		}
 		objectCount++;
-	}
+        }
+
 	
 	// DOOR (TALL BOX)
 	vec3 rObjOrigin, rObjDirection;
@@ -225,20 +241,6 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, bool checkModels )
 	}
 	objectCount++;
 	
-	for (int i = 0; i < N_OPENCYLINDERS; i++)
-        {
-		d = OpenCylinderIntersect( openCylinders[i].pos1, openCylinders[i].pos2, openCylinders[i].radius, rayOrigin, rayDirection, normal );
-		if (d < t)
-		{
-			t = d;
-			hitNormal = normal;
-			hitEmission = openCylinders[i].emission;
-			hitColor = openCylinders[i].color;
-			hitType = openCylinders[i].type;
-			hitObjectID = float(objectCount);
-		}
-		objectCount++;
-        }
 	
 	for (int i = 0; i < N_SPHERES; i++)
         {
@@ -257,10 +259,13 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, bool checkModels )
 		objectCount++;
 	}
 
+	
+	
+
 	if (!checkModels)
 		return t;
 
-	// teapot 0
+	
 	GetBoxNodeData(stackptr, currentBoxNodeData0, currentBoxNodeData1);
 	currentStackData = vec2(stackptr, BoundingBoxIntersect(currentBoxNodeData0.yzw, currentBoxNodeData1.yzw, rayOrigin, inverseDir));
 	stackLevels[0] = currentStackData;
@@ -348,199 +353,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, bool checkModels )
 			triangleU = tu;
 			triangleV = tv;
 			triangleLookupNeeded = true;
-			modelID = 0;
-		}
-	      
-        } // end while (true)
-
-
-	stackptr = 0.0;
-	rayOrigin.x -= 70.0;
-	// teapot 1
-	GetBoxNodeData(stackptr, currentBoxNodeData0, currentBoxNodeData1);
-	currentStackData = vec2(stackptr, BoundingBoxIntersect(currentBoxNodeData0.yzw, currentBoxNodeData1.yzw, rayOrigin, inverseDir));
-	stackLevels[0] = currentStackData;
-	skip = (currentStackData.y < t);
-
-	while (true)
-        {
-		if (!skip) 
-                {
-                        // decrease pointer by 1 (0.0 is root level, 27.0 is maximum depth)
-                        if (--stackptr < 0.0) // went past the root level, terminate loop
-                                break;
-
-                        currentStackData = stackLevels[int(stackptr)];
-			
-			if (currentStackData.y >= t)
-				continue;
-			
-			GetBoxNodeData(currentStackData.x, currentBoxNodeData0, currentBoxNodeData1);
-                }
-		skip = false; // reset skip
-		
-
-		if (currentBoxNodeData0.x < 0.0) // < 0.0 signifies an inner node
-		{
-			GetBoxNodeData(currentStackData.x + 1.0, nodeAData0, nodeAData1);
-			GetBoxNodeData(currentBoxNodeData1.x, nodeBData0, nodeBData1);
-			stackDataA = vec2(currentStackData.x + 1.0, BoundingBoxIntersect(nodeAData0.yzw, nodeAData1.yzw, rayOrigin, inverseDir));
-			stackDataB = vec2(currentBoxNodeData1.x, BoundingBoxIntersect(nodeBData0.yzw, nodeBData1.yzw, rayOrigin, inverseDir));
-			
-			// first sort the branch node data so that 'a' is the smallest
-			if (stackDataB.y < stackDataA.y)
-			{
-				tmpStackData = stackDataB;
-				stackDataB = stackDataA;
-				stackDataA = tmpStackData;
-
-				tmpNodeData0 = nodeBData0;   tmpNodeData1 = nodeBData1;
-				nodeBData0   = nodeAData0;   nodeBData1   = nodeAData1;
-				nodeAData0   = tmpNodeData0; nodeAData1   = tmpNodeData1;
-			} // branch 'b' now has the larger rayT value of 'a' and 'b'
-
-			if (stackDataB.y < t) // see if branch 'b' (the larger rayT) needs to be processed
-			{
-				currentStackData = stackDataB;
-				currentBoxNodeData0 = nodeBData0;
-				currentBoxNodeData1 = nodeBData1;
-				skip = true; // this will prevent the stackptr from decreasing by 1
-			}
-			if (stackDataA.y < t) // see if branch 'a' (the smaller rayT) needs to be processed 
-			{
-				if (skip) // if larger branch 'b' needed to be processed also,
-					stackLevels[int(stackptr++)] = stackDataB; // cue larger branch 'b' for future round
-							// also, increase pointer by 1
-				
-				currentStackData = stackDataA;
-				currentBoxNodeData0 = nodeAData0; 
-				currentBoxNodeData1 = nodeAData1;
-				skip = true; // this will prevent the stackptr from decreasing by 1
-			}
-
-			continue;
-		} // end if (currentBoxNodeData0.x < 0.0) // inner node
-
-
-		// else this is a leaf
-
-		// each triangle's data is encoded in 8 rgba(or xyzw) texture slots
-		id = 8.0 * currentBoxNodeData0.x;
-
-		uv0 = ivec2( mod(id + 0.0, 2048.0), (id + 0.0) * INV_TEXTURE_WIDTH );
-		uv1 = ivec2( mod(id + 1.0, 2048.0), (id + 1.0) * INV_TEXTURE_WIDTH );
-		uv2 = ivec2( mod(id + 2.0, 2048.0), (id + 2.0) * INV_TEXTURE_WIDTH );
-		
-		vd0 = texelFetch(tTriangleTexture, uv0, 0);
-		vd1 = texelFetch(tTriangleTexture, uv1, 0);
-		vd2 = texelFetch(tTriangleTexture, uv2, 0);
-
-		d = BVH_DoubleSidedTriangleIntersect( vec3(vd0.xyz), vec3(vd0.w, vd1.xy), vec3(vd1.zw, vd2.x), rayOrigin, rayDirection, tu, tv );
-
-		if (d < t)
-		{
-			t = d;
-			triangleID = id;
-			triangleU = tu;
-			triangleV = tv;
-			triangleLookupNeeded = true;
-			modelID = 1;
-		}
-	      
-        } // end while (true)
-
-
-	stackptr = 0.0;
-	rayOrigin.x -= 70.0;
-	// teapot 2
-	GetBoxNodeData(stackptr, currentBoxNodeData0, currentBoxNodeData1);
-	currentStackData = vec2(stackptr, BoundingBoxIntersect(currentBoxNodeData0.yzw, currentBoxNodeData1.yzw, rayOrigin, inverseDir));
-	stackLevels[0] = currentStackData;
-	skip = (currentStackData.y < t);
-
-	while (true)
-        {
-		if (!skip) 
-                {
-                        // decrease pointer by 1 (0.0 is root level, 27.0 is maximum depth)
-                        if (--stackptr < 0.0) // went past the root level, terminate loop
-                                break;
-
-                        currentStackData = stackLevels[int(stackptr)];
-			
-			if (currentStackData.y >= t)
-				continue;
-			
-			GetBoxNodeData(currentStackData.x, currentBoxNodeData0, currentBoxNodeData1);
-                }
-		skip = false; // reset skip
-		
-
-		if (currentBoxNodeData0.x < 0.0) // < 0.0 signifies an inner node
-		{
-			GetBoxNodeData(currentStackData.x + 1.0, nodeAData0, nodeAData1);
-			GetBoxNodeData(currentBoxNodeData1.x, nodeBData0, nodeBData1);
-			stackDataA = vec2(currentStackData.x + 1.0, BoundingBoxIntersect(nodeAData0.yzw, nodeAData1.yzw, rayOrigin, inverseDir));
-			stackDataB = vec2(currentBoxNodeData1.x, BoundingBoxIntersect(nodeBData0.yzw, nodeBData1.yzw, rayOrigin, inverseDir));
-			
-			// first sort the branch node data so that 'a' is the smallest
-			if (stackDataB.y < stackDataA.y)
-			{
-				tmpStackData = stackDataB;
-				stackDataB = stackDataA;
-				stackDataA = tmpStackData;
-
-				tmpNodeData0 = nodeBData0;   tmpNodeData1 = nodeBData1;
-				nodeBData0   = nodeAData0;   nodeBData1   = nodeAData1;
-				nodeAData0   = tmpNodeData0; nodeAData1   = tmpNodeData1;
-			} // branch 'b' now has the larger rayT value of 'a' and 'b'
-
-			if (stackDataB.y < t) // see if branch 'b' (the larger rayT) needs to be processed
-			{
-				currentStackData = stackDataB;
-				currentBoxNodeData0 = nodeBData0;
-				currentBoxNodeData1 = nodeBData1;
-				skip = true; // this will prevent the stackptr from decreasing by 1
-			}
-			if (stackDataA.y < t) // see if branch 'a' (the smaller rayT) needs to be processed 
-			{
-				if (skip) // if larger branch 'b' needed to be processed also,
-					stackLevels[int(stackptr++)] = stackDataB; // cue larger branch 'b' for future round
-							// also, increase pointer by 1
-				
-				currentStackData = stackDataA;
-				currentBoxNodeData0 = nodeAData0; 
-				currentBoxNodeData1 = nodeAData1;
-				skip = true; // this will prevent the stackptr from decreasing by 1
-			}
-
-			continue;
-		} // end if (currentBoxNodeData0.x < 0.0) // inner node
-
-
-		// else this is a leaf
-
-		// each triangle's data is encoded in 8 rgba(or xyzw) texture slots
-		id = 8.0 * currentBoxNodeData0.x;
-
-		uv0 = ivec2( mod(id + 0.0, 2048.0), (id + 0.0) * INV_TEXTURE_WIDTH );
-		uv1 = ivec2( mod(id + 1.0, 2048.0), (id + 1.0) * INV_TEXTURE_WIDTH );
-		uv2 = ivec2( mod(id + 2.0, 2048.0), (id + 2.0) * INV_TEXTURE_WIDTH );
-		
-		vd0 = texelFetch(tTriangleTexture, uv0, 0);
-		vd1 = texelFetch(tTriangleTexture, uv1, 0);
-		vd2 = texelFetch(tTriangleTexture, uv2, 0);
-
-		d = BVH_DoubleSidedTriangleIntersect( vec3(vd0.xyz), vec3(vd0.w, vd1.xy), vec3(vd1.zw, vd2.x), rayOrigin, rayDirection, tu, tv );
-
-		if (d < t)
-		{
-			t = d;
-			triangleID = id;
-			triangleU = tu;
-			triangleV = tv;
-			triangleLookupNeeded = true;
-			modelID = 2;
+			///modelID = 0;
 		}
 	      
         } // end while (true)
@@ -566,7 +379,6 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, bool checkModels )
 		vd6 = texelFetch(tTriangleTexture, uv6, 0);
 		vd7 = texelFetch(tTriangleTexture, uv7, 0);
 
-	
 		// face normal for flat-shaded polygon look
 		//hitNormal = ( cross(vec3(vd0.w, vd1.xy) - vec3(vd0.xyz), vec3(vd1.zw, vd2.x) - vec3(vd0.xyz)) );
 		
@@ -581,16 +393,16 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, bool checkModels )
 		hitColor = vec3(0.7);
 		hitType = SPEC;
 		hitObjectID = float(objectCount);
+
 		objectCount++;
-		if (modelID == 1)
+		if (vd7.y == 1.0)
 		{
 			hitColor = vec3(1.2); // makes white teapot a little more white
 			hitType = COAT;
 			hitObjectID = float(objectCount);
 		}
 		objectCount++;
-		
-		if (modelID == 2)
+		if (vd7.y == 2.0)
 		{
 			hitColor = vec3(1);
 			hitType = REFR;
@@ -598,7 +410,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, bool checkModels )
 		}
 		
 		hitIsModel = true;
-	}
+	} // end if (triangleLookupNeeded)
 	
 	return t;
 	
@@ -654,7 +466,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	rayDirection = randomCosWeightedDirectionInHemisphere(lightNormal);
 	rayOrigin = randPointOnLight + lightNormal * uEPS_intersect; // move light ray out to prevent self-intersection with light
 	
-	t = SceneIntersect(rayOrigin, rayDirection, checkModels);
+	t = SceneIntersect(checkModels);
 		
 	if (hitType == DIFF)
 	{
@@ -678,7 +490,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	for (int bounces = 0; bounces < 5; bounces++)
 	{
 		
-		t = SceneIntersect(rayOrigin, rayDirection, checkModels);
+		t = SceneIntersect(checkModels);
 		
 		if (t == INFINITY)
 			break;
