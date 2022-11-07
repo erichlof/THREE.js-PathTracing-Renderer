@@ -92,7 +92,7 @@ function load_GLTF_Models()
 			modelMesh.geometry = modelMesh.geometry.toNonIndexed();
 
 		modelMesh.geometry.center();
-
+		
 		// settings for UtahTeapot model
 		modelScale = 2.3;
 		modelPositionOffset.set(-70, -38.7, -180);
@@ -118,7 +118,7 @@ function initSceneData()
 	cameraFlightSpeed = 200;
 
 	// pixelRatio is resolution - range: 0.5(half resolution) to 1.0(full resolution)
-	pixelRatio = mouseControl ? 0.6 : 0.6;
+	pixelRatio = mouseControl ? 0.7 : 0.7;
 
 	EPS_intersect = 0.001;
 
@@ -133,9 +133,9 @@ function initSceneData()
 
 
 	total_number_of_triangles = modelMesh.geometry.attributes.position.array.length / 9;
-	console.log("Triangle count:" + total_number_of_triangles);
+	console.log("Triangle count:" + (total_number_of_triangles * 3));
 
-	totalWork = new Uint32Array(total_number_of_triangles);
+	totalWork = new Uint32Array(total_number_of_triangles * 3);
 
 	let triangle_b_box_min = new THREE.Vector3();
 	let triangle_b_box_max = new THREE.Vector3();
@@ -153,9 +153,15 @@ function initSceneData()
 	}
 
 	let materialNumber = 0;
+	let ix32, ix9;
+	let numTrisx32 = total_number_of_triangles * 32;
+	let numTrisx9 = total_number_of_triangles * 9;
 
+	// 1st teapot (left side of table)
 	for (let i = 0; i < total_number_of_triangles; i++)
 	{
+		ix32 = i * 32;
+		ix9  = i * 9;
 
 		triangle_b_box_min.set(Infinity, Infinity, Infinity);
 		triangle_b_box_max.set(-Infinity, -Infinity, -Infinity);
@@ -184,14 +190,14 @@ function initSceneData()
 		}
 
 		// record vertex normals
-		vn0.set(vna[9 * i + 0], vna[9 * i + 1], vna[9 * i + 2]).normalize();
-		vn1.set(vna[9 * i + 3], vna[9 * i + 4], vna[9 * i + 5]).normalize();
-		vn2.set(vna[9 * i + 6], vna[9 * i + 7], vna[9 * i + 8]).normalize();
+		vn0.set(vna[ix9 + 0], vna[ix9 + 1], vna[ix9 + 2]).normalize();
+		vn1.set(vna[ix9 + 3], vna[ix9 + 4], vna[ix9 + 5]).normalize();
+		vn2.set(vna[ix9 + 6], vna[ix9 + 7], vna[ix9 + 8]).normalize();
 
 		// record vertex positions
-		vp0.set(vpa[9 * i + 0], vpa[9 * i + 1], vpa[9 * i + 2]);
-		vp1.set(vpa[9 * i + 3], vpa[9 * i + 4], vpa[9 * i + 5]);
-		vp2.set(vpa[9 * i + 6], vpa[9 * i + 7], vpa[9 * i + 8]);
+		vp0.set(vpa[ix9 + 0], vpa[ix9 + 1], vpa[ix9 + 2]);
+		vp1.set(vpa[ix9 + 3], vpa[ix9 + 4], vpa[ix9 + 5]);
+		vp2.set(vpa[ix9 + 6], vpa[ix9 + 7], vpa[ix9 + 8]);
 
 		vp0.multiplyScalar(modelScale);
 		vp1.multiplyScalar(modelScale);
@@ -202,54 +208,54 @@ function initSceneData()
 		vp2.add(modelPositionOffset);
 
 		//slot 0
-		triangle_array[32 * i + 0] = vp0.x; // r or x
-		triangle_array[32 * i + 1] = vp0.y; // g or y 
-		triangle_array[32 * i + 2] = vp0.z; // b or z
-		triangle_array[32 * i + 3] = vp1.x; // a or w
+		triangle_array[ix32 + 0] = vp0.x; // r or x
+		triangle_array[ix32 + 1] = vp0.y; // g or y 
+		triangle_array[ix32 + 2] = vp0.z; // b or z
+		triangle_array[ix32 + 3] = vp1.x; // a or w
 
 		//slot 1
-		triangle_array[32 * i + 4] = vp1.y; // r or x
-		triangle_array[32 * i + 5] = vp1.z; // g or y
-		triangle_array[32 * i + 6] = vp2.x; // b or z
-		triangle_array[32 * i + 7] = vp2.y; // a or w
+		triangle_array[ix32 + 4] = vp1.y; // r or x
+		triangle_array[ix32 + 5] = vp1.z; // g or y
+		triangle_array[ix32 + 6] = vp2.x; // b or z
+		triangle_array[ix32 + 7] = vp2.y; // a or w
 
 		//slot 2
-		triangle_array[32 * i + 8] = vp2.z; // r or x
-		triangle_array[32 * i + 9] = vn0.x; // g or y
-		triangle_array[32 * i + 10] = vn0.y; // b or z
-		triangle_array[32 * i + 11] = vn0.z; // a or w
+		triangle_array[ix32 + 8] = vp2.z; // r or x
+		triangle_array[ix32 + 9] = vn0.x; // g or y
+		triangle_array[ix32 + 10] = vn0.y; // b or z
+		triangle_array[ix32 + 11] = vn0.z; // a or w
 
 		//slot 3
-		triangle_array[32 * i + 12] = vn1.x; // r or x
-		triangle_array[32 * i + 13] = vn1.y; // g or y
-		triangle_array[32 * i + 14] = vn1.z; // b or z
-		triangle_array[32 * i + 15] = vn2.x; // a or w
+		triangle_array[ix32 + 12] = vn1.x; // r or x
+		triangle_array[ix32 + 13] = vn1.y; // g or y
+		triangle_array[ix32 + 14] = vn1.z; // b or z
+		triangle_array[ix32 + 15] = vn2.x; // a or w
 
 		//slot 4
-		triangle_array[32 * i + 16] = vn2.y; // r or x
-		triangle_array[32 * i + 17] = vn2.z; // g or y
-		triangle_array[32 * i + 18] = vt0.x; // b or z
-		triangle_array[32 * i + 19] = vt0.y; // a or w
+		triangle_array[ix32 + 16] = vn2.y; // r or x
+		triangle_array[ix32 + 17] = vn2.z; // g or y
+		triangle_array[ix32 + 18] = vt0.x; // b or z
+		triangle_array[ix32 + 19] = vt0.y; // a or w
 
 		//slot 5
-		triangle_array[32 * i + 20] = vt1.x; // r or x
-		triangle_array[32 * i + 21] = vt1.y; // g or y
-		triangle_array[32 * i + 22] = vt2.x; // b or z
-		triangle_array[32 * i + 23] = vt2.y; // a or w
+		triangle_array[ix32 + 20] = vt1.x; // r or x
+		triangle_array[ix32 + 21] = vt1.y; // g or y
+		triangle_array[ix32 + 22] = vt2.x; // b or z
+		triangle_array[ix32 + 23] = vt2.y; // a or w
 
 		// the remaining slots are used for PBR material properties
 
 		//slot 6
-		triangle_array[32 * i + 24] = pathTracingMaterialList[materialNumber].type; // r or x 
-		triangle_array[32 * i + 25] = pathTracingMaterialList[materialNumber].color.r; // g or y
-		triangle_array[32 * i + 26] = pathTracingMaterialList[materialNumber].color.g; // b or z
-		triangle_array[32 * i + 27] = pathTracingMaterialList[materialNumber].color.b; // a or w
+		triangle_array[ix32 + 24] = pathTracingMaterialList[materialNumber].type; // r or x 
+		triangle_array[ix32 + 25] = pathTracingMaterialList[materialNumber].color.r; // g or y
+		triangle_array[ix32 + 26] = pathTracingMaterialList[materialNumber].color.g; // b or z
+		triangle_array[ix32 + 27] = pathTracingMaterialList[materialNumber].color.b; // a or w
 
 		//slot 7
-		triangle_array[32 * i + 28] = pathTracingMaterialList[materialNumber].albedoTextureID; // r or x
-		triangle_array[32 * i + 29] = 0; // g or y
-		triangle_array[32 * i + 30] = 0; // b or z
-		triangle_array[32 * i + 31] = 0; // a or w
+		triangle_array[ix32 + 28] = pathTracingMaterialList[materialNumber].albedoTextureID; // r or x
+		triangle_array[ix32 + 29] = 0.0; // g or y
+		triangle_array[ix32 + 30] = 0; // b or z
+		triangle_array[ix32 + 31] = 0; // a or w
 
 		triangle_b_box_min.copy(triangle_b_box_min.min(vp0));
 		triangle_b_box_max.copy(triangle_b_box_max.max(vp0));
@@ -260,24 +266,283 @@ function initSceneData()
 
 		triangle_b_box_centroid.copy(triangle_b_box_min).add(triangle_b_box_max).multiplyScalar(0.5);
 
-		aabb_array[9 * i + 0] = triangle_b_box_min.x;
-		aabb_array[9 * i + 1] = triangle_b_box_min.y;
-		aabb_array[9 * i + 2] = triangle_b_box_min.z;
-		aabb_array[9 * i + 3] = triangle_b_box_max.x;
-		aabb_array[9 * i + 4] = triangle_b_box_max.y;
-		aabb_array[9 * i + 5] = triangle_b_box_max.z;
-		aabb_array[9 * i + 6] = triangle_b_box_centroid.x;
-		aabb_array[9 * i + 7] = triangle_b_box_centroid.y;
-		aabb_array[9 * i + 8] = triangle_b_box_centroid.z;
+		aabb_array[ix9 + 0] = triangle_b_box_min.x;
+		aabb_array[ix9 + 1] = triangle_b_box_min.y;
+		aabb_array[ix9 + 2] = triangle_b_box_min.z;
+		aabb_array[ix9 + 3] = triangle_b_box_max.x;
+		aabb_array[ix9 + 4] = triangle_b_box_max.y;
+		aabb_array[ix9 + 5] = triangle_b_box_max.z;
+		aabb_array[ix9 + 6] = triangle_b_box_centroid.x;
+		aabb_array[ix9 + 7] = triangle_b_box_centroid.y;
+		aabb_array[ix9 + 8] = triangle_b_box_centroid.z;
 
 		totalWork[i] = i;
 	}
 
+	
+	// 2nd teapot (center of table)
+	materialNumber = 0;
+	modelPositionOffset.set(0, -38.7, -180);
 
-	// Build the BVH acceleration structure, which places a bounding box ('root' of the tree) around all of the 
+	for (let i = 0; i < total_number_of_triangles; i++)
+	{
+		ix32 = i * 32;
+		ix9  = i * 9;
+
+		triangle_b_box_min.set(Infinity, Infinity, Infinity);
+		triangle_b_box_max.set(-Infinity, -Infinity, -Infinity);
+
+		for (let j = 0; j < pathTracingMaterialList.length; j++)
+		{
+			if (i < triangleMaterialMarkers[j])
+			{
+				materialNumber = j;
+				break;
+			}
+		}
+
+		// record vertex texture coordinates (UVs)
+		if (modelHasUVs)
+		{
+			vt0.set(vta[6 * i + 0], vta[6 * i + 1]);
+			vt1.set(vta[6 * i + 2], vta[6 * i + 3]);
+			vt2.set(vta[6 * i + 4], vta[6 * i + 5]);
+		}
+		else
+		{
+			vt0.set(-1, -1);
+			vt1.set(-1, -1);
+			vt2.set(-1, -1);
+		}
+
+		// record vertex normals
+		vn0.set(vna[ix9 + 0], vna[ix9 + 1], vna[ix9 + 2]).normalize();
+		vn1.set(vna[ix9 + 3], vna[ix9 + 4], vna[ix9 + 5]).normalize();
+		vn2.set(vna[ix9 + 6], vna[ix9 + 7], vna[ix9 + 8]).normalize();
+
+		// record vertex positions
+		vp0.set(vpa[ix9 + 0], vpa[ix9 + 1], vpa[ix9 + 2]);
+		vp1.set(vpa[ix9 + 3], vpa[ix9 + 4], vpa[ix9 + 5]);
+		vp2.set(vpa[ix9 + 6], vpa[ix9 + 7], vpa[ix9 + 8]);
+
+		vp0.multiplyScalar(modelScale);
+		vp1.multiplyScalar(modelScale);
+		vp2.multiplyScalar(modelScale);
+
+		vp0.add(modelPositionOffset);
+		vp1.add(modelPositionOffset);
+		vp2.add(modelPositionOffset);
+
+		//slot 0
+		triangle_array[ix32 + 0 + numTrisx32] = vp0.x; // r or x
+		triangle_array[ix32 + 1 + numTrisx32] = vp0.y; // g or y 
+		triangle_array[ix32 + 2 + numTrisx32] = vp0.z; // b or z
+		triangle_array[ix32 + 3 + numTrisx32] = vp1.x; // a or w
+
+		//slot 1
+		triangle_array[ix32 + 4 + numTrisx32] = vp1.y; // r or x
+		triangle_array[ix32 + 5 + numTrisx32] = vp1.z; // g or y
+		triangle_array[ix32 + 6 + numTrisx32] = vp2.x; // b or z
+		triangle_array[ix32 + 7 + numTrisx32] = vp2.y; // a or w
+
+		//slot 2
+		triangle_array[ix32 + 8 + numTrisx32] = vp2.z; // r or x
+		triangle_array[ix32 + 9 + numTrisx32] = vn0.x; // g or y
+		triangle_array[ix32 + 10 + numTrisx32] = vn0.y; // b or z
+		triangle_array[ix32 + 11 + numTrisx32] = vn0.z; // a or w
+
+		//slot 3
+		triangle_array[ix32 + 12 + numTrisx32] = vn1.x; // r or x
+		triangle_array[ix32 + 13 + numTrisx32] = vn1.y; // g or y
+		triangle_array[ix32 + 14 + numTrisx32] = vn1.z; // b or z
+		triangle_array[ix32 + 15 + numTrisx32] = vn2.x; // a or w
+
+		//slot 4
+		triangle_array[ix32 + 16 + numTrisx32] = vn2.y; // r or x
+		triangle_array[ix32 + 17 + numTrisx32] = vn2.z; // g or y
+		triangle_array[ix32 + 18 + numTrisx32] = vt0.x; // b or z
+		triangle_array[ix32 + 19 + numTrisx32] = vt0.y; // a or w
+
+		//slot 5
+		triangle_array[ix32 + 20 + numTrisx32] = vt1.x; // r or x
+		triangle_array[ix32 + 21 + numTrisx32] = vt1.y; // g or y
+		triangle_array[ix32 + 22 + numTrisx32] = vt2.x; // b or z
+		triangle_array[ix32 + 23 + numTrisx32] = vt2.y; // a or w
+
+		// the remaining slots are used for PBR material properties
+
+		//slot 6
+		triangle_array[ix32 + 24 + numTrisx32] = pathTracingMaterialList[materialNumber].type; // r or x 
+		triangle_array[ix32 + 25 + numTrisx32] = pathTracingMaterialList[materialNumber].color.r; // g or y
+		triangle_array[ix32 + 26 + numTrisx32] = pathTracingMaterialList[materialNumber].color.g; // b or z
+		triangle_array[ix32 + 27 + numTrisx32] = pathTracingMaterialList[materialNumber].color.b; // a or w
+
+		//slot 7
+		triangle_array[ix32 + 28 + numTrisx32] = pathTracingMaterialList[materialNumber].albedoTextureID; // r or x
+		triangle_array[ix32 + 29 + numTrisx32] = 1.0; // g or y
+		triangle_array[ix32 + 30 + numTrisx32] = 0; // b or z
+		triangle_array[ix32 + 31 + numTrisx32] = 0; // a or w
+
+		triangle_b_box_min.copy(triangle_b_box_min.min(vp0));
+		triangle_b_box_max.copy(triangle_b_box_max.max(vp0));
+		triangle_b_box_min.copy(triangle_b_box_min.min(vp1));
+		triangle_b_box_max.copy(triangle_b_box_max.max(vp1));
+		triangle_b_box_min.copy(triangle_b_box_min.min(vp2));
+		triangle_b_box_max.copy(triangle_b_box_max.max(vp2));
+
+		triangle_b_box_centroid.copy(triangle_b_box_min).add(triangle_b_box_max).multiplyScalar(0.5);
+
+		aabb_array[ix9 + 0 + numTrisx9] = triangle_b_box_min.x;
+		aabb_array[ix9 + 1 + numTrisx9] = triangle_b_box_min.y;
+		aabb_array[ix9 + 2 + numTrisx9] = triangle_b_box_min.z;
+		aabb_array[ix9 + 3 + numTrisx9] = triangle_b_box_max.x;
+		aabb_array[ix9 + 4 + numTrisx9] = triangle_b_box_max.y;
+		aabb_array[ix9 + 5 + numTrisx9] = triangle_b_box_max.z;
+		aabb_array[ix9 + 6 + numTrisx9] = triangle_b_box_centroid.x;
+		aabb_array[ix9 + 7 + numTrisx9] = triangle_b_box_centroid.y;
+		aabb_array[ix9 + 8 + numTrisx9] = triangle_b_box_centroid.z;
+
+		totalWork[i + total_number_of_triangles] = i + total_number_of_triangles;
+	}
+
+
+	// 3rd teapot (right side of table)
+	materialNumber = 0;
+	modelPositionOffset.set(70, -38.7, -180);
+
+	for (let i = 0; i < total_number_of_triangles; i++)
+	{
+		ix32 = i * 32;
+		ix9  = i * 9;
+
+		triangle_b_box_min.set(Infinity, Infinity, Infinity);
+		triangle_b_box_max.set(-Infinity, -Infinity, -Infinity);
+
+		for (let j = 0; j < pathTracingMaterialList.length; j++)
+		{
+			if (i < triangleMaterialMarkers[j])
+			{
+				materialNumber = j;
+				break;
+			}
+		}
+
+		// record vertex texture coordinates (UVs)
+		if (modelHasUVs)
+		{
+			vt0.set(vta[6 * i + 0], vta[6 * i + 1]);
+			vt1.set(vta[6 * i + 2], vta[6 * i + 3]);
+			vt2.set(vta[6 * i + 4], vta[6 * i + 5]);
+		}
+		else
+		{
+			vt0.set(-1, -1);
+			vt1.set(-1, -1);
+			vt2.set(-1, -1);
+		}
+
+		// record vertex normals
+		vn0.set(vna[ix9 + 0], vna[ix9 + 1], vna[ix9 + 2]).normalize();
+		vn1.set(vna[ix9 + 3], vna[ix9 + 4], vna[ix9 + 5]).normalize();
+		vn2.set(vna[ix9 + 6], vna[ix9 + 7], vna[ix9 + 8]).normalize();
+
+		// record vertex positions
+		vp0.set(vpa[ix9 + 0], vpa[ix9 + 1], vpa[ix9 + 2]);
+		vp1.set(vpa[ix9 + 3], vpa[ix9 + 4], vpa[ix9 + 5]);
+		vp2.set(vpa[ix9 + 6], vpa[ix9 + 7], vpa[ix9 + 8]);
+
+		vp0.multiplyScalar(modelScale);
+		vp1.multiplyScalar(modelScale);
+		vp2.multiplyScalar(modelScale);
+
+		vp0.add(modelPositionOffset);
+		vp1.add(modelPositionOffset);
+		vp2.add(modelPositionOffset);
+
+		//slot 0
+		triangle_array[ix32 + 0 + numTrisx32 + numTrisx32] = vp0.x; // r or x
+		triangle_array[ix32 + 1 + numTrisx32 + numTrisx32] = vp0.y; // g or y 
+		triangle_array[ix32 + 2 + numTrisx32 + numTrisx32] = vp0.z; // b or z
+		triangle_array[ix32 + 3 + numTrisx32 + numTrisx32] = vp1.x; // a or w
+
+		//slot 1
+		triangle_array[ix32 + 4 + numTrisx32 + numTrisx32] = vp1.y; // r or x
+		triangle_array[ix32 + 5 + numTrisx32 + numTrisx32] = vp1.z; // g or y
+		triangle_array[ix32 + 6 + numTrisx32 + numTrisx32] = vp2.x; // b or z
+		triangle_array[ix32 + 7 + numTrisx32 + numTrisx32] = vp2.y; // a or w
+
+		//slot 2
+		triangle_array[ix32 + 8 + numTrisx32 + numTrisx32] = vp2.z; // r or x
+		triangle_array[ix32 + 9 + numTrisx32 + numTrisx32] = vn0.x; // g or y
+		triangle_array[ix32 + 10 + numTrisx32 + numTrisx32] = vn0.y; // b or z
+		triangle_array[ix32 + 11 + numTrisx32 + numTrisx32] = vn0.z; // a or w
+
+		//slot 3
+		triangle_array[ix32 + 12 + numTrisx32 + numTrisx32] = vn1.x; // r or x
+		triangle_array[ix32 + 13 + numTrisx32 + numTrisx32] = vn1.y; // g or y
+		triangle_array[ix32 + 14 + numTrisx32 + numTrisx32] = vn1.z; // b or z
+		triangle_array[ix32 + 15 + numTrisx32 + numTrisx32] = vn2.x; // a or w
+
+		//slot 4
+		triangle_array[ix32 + 16 + numTrisx32 + numTrisx32] = vn2.y; // r or x
+		triangle_array[ix32 + 17 + numTrisx32 + numTrisx32] = vn2.z; // g or y
+		triangle_array[ix32 + 18 + numTrisx32 + numTrisx32] = vt0.x; // b or z
+		triangle_array[ix32 + 19 + numTrisx32 + numTrisx32] = vt0.y; // a or w
+
+		//slot 5
+		triangle_array[ix32 + 20 + numTrisx32 + numTrisx32] = vt1.x; // r or x
+		triangle_array[ix32 + 21 + numTrisx32 + numTrisx32] = vt1.y; // g or y
+		triangle_array[ix32 + 22 + numTrisx32 + numTrisx32] = vt2.x; // b or z
+		triangle_array[ix32 + 23 + numTrisx32 + numTrisx32] = vt2.y; // a or w
+
+		// the remaining slots are used for PBR material properties
+
+		//slot 6
+		triangle_array[ix32 + 24 + numTrisx32 + numTrisx32] = pathTracingMaterialList[materialNumber].type; // r or x 
+		triangle_array[ix32 + 25 + numTrisx32 + numTrisx32] = pathTracingMaterialList[materialNumber].color.r; // g or y
+		triangle_array[ix32 + 26 + numTrisx32 + numTrisx32] = pathTracingMaterialList[materialNumber].color.g; // b or z
+		triangle_array[ix32 + 27 + numTrisx32 + numTrisx32] = pathTracingMaterialList[materialNumber].color.b; // a or w
+
+		//slot 7
+		triangle_array[ix32 + 28 + numTrisx32 + numTrisx32] = pathTracingMaterialList[materialNumber].albedoTextureID; // r or x
+		triangle_array[ix32 + 29 + numTrisx32 + numTrisx32] = 2.0; // g or y
+		triangle_array[ix32 + 30 + numTrisx32 + numTrisx32] = 0; // b or z
+		triangle_array[ix32 + 31 + numTrisx32 + numTrisx32] = 0; // a or w
+
+		triangle_b_box_min.copy(triangle_b_box_min.min(vp0));
+		triangle_b_box_max.copy(triangle_b_box_max.max(vp0));
+		triangle_b_box_min.copy(triangle_b_box_min.min(vp1));
+		triangle_b_box_max.copy(triangle_b_box_max.max(vp1));
+		triangle_b_box_min.copy(triangle_b_box_min.min(vp2));
+		triangle_b_box_max.copy(triangle_b_box_max.max(vp2));
+
+		triangle_b_box_centroid.copy(triangle_b_box_min).add(triangle_b_box_max).multiplyScalar(0.5);
+
+		aabb_array[ix9 + 0 + numTrisx9 + numTrisx9] = triangle_b_box_min.x;
+		aabb_array[ix9 + 1 + numTrisx9 + numTrisx9] = triangle_b_box_min.y;
+		aabb_array[ix9 + 2 + numTrisx9 + numTrisx9] = triangle_b_box_min.z;
+		aabb_array[ix9 + 3 + numTrisx9 + numTrisx9] = triangle_b_box_max.x;
+		aabb_array[ix9 + 4 + numTrisx9 + numTrisx9] = triangle_b_box_max.y;
+		aabb_array[ix9 + 5 + numTrisx9 + numTrisx9] = triangle_b_box_max.z;
+		aabb_array[ix9 + 6 + numTrisx9 + numTrisx9] = triangle_b_box_centroid.x;
+		aabb_array[ix9 + 7 + numTrisx9 + numTrisx9] = triangle_b_box_centroid.y;
+		aabb_array[ix9 + 8 + numTrisx9 + numTrisx9] = triangle_b_box_centroid.z;
+
+		totalWork[i + total_number_of_triangles + total_number_of_triangles] = i + total_number_of_triangles + total_number_of_triangles;
+	}
+
+
+
+	console.time("BvhGeneration");
+	console.log("BvhGeneration...");
+
+	// Build the BVH acceleration structure, which places a bounding box ('root' of the tree) around all of the
 	// triangles of the entire mesh, then subdivides each box into 2 smaller boxes.  It continues until it reaches 1 triangle,
 	// which it then designates as a 'leaf'
 	BVH_Build_Iterative(totalWork, aabb_array);
+	//console.log(buildnodes);
+
+	console.timeEnd("BvhGeneration");
 
 
 	triangleDataTexture = new THREE.DataTexture(
