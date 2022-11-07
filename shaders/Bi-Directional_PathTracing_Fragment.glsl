@@ -9,8 +9,7 @@ precision highp sampler2D;
 #define N_OPENCYLINDERS 6
 #define N_CONES 1
 #define N_DISKS 1
-#define N_QUADS 5
-#define N_BOXES 1
+#define N_BOXES 2
 
 
 vec3 rayOrigin, rayDirection;
@@ -19,14 +18,13 @@ vec3 hitNormal, hitEmission, hitColor;
 vec2 hitUV;
 float hitRoughness;
 float hitObjectID;
-int hitType = -100;
+int hitType;
 
 struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; float roughness; int type; };
 struct Ellipsoid { vec3 radii; vec3 position; vec3 emission; vec3 color; float roughness; int type; };
 struct OpenCylinder { float radius; vec3 pos1; vec3 pos2; vec3 emission; vec3 color; float roughness; int type; };
 struct Cone { vec3 pos0; float radius0; vec3 pos1; float radius1; vec3 emission; vec3 color; float roughness; int type; };
 struct Disk { float radius; vec3 pos; vec3 normal; vec3 emission; vec3 color; float roughness; int type; };
-struct Quad { vec3 normal; vec3 v0; vec3 v1; vec3 v2; vec3 v3; vec3 emission; vec3 color; float roughness; int type; };
 struct Box { vec3 minCorner; vec3 maxCorner; vec3 emission; vec3 color; float roughness; int type; };
 
 Sphere spheres[N_SPHERES];
@@ -34,7 +32,6 @@ Ellipsoid ellipsoids[N_ELLIPSOIDS];
 OpenCylinder openCylinders[N_OPENCYLINDERS];
 Cone cones[N_CONES];
 Disk disks[N_DISKS];
-Quad quads[N_QUADS];
 Box boxes[N_BOXES];
 
 #include <pathtracing_random_functions>
@@ -51,9 +48,9 @@ Box boxes[N_BOXES];
 
 #include <pathtracing_disk_intersect>
 
-#include <pathtracing_quad_intersect>
-
 #include <pathtracing_box_intersect>
+
+#include <pathtracing_box_interior_intersect>
 
 //#include <pathtracing_sample_sphere_light>
 
@@ -63,7 +60,7 @@ Box boxes[N_BOXES];
 float SceneIntersect()
 //--------------------------------------------------------------------------------------
 {
-	vec3 normal;
+	vec3 normal, n;
         float d;
 	float t = INFINITY;
 	bool isRayExiting = false;
@@ -72,23 +69,26 @@ float SceneIntersect()
 	hitObjectID = -INFINITY;
 
 			
-	// ROOM
-	for (int i = 0; i < N_QUADS; i++)
-        {
-		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, rayOrigin, rayDirection, true );
-		if (d < t)
-		{
-			t = d;
-			hitNormal = quads[i].normal;
-			hitEmission = quads[i].emission;
-			hitColor = quads[i].color;
-			hitRoughness = quads[i].roughness;
-			hitType = quads[i].type;
-			hitObjectID = float(objectCount);
-		}
-		objectCount++;
-        }
+	// ROOM	
+	d = BoxInteriorIntersect( boxes[1].minCorner, boxes[1].maxCorner, rayOrigin, rayDirection, n );
+	if (d < t && n != vec3(0,0,-1))
+	{
+		t = d;
+		hitNormal = n;
+		hitEmission = boxes[1].emission;
+		hitColor = boxes[1].color;
+		hitRoughness = boxes[1].roughness;
+		hitType = boxes[1].type;
 	
+		if (n == vec3(0,-1,0)) // ceiling
+		{
+			hitColor = vec3(1);
+		}
+		
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
 	// TABLETOP
 	d = BoxIntersect( boxes[0].minCorner, boxes[0].maxCorner, rayOrigin, rayDirection, normal, isRayExiting );
 	if (d < t)
@@ -102,23 +102,6 @@ float SceneIntersect()
 		hitObjectID = float(objectCount);
 	}
 	objectCount++;
-	
-	// TABLE LEGS, LAMP POST, and SPOTLIGHT CASING
-	for (int i = 0; i < N_OPENCYLINDERS; i++)
-        {
-		d = OpenCylinderIntersect( openCylinders[i].pos1, openCylinders[i].pos2, openCylinders[i].radius, rayOrigin, rayDirection, normal );
-		if (d < t)
-		{
-			t = d;
-			hitNormal = normal;
-			hitEmission = openCylinders[i].emission;
-			hitColor = openCylinders[i].color;
-			hitRoughness = openCylinders[i].roughness;
-			hitType = openCylinders[i].type;
-			hitObjectID = float(objectCount);
-		}
-		objectCount++;
-        }
 	
 	// LAMP BASE AND FLOOR LAMP BULB
 	for (int i = 0; i < N_SPHERES - 1; i++)
@@ -203,7 +186,22 @@ float SceneIntersect()
 		hitObjectID = float(objectCount);  // same as sphere - sphere and ellipsoid make up 1 object
 	}
 
-	
+	// TABLE LEGS, LAMP POST, and SPOTLIGHT CASING
+	for (int i = 0; i < N_OPENCYLINDERS; i++)
+        {
+		d = OpenCylinderIntersect( openCylinders[i].pos1, openCylinders[i].pos2, openCylinders[i].radius, rayOrigin, rayDirection, normal );
+		if (d < t)
+		{
+			t = d;
+			hitNormal = normal;
+			hitEmission = openCylinders[i].emission;
+			hitColor = openCylinders[i].color;
+			hitRoughness = openCylinders[i].roughness;
+			hitType = openCylinders[i].type;
+			hitObjectID = float(objectCount);
+		}
+		objectCount++;
+        }
 	
 	
 	return t;
@@ -455,14 +453,9 @@ void SetupScene(void)
 	vec3 spotlightDir = normalize(spotlightPos1 - spotlightPos2);
 	float spotlightRadius = 14.0; // 12.0
 	
-	quads[0] = Quad( vec3( 0.0, 0.0, 1.0), vec3(  0.0,   0.0,-559.2), vec3(549.6,   0.0,-559.2), vec3(549.6, 548.8,-559.2), vec3(  0.0, 548.8,-559.2),  z, wallColor, 0.0, DIFF);// Back Wall
-	quads[1] = Quad( vec3( 1.0, 0.0, 0.0), vec3(  0.0,   0.0,   0.0), vec3(  0.0,   0.0,-559.2), vec3(  0.0, 548.8,-559.2), vec3(  0.0, 548.8,   0.0),  z, wallColor, 0.0, DIFF);// Left Wall
-	quads[2] = Quad( vec3(-1.0, 0.0, 0.0), vec3(549.6,   0.0,-559.2), vec3(549.6,   0.0,   0.0), vec3(549.6, 548.8,   0.0), vec3(549.6, 548.8,-559.2),  z, wallColor, 0.0, DIFF);// Right Wall
-	quads[3] = Quad( vec3( 0.0,-1.0, 0.0), vec3(  0.0, 548.8,-559.2), vec3(549.6, 548.8,-559.2), vec3(549.6, 548.8,   0.0), vec3(  0.0, 548.8,   0.0),  z, vec3(1.0), 0.0, DIFF);// Ceiling
-	quads[4] = Quad( vec3( 0.0, 1.0, 0.0), vec3(  0.0,   0.0,   0.0), vec3(549.6,   0.0,   0.0), vec3(549.6,   0.0,-559.2), vec3(  0.0,   0.0,-559.2),  z, wallColor, 0.0, DIFF);// Floor
-	
 	boxes[0] = Box( vec3(180.0, 145.0, -540.0), vec3(510.0, 155.0, -310.0), z, tableColor, 0.0, DIFF);// Table Top
-	
+	boxes[1] = Box( vec3(0, 0,-559.2), vec3(549.6, 548.8, 0), z, wallColor, 0.0, DIFF);// the Cornell Box interior 
+
 	openCylinders[0] = OpenCylinder( 8.5, vec3(205.0, 0.0, -515.0), vec3(205.0, 145.0, -515.0), z, tableColor, 0.0, DIFF);// Table Leg
 	openCylinders[1] = OpenCylinder( 8.5, vec3(485.0, 0.0, -515.0), vec3(485.0, 145.0, -515.0), z, tableColor, 0.0, DIFF);// Table Leg
 	openCylinders[2] = OpenCylinder( 8.5, vec3(205.0, 0.0, -335.0), vec3(205.0, 145.0, -335.0), z, tableColor, 0.0, DIFF);// Table Leg
