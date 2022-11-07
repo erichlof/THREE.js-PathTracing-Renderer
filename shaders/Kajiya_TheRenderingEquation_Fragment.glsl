@@ -58,37 +58,22 @@ float SceneIntersect( )
 	hitObjectID = -INFINITY;
 	
 	
-        for (int i = 0; i < N_SPHERES; i++)
+	for (int i = 0; i < N_RECTANGLES; i++)
         {
-		d = SphereIntersect( spheres[i].radius, spheres[i].position, rayOrigin, rayDirection );
+		d = RectangleIntersect( rectangles[i].position, rectangles[i].normal, rectangles[i].radiusU, rectangles[i].radiusV, rayOrigin, rayDirection );
 		if (d < t)
 		{
 			t = d;
-			hitNormal = (rayOrigin + rayDirection * t) - spheres[i].position;
-			hitEmission = spheres[i].emission;
-			hitColor = spheres[i].color;
-			hitType = spheres[i].type;
+			hitNormal = rectangles[i].normal;
+			hitEmission = rectangles[i].emission;
+			hitColor = rectangles[i].color;
+			hitType = rectangles[i].type;
 			hitObjectID = float(objectCount);
 		}
 		objectCount++;
         }
 	
-	for (int i = 0; i < N_ELLIPSOIDS; i++)
-        {
-		d = EllipsoidIntersect( ellipsoids[i].radii, ellipsoids[i].position, rayOrigin, rayDirection );
-		if (d < t)
-		{
-			t = d;
-			hitNormal = ((rayOrigin + rayDirection * t) - ellipsoids[i].position) / (ellipsoids[i].radii * ellipsoids[i].radii);
-			hitEmission = ellipsoids[i].emission;
-			hitColor = ellipsoids[i].color;
-			hitType = ellipsoids[i].type;
-			hitObjectID = float(objectCount);
-		}
-		objectCount++;
-	}
 	
-        
 	for (int i = 0; i < N_BOXES; i++)
         {
 		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, rayOrigin, rayDirection, n, isRayExiting );
@@ -104,20 +89,38 @@ float SceneIntersect( )
 		objectCount++;
 	}
 	
-	for (int i = 0; i < N_RECTANGLES; i++)
+
+	for (int i = 0; i < N_ELLIPSOIDS; i++)
         {
-		d = RectangleIntersect( rectangles[i].position, rectangles[i].normal, rectangles[i].radiusU, rectangles[i].radiusV, rayOrigin, rayDirection );
+		d = EllipsoidIntersect( ellipsoids[i].radii, ellipsoids[i].position, rayOrigin, rayDirection );
 		if (d < t)
 		{
 			t = d;
-			hitNormal = rectangles[i].normal;
-			hitEmission = rectangles[i].emission;
-			hitColor = rectangles[i].color;
-			hitType = rectangles[i].type;
+			hitNormal = ((rayOrigin + rayDirection * t) - ellipsoids[i].position) / (ellipsoids[i].radii * ellipsoids[i].radii);
+			hitEmission = ellipsoids[i].emission;
+			hitColor = ellipsoids[i].color;
+			hitType = ellipsoids[i].type;
+			hitObjectID = float(objectCount);
+		}
+		objectCount++;
+	}
+
+
+	for (int i = 0; i < N_SPHERES; i++)
+        {
+		d = SphereIntersect( spheres[i].radius, spheres[i].position, rayOrigin, rayDirection );
+		if (d < t)
+		{
+			t = d;
+			hitNormal = (rayOrigin + rayDirection * t) - spheres[i].position;
+			hitEmission = spheres[i].emission;
+			hitColor = spheres[i].color;
+			hitType = spheres[i].type;
 			hitObjectID = float(objectCount);
 		}
 		objectCount++;
         }
+
 	
 	return t;
 	
@@ -181,9 +184,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 		
 		if (t == INFINITY)
-		{
-			///pixelSharpness = diffuseCount == 0 ? 1.01 : 0.0;
-			
+		{		
 			skyColor = mix(vec3(0), vec3(0.004, 0.0, 0.04), clamp(exp(rayDirection.y * -15.0), 0.0, 1.0));
 			
 			if (bounceIsSpecular || sampleLight)
