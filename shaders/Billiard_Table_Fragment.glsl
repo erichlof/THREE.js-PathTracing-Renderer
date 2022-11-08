@@ -16,9 +16,8 @@ uniform sampler2D tLightWoodTexture;
 #define N_LIGHTS 2.0
 #define N_SPHERES 3
 #define N_ELLIPSOIDS 2
-#define N_PLANES 1
 #define N_QUADS 6
-#define N_BOXES 9
+#define N_BOXES 10
 #define N_CONES 5
 
 //-----------------------------------------------------------------------
@@ -33,31 +32,35 @@ int hitType = -100;
 
 struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; float roughness; int type; };
 struct Ellipsoid { vec3 radii; vec3 position; vec3 emission; vec3 color; float roughness; int type; };
-struct Plane { vec4 pla; vec3 emission; vec3 color; float roughness; int type; };
 struct Quad { vec3 normal; vec3 v0; vec3 v1; vec3 v2; vec3 v3; vec3 emission; vec3 color; float roughness; int type; };
 struct Box { vec3 minCorner; vec3 maxCorner; vec3 emission; vec3 color; float roughness; int type; };
 struct Cone { vec3 pos0; float radius0; vec3 pos1; float radius1; vec3 emission; vec3 color; float roughness; int type; };
 
 Sphere spheres[N_SPHERES];
 Ellipsoid ellipsoids[N_ELLIPSOIDS];
-Plane planes[N_PLANES];
 Quad quads[N_QUADS];
 Box boxes[N_BOXES];
 Cone cones[N_CONES];
 
 #include <pathtracing_random_functions>
+
 #include <pathtracing_calc_fresnel_reflectance>
-#include <pathtracing_plane_intersect>
+
 #include <pathtracing_sphere_intersect>
+
 #include <pathtracing_ellipsoid_intersect>
+
 #include <pathtracing_quad_intersect>
+
 #include <pathtracing_box_intersect>
+
 #include <pathtracing_cone_intersect>
+
 #include <pathtracing_sample_quad_light>
 
 
 //---------------------------------------------------------------------------------------
-float SceneIntersect()
+float SceneIntersect( )
 //---------------------------------------------------------------------------------------
 {
 	vec3 n;
@@ -68,7 +71,23 @@ float SceneIntersect()
 	
 	hitObjectID = -INFINITY;
 	
+	for (int i = 0; i < N_BOXES; i++)
+        {
 	
+		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, rayOrigin, rayDirection, n, isRayExiting );
+		if (d < t)
+		{
+			t = d;
+			hitNormal = n;
+			hitEmission = boxes[i].emission;
+			hitColor = boxes[i].color;
+			hitRoughness = boxes[i].roughness;
+			hitType = boxes[i].type;
+			hitObjectID = float(objectCount);
+		}
+		objectCount++;
+        }
+
 	for (int i = 0; i < N_QUADS; i++)
         {
 		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, rayOrigin, rayDirection, false);
@@ -117,39 +136,6 @@ float SceneIntersect()
 		objectCount++;
 	}
 	
-	for (int i = 0; i < N_BOXES; i++)
-        {
-	
-		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, rayOrigin, rayDirection, n, isRayExiting );
-		if (d < t)
-		{
-			t = d;
-			hitNormal = n;
-			hitEmission = boxes[i].emission;
-			hitColor = boxes[i].color;
-			hitRoughness = boxes[i].roughness;
-			hitType = boxes[i].type;
-			hitObjectID = float(objectCount);
-		}
-		objectCount++;
-        }
-	
-	for (int i = 0; i < N_PLANES; i++)
-        {
-		d = PlaneIntersect( planes[i].pla, rayOrigin, rayDirection );
-		if (d < t)
-		{
-			t = d;
-			hitNormal = (planes[i].pla.xyz);
-			hitEmission = planes[i].emission;
-			hitColor = planes[i].color;
-			hitRoughness = planes[i].roughness;
-			hitType = planes[i].type;
-			hitObjectID = float(objectCount);
-		}
-		objectCount++;
-        }
-	
 	for (int i = 0; i < N_CONES; i++)
         {
 		d = ConeIntersect( cones[i].pos0, cones[i].radius0, cones[i].pos1, cones[i].radius1, rayOrigin, rayDirection, n );
@@ -165,10 +151,11 @@ float SceneIntersect()
 		}
 		objectCount++;
         }
-	
+
+
 	return t;
 	
-} // end float SceneIntersect(vec3 rayOrigin, vec3 rayDirection)
+} // end float SceneIntersect( )
 
 
 //-----------------------------------------------------------------------------------------------------------------------------
@@ -193,6 +180,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 	bool bounceIsSpecular = true;
 	bool sampleLight = false;
+
 
 	lightChoice = quads[int(rand() * N_LIGHTS)];
 
@@ -457,6 +445,12 @@ void SetupScene(void)
 	ellipsoids[0] = Ellipsoid(  vec3(1.97,1.97,1), vec3(0,2,79), z, vec3(0,0.3,0.7), 0.0, DIFF);//CueStick blue chalked tip
 	ellipsoids[1] = Ellipsoid(  vec3(4.5,4.5,2), vec3(0,4.5,-375), z, vec3(0.01), 0.0, DIFF);//CueStick rubber butt-end cap
 	
+	cones[0] = Cone( vec3(0,3.5,-160), 3.5, vec3(0,2,72), 2.0, z, vec3(0.99), 0.1, LIGHTWOOD);//Wooden CueStick shaft
+	cones[1] = Cone( vec3(0,2,71), 2.0, vec3(0,2,78), 1.97, z, vec3(0.9), 0.0, COAT);//CueStick shaft white plastic collar
+	cones[2] = Cone( vec3(0,2,77.5), 1.93, vec3(0,2,79), 1.93, z, vec3(0.02,0.005,0.001), 0.4, COAT);//CueStick dark leather tip
+	cones[3] = Cone( vec3(0,4,-270), 4.0, vec3(0,3.5,-160), 3.5, z, vec3(0.4, 0.01, 0.3), 0.0, DARKWOOD);//Wooden CueStick butt
+	cones[4] = Cone( vec3(0,4.5,-375), 4.5, vec3(0,4,-270), 4.0, z, vec3(0.1), 0.0, CLOTH);//CueStick handle wrap
+
 	boxes[0] = Box( vec3(-200,-10,-400), vec3(200,0,400), z, clothColor, 0.0, CLOTH);//Blue Cloth Table Bed
 	boxes[1] = Box( vec3(-200,9,-400), vec3( 200, 10,-390), z, clothColor, 0.0, CLOTH);//Cloth Rail back
 	boxes[2] = Box( vec3(-200,9, 390), vec3( 200, 10, 400), z, clothColor, 0.0, CLOTH);//Cloth Rail front
@@ -467,14 +461,7 @@ void SetupScene(void)
 	boxes[6] = Box( vec3(-225,-10, 400), vec3( 225, 10, 425), z, railWoodColor, 0.3, DARKWOOD);//Wooden Rail front
 	boxes[7] = Box( vec3(-225,-10,-425), vec3(-200, 10, 425), z, railWoodColor, 0.3, DARKWOOD);//Wooden Rail left
 	boxes[8] = Box( vec3( 200,-10,-425), vec3( 225, 10, 425), z, railWoodColor, 0.3, DARKWOOD);//Wooden Rail right
-	
-	planes[0] = Plane( vec4( 0,1,0, -300.0), z, vec3(0.5), 0.0, DIFF);//Floor
-	
-	cones[0] = Cone( vec3(0,3.5,-160), 3.5, vec3(0,2,72), 2.0, z, vec3(0.99), 0.1, LIGHTWOOD);//Wooden CueStick shaft
-	cones[1] = Cone( vec3(0,2,71), 2.0, vec3(0,2,78), 1.97, z, vec3(0.9), 0.0, COAT);//CueStick shaft white plastic collar
-	cones[2] = Cone( vec3(0,2,77.5), 1.93, vec3(0,2,79), 1.93, z, vec3(0.02,0.005,0.001), 0.4, COAT);//CueStick dark leather tip
-	cones[3] = Cone( vec3(0,4,-270), 4.0, vec3(0,3.5,-160), 3.5, z, vec3(0.4, 0.01, 0.3), 0.0, DARKWOOD);//Wooden CueStick butt
-	cones[4] = Cone( vec3(0,4.5,-375), 4.5, vec3(0,4,-270), 4.0, z, vec3(0.1), 0.0, CLOTH);//CueStick handle wrap
+	boxes[9] = Box( vec3(-10000,-302,-10000), vec3(10000,-300,10000), z, vec3(0.5), 0.0, DIFF);//Floor
 }
 
 
