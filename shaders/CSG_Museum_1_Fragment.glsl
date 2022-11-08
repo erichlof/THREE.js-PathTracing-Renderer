@@ -5,10 +5,8 @@ precision highp sampler2D;
 #include <pathtracing_uniforms_and_defines>
 
 #define N_LIGHTS 2.0
-#define N_SPHERES 2
-#define N_PLANES 4
 #define N_QUADS 2
-#define N_BOXES 2
+#define N_BOXES 1
 
 
 //-----------------------------------------------------------------------
@@ -20,13 +18,11 @@ vec2 hitUV;
 float hitObjectID;
 int hitType = -100;
 
-struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; int type; };
+
 struct Plane { vec4 pla; vec3 emission; vec3 color; int type; };
 struct Quad { vec3 normal; vec3 v0; vec3 v1; vec3 v2; vec3 v3; vec3 emission; vec3 color; int type; };
 struct Box { vec3 minCorner; vec3 maxCorner; vec3 emission; vec3 color; int type; };
 
-Sphere spheres[N_SPHERES];
-Plane planes[N_PLANES];
 Quad quads[N_QUADS];
 Box boxes[N_BOXES];
 
@@ -34,13 +30,13 @@ Box boxes[N_BOXES];
 
 #include <pathtracing_calc_fresnel_reflectance>
 
-#include <pathtracing_plane_intersect>
-
-#include <pathtracing_quad_intersect>
-
 #include <pathtracing_sphere_intersect>
 
 #include <pathtracing_box_intersect>
+
+#include <pathtracing_box_interior_intersect>
+
+#include <pathtracing_quad_intersect>
 
 #include <pathtracing_sample_quad_light>
 
@@ -727,6 +723,28 @@ float SceneIntersect( )
 	hitObjectID = -INFINITY;
 	
 	// first, intersect all regular objects in the scene
+
+	d = BoxInteriorIntersect(boxes[0].minCorner, boxes[0].maxCorner, rayOrigin, rayDirection, n);
+	if (d < t)
+	{
+		t = d;
+		hitNormal = n;
+		hitEmission = boxes[0].emission;
+		hitColor = boxes[0].color;
+		hitType = boxes[0].type;
+		hitObjectID = float(objectCount);
+
+		if (n == vec3(-1,0,0))
+		{
+			hitColor = vec3(0.15,0.05,0.15);
+		}
+		if (n == vec3(0,1,0))
+		{
+			hitColor = vec3(1);
+			hitType = CHECK;
+		}
+	}
+	objectCount++;
 	
 	for (int i = 0; i < N_QUADS; i++)
         {
@@ -742,35 +760,6 @@ float SceneIntersect( )
 		}
 		objectCount++;
 	}
-	
-	d = SphereIntersect( spheres[0].radius, spheres[0].position, rayOrigin, rayDirection );	
-	if (d < t)
-	{
-		t = d;
-		//n = (rayOrigin + rayDirection * d) - spheres[0].position;
-		n = vec3(0,1,0);
-		hitNormal = n;
-		hitEmission = spheres[0].emission;
-		hitColor = spheres[0].color;
-		hitType = spheres[0].type;
-		hitObjectID = float(objectCount);
-	}
-	objectCount++;
-        
-	for (int i = 0; i < N_PLANES; i++)
-        {
-		d = PlaneIntersect( planes[i].pla, rayOrigin, rayDirection );
-		if (d < t)
-		{
-			t = d;
-			hitNormal = planes[i].pla.xyz;
-			hitEmission = planes[i].emission;
-			hitColor = planes[i].color;
-			hitType = planes[i].type;
-			hitObjectID = float(objectCount);
-		}
-		objectCount++;
-        }
 	
 	
 	// now intersect all CSG objects
@@ -1173,16 +1162,10 @@ void SetupScene(void)
 	vec3 L1 = vec3(1.0, 1.0, 1.0) * 2.0;// White light
 	float ceilingHeight = 300.0;
 	
-	quads[0] = Quad( vec3( 0.0,-1.0, 0.0), vec3(-150.0, ceilingHeight,-200.0), vec3(150.0, ceilingHeight,-200.0), vec3(150.0, ceilingHeight,-25.0), vec3(-150.0, ceilingHeight,-25.0), L1, z, LIGHT);// rectangular Area Light in ceiling
-	quads[1] = Quad( vec3( 0.0,-1.0, 0.0), vec3(-150.0, ceilingHeight,25.0), vec3(150.0, ceilingHeight,25.0), vec3(150.0, ceilingHeight,200.0), vec3(-150.0, ceilingHeight,200.0), L1, z, LIGHT);// rectangular Area Light in ceiling
+	quads[0] = Quad( vec3(0,-1,0), vec3(-150, ceilingHeight,-200), vec3(150, ceilingHeight,-200), vec3(150, ceilingHeight,-25), vec3(-150, ceilingHeight,-25), L1, z, LIGHT);// rectangular Area Light in ceiling
+	quads[1] = Quad( vec3(0,-1,0), vec3(-150, ceilingHeight, 25), vec3(150, ceilingHeight, 25), vec3(150, ceilingHeight, 200), vec3(-150, ceilingHeight, 200), L1, z, LIGHT);// rectangular Area Light in ceiling
 	
-	spheres[0] = Sphere(100000.0, vec3(  0.0, 100000.0, 0.0), z, vec3(1.0), CHECK);//Checkered Floor
-        
-	planes[0] = Plane( vec4( 0,0,1,  -300.0), z, vec3(0.7), DIFF);//Gray Wall in front of camera
-	planes[1] = Plane( vec4( 0,0,-1, -300.0), z, vec3(0.7), DIFF);//Gray Wall behind camera
-	planes[2] = Plane( vec4(-1,0,0,  -300.0), z, vec3(0.15,0.05,0.15), DIFF);//Purple Wall on the right
-	planes[3] = Plane( vec4( 0,-1,0, -301.0), z, vec3(0.7), DIFF);//Ceiling
-	
+	boxes[0] = Box( vec3(-100000,0,-300), vec3(300,301,300), z, vec3(0.7), DIFF); // museum room interior
 }
 
 
