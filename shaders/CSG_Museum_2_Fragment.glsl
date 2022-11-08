@@ -5,11 +5,9 @@ precision highp sampler2D;
 #include <pathtracing_uniforms_and_defines>
 
 #define N_LIGHTS 2.0
-#define N_SPHERES 2
-#define N_PLANES 4
 #define N_DISKS 3
 #define N_QUADS 2
-#define N_BOXES 2
+#define N_BOXES 3
 
 
 //-----------------------------------------------------------------------
@@ -21,14 +19,11 @@ vec2 hitUV;
 float hitObjectID;
 int hitType = -100;
 
-struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; int type; };
 struct Plane { vec4 pla; vec3 emission; vec3 color; int type; };
 struct Disk { float radius; vec3 pos; vec3 normal; vec3 emission; vec3 color; int type; };
 struct Quad { vec3 normal; vec3 v0; vec3 v1; vec3 v2; vec3 v3; vec3 emission; vec3 color; int type; };
 struct Box { vec3 minCorner; vec3 maxCorner; vec3 emission; vec3 color; int type; };
 
-Sphere spheres[N_SPHERES];
-Plane planes[N_PLANES];
 Disk disks[N_DISKS];
 Quad quads[N_QUADS];
 Box boxes[N_BOXES];
@@ -37,15 +32,15 @@ Box boxes[N_BOXES];
 
 #include <pathtracing_calc_fresnel_reflectance>
 
-#include <pathtracing_plane_intersect>
+#include <pathtracing_sphere_intersect>
 
 #include <pathtracing_disk_intersect>
 
-#include <pathtracing_quad_intersect>
-
 #include <pathtracing_box_intersect>
 
-#include <pathtracing_sphere_intersect>
+#include <pathtracing_box_interior_intersect>
+
+#include <pathtracing_quad_intersect>
 	
 #include <pathtracing_sample_quad_light>
 
@@ -795,7 +790,29 @@ float SceneIntersect( )
 	hitObjectID = -INFINITY;
 	
 	// first, intersect all regular objects in the scene
-	
+
+	d = BoxInteriorIntersect(boxes[2].minCorner, boxes[2].maxCorner, rayOrigin, rayDirection, n);
+	if (d < t)
+	{
+		t = d;
+		hitNormal = n;
+		hitEmission = boxes[2].emission;
+		hitColor = boxes[2].color;
+		hitType = boxes[2].type;
+		hitObjectID = float(objectCount);
+
+		if (n == vec3(-1,0,0))
+		{
+			hitColor = vec3(0.15,0.05,0.15);
+		}
+		if (n == vec3(0,1,0))
+		{
+			hitColor = vec3(1);
+			hitType = CHECK;
+		}
+	}
+	objectCount++;
+
 	for (int i = 0; i < N_QUADS; i++)
         {
 		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, rayOrigin, rayDirection, false);
@@ -810,20 +827,6 @@ float SceneIntersect( )
 		}
 		objectCount++;
 	}
-	
-	d = SphereIntersect( spheres[0].radius, spheres[0].position, rayOrigin, rayDirection );	
-	if (d < t)
-	{
-		t = d;
-		//n = (rayOrigin + rayDirection * d) - spheres[0].position;
-		n = vec3(0,1,0);
-		hitNormal = n;
-		hitEmission = spheres[0].emission;
-		hitColor = spheres[0].color;
-		hitType = spheres[0].type;
-		hitObjectID = float(objectCount);
-	}
-	objectCount++;
         
 	for (int i = 0; i < N_BOXES; i++)
         {
@@ -836,21 +839,6 @@ float SceneIntersect( )
 			hitEmission = boxes[i].emission;
 			hitColor = boxes[i].color;
 			hitType = boxes[i].type;
-			hitObjectID = float(objectCount);
-		}
-		objectCount++;
-        }
-	
-	for (int i = 0; i < N_PLANES; i++)
-        {
-		d = PlaneIntersect( planes[i].pla, rayOrigin, rayDirection );
-		if (d < t)
-		{
-			t = d;
-			hitNormal = planes[i].pla.xyz;
-			hitEmission = planes[i].emission;
-			hitColor = planes[i].color;
-			hitType = planes[i].type;
 			hitObjectID = float(objectCount);
 		}
 		objectCount++;
@@ -889,7 +877,7 @@ float SceneIntersect( )
 	objectCount++;
 	
 	// pink and blue sphere-cylinders along right wall
-	A_near = CSG_SphereIntersect( 20.0, vec3(250, 20.5, 30), rayOrigin, rayDirection, A_n1, A_n2, A_far);
+	A_near = CSG_SphereIntersect( 20.0, vec3(250, 20, 30), rayOrigin, rayDirection, A_n1, A_n2, A_far);
 	B_near = CSG_OpenCylinderIntersect( vec3(-INFINITY, 20, 30), vec3(INFINITY, 20, 30), 8.0, rayOrigin, rayDirection, B_n1, B_n2, B_far );
 	d = operation_SolidA_Minus_SolidB( A_near, A_far, B_near, B_far, A_n1, A_n2, B_n1, B_n2, n );
 	if (d < t)
@@ -904,7 +892,7 @@ float SceneIntersect( )
 	objectCount++;
 	
 	A_near = CSG_OpenCylinderIntersect( vec3(220, 20, 115), vec3(295, 20, 115), 8.0, rayOrigin, rayDirection, A_n1, A_n2, A_far );
-	B_near = CSG_SphereIntersect( 20.0, vec3(250, 21, 115), rayOrigin, rayDirection, B_n1, B_n2, B_far);
+	B_near = CSG_SphereIntersect( 20.0, vec3(250, 20, 115), rayOrigin, rayDirection, B_n1, B_n2, B_far);
 	d = operation_HollowA_Minus_SolidB( A_near, A_far, B_near, B_far, A_n1, A_n2, B_n1, B_n2, n );
 	if (d < t)
 	{
@@ -917,7 +905,7 @@ float SceneIntersect( )
 	}
 	objectCount++;
 	
-	A_near = CSG_SphereIntersect( 20.0, vec3(250, 21, 200), rayOrigin, rayDirection, A_n1, A_n2, A_far);
+	A_near = CSG_SphereIntersect( 20.0, vec3(250, 20, 200), rayOrigin, rayDirection, A_n1, A_n2, A_far);
 	B_near = CSG_OpenCylinderIntersect( vec3(220, 20, 200), vec3(280, 20, 200), 8.0, rayOrigin, rayDirection, B_n1, B_n2, B_far );
 	d = operation_HollowA_Plus_HollowB( A_near, A_far, B_near, B_far, A_n1, A_n2, B_n1, B_n2, n );
 	if (d < t)
@@ -1204,18 +1192,12 @@ void SetupScene(void)
 	vec3 L1 = vec3(1.0, 1.0, 1.0) * 2.0;// White light
 	float ceilingHeight = 300.0;
 	
-	quads[0] = Quad( vec3( 0.0,-1.0, 0.0), vec3(-150.0, ceilingHeight,-200.0), vec3(150.0, ceilingHeight,-200.0), vec3(150.0, ceilingHeight,-25.0), vec3(-150.0, ceilingHeight,-25.0), L1, z, LIGHT);// rectangular Area Light in ceiling
-	quads[1] = Quad( vec3( 0.0,-1.0, 0.0), vec3(-150.0, ceilingHeight,25.0), vec3(150.0, ceilingHeight,25.0), vec3(150.0, ceilingHeight,200.0), vec3(-150.0, ceilingHeight,200.0), L1, z, LIGHT);// rectangular Area Light in ceiling
+	quads[0] = Quad( vec3(0,-1,0), vec3(-150, ceilingHeight,-200), vec3(150, ceilingHeight,-200), vec3(150, ceilingHeight,-25), vec3(-150, ceilingHeight,-25), L1, z, LIGHT);// rectangular Area Light in ceiling
+	quads[1] = Quad( vec3(0,-1,0), vec3(-150, ceilingHeight, 25), vec3(150, ceilingHeight, 25), vec3(150, ceilingHeight, 200), vec3(-150, ceilingHeight, 200), L1, z, LIGHT);// rectangular Area Light in ceiling
 	
-	spheres[0] = Sphere(100000.0, vec3(  0.0, 100000.0, 0.0), z, vec3(1.0), CHECK);//Checkered Floor
-        
-	boxes[0] = Box( vec3(263.0,0.0,-90.0), vec3(270.0,90.0,-140.0), z, vec3(0.2,0.9,0.7), REFR);//Glass Box
-	boxes[1] = Box( vec3(269.0,6.0,-96.0), vec3(264.0,84.0,-134.0), z, vec3(0.0,0.0,0.0), DIFF);//Diffuse Box
-	
-	planes[0] = Plane( vec4( 0,0,1,  -300.0), z, vec3(0.7), DIFF);//Gray Wall in front of camera
-	planes[1] = Plane( vec4( 0,0,-1, -300.0), z, vec3(0.7), DIFF);//Gray Wall behind camera
-	planes[2] = Plane( vec4(-1,0,0,  -300.0), z, vec3(0.15,0.05,0.15), DIFF);//Purple Wall on the right
-	planes[3] = Plane( vec4( 0,-1,0, -301.0), z, vec3(0.7), DIFF);//Ceiling
+	boxes[0] = Box( vec3(263,0,-90), vec3(270,90,-140), z, vec3(0.2,0.9,0.7), REFR);//Glass Box
+	boxes[1] = Box( vec3(269,6,-96), vec3(264,84,-134), z, vec3(0.0,0.0,0.0), DIFF);//Diffuse Box
+	boxes[2] = Box( vec3(-100000,0,-300), vec3(300,301,300), z, vec3(0.7), DIFF); // museum room interior
 	
 	disks[0] = Disk( 8.0, vec3(220, 20, 115), vec3(-1,0,0), z, vec3(0.2,0.5,1.0), COAT);
 	disks[1] = Disk( 8.0, vec3(220, 20, 200), vec3(-1,0,0), z, vec3(1.0,0.0,0.7), REFR);
