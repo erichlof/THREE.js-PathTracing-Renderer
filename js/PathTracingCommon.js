@@ -2697,170 +2697,7 @@ vec3 Get_Sky_Color(vec3 rayDir)
 }
 `;
 
-THREE.ShaderChunk[ 'pathtracing_pbr_material_functions' ] = `
 
-/*  All of the following GGX functions come from this great tutorial/resource:
-	http://cwyman.org/code/dxrTutors/tutors/Tutor14/tutorial14.md.html */
-
-
-// The NDF for GGX, see Eqn 19 from 
-//    http://blog.selfshadow.com/publications/s2012-shading-course/hoffman/s2012_pbs_physics_math_notes.pdf
-//
-// This function can be used for "D" in the Cook-Torrance model:  D*G*F / (4*NdotL*NdotV)
-float ggxNormalDistribution(float NdotH, float roughness)
-{
-	float a2 = roughness * roughness;
-	float d = ((NdotH * a2 - NdotH) * NdotH + 1.0);
-	return a2 / max(0.001, (d * d * PI));
-}
-
-// This from Schlick 1994, modified as per Karas in SIGGRAPH 2013 "Physically Based Shading" course
-//
-// This function can be used for "G" in the Cook-Torrance model:  D*G*F / (4*NdotL*NdotV)
-float ggxSchlickMaskingTerm(float NdotL, float NdotV, float roughness)
-{
-	// Karis notes they use alpha / 2 (or roughness^2 / 2)
-	float k = (roughness * roughness) * 0.5;
-
-	// Karis also notes they can use the following equation, but only for analytical lights
-	//float k = (roughness + 1.0) * (roughness + 1.0) / 8.0; 
-
-	// Compute G(v) and G(l).  These equations directly from Schlick 1994
-	float g_v = NdotV / (NdotV * (1.0 - k) + k);
-	float g_l = NdotL / (NdotL * (1.0 - k) + k);
-
-	// Return G(v) * G(l)
-	return g_v * g_l;
-}
-
-// Traditional Schlick approximation to the Fresnel term (also from Schlick 1994)
-//
-// This function can be used for "F" in the Cook-Torrance model:  D*G*F / (4*NdotL*NdotV)
-vec3 schlickFresnel(vec3 f0, float u)
-{
-	float U = 1.0 - u;
-	return f0 + (vec3(1) - f0) * (U * U * U * U * U); // same as  * pow(1.0 - u, 5.0);
-}
-
-// Get a GGX half vector / microfacet normal, sampled according to the distribution computed by
-//     the function ggxNormalDistribution() above.  
-//
-// When using this function to sample, the probability density is pdf = D * NdotH / (4 * HdotV)
-vec3 getGGXMicrofacet(float roughness, vec3 nl)
-{
-	float r0 = rng();
-	// GGX NDF sampling
-	float a2 = roughness * roughness;
-	float cosThetaH = sqrt(max(0.0, (1.0 - r0) / ((a2 - 1.0) * r0 + 1.0)));
-	float sinThetaH = sqrt(max(0.0, 1.0 - cosThetaH * cosThetaH));
-	float phiH = rng() * TWO_PI;
-
-	// Get an orthonormal basis from the normal
-	vec3 T = normalize(cross(nl.yzx, nl));
-	vec3 B = cross(nl, T);
-
-	// Get our GGX NDF sample (i.e., the half vector)
-	return normalize(T * sinThetaH * cos(phiH) + B * sinThetaH * sin(phiH) + nl * cosThetaH);
-}
-
-float luminance(vec3 color)
-{ 
-	//return dot(color, vec3(0.299, 0.587, 0.114));
-	return dot(color, vec3(0.2126, 0.7152, 0.0722));
-}
-// Our material has both a diffuse and a specular lobe.  
-//     With what probability should we sample the diffuse one?
-float probabilityToSampleDiffuse(vec3 difColor, vec3 specColor)
-{
-	float lumDiffuse = max(0.001, luminance(difColor));
-	float lumSpecular = max(0.001, luminance(specColor));
-	return lumDiffuse / (lumDiffuse + lumSpecular);
-}
-
-vec3 ggxDirect(Sphere light, vec3 hitPoint, vec3 N, vec3 difColor, vec3 specColor, float roughness, out vec3 L)
-{
-	vec3 V = -rayDirection;
-	float weight;
-	L = sampleSphereLight(hitPoint, N, light, weight);
-	// Compute our lambertian term (N dot L)
-	float NdotL = clamp(dot(N, L), 0.001, 1.0);
-
-	// Compute half vectors and additional dot products for GGX
-	vec3 H = normalize(V + L);
-	float NdotH = clamp(dot(N, H), 0.001, 1.0);
-	float LdotH = clamp(dot(L, H), 0.001, 1.0);
-	float NdotV = clamp(dot(N, V), 0.001, 1.0);
-
-	// Evaluate terms for our GGX BRDF model
-	float D = ggxNormalDistribution(NdotH, roughness);
-	float G = ggxSchlickMaskingTerm(NdotL, NdotV, roughness);
-	vec3  F = schlickFresnel(specColor, LdotH);
-
-	// Evaluate the Cook-Torrance Microfacet BRDF model
-	//     Cancel out NdotL here & the next eq. to avoid catastrophic numerical precision issues.
-	vec3 ggxTerm = D * G * F / (4.0 * NdotV /* * NdotL */);
-
-	// Compute our final color (combining diffuse lobe plus specular GGX lobe)
-	return (/* NdotL * */ ggxTerm + weight * difColor / PI);
-}
-
-vec3 ggxIndirect(vec3 hitPoint, vec3 N, vec3 difColor, vec3 specColor, float roughness, out vec3 L, inout int diffuseCount)
-{
-	// We have to decide whether we sample our diffuse or specular/ggx lobe.
-	float probDiffuse = probabilityToSampleDiffuse(difColor, specColor);
-	bool chooseDiffuse = rng() < probDiffuse;
-
-	vec3 V = -rayDirection;
-	// We'll need NdotV for both diffuse and specular...
-	float NdotV = clamp(dot(N, V), 0.001, 1.0);
-
-	// If we randomly selected to sample our diffuse lobe...
-	if (chooseDiffuse)
-	{
-		diffuseCount++;
-		// Choose a randomly selected cosine-sampled diffuse ray.
-		L = randomCosWeightedDirectionInHemisphere(N);
-
-		// Check to make sure our randomly selected, normal mapped diffuse ray didn't go below the surface.
-		//if (dot(noNormalN, L) <= 0.0) return vec3(0, 0, 0);
-
-		// Accumulate the color: (NdotL * incomingLight * dif / pi) 
-		// Probability of sampling:  (NdotL / pi) * probDiffuse
-		return difColor / probDiffuse;
-	}
-	// Otherwise we randomly selected to sample our GGX lobe
-	else
-	{
-		// Randomly sample the NDF to get a microfacet in our BRDF to reflect off of
-		vec3 H = getGGXMicrofacet(roughness, N);
-
-		// Compute the outgoing direction based on this (perfectly reflective) microfacet
-		L = reflect(rayDirection, H);
-
-		// Check to make sure our randomly selected, normal mapped diffuse ray didn't go below the surface.
-		//if (dot(noNormalN, L) <= 0.0) return vec3(0, 0, 0);
-
-		// Compute some dot products needed for shading
-		float NdotL = clamp(dot(N, L), 0.001, 1.0);
-		float NdotH = clamp(dot(N, H), 0.001, 1.0);
-		float LdotH = clamp(dot(L, H), 0.001, 1.0);
-
-		// Evaluate our BRDF using a microfacet BRDF model
-		float D = ggxNormalDistribution(NdotH, roughness);        // The GGX normal distribution
-		float G = ggxSchlickMaskingTerm(NdotL, NdotV, roughness); // Use Schlick's masking term approx
-		vec3  F = schlickFresnel(specColor, LdotH);               // Use Schlick's approx to Fresnel
-		vec3  ggxTerm = D * G * F / (4.0 * NdotL * NdotV);        // The Cook-Torrance microfacet BRDF
-
-		// What's the probability of sampling vector H from getGGXMicrofacet()?
-		float  ggxProb = D * NdotH / (4.0 * LdotH);
-
-		// Accumulate the color:  ggx-BRDF * incomingLight * NdotL / probability-of-sampling
-		//    -> Should really simplify the math above.
-		return NdotL * ggxTerm / (ggxProb * (1.0 - probDiffuse));
-	}
-}
-
-`;
 
 THREE.ShaderChunk[ 'pathtracing_random_functions' ] = `
 // globals used in rand() function
@@ -3023,10 +2860,10 @@ float calcFresnelReflectance(vec3 rayDirection, vec3 n, float etai, float etat, 
 	}
 	
 	ratioIoR = etai / etat;
-	float sint = ratioIoR * sqrt(1.0 - (cosi * cosi));
-	if (sint >= 1.0) 
+	float sint2 = ratioIoR * ratioIoR * (1.0 - (cosi * cosi));
+	if (sint2 >= 1.0) 
 		return 1.0; // total internal reflection
-	float cost = sqrt(1.0 - (sint * sint));
+	float cost = sqrt(1.0 - sint2);
 	cosi = abs(cosi);
 	float Rs = ((etat * cosi) - (etai * cost)) / ((etat * cosi) + (etai * cost));
 	float Rp = ((etai * cosi) - (etat * cost)) / ((etai * cosi) + (etat * cost));
