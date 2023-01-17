@@ -52,7 +52,7 @@ vec3 sampleQuadLight(vec3 x, vec3 nl, Quad light, out float weight)
 
 
 //----------------------------------------------------------------------------------------------------------------------------------------
-float BoxMissingSidesIntersect( vec3 minCorner, vec3 maxCorner, vec3 rayOrigin, vec3 rayDirection, out vec3 normal, out bool isRayExiting )
+float BoxMissingSidesIntersect( vec3 minCorner, vec3 maxCorner, vec3 rayOrigin, vec3 rayDirection, out vec3 normal, out int isRayExiting )
 //----------------------------------------------------------------------------------------------------------------------------------------
 {
 	vec3 invDir = 1.0 / rayDirection;
@@ -72,7 +72,7 @@ float BoxMissingSidesIntersect( vec3 minCorner, vec3 maxCorner, vec3 rayOrigin, 
 	if (t0 > 0.0) // if we are outside the box
 	{
 		normal = -sign(rayDirection) * step(tmin.yzx, tmin) * step(tmin.zxy, tmin);
-		isRayExiting = false;
+		isRayExiting = FALSE;
 		ip = rayOrigin + rayDirection * t0;
 		if (normal == vec3(1,0,0) && abs(ip.y) < 2.0 && abs(ip.z) < 2.0)
 			t0 = INFINITY;
@@ -83,7 +83,7 @@ float BoxMissingSidesIntersect( vec3 minCorner, vec3 maxCorner, vec3 rayOrigin, 
 	if ((t0 < 0.0 || t0 == INFINITY) && t1 > 0.0) // if we are inside the box
 	{
 		normal = -sign(rayDirection) * step(tmax, tmax.yzx) * step(tmax, tmax.zxy);
-		isRayExiting = true;
+		isRayExiting = TRUE;
 		ip = rayOrigin + rayDirection * t1;
 		if (normal == vec3(-1,0,0) && abs(ip.y) < 2.0 && abs(ip.z) < 2.0)
 			t1 = INFINITY;
@@ -104,7 +104,7 @@ float SceneIntersect( vec3 rOrigin, vec3 rDirection, out vec3 hitNormal, out vec
 	float d;
 	float t = INFINITY;
 	int objectCount = 0;
-	bool isRayExiting = false;
+	int isRayExiting = FALSE;
 	
 	hitObjectID = -INFINITY;
 
@@ -120,19 +120,19 @@ float SceneIntersect( vec3 rOrigin, vec3 rDirection, out vec3 hitNormal, out vec
 		hitColor = vec3(1);
 		hitType = DIFF;
 
-		if (isRayExiting == true && n == vec3(1,0,0)) // left wall
+		if (isRayExiting == TRUE && n == vec3(1,0,0)) // left wall
 		{
 			hitColor = vec3(0.7, 0.05, 0.05);
 		}
-		else if (isRayExiting == true && n == vec3(-1,0,0)) // right wall
+		else if (isRayExiting == TRUE && n == vec3(-1,0,0)) // right wall
 		{
 			hitColor = vec3(0.05, 0.05, 0.7);
 		}
-		else if (isRayExiting == false && n == vec3(-1,0,0)) // left wall
+		else if (isRayExiting == FALSE && n == vec3(-1,0,0)) // left wall
 		{
 			hitColor = vec3(0.7, 0.05, 0.05);
 		}
-		else if (isRayExiting == false && n == vec3(1,0,0)) // right wall
+		else if (isRayExiting == FALSE && n == vec3(1,0,0)) // right wall
 		{
 			hitColor = vec3(0.05, 0.05, 0.7);
 		}
@@ -158,7 +158,7 @@ float SceneIntersect( vec3 rOrigin, vec3 rDirection, out vec3 hitNormal, out vec
 	
 	for (int i = 0; i < N_QUADS; i++)
 	{
-		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, rOrigin, rDirection, true );
+		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, rOrigin, rDirection, TRUE );
 		if (d < t)
 		{
 			t = d;
@@ -242,9 +242,8 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	int diffuseCount = 0;
 	int previousIntersecType = -100;
 	
-	bool rayWasRefracted = false;
-	bool bounceIsSpecular = true;
-	bool sampleLight = false;
+	int bounceIsSpecular = TRUE;
+	int sampleLight = FALSE;
 
 	
 	// depth of 4 is required for higher quality glass refraction
@@ -308,7 +307,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		// now do the normal path tracing routine with the camera ray
 		if (eHitType == LIGHT)
 		{
-			if (bounceIsSpecular || sampleLight)
+			if (bounceIsSpecular == TRUE || sampleLight == TRUE)
 			{
 				trans = exp( -((d + camt) * FOG_DENSITY) );
 				accumCol += mask * eHitEmission * trans;	
@@ -319,7 +318,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			//break;
 		}
 		
-		if (sampleLight)
+		if (sampleLight == TRUE)
 			break;
 		
 		
@@ -329,7 +328,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			mask *= eHitColor;
 
-			bounceIsSpecular = false;
+			bounceIsSpecular = FALSE;
 
 			if (diffuseCount == 1 && rand() < 0.5)
 			{
@@ -355,7 +354,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			rayDirection = dirToLight;
 			rayOrigin = x + nl * uEPS_intersect;
 			
-			sampleLight = true;
+			sampleLight = TRUE;
 			continue;	
 		}
 		
@@ -366,7 +365,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			rayDirection = reflect(rayDirection, nl);
 			rayOrigin = x + nl * uEPS_intersect;
 			
-			//bounceIsSpecular = true; // turn on mirror caustics
+			//bounceIsSpecular = TRUE; // turn on mirror caustics
 			
 			continue;
 		}
@@ -389,7 +388,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
 				rayOrigin = x + nl * uEPS_intersect;
 				    
-				//bounceIsSpecular = true; // turn on reflecting caustics
+				//bounceIsSpecular = TRUE; // turn on reflecting caustics
 			    	continue;	
 			}
 			// transmit ray through surface
@@ -401,7 +400,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			rayDirection = tdir;
 			rayOrigin = x - nl * uEPS_intersect;
 
-			//bounceIsSpecular = true; // turn on refracting caustics
+			//bounceIsSpecular = TRUE; // turn on refracting caustics
 			continue;
 			
 		} // end if (eHitType == REFR)
@@ -427,7 +426,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			diffuseCount++;
 
-			bounceIsSpecular = false;
+			bounceIsSpecular = FALSE;
 
 			mask *= TP;
 			mask *= eHitColor;
@@ -456,7 +455,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			rayDirection = dirToLight;
 			rayOrigin = x + nl * uEPS_intersect;
 			
-			sampleLight = true;
+			sampleLight = TRUE;
 			continue;
 			
 		} //end if (eHitType == COAT)
