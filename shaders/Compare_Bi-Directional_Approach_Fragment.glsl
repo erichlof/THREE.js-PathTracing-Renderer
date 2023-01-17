@@ -41,12 +41,12 @@ float SceneIntersect( )
 	vec3 rObjOrigin, rObjDirection;
         float d;
 	float t = INFINITY;
-	bool isRayExiting = false;
+	int isRayExiting = FALSE;
 	int objectCount = 0;
 	
 	hitObjectID = -INFINITY;
 	
-	d = QuadIntersect( quads[0].v0, quads[0].v1, quads[0].v2, quads[0].v3, rayOrigin, rayDirection, false );
+	d = QuadIntersect( quads[0].v0, quads[0].v1, quads[0].v2, quads[0].v3, rayOrigin, rayDirection, FALSE );
 	if (d < t)
 	{
 		t = d;
@@ -164,10 +164,10 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	int diffuseCount = 0;
 	int previousIntersecType = -100;
 
-	bool bounceIsSpecular = true;
-	bool sampleLight = false;
-	bool ableToJoinPaths = false;
-	bool diffuseFound = false;
+	int bounceIsSpecular = TRUE;
+	int sampleLight = FALSE;
+	int ableToJoinPaths = FALSE;
+	int diffuseFound = FALSE;
 
 	// first light trace
 	rayDirection = quads[0].normal;
@@ -177,7 +177,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	if (t < INFINITY && hitType == DIFF)
 	{
 		hitNormal = normalize(hitNormal);
-		diffuseFound = true;
+		diffuseFound = TRUE;
 		lightHitPos = rayOrigin + rayDirection * t;
 		weight = max(0.0, dot(-rayDirection, hitNormal));
 		lightHitEmission *= hitColor  * weight;
@@ -210,7 +210,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	}
 
 	// this allows the original light to be the lightsource once in a while
-	if ( !diffuseFound || rng() < 0.5 )
+	if ( diffuseFound == FALSE || rng() < 0.5 )
 	{
 		lightHitPos = randPointOnLight;
 		lightHitEmission = quads[0].emission;
@@ -253,7 +253,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			if (diffuseCount == 0)
 				pixelSharpness = 1.01;
 			
-			if (sampleLight)
+			if (sampleLight == TRUE)
 				accumCol = mask * hitEmission * max(0.0, dot(-rayDirection, nl));
 
 			else
@@ -263,11 +263,11 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		}
 
 
-		if (hitType == DIFF && sampleLight)
+		if (hitType == DIFF && sampleLight == TRUE)
 		{
-			ableToJoinPaths = abs(lightHitDistance - t) < 0.5;
+			ableToJoinPaths = abs(lightHitDistance - t) < 0.5 ? TRUE : FALSE;
 
-			if (ableToJoinPaths)
+			if (ableToJoinPaths == TRUE)
 			{
 				weight = max(0.0, dot(nl, -rayDirection));
 				accumCol = mask * lightHitEmission * weight;
@@ -276,9 +276,9 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			break;
 		}
 
-		// if we reached this point and sampleLight is still true, then we can 
-		//  exit because the light was not found
-		if (sampleLight)
+		// if we get here and sampleLight is still TRUE, shadow ray failed to find the light source 
+		// the ray hit an occluding object along its way to the light
+		if (sampleLight == TRUE)
 			break;
 
 
@@ -290,7 +290,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			mask *= hitColor;
 
-			bounceIsSpecular = false;
+			bounceIsSpecular = FALSE;
 
 			if (diffuseCount < 3 && rand() < 0.5)
 			{	
@@ -311,7 +311,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			rayOrigin = x + nl * uEPS_intersect;
 			lightHitDistance = distance(rayOrigin, lightHitPos);
 
-			sampleLight = true;
+			sampleLight = TRUE;
 			continue;
 			
 		} // end if (hitType == DIFF)
@@ -325,7 +325,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			rayDirection = reflect(rayDirection, nl);
 			rayOrigin = x + nl * uEPS_intersect;
 
-			//bounceIsSpecular = true; // turn on mirror caustics
+			//bounceIsSpecular = TRUE; // turn on mirror caustics
 			continue;
 		}
 		
