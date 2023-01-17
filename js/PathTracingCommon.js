@@ -50,6 +50,8 @@ in vec2 vUv;
 #define DARKWOOD 16
 #define PAINTING 17
 #define METALCOAT 18
+#define TRUE 1
+#define FALSE 0
 `;
 
 THREE.ShaderChunk[ 'pathtracing_skymodel_defines' ] = `
@@ -167,12 +169,12 @@ float SlabIntersect( float radius, vec3 normal, vec3 rayOrigin, vec3 rayDirectio
 `;
 
 THREE.ShaderChunk[ 'pathtracing_sphere_intersect' ] = `
-/* bool solveQuadratic(float A, float B, float C, out float t0, out float t1)
+/* int solveQuadratic(float A, float B, float C, out float t0, out float t1)
 {
 	float discrim = B * B - 4.0 * A * C;
     
 	if (discrim < 0.0)
-        	return false;
+        	return FALSE;
     
 	float rootDiscrim = sqrt(discrim);
 	float Q = (B > 0.0) ? -0.5 * (B + rootDiscrim) : -0.5 * (B - rootDiscrim); 
@@ -183,7 +185,7 @@ THREE.ShaderChunk[ 'pathtracing_sphere_intersect' ] = `
 	t1 = Q / A; 
 	t0 = C / Q;
 	
-	return true;
+	return TRUE;
 } */
 // optimized algorithm for solving quadratic equations developed by Dr. Po-Shen Loh -> https://youtu.be/XKBX0r3J-9Y
 // Adapted to root finding (ray t0/t1) for all quadric shapes (sphere, ellipsoid, cylinder, cone, etc.) by Erich Loftis
@@ -215,7 +217,7 @@ float SphereIntersect( float rad, vec3 pos, vec3 rayOrigin, vec3 rayDirection )
 
 THREE.ShaderChunk[ 'pathtracing_unit_bounding_sphere_intersect' ] = `
 
-float UnitBoundingSphereIntersect( vec3 ro, vec3 rd, out bool insideSphere )
+float UnitBoundingSphereIntersect( vec3 ro, vec3 rd, out int insideSphere )
 {
 	float t0, t1;
 	float a = dot(rd, rd);
@@ -224,12 +226,12 @@ float UnitBoundingSphereIntersect( vec3 ro, vec3 rd, out bool insideSphere )
 	solveQuadratic(a, b, c, t0, t1);
 	if (t0 > 0.0)
 	{
-		insideSphere = false;
+		insideSphere = FALSE;
 		return t0;
 	}
 	if (t1 > 0.0)
 	{
-		insideSphere = true;
+		insideSphere = TRUE;
 		return t1;
 	}
 
@@ -2476,13 +2478,13 @@ float UnitTorusIntersect(vec3 ro, vec3 rd, float k, out vec3 n)
 
 
 THREE.ShaderChunk[ 'pathtracing_quad_intersect' ] = `
-float TriangleIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 rayOrigin, vec3 rayDirection, bool isDoubleSided )
+float TriangleIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 rayOrigin, vec3 rayDirection, int isDoubleSided )
 {
 	vec3 edge1 = v1 - v0;
 	vec3 edge2 = v2 - v0;
 	vec3 pvec = cross(rayDirection, edge2);
 	float det = 1.0 / dot(edge1, pvec);
-	if ( !isDoubleSided && det < 0.0 ) 
+	if ( isDoubleSided == FALSE && det < 0.0 ) 
 		return INFINITY;
 	vec3 tvec = rayOrigin - v0;
 	float u = dot(tvec, pvec) * det;
@@ -2492,7 +2494,7 @@ float TriangleIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 rayOrigin, vec3 rayDire
 	return (u < 0.0 || u > 1.0 || v < 0.0 || u + v > 1.0 || t <= 0.0) ? INFINITY : t;
 }
 //--------------------------------------------------------------------------------------------------------------
-float QuadIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 v3, vec3 rayOrigin, vec3 rayDirection, bool isDoubleSided )
+float QuadIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 v3, vec3 rayOrigin, vec3 rayDirection, int isDoubleSided )
 //--------------------------------------------------------------------------------------------------------------
 {
 	return min(TriangleIntersect(v0, v1, v2, rayOrigin, rayDirection, isDoubleSided), 
@@ -2502,7 +2504,7 @@ float QuadIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 v3, vec3 rayOrigin, vec3 ra
 
 THREE.ShaderChunk[ 'pathtracing_box_intersect' ] = `
 //-----------------------------------------------------------------------------------------------------------------------------
-float BoxIntersect( vec3 minCorner, vec3 maxCorner, vec3 rayOrigin, vec3 rayDirection, out vec3 normal, out bool isRayExiting )
+float BoxIntersect( vec3 minCorner, vec3 maxCorner, vec3 rayOrigin, vec3 rayDirection, out vec3 normal, out int isRayExiting )
 //-----------------------------------------------------------------------------------------------------------------------------
 {
 	vec3 invDir = 1.0 / rayDirection;
@@ -2519,13 +2521,13 @@ float BoxIntersect( vec3 minCorner, vec3 maxCorner, vec3 rayOrigin, vec3 rayDire
 	if (t0 > 0.0) // if we are outside the box
 	{
 		normal = -sign(rayDirection) * step(tmin.yzx, tmin) * step(tmin.zxy, tmin);
-		isRayExiting = false;
+		isRayExiting = FALSE;
 		return t0;
 	}
 	if (t1 > 0.0) // if we are inside the box
 	{
 		normal = -sign(rayDirection) * step(tmax, tmax.yzx) * step(tmax, tmax.zxy);
-		isRayExiting = true;
+		isRayExiting = TRUE;
 		return t1;
 	}
 	return INFINITY;
