@@ -272,7 +272,7 @@ float checkCloudCover(vec3 rayOrigin, vec3 rayDirection)
 
 
 //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-float SceneIntersect( bool checkOcean )
+float SceneIntersect( int checkOcean )
 //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 {
 	vec3 rObjOrigin, rObjDirection;
@@ -292,7 +292,7 @@ float SceneIntersect( bool checkOcean )
 
 	int objectCount = 0;
 
-	bool isRayExiting = false;
+	int isRayExiting = FALSE;
 	
 	
 	
@@ -359,7 +359,7 @@ float SceneIntersect( bool checkOcean )
 
 	for (int i = 0; i < N_QUADS; i++)
         {
-		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, rayOrigin, rayDirection, true );
+		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, rayOrigin, rayDirection, TRUE );
 		if (d < t)
 		{
 			t = d;
@@ -417,7 +417,7 @@ float SceneIntersect( bool checkOcean )
 	// OCEAN 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////
 	
-	if ( !checkOcean )
+	if ( checkOcean == FALSE )
 	{
 		return t;
 	}
@@ -496,31 +496,36 @@ vec3 CalculateRadiance(out vec3 objectNormal, out vec3 objectColor, out float ob
 	
 	vec3 accumCol = vec3(0);
         vec3 mask = vec3(1);
+	vec3 reflectionMask = vec3(1);
+	vec3 reflectionRayOrigin = vec3(0);
+	vec3 reflectionRayDirection = vec3(0);
 	vec3 n, nl, x;
 	vec3 firstX = vec3(0);
 	vec3 tdir;
 	
 	float nc, nt, ratioIoR, Re, Tr;
-	float P, RP, TP;
+	//float P, RP, TP;
 	float weight;
 	float t = INFINITY;
 	float hitObjectID;
 	
 	int diffuseCount = 0;
 	int previousIntersecType = -100;
+	hitType = -100;
 
-	bool checkOcean = true;
-	bool skyHit = false;
-	bool sampleLight = false;
-	bool bounceIsSpecular = true;
-
+	int checkOcean = TRUE;
+	int skyHit = FALSE;
+	int sampleLight = FALSE;
+	int bounceIsSpecular = TRUE;
+	int willNeedReflectionRay = FALSE;
 	
 	
         for (int bounces = 0; bounces < 6; bounces++)
 	{
+		previousIntersecType = hitType;
 
 		t = SceneIntersect(checkOcean);
-		checkOcean = false;
+		checkOcean = FALSE;
 
 		if (t == INFINITY)
 		{
@@ -529,41 +534,53 @@ vec3 CalculateRadiance(out vec3 objectNormal, out vec3 objectColor, out float ob
 			if (bounces == 0) // ray hits sky first
 			{
 				pixelSharpness = 1.01;
-				skyHit = true;
+				skyHit = TRUE;
 				firstX = skyPos;
-				initialSkyColor = mask * skyColor;
-				accumCol = initialSkyColor;
+				initialSkyColor = skyColor;
+				accumCol += skyColor;
 				break; // exit early	
 			}
 			else if (bounces == 1 && previousIntersecType == SPEC) // ray reflects off of mirror box first, then hits sky
 			{
 				pixelSharpness = 1.01;
-				skyHit = true;
+				skyHit = TRUE;
 				firstX = skyPos;
 				initialSkyColor = mask * skyColor;
-				accumCol = initialSkyColor;
-				break; // exit early	
+				accumCol += initialSkyColor;
+				//break; // exit early	
 			}
-			else if (diffuseCount == 0 && previousIntersecType == REFR)
+			else if (diffuseCount == 0 && bounceIsSpecular == TRUE) // ray reflects off of the ocean
 			{
-				//skyHit = true;
+				pixelSharpness = 1.01;
+				//skyHit = TRUE;
 				firstX = skyPos;
 				initialSkyColor = mask * skyColor;
-				accumCol = initialSkyColor;
-				break; // exit early	
+				accumCol += initialSkyColor;
+				//break; // exit early	
 			}	
-			else if (sampleLight)
+			else if (sampleLight == TRUE) // diffuse direct sun light sampling (Cornell Box) 
 			{
-				accumCol = mask * skyColor;
-				break;
+				accumCol += mask * skyColor;
+				//break;
 			}
-			else if (diffuseCount > 0)
+			else if (diffuseCount > 0) // random diffuse ray hit sky (don't count Sun hits, otherwise will make fireflies)
 			{
 				weight = dot(rayDirection, uSunDirection) < 0.99 ? 1.0 : 0.0;
-				accumCol = mask * skyColor * weight;
-				break;
+				accumCol += mask * skyColor * weight;
+				//break;
 			}
-			
+
+			if (willNeedReflectionRay == TRUE)
+			{
+				mask = reflectionMask;
+				rayOrigin = reflectionRayOrigin;
+				rayDirection = reflectionRayDirection;
+
+				willNeedReflectionRay = FALSE;
+				bounceIsSpecular = TRUE;
+				sampleLight = FALSE;
+				continue;
+			}
 			// reached the sky light, so we can exit
 			break;
 		} // end if (t == INFINITY)
@@ -571,21 +588,47 @@ vec3 CalculateRadiance(out vec3 objectNormal, out vec3 objectColor, out float ob
 		
 		if (hitType == SEAFLOOR)
 		{
-			pixelSharpness = -1.0;
-
-			checkOcean = false;
 
 			float waterDotSun = max(0.0, dot(vec3(0,1,0), uSunDirection));
 			float waterDotCamera = max(0.4, dot(vec3(0,1,0), -cameraRayDirection));
 
-			accumCol = mask * hitColor * waterDotSun * waterDotCamera;
+			accumCol += mask * hitColor * waterDotSun * waterDotCamera;
+
+			if (willNeedReflectionRay == TRUE)
+			{
+				mask = reflectionMask;
+				rayOrigin = reflectionRayOrigin;
+				rayDirection = reflectionRayDirection;
+
+				willNeedReflectionRay = FALSE;
+				bounceIsSpecular = TRUE;
+				sampleLight = FALSE;
+				continue;
+			}
+
 			break;
 		} // end if (hitType == SEAFLOOR)
 
 
-		//if we get here and sampleLight is still true, shadow ray failed to find a light source
-		if (sampleLight) 	
+		// if we get here and sampleLight is still TRUE, shadow ray failed to find the light source 
+		// the ray hit an occluding object along its way to the light
+		if (sampleLight == TRUE)
+		{
+			if (willNeedReflectionRay == TRUE)
+			{
+				mask = reflectionMask;
+				rayOrigin = reflectionRayOrigin;
+				rayDirection = reflectionRayDirection;
+
+				willNeedReflectionRay = FALSE;
+				bounceIsSpecular = TRUE;
+				sampleLight = FALSE;
+				diffuseCount = 0;
+				continue;
+			}
+
 			break;
+		}
 		
 		
 		
@@ -610,15 +653,12 @@ vec3 CalculateRadiance(out vec3 objectNormal, out vec3 objectColor, out float ob
 		
                 if (hitType == DIFF) // Ideal DIFFUSE reflection
                 {	
-			previousIntersecType = DIFF;
-
-			checkOcean = false;
 
 			diffuseCount++;
 
 			mask *= hitColor;
 
-			bounceIsSpecular = false;
+			bounceIsSpecular = FALSE;
 
 			if (diffuseCount == 1 && rand() < 0.5)
 			{
@@ -636,14 +676,13 @@ vec3 CalculateRadiance(out vec3 objectNormal, out vec3 objectColor, out float ob
 			mask *= diffuseCount == 1 ? 2.0 : 1.0;
 			mask *= weight * cloudShadowFactor;
 			
-			sampleLight = true;
+			sampleLight = TRUE;
 			continue;
                         
                 } // end if (hitType == DIFF)
 		
                 if (hitType == SPEC)  // Ideal SPECULAR reflection
                 {
-			previousIntersecType = SPEC;
 
 			mask *= hitColor;
 
@@ -651,41 +690,43 @@ vec3 CalculateRadiance(out vec3 objectNormal, out vec3 objectColor, out float ob
 			rayOrigin = x + nl * uEPS_intersect;
 
 			if (bounces == 0)
-				checkOcean = true;
+				checkOcean = TRUE;
 
-			//bounceIsSpecular = true; // turn on mirror caustics
+			//bounceIsSpecular = TRUE; // turn on mirror caustics
 			continue;
                 }
 		
 		if (hitType == REFR)  // Ideal dielectric REFRACTION
 		{
-			//previousIntersecType = REFR;
-			//above REFR setting must be placed under the if statement below that uses previousIntersecType
-
-			pixelSharpness = diffuseCount == 0 ? -1.0 : pixelSharpness;
-
-			checkOcean = false;
+			//pixelSharpness = diffuseCount == 0 ? -1.0 : pixelSharpness;
 			
 			nc = 1.0; // IOR of Air
 			nt = 1.33; // IOR of Water
 			Re = calcFresnelReflectance(rayDirection, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
-			P  = 0.25 + (0.5 * Re);
-                	RP = Re / P;
-                	TP = Tr / (1.0 - P);
 			
-			if (rand() < P && (bounces == 0 || (bounces == 1 && previousIntersecType == SPEC)) )
-			{	
-				previousIntersecType = REFR;
-				mask *= RP;
-				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
-				rayOrigin = x + nl * uEPS_intersect;
+			if ( (bounces == 0 || (bounces == 1 && previousIntersecType == SPEC)) )
+			{
+				reflectionMask = mask * Re;
+				reflectionRayDirection = reflect(rayDirection, nl); // reflect ray from surface
+				reflectionRayOrigin = x + nl * uEPS_intersect;
+				willNeedReflectionRay = TRUE;
+			}
+
+			if (Re == 1.0)
+			{
+				mask = reflectionMask;
+				rayOrigin = reflectionRayOrigin;
+				rayDirection = reflectionRayDirection;
+
+				willNeedReflectionRay = FALSE;
+				bounceIsSpecular = TRUE;
+				sampleLight = FALSE;
 				continue;
 			}
 			
-			previousIntersecType = REFR;
 
-			mask *= TP;
+			mask *= Tr;
 			mask *= hitColor;
 
 			// transmit ray through surface
@@ -699,27 +740,24 @@ vec3 CalculateRadiance(out vec3 objectNormal, out vec3 objectColor, out float ob
 		
 		if (hitType == WOOD)  // Diffuse object underneath with thin layer of Water on top
 		{
-			previousIntersecType = COAT;
 
-			checkOcean = false;
-			
 			nc = 1.0; // IOR of air
 			nt = 1.1; // IOR of ClearCoat 
 			Re = calcFresnelReflectance(rayDirection, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
-			P  = 0.25 + (0.5 * Re);
-                	RP = Re / P;
-                	TP = Tr / (1.0 - P);
 			
-			if (bounces == 0 && rand() < P)
+			if (bounces == 0)// || (bounces == 1 && hitObjectID != objectID && bounceIsSpecular == TRUE))
 			{
-				mask *= RP;
-				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
-				rayOrigin = x + nl * uEPS_intersect;
-				continue;
+				reflectionMask = mask * Re;
+				reflectionRayDirection = reflect(rayDirection, nl); // reflect ray from surface
+				reflectionRayOrigin = x + nl * uEPS_intersect;
+				willNeedReflectionRay = TRUE;
 			}
 
-			mask *= TP;
+			diffuseCount++;
+
+			if (bounces == 0)
+				mask *= Tr;
 			
 			float pattern = noise( vec2( x.x * 0.5 * x.z * 0.5 + sin(x.y*0.005) ) );
 			float woodPattern = 1.0 / max(1.0, pattern * 100.0);
@@ -730,9 +768,8 @@ vec3 CalculateRadiance(out vec3 objectNormal, out vec3 objectColor, out float ob
 			
 			mask *= hitColor;
 
-			diffuseCount++;
 
-			bounceIsSpecular = false;
+			bounceIsSpecular = FALSE;
 
 			if (diffuseCount == 1 && rand() < 0.5)
 			{
@@ -750,7 +787,7 @@ vec3 CalculateRadiance(out vec3 objectNormal, out vec3 objectColor, out float ob
 			weight = max(0.0, dot(rayDirection, nl)) * 0.05; // down-weight directSunLight contribution
 			mask *= weight;
 			
-			sampleLight = true;
+			sampleLight = TRUE;
 			continue;
 			
 		} //end if (hitType == WOOD)
@@ -761,7 +798,7 @@ vec3 CalculateRadiance(out vec3 objectNormal, out vec3 objectColor, out float ob
 	// atmospheric haze effect (aerial perspective)
 	float hitDistance;
 	
-	if ( skyHit ) // sky and clouds
+	if ( skyHit == TRUE ) // sky and clouds
 	{
 		vec3 cloudColor = cld.rgb / (cld.a + 0.00001);
 		vec3 sunColor = clamp( Get_Sky_Color(randomDirectionInSpecularLobe(uSunDirection, 0.1)), 0.0, 5.0 );
