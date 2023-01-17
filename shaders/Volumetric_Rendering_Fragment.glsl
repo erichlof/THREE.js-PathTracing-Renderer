@@ -148,9 +148,8 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	int diffuseCount = 0;
 	int previousIntersecType = -100;
 	
-	bool rayWasRefracted = false;
-	bool bounceIsSpecular = true;
-	bool sampleLight = false;
+	int bounceIsSpecular = TRUE;
+	int sampleLight = FALSE;
 
 	
 	// depth of 4 is required for higher quality glass refraction
@@ -210,7 +209,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		// now do the normal path tracing routine with the camera ray
 		if (eHitType == LIGHT)
 		{
-			if (bounceIsSpecular || sampleLight)
+			if (bounceIsSpecular == TRUE || sampleLight == TRUE)
 			{
 				trans = exp( -((d + camt) * FOG_DENSITY) );
 				accumCol += mask * eHitEmission * trans;	
@@ -228,7 +227,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			mask *= eHitColor;
 
-			bounceIsSpecular = false;
+			bounceIsSpecular = FALSE;
 
 			if (diffuseCount == 1 && rand() < 0.5)
 			{
@@ -246,7 +245,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			rayDirection = dirToLight;
 			rayOrigin = x + nl * uEPS_intersect;
 			
-			sampleLight = true;
+			sampleLight = TRUE;
 			continue;	
                 }
 		
@@ -257,7 +256,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			rayDirection = reflect(rayDirection, nl);
 			rayOrigin = x + nl * uEPS_intersect;
                         
-                        //bounceIsSpecular = true; // turn on mirror caustics
+                        //bounceIsSpecular = TRUE; // turn on mirror caustics
 			
                         continue;
                 }
@@ -280,7 +279,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
 				rayOrigin = x + nl * uEPS_intersect;
 				    
-				//bounceIsSpecular = true; // turn on reflecting caustics
+				//bounceIsSpecular = TRUE; // turn on reflecting caustics
 			    	continue;	
 			}
 			// transmit ray through surface
@@ -292,7 +291,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			rayDirection = tdir;
 			rayOrigin = x - nl * uEPS_intersect;
 
-			//bounceIsSpecular = true; // turn on refracting caustics
+			//bounceIsSpecular = TRUE; // turn on refracting caustics
 			continue;
 			
 		} // end if (eHitType == REFR)
@@ -318,7 +317,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			diffuseCount++;
 
-			bounceIsSpecular = false;
+			bounceIsSpecular = FALSE;
 
 			mask *= TP;
 			mask *= eHitColor;
@@ -339,7 +338,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			rayDirection = dirToLight;
 			rayOrigin = x + nl * uEPS_intersect;
 			
-			sampleLight = true;
+			sampleLight = TRUE;
 			continue;
 			
 		} //end if (eHitType == COAT)
