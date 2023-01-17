@@ -31,12 +31,12 @@ float hitRoughness;
 float hitObjectID;
 int hitTextureID;
 int hitType = -100;
-bool hitIsModel = false;
+int hitIsModel = FALSE;
 
-struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; float roughness; int type; bool isModel; };
-struct OpenCylinder { float radius; vec3 pos1; vec3 pos2; vec3 emission; vec3 color; float roughness; int type; bool isModel; };
-struct Quad { vec3 normal; vec3 v0; vec3 v1; vec3 v2; vec3 v3; vec3 emission; vec3 color; float roughness; int type; bool isModel; };
-struct Box { vec3 minCorner; vec3 maxCorner; vec3 emission; vec3 color; float roughness; int type; bool isModel; };
+struct Sphere { float radius; vec3 position; vec3 emission; vec3 color; float roughness; int type; int isModel; };
+struct OpenCylinder { float radius; vec3 pos1; vec3 pos2; vec3 emission; vec3 color; float roughness; int type; int isModel; };
+struct Quad { vec3 normal; vec3 v0; vec3 v1; vec3 v2; vec3 v3; vec3 emission; vec3 color; float roughness; int type; int isModel; };
+struct Box { vec3 minCorner; vec3 maxCorner; vec3 emission; vec3 color; float roughness; int type; int isModel; };
 
 Sphere spheres[N_SPHERES];
 OpenCylinder openCylinders[N_OPENCYLINDERS];
@@ -109,7 +109,7 @@ void GetBoxNodeData(const in float i, inout vec4 boxNodeData0, inout vec4 boxNod
 
 
 //--------------------------------------------------------------------------------------------------------
-float SceneIntersect( bool checkModels )
+float SceneIntersect( int checkModels )
 //--------------------------------------------------------------------------------------------------------
 {
 	vec4 currentBoxNodeData0, nodeAData0, nodeBData0, tmpNodeData0;
@@ -138,9 +138,9 @@ float SceneIntersect( bool checkModels )
 	
 	hitObjectID = -INFINITY;
 	
-	bool skip = false;
-	bool triangleLookupNeeded = false;
-	bool isRayExiting = false;
+	int skip = FALSE;
+	int triangleLookupNeeded = FALSE;
+	int isRayExiting = FALSE;
 
 	for (int i = 0; i < N_BOXES - 2; i++)
         {
@@ -192,7 +192,7 @@ float SceneIntersect( bool checkModels )
 	
 	for (int i = 0; i < N_QUADS; i++)
         {
-		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, rayOrigin, rayDirection, true );
+		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, rayOrigin, rayDirection, TRUE );
 		if (d < t)
 		{
 			t = d;
@@ -262,18 +262,18 @@ float SceneIntersect( bool checkModels )
 	
 	
 
-	if (!checkModels)
+	if (checkModels == FALSE)
 		return t;
 
 	
 	GetBoxNodeData(stackptr, currentBoxNodeData0, currentBoxNodeData1);
 	currentStackData = vec2(stackptr, BoundingBoxIntersect(currentBoxNodeData0.yzw, currentBoxNodeData1.yzw, rayOrigin, inverseDir));
 	stackLevels[0] = currentStackData;
-	skip = (currentStackData.y < t);
+	skip = (currentStackData.y < t) ? TRUE : FALSE;
 
 	while (true)
         {
-		if (!skip) 
+		if (skip == FALSE) 
                 {
                         // decrease pointer by 1 (0.0 is root level, 27.0 is maximum depth)
                         if (--stackptr < 0.0) // went past the root level, terminate loop
@@ -286,7 +286,7 @@ float SceneIntersect( bool checkModels )
 			
 			GetBoxNodeData(currentStackData.x, currentBoxNodeData0, currentBoxNodeData1);
                 }
-		skip = false; // reset skip
+		skip = FALSE; // reset skip
 		
 
 		if (currentBoxNodeData0.x < 0.0) // < 0.0 signifies an inner node
@@ -313,18 +313,18 @@ float SceneIntersect( bool checkModels )
 				currentStackData = stackDataB;
 				currentBoxNodeData0 = nodeBData0;
 				currentBoxNodeData1 = nodeBData1;
-				skip = true; // this will prevent the stackptr from decreasing by 1
+				skip = TRUE; // this will prevent the stackptr from decreasing by 1
 			}
 			if (stackDataA.y < t) // see if branch 'a' (the smaller rayT) needs to be processed 
 			{
-				if (skip) // if larger branch 'b' needed to be processed also,
+				if (skip == TRUE) // if larger branch 'b' needed to be processed also,
 					stackLevels[int(stackptr++)] = stackDataB; // cue larger branch 'b' for future round
 							// also, increase pointer by 1
 				
 				currentStackData = stackDataA;
 				currentBoxNodeData0 = nodeAData0; 
 				currentBoxNodeData1 = nodeAData1;
-				skip = true; // this will prevent the stackptr from decreasing by 1
+				skip = TRUE; // this will prevent the stackptr from decreasing by 1
 			}
 
 			continue;
@@ -352,14 +352,14 @@ float SceneIntersect( bool checkModels )
 			triangleID = id;
 			triangleU = tu;
 			triangleV = tv;
-			triangleLookupNeeded = true;
+			triangleLookupNeeded = TRUE;
 			///modelID = 0;
 		}
 	      
-        } // end while (true)
+        } // end while (TRUE)
 
 
-	if (triangleLookupNeeded)
+	if (triangleLookupNeeded == TRUE)
 	{
 		uv0 = ivec2( mod(triangleID + 0.0, 2048.0), (triangleID + 0.0) * INV_TEXTURE_WIDTH );
 		uv1 = ivec2( mod(triangleID + 1.0, 2048.0), (triangleID + 1.0) * INV_TEXTURE_WIDTH );
@@ -409,12 +409,12 @@ float SceneIntersect( bool checkModels )
 			hitObjectID = float(objectCount);
 		}
 		
-		hitIsModel = true;
-	} // end if (triangleLookupNeeded)
+		hitIsModel = TRUE;
+	} // end if (triangleLookupNeeded == TRUE)
 	
 	return t;
 	
-} // end SceneIntersect( bool checkModels )
+} // end SceneIntersect( int checkModels )
 
 
 
@@ -428,6 +428,9 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	vec3 originalRayDirection = rayDirection;
 	vec3 accumCol = vec3(0);
 	vec3 mask = vec3(1);
+	vec3 reflectionMask = vec3(1);
+	vec3 reflectionRayOrigin = vec3(0);
+	vec3 reflectionRayDirection = vec3(0);
 	vec3 checkCol0 = vec3(0.01);
 	vec3 checkCol1 = vec3(1.0);
 	vec3 nl, n, x;
@@ -437,7 +440,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	vec2 sampleUV;
 	
 	float nc, nt, ratioIoR, Re, Tr;
-	float P, RP, TP;
+	//float P, RP, TP;
 	float t = INFINITY;
 	float lightHitDistance = INFINITY;
 	float weight;
@@ -446,11 +449,13 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	int diffuseCount = 0;
 	int previousIntersecType = -1;
 
-	bool coatTypeIntersected = false;
-	bool sampleLight = false;
-	bool bounceIsSpecular = true;
-	bool ableToJoinPaths = false;
-	bool checkModels = false;
+	int coatTypeIntersected = FALSE;
+	int sampleLight = FALSE;
+	int bounceIsSpecular = TRUE;
+	int ableToJoinPaths = FALSE;
+	int checkModels = FALSE;
+
+	int willNeedReflectionRay = FALSE;
 
 
 	// Light path tracing (from Light source) /////////////////////////////////////////////////////////////////////
@@ -480,20 +485,35 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	rayOrigin = originalRayOrigin;
 	rayDirection = originalRayDirection;
 	
-	checkModels = true;
+	checkModels = TRUE;
 	hitType = -100;
 	hitObjectID = -100.0;
 
 
 	// Eye path tracing (from Camera) ///////////////////////////////////////////////////////////////////////////
 	
-	for (int bounces = 0; bounces < 5; bounces++)
+	for (int bounces = 0; bounces < 6; bounces++)
 	{
 		
 		t = SceneIntersect(checkModels);
 		
 		if (t == INFINITY)
+		{
+			if (willNeedReflectionRay == TRUE)
+			{
+				mask = reflectionMask;
+				rayOrigin = reflectionRayOrigin;
+				rayDirection = reflectionRayDirection;
+
+				willNeedReflectionRay = FALSE;
+				bounceIsSpecular = TRUE;
+				sampleLight = FALSE;
+				diffuseCount = 0;
+				continue;
+			}
+
 			break;
+		}
 		
 		// useful data 
 		n = normalize(hitNormal);
@@ -513,29 +533,71 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			if (diffuseCount == 0)
 				pixelSharpness = 1.01;
 			
-			if (bounceIsSpecular || sampleLight)
-				accumCol = mask * hitEmission;
-			
+			if (bounceIsSpecular == TRUE || sampleLight == TRUE)
+				accumCol += mask * hitEmission;
+
+			if (willNeedReflectionRay == TRUE)
+			{
+				mask = reflectionMask;
+				rayOrigin = reflectionRayOrigin;
+				rayDirection = reflectionRayDirection;
+
+				willNeedReflectionRay = FALSE;
+				bounceIsSpecular = TRUE;
+				sampleLight = FALSE;
+				diffuseCount = 0;
+				continue;
+			}
+			// reached a light, so we can exit
 			break;
 		}
 
-		if (hitType == DIFF && sampleLight)
+		if (hitType == DIFF && sampleLight == TRUE)
 		{
-			ableToJoinPaths = abs(t - lightHitDistance) < 0.5;
+			ableToJoinPaths = abs(t - lightHitDistance) < 0.5 ? TRUE : FALSE;
 			
-			if (ableToJoinPaths)
+			if (ableToJoinPaths == TRUE)
 			{
 				weight = max(0.0, dot(n, -rayDirection));
-				accumCol = mask * lightHitEmission * weight;
+				accumCol += mask * lightHitEmission * weight;
+			}
+
+			if (willNeedReflectionRay == TRUE)
+			{
+				mask = reflectionMask;
+				rayOrigin = reflectionRayOrigin;
+				rayDirection = reflectionRayDirection;
+
+				willNeedReflectionRay = FALSE;
+				bounceIsSpecular = TRUE;
+				sampleLight = FALSE;
+				diffuseCount = 0;
+				continue;
+			}
+			// reached a light, so we can exit
+			break;
+		}
+
+		
+		// if we get here and sampleLight is still true, shadow ray failed to find the light source 
+		// the ray hit an occluding object along its way to the light
+		if (sampleLight == TRUE)
+		{
+			if (willNeedReflectionRay == TRUE)
+			{
+				mask = reflectionMask;
+				rayOrigin = reflectionRayOrigin;
+				rayDirection = reflectionRayDirection;
+
+				willNeedReflectionRay = FALSE;
+				bounceIsSpecular = TRUE;
+				sampleLight = FALSE;
+				diffuseCount = 0;
+				continue;
 			}
 
 			break;
 		}
-
-		// if we reached this point and sampleLight is still true, then we can
-		// exit because the light was not found
-		if (sampleLight)
-			break;
 		
 		
 		
@@ -564,7 +626,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				hitColor *= pow(texColor.rgb, vec3(2.2));
 			}
 
-			if (bounces == 0 || (diffuseCount == 0 && !coatTypeIntersected && previousIntersecType == SPEC))	
+			if (bounces == 0 || (diffuseCount == 0 && coatTypeIntersected == FALSE && previousIntersecType == SPEC))	
 				objectColor = hitColor;
 
 			diffuseCount++;
@@ -573,7 +635,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			mask *= hitColor;
 
-			bounceIsSpecular = false;
+			bounceIsSpecular = FALSE;
 
 			if (diffuseCount == 1 && rand() < 0.5)
 			{
@@ -593,7 +655,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			rayOrigin = x + nl * uEPS_intersect;
 			lightHitDistance = distance(rayOrigin, lightHitPos);
 
-			sampleLight = true;
+			sampleLight = TRUE;
 			continue;
 		}
 		
@@ -603,7 +665,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			mask *= hitColor;
 			
-			if (hitIsModel)
+			if (hitIsModel == TRUE)
 				nl = perturbNormal(nl, vec2(0.15, 0.15), hitUV * 2.0);
 
 			if (bounces == 0)
@@ -625,18 +687,28 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			nt = 1.5; // IOR of common Glass
 			Re = calcFresnelReflectance(rayDirection, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
-			P  = 0.25 + (0.5 * Re);
-                	RP = Re / P;
-                	TP = Tr / (1.0 - P);
+			// P  = 0.25 + (0.5 * Re);
+                	// RP = Re / P;
+                	// TP = Tr / (1.0 - P);
 
-			if (bounces == 0 && rand() < P)
+			if (bounces == 0 || (bounces == 1 && hitObjectID != objectID && bounceIsSpecular == TRUE))
 			{
-				mask *= RP;
-				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
-				rayOrigin = x + nl * uEPS_intersect;
-				
-				previousIntersecType = REFR;
-				continue;	
+				reflectionMask = mask * Re;
+				reflectionRayDirection = reflect(rayDirection, nl); // reflect ray from surface
+				reflectionRayOrigin = x + nl * uEPS_intersect;
+				willNeedReflectionRay = TRUE;
+			}
+
+			if (Re == 1.0)
+			{
+				mask = reflectionMask;
+				rayOrigin = reflectionRayOrigin;
+				rayDirection = reflectionRayDirection;
+
+				willNeedReflectionRay = FALSE;
+				bounceIsSpecular = TRUE;
+				sampleLight = FALSE;
+				continue;
 			}
 
 			// transmit ray through surface
@@ -646,7 +718,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		
 			previousIntersecType = REFR;
 		
-			mask *= TP;
+			mask *= Tr;
 			mask *= hitColor;
 
 			tdir = refract(rayDirection, nl, ratioIoR);
@@ -659,26 +731,22 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		
 		if (hitType == COAT || hitType == CHECK)  // Diffuse object underneath with ClearCoat on top
 		{	
-			coatTypeIntersected = true;
+			coatTypeIntersected = TRUE;
 
 			nc = 1.0; // IOR of Air
 			nt = 1.4; // IOR of ClearCoat
 			Re = calcFresnelReflectance(rayDirection, nl, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
-			P  = 0.25 + (0.5 * Re);
-                	RP = Re / P;
-                	TP = Tr / (1.0 - P);
+			// P  = 0.25 + (0.5 * Re);
+                	// RP = Re / P;
+                	// TP = Tr / (1.0 - P);
 
-			// choose either specular reflection or diffuse
-			if (bounces == 0 && rand() < P)
-			{	
-				mask *= RP;
-				// reflect ray from surface
-				rayDirection = randomDirectionInSpecularLobe(reflect(rayDirection, nl), hitRoughness);
-				rayOrigin = x + nl * uEPS_intersect;
-
-				previousIntersecType = COAT;
-				continue;	
+			if (bounces == 0 || (bounces == 1 && hitObjectID != objectID && bounceIsSpecular == TRUE))
+			{
+				reflectionMask = mask * Re;
+				reflectionRayDirection = randomDirectionInSpecularLobe(reflect(rayDirection, nl), hitRoughness);
+				reflectionRayOrigin = x + nl * uEPS_intersect;
+				willNeedReflectionRay = TRUE;
 			}
 
 			if (hitType == CHECK)
@@ -703,9 +771,10 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			previousIntersecType = COAT;
 
-			bounceIsSpecular = false;
+			bounceIsSpecular = FALSE;
 
-			mask *= TP;
+			if (bounces == 0)
+				mask *= Tr;
 			mask *= hitColor;
 			
 			if (diffuseCount == 1 && rand() < 0.5)
@@ -726,7 +795,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			rayOrigin = x + nl * uEPS_intersect;
 			lightHitDistance = distance(rayOrigin, lightHitPos);
 
-			sampleLight = true;
+			sampleLight = TRUE;
 			continue;	
 				
 		} //end if (hitType == COAT)
@@ -749,29 +818,29 @@ void SetupScene(void)
 	vec3 tableColor = vec3(1.0, 0.7, 0.4) * 0.6;
 	vec3 brassColor = vec3(1.0, 0.7, 0.5) * 0.7;
 	
-	quads[0] = Quad( vec3(0,0,1), vec3( 180,-100,-298.5), vec3( 280,-100,-298.5), vec3( 280,  90,-298.5), vec3( 180,  90,-298.5), L2, z, 0.0, LIGHT, false);// Area Light Quad in doorway
-	quads[1] = Quad( vec3(0,0,1), vec3(-55, 20,-295), vec3( 55, 20,-295), vec3( 55, 65,-295), vec3(-55, 65,-295), z, vec3(1.0), 0.0, PAINTING, false);// Wall Painting
+	quads[0] = Quad( vec3(0,0,1), vec3( 180,-100,-298.5), vec3( 280,-100,-298.5), vec3( 280,  90,-298.5), vec3( 180,  90,-298.5), L2, z, 0.0, LIGHT, FALSE);// Area Light Quad in doorway
+	quads[1] = Quad( vec3(0,0,1), vec3(-55, 20,-295), vec3( 55, 20,-295), vec3( 55, 65,-295), vec3(-55, 65,-295), z, vec3(1.0), 0.0, PAINTING, FALSE);// Wall Painting
 	
-	boxes[0] = Box( vec3(-100,-60,-230), vec3(100,-57,-130), z, vec3(1.0), 0.0, LIGHTWOOD, false);// Table Top
-	boxes[1] = Box( vec3(-90,-100,-150), vec3(-84,-60,-144), z, vec3(0.8, 0.85, 0.9),  0.1, SPEC, false);// Table leg left front
-	boxes[2] = Box( vec3(-90,-100,-220), vec3(-84,-60,-214), z, vec3(0.8, 0.85, 0.9),  0.1, SPEC, false);// Table leg left rear
-	boxes[3] = Box( vec3( 84,-100,-150), vec3( 90,-60,-144), z, vec3(0.8, 0.85, 0.9),  0.1, SPEC, false);// Table leg right front
-	boxes[4] = Box( vec3( 84,-100,-220), vec3( 90,-60,-214), z, vec3(0.8, 0.85, 0.9),  0.1, SPEC, false);// Table leg right rear
+	boxes[0] = Box( vec3(-100,-60,-230), vec3(100,-57,-130), z, vec3(1.0), 0.0, LIGHTWOOD, FALSE);// Table Top
+	boxes[1] = Box( vec3(-90,-100,-150), vec3(-84,-60,-144), z, vec3(0.8, 0.85, 0.9),  0.1, SPEC, FALSE);// Table leg left front
+	boxes[2] = Box( vec3(-90,-100,-220), vec3(-84,-60,-214), z, vec3(0.8, 0.85, 0.9),  0.1, SPEC, FALSE);// Table leg left rear
+	boxes[3] = Box( vec3( 84,-100,-150), vec3( 90,-60,-144), z, vec3(0.8, 0.85, 0.9),  0.1, SPEC, FALSE);// Table leg right front
+	boxes[4] = Box( vec3( 84,-100,-220), vec3( 90,-60,-214), z, vec3(0.8, 0.85, 0.9),  0.1, SPEC, FALSE);// Table leg right rear
 	
-	boxes[5] = Box( vec3(-60, 15, -299), vec3( 60, 70, -296), z, vec3(0.01, 0, 0), 0.3, SPEC, false);// Painting Frame
+	boxes[5] = Box( vec3(-60, 15, -299), vec3( 60, 70, -296), z, vec3(0.01, 0, 0), 0.3, SPEC, FALSE);// Painting Frame
 	
-	boxes[6] = Box( vec3( 172,-100,-302), vec3( 180,  98,-299), z, vec3(0.001), 0.3, SPEC, false);// Door Frame left
-	boxes[7] = Box( vec3( 280,-100,-302), vec3( 288,  98,-299), z, vec3(0.001), 0.3, SPEC, false);// Door Frame right
-	boxes[8] = Box( vec3( 172,  90,-302), vec3( 288,  98,-299), z, vec3(0.001), 0.3, SPEC, false);// Door Frame top
-	boxes[9] = Box( vec3(   0, -94,  -3), vec3( 101,  95,   3), z, vec3(0.7), 0.0, DARKWOOD, false);// Door
-	boxes[10] = Box( vec3(-350,-100,-300), vec3(350,150,200), z, wallColor, 0.0, DIFF, false);// Room walls (box interior)
+	boxes[6] = Box( vec3( 172,-100,-302), vec3( 180,  98,-299), z, vec3(0.001), 0.3, SPEC, FALSE);// Door Frame left
+	boxes[7] = Box( vec3( 280,-100,-302), vec3( 288,  98,-299), z, vec3(0.001), 0.3, SPEC, FALSE);// Door Frame right
+	boxes[8] = Box( vec3( 172,  90,-302), vec3( 288,  98,-299), z, vec3(0.001), 0.3, SPEC, FALSE);// Door Frame top
+	boxes[9] = Box( vec3(   0, -94,  -3), vec3( 101,  95,   3), z, vec3(0.7), 0.0, DARKWOOD, FALSE);// Door
+	boxes[10] = Box( vec3(-350,-100,-300), vec3(350,150,200), z, wallColor, 0.0, DIFF, FALSE);// Room walls (box interior)
 	
-	openCylinders[0] = OpenCylinder( 1.5, vec3( 179,  64,-297), vec3( 179,  80,-297), z, brassColor, 0.2, SPEC, false);// Door Hinge upper
-	openCylinders[1] = OpenCylinder( 1.5, vec3( 179,  -8,-297), vec3( 179,   8,-297), z, brassColor, 0.2, SPEC, false);// Door Hinge middle
-	openCylinders[2] = OpenCylinder( 1.5, vec3( 179, -80,-297), vec3( 179, -64,-297), z, brassColor, 0.2, SPEC, false);// Door Hinge lower
+	openCylinders[0] = OpenCylinder( 1.5, vec3( 179,  64,-297), vec3( 179,  80,-297), z, brassColor, 0.2, SPEC, FALSE);// Door Hinge upper
+	openCylinders[1] = OpenCylinder( 1.5, vec3( 179,  -8,-297), vec3( 179,   8,-297), z, brassColor, 0.2, SPEC, FALSE);// Door Hinge middle
+	openCylinders[2] = OpenCylinder( 1.5, vec3( 179, -80,-297), vec3( 179, -64,-297), z, brassColor, 0.2, SPEC, FALSE);// Door Hinge lower
 	
-	spheres[0] = Sphere( 4.0, vec3( 88, -10,  7.8), z, brassColor, 0.0, SPEC, false);// Door knob front
-	spheres[1] = Sphere( 4.0, vec3( 88, -10, -7), z, brassColor, 0.0, SPEC, false);// Door knob back
+	spheres[0] = Sphere( 4.0, vec3( 88, -10,  7.8), z, brassColor, 0.0, SPEC, FALSE);// Door knob front
+	spheres[1] = Sphere( 4.0, vec3( 88, -10, -7), z, brassColor, 0.0, SPEC, FALSE);// Door knob back
 }
 
 
