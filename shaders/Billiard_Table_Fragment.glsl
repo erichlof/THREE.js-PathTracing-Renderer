@@ -66,7 +66,7 @@ float SceneIntersect( )
 	vec3 n;
 	float d;
 	float t = INFINITY;
-	bool isRayExiting = false;
+	int isRayExiting = FALSE;
 	int objectCount = 0;
 	
 	hitObjectID = -INFINITY;
@@ -90,7 +90,7 @@ float SceneIntersect( )
 
 	for (int i = 0; i < N_QUADS; i++)
         {
-		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, rayOrigin, rayDirection, false);
+		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, rayOrigin, rayDirection, FALSE);
 		if (d < t)
 		{
 			t = d;
@@ -166,6 +166,9 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 	vec3 accumCol = vec3(0);
 	vec3 mask = vec3(1);
+	vec3 reflectionMask = vec3(1);
+	vec3 reflectionRayOrigin = vec3(0);
+	vec3 reflectionRayDirection = vec3(0);
 	vec3 tdir;
 	vec3 dirToLight;
 	vec3 x, n, nl;
@@ -173,13 +176,17 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	float t;
         float weight;
 	float nc, nt, ratioIoR, Re, Tr;
-	float P, RP, TP;
+	//float P, RP, TP;
 	float hitObjectID;
+	float spotRadius = 1.5;
 
 	int diffuseCount = 0;
 
-	bool bounceIsSpecular = true;
-	bool sampleLight = false;
+	//int coatTypeIntersected = FALSE;
+	int isSpot = FALSE;
+	int bounceIsSpecular = TRUE;
+	int sampleLight = FALSE;
+	int willNeedReflectionRay = FALSE;
 
 
 	lightChoice = quads[int(rand() * N_LIGHTS)];
@@ -191,7 +198,22 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		t = SceneIntersect();
 		
 		if (t == INFINITY)
+		{
+			if (willNeedReflectionRay == TRUE)
+			{
+				mask = reflectionMask;
+				rayOrigin = reflectionRayOrigin;
+				rayDirection = reflectionRayDirection;
+
+				willNeedReflectionRay = FALSE;
+				bounceIsSpecular = TRUE;
+				sampleLight = FALSE;
+				diffuseCount = 0;
+				continue;
+			}
+
 			break;
+		}
 		
 		// useful data 
 		n = normalize(hitNormal);
@@ -208,19 +230,54 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 		if (hitType == LIGHT)
 		{	
-			if (diffuseCount == 0)
+			if (bounces == 0)
 				pixelSharpness = 1.01;
 
-			if (bounceIsSpecular || sampleLight)
-				accumCol = mask * hitEmission; // looking at light through a reflection
+			if (diffuseCount == 0)
+			{
+				objectNormal = nl;
+				objectColor = hitColor;
+				objectID = hitObjectID;
+			}
 			
+			if (bounceIsSpecular == TRUE || sampleLight == TRUE)
+				accumCol += mask * hitEmission; // looking at light through a reflection
+			
+			if (willNeedReflectionRay == TRUE)
+			{
+				mask = reflectionMask;
+				rayOrigin = reflectionRayOrigin;
+				rayDirection = reflectionRayDirection;
+
+				willNeedReflectionRay = FALSE;
+				bounceIsSpecular = TRUE;
+				sampleLight = FALSE;
+				diffuseCount = 0;
+				continue;
+			}
 			// reached a light, so we can exit
 			break;
 		}
 
-		// if we get here and sampleLight is still true, shadow ray failed to find a light source
-		if (sampleLight) 
+		// if we get here and sampleLight is still true, shadow ray failed to find the light source 
+		// the ray hit an occluding object along its way to the light
+		if (sampleLight == TRUE)
+		{
+			if (willNeedReflectionRay == TRUE)
+			{
+				mask = reflectionMask;
+				rayOrigin = reflectionRayOrigin;
+				rayDirection = reflectionRayDirection;
+
+				willNeedReflectionRay = FALSE;
+				bounceIsSpecular = TRUE;
+				sampleLight = FALSE;
+				diffuseCount = 0;
+				continue;
+			}
+
 			break;
+		}
 		
 
 		
@@ -237,7 +294,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			mask *= hitColor;
 
-			bounceIsSpecular = false;
+			bounceIsSpecular = FALSE;
 
 			if (diffuseCount == 1 && rand() < 0.5)
 			{	
@@ -255,37 +312,40 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			rayDirection = dirToLight;
 			rayOrigin = x + nl * uEPS_intersect;
 			
-			sampleLight = true;
+			sampleLight = TRUE;
 			continue;
 
 		} // end if (hitType == DIFF)
 		
 		if (hitType == COAT)  // Diffuse object underneath with ClearCoat on top
 		{
+			//coatTypeIntersected = TRUE;
+
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of Clear Coat
 			Re = calcFresnelReflectance(rayDirection, nl, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
-			P  = 0.25 + (0.5 * Re);
-                	RP = Re / P;
-                	TP = Tr / (1.0 - P);
+			// P  = 0.25 + (0.5 * Re);
+                	// RP = Re / P;
+                	// TP = Tr / (1.0 - P);
 
-			if (bounces == 0 && rand() < P)
+			if (bounces == 0 || (bounces == 1 && hitObjectID != objectID && bounceIsSpecular == TRUE))
 			{
-				mask *= RP;
-				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
-				rayOrigin = x + nl * uEPS_intersect;
-				continue;
+				reflectionMask = mask * Re;
+				reflectionRayDirection = reflect(rayDirection, nl); // reflect ray from surface
+				reflectionRayOrigin = x + nl * uEPS_intersect;
+				willNeedReflectionRay = TRUE;
 			}
 
 			// handle diffuse surface underneath
 
 			diffuseCount++;
 
-			mask *= TP;
+			if (bounces == 0)
+				mask *= Tr;
 			mask *= hitColor;
 			
-			bounceIsSpecular = false;
+			bounceIsSpecular = FALSE;
 
 			if (diffuseCount == 1 && rand() < 0.5)
 			{	
@@ -303,7 +363,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			rayDirection = dirToLight;
 			rayOrigin = x + nl * uEPS_intersect;
 
-			sampleLight = true;
+			sampleLight = TRUE;
 			continue;
                         
 		} //end if (hitType == COAT)
@@ -314,65 +374,42 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			nt = 1.1; // IOR of Clear Coat
 			Re = calcFresnelReflectance(rayDirection, nl, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
-			P  = 0.25 + (0.5 * Re);
-                	RP = Re / P;
-                	TP = Tr / (1.0 - P);
+			// P  = 0.25 + (0.5 * Re);
+                	// RP = Re / P;
+                	// TP = Tr / (1.0 - P);
 
-			if (bounces == 0 && rand() < P)
+			if (bounces == 0 || (bounces == 1 && hitObjectID != objectID && bounceIsSpecular == TRUE))
 			{
-				mask *= RP;
-				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
-				rayDirection = randomDirectionInSpecularLobe(rayDirection, hitRoughness);
-				rayOrigin = x + nl * uEPS_intersect;
-				continue;
+				reflectionMask = mask * Re;
+				reflectionRayDirection = randomDirectionInSpecularLobe(reflect(rayDirection, nl), hitRoughness);
+				reflectionRayOrigin = x + nl * uEPS_intersect;
+				willNeedReflectionRay = TRUE;
 			}
 			
-			float spotRadius = 1.5;
-			bool isSpot = false;
-			
-			bool spotn1 = distance(x, vec3(212, 10, -100)) < spotRadius;
-			bool spotn2 = distance(x, vec3(212, 10, -200)) < spotRadius;
-			bool spotn3 = distance(x, vec3(212, 10, -300)) < spotRadius;
-			bool spotn4 = distance(x, vec3(212, 10, -400)) < spotRadius;
-			bool spotp0 = distance(x, vec3(212, 10, 0)) < spotRadius;
-			bool spotp1 = distance(x, vec3(212, 10, 100)) < spotRadius;
-			bool spotp2 = distance(x, vec3(212, 10, 200)) < spotRadius;
-			bool spotp3 = distance(x, vec3(212, 10, 300)) < spotRadius;
-			bool spotp4 = distance(x, vec3(212, 10, 400)) < spotRadius;
-			if (spotn1 || spotn2 || spotn3 || spotn4 || spotp0 || 
-				spotp1 || spotp2 || spotp3 || spotp4 ) 
-				isSpot = true;
+			if ( distance(x, vec3(212, 10, -100)) < spotRadius || distance(x, vec3(212, 10, -200)) < spotRadius ||
+			 	distance(x, vec3(212, 10, -300)) < spotRadius || distance(x, vec3(212, 10, -400)) < spotRadius || 
+			 	distance(x, vec3(212, 10, 0)) < spotRadius || distance(x, vec3(212, 10, 100)) < spotRadius ||
+			  	distance(x, vec3(212, 10, 200)) < spotRadius || distance(x, vec3(212, 10, 300)) < spotRadius ||
+			   	distance(x, vec3(212, 10, 400)) < spotRadius ) 
+				isSpot = TRUE;
 				
-			spotn1 = distance(x, vec3(-212, 10, -100)) < spotRadius;
-			spotn2 = distance(x, vec3(-212, 10, -200)) < spotRadius;
-			spotn3 = distance(x, vec3(-212, 10, -300)) < spotRadius;
-			spotn4 = distance(x, vec3(-212, 10, -400)) < spotRadius;
-			bool spotn0 = distance(x, vec3(-212, 10, 0)) < spotRadius;
-			spotp1 = distance(x, vec3(-212, 10, 100)) < spotRadius;
-			spotp2 = distance(x, vec3(-212, 10, 200)) < spotRadius;
-			spotp3 = distance(x, vec3(-212, 10, 300)) < spotRadius;
-			spotp4 = distance(x, vec3(-212, 10, 400)) < spotRadius;
-			if (spotn1 || spotn2 || spotn3 || spotn4 || spotn0 || 
-				spotp1 || spotp2 || spotp3 || spotp4 ) 
-				isSpot = true;
+			if ( distance(x, vec3(-212, 10, -100)) < spotRadius || distance(x, vec3(-212, 10, -200)) < spotRadius || 
+				distance(x, vec3(-212, 10, -300)) < spotRadius || distance(x, vec3(-212, 10, -400)) < spotRadius || 
+				distance(x, vec3(-212, 10, 0)) < spotRadius || distance(x, vec3(-212, 10, 100)) < spotRadius || 
+				distance(x, vec3(-212, 10, 200)) < spotRadius || distance(x, vec3(-212, 10, 300)) < spotRadius || 
+				distance(x, vec3(-212, 10, 400)) < spotRadius ) 
+				isSpot = TRUE;
 			
-			spotn1 = distance(x, vec3(200, 10, -412)) < spotRadius;
-			spotn2 = distance(x, vec3(100, 10, -412)) < spotRadius;
-			spotn0 = distance(x, vec3(0, 10, -412)) < spotRadius;
-			spotn3 = distance(x, vec3(-100, 10, -412)) < spotRadius;
-			spotn4 = distance(x, vec3(-200, 10, -412)) < spotRadius;
-			spotp1 = distance(x, vec3(200, 10,  412)) < spotRadius;
-			spotp2 = distance(x, vec3(100, 10, 412)) < spotRadius;
-			spotp0 = distance(x, vec3(0, 10, 412)) < spotRadius;
-			spotp3 = distance(x, vec3(-100, 10, 412)) < spotRadius;
-			spotp4 = distance(x, vec3(-200, 10, 412)) < spotRadius;
-			if (spotn1 || spotn2 || spotn0 || spotn3 || spotn4 || 
-				spotp1 || spotp2 || spotp0 || spotp3 || spotp4 ) 
-				isSpot = true;
+			if ( distance(x, vec3(200, 10, -412)) < spotRadius || distance(x, vec3(100, 10, -412)) < spotRadius ||
+				distance(x, vec3(0, 10, -412)) < spotRadius || distance(x, vec3(-100, 10, -412)) < spotRadius ||
+				distance(x, vec3(-200, 10, -412)) < spotRadius || distance(x, vec3(200, 10,  412)) < spotRadius ||
+				distance(x, vec3(100, 10, 412)) < spotRadius || distance(x, vec3(0, 10, 412)) < spotRadius || 
+				distance(x, vec3(-100, 10, 412)) < spotRadius || distance(x, vec3(-200, 10, 412)) < spotRadius ) 
+				isSpot = TRUE;
 			
 			if (hitType == DARKWOOD)
 				hitColor *= pow(clamp(texture(tDarkWoodTexture, 3.5 * x.xz / 512.0).rgb, 0.0, 1.0), vec3(2.2));
-			if (isSpot)
+			if (isSpot == TRUE)
 				hitColor = clamp(hitColor + 0.5, 0.0, 1.0);
 				
 			if (hitType == LIGHTWOOD)	
@@ -386,10 +423,11 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			diffuseCount++;
 
-			mask *= TP;
+			if (bounces == 0)
+				mask *= Tr;
 			mask *= hitColor;
 			
-			bounceIsSpecular = false;
+			bounceIsSpecular = FALSE;
 
 			if (diffuseCount == 1 && rand() < 0.5)
                         {
@@ -407,7 +445,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			rayDirection = dirToLight;
 			rayOrigin = x + nl * uEPS_intersect;
 
-			sampleLight = true;
+			sampleLight = TRUE;
 			continue;
                         
 		} //end if (hitType == LIGHTWOOD || hitType == DARKWOOD)
