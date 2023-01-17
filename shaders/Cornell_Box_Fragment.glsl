@@ -42,13 +42,13 @@ float SceneIntersect( )
 	vec3 normal, n;
         float d;
 	float t = INFINITY;
-	bool isRayExiting = false;
+	int isRayExiting = FALSE;
 	int objectCount = 0;
 	
 	hitObjectID = -INFINITY;
 	
 
-	d = QuadIntersect( quads[0].v0, quads[0].v1, quads[0].v2, quads[0].v3, rayOrigin, rayDirection, false );
+	d = QuadIntersect( quads[0].v0, quads[0].v1, quads[0].v2, quads[0].v3, rayOrigin, rayDirection, FALSE );
 	if (d < t)
 	{
 		t = d;
@@ -145,9 +145,9 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	int previousIntersecType = -100;
 	hitType = -100;
 	
-	bool bounceIsSpecular = true;
-	bool sampleLight = false;
-	bool createCausticRay = false;
+	int bounceIsSpecular = TRUE;
+	int sampleLight = FALSE;
+	int createCausticRay = FALSE;
 
 
 	for (int bounces = 0; bounces < 5; bounces++)
@@ -181,22 +181,23 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			if (diffuseCount == 0)
 				pixelSharpness = 1.01;
 
-			if (bounceIsSpecular || sampleLight || createCausticRay)
+			if (bounceIsSpecular == TRUE || sampleLight == TRUE || createCausticRay == TRUE)
 				accumCol = mask * hitEmission;
 
 			// reached a light source, so we can exit
 			break;
 		}
 		
-		// if we get here and sampleLight is still true, shadow ray failed to find a light source
-		if (sampleLight) 
+		// if we get here and sampleLight is still TRUE, shadow ray failed to find the light source 
+		// the ray hit an occluding object along its way to the light
+		if (sampleLight == TRUE) 
 			break;
 
 
 
                 if (hitType == DIFF) // Ideal DIFFUSE reflection
                 {
-			if (createCausticRay)
+			if (createCausticRay == TRUE)
 				break;
 
 			if ( diffuseCount == 0 && previousIntersecType == SPEC )	
@@ -210,7 +211,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
                         if (diffuseCount == 1 && rand() < 0.25)
                         {
 				mask *= 3.0;
-				createCausticRay = true;
+				createCausticRay = TRUE;
 
 				vec3 randVec = vec3(rng() * 2.0 - 1.0, rng() * 2.0 - 1.0, rng() * 2.0 - 1.0);
 				vec3 offset = vec3(randVec.x * 82.0, randVec.y * 170.0, randVec.z * 80.0);
@@ -225,7 +226,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				continue;
 			}
 
-			bounceIsSpecular = false;
+			bounceIsSpecular = FALSE;
 
 			if (diffuseCount == 1 && rand() < 0.5)
 			{	
@@ -242,7 +243,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			rayDirection = dirToLight;
 			rayOrigin = x + nl * uEPS_intersect;
-			sampleLight = true;
+			sampleLight = TRUE;
 			continue;
                         
                 } // end if (hitType == DIFF)
