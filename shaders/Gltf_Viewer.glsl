@@ -89,9 +89,9 @@ float SceneIntersect( )
 	
 	hitObjectID = -INFINITY;
 
-	bool skip = false;
-	bool triangleLookupNeeded = false;
-	bool isRayExiting = false;
+	int skip = FALSE;
+	int triangleLookupNeeded = FALSE;
+	int isRayExiting = FALSE;
 
 
 	// GROUND Plane (thin, wide box that acts like ground plane)
@@ -115,11 +115,11 @@ float SceneIntersect( )
 	GetBoxNodeData(stackptr, currentBoxNodeData0, currentBoxNodeData1);
 	currentStackData = vec2(stackptr, BoundingBoxIntersect(currentBoxNodeData0.yzw, currentBoxNodeData1.yzw, rayOrigin, inverseDir));
 	stackLevels[0] = currentStackData;
-	skip = (currentStackData.y < t);
+	skip = (currentStackData.y < t) ? TRUE : FALSE;
 
 	while (true)
         {
-		if (!skip) 
+		if (skip == FALSE) 
                 {
                         // decrease pointer by 1 (0.0 is root level, 27.0 is maximum depth)
                         if (--stackptr < 0.0) // went past the root level, terminate loop
@@ -132,7 +132,7 @@ float SceneIntersect( )
 			
 			GetBoxNodeData(currentStackData.x, currentBoxNodeData0, currentBoxNodeData1);
                 }
-		skip = false; // reset skip
+		skip = FALSE; // reset skip
 		
 		if (currentBoxNodeData0.x < 0.0) // // < 0.0 signifies an inner node 
 		{
@@ -158,18 +158,18 @@ float SceneIntersect( )
 				currentStackData = stackDataB;
 				currentBoxNodeData0 = nodeBData0;
 				currentBoxNodeData1 = nodeBData1;
-				skip = true; // this will prevent the stackptr from decreasing by 1
+				skip = TRUE; // this will prevent the stackptr from decreasing by 1
 			}
 			if (stackDataA.y < t) // see if branch 'a' (the smaller rayT) needs to be processed 
 			{
-				if (skip) // if larger branch 'b' needed to be processed also,
+				if (skip == TRUE) // if larger branch 'b' needed to be processed also,
 					stackLevels[int(stackptr++)] = stackDataB; // cue larger branch 'b' for future round
 							// also, increase pointer by 1
 				
 				currentStackData = stackDataA;
 				currentBoxNodeData0 = nodeAData0; 
 				currentBoxNodeData1 = nodeAData1;
-				skip = true; // this will prevent the stackptr from decreasing by 1
+				skip = TRUE; // this will prevent the stackptr from decreasing by 1
 			}
 
 			continue;
@@ -198,13 +198,13 @@ float SceneIntersect( )
 			triangleID = id;
 			triangleU = tu;
 			triangleV = tv;
-			triangleLookupNeeded = true;
+			triangleLookupNeeded = TRUE;
 		}
 	      
-        } // end while (true)
+        } // end while (TRUE)
 
 
-	if (triangleLookupNeeded)
+	if (triangleLookupNeeded == TRUE)
 	{
 		uv0 = ivec2( mod(triangleID + 0.0, 2048.0), floor((triangleID + 0.0) * INV_TEXTURE_WIDTH) );
 		uv1 = ivec2( mod(triangleID + 1.0, 2048.0), floor((triangleID + 1.0) * INV_TEXTURE_WIDTH) );
@@ -266,13 +266,16 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 	vec3 accumCol = vec3(0.0);
 	vec3 mask = vec3(1.0);
+	vec3 reflectionMask = vec3(1);
+	vec3 reflectionRayOrigin = vec3(0);
+	vec3 reflectionRayDirection = vec3(0);
 	vec3 n, nl, x;
 	vec3 firstX = vec3(0);
 	vec3 tdir;
 
 	float hitDistance;
 	float nc, nt, ratioIoR, Re, Tr;
-	float P, RP, TP;
+	//float P, RP, TP;
 	float weight;
 	float t = INFINITY;
 	float epsIntersect = 0.01;
@@ -281,71 +284,88 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	int previousIntersecType = -100;
 	hitType = -100;
 	
-	bool skyHit = false;
-	bool bounceIsSpecular = true;
-	bool sampleSunLight = false;
+	int bounceIsSpecular = TRUE;
+	int sampleLight = FALSE;
+	int willNeedReflectionRay = FALSE;
 
-    	for (int bounces = 0; bounces < 4; bounces++)
+    	for (int bounces = 0; bounces < 5; bounces++)
 	{
+		previousIntersecType = hitType;
 
 		t = SceneIntersect();
 
-		// ray hits sky first
-		if (t == INFINITY && bounces == 0 )
+		
+		if (t == INFINITY)
 		{
-			pixelSharpness = 1.01;
-
-			accumCol = Get_HDR_Color(rayDirection);
-			break;	
-		}
-
-		// if ray bounced off of diffuse material and hits sky
-		if (t == INFINITY && previousIntersecType == DIFF)
-		{
-			if (sampleSunLight)
-				accumCol = mask * uSunColor * uSunLightIntensity * 0.5;
-			else
-				accumCol = mask * Get_HDR_Color(rayDirection) * uSkyLightIntensity * 0.5;
-
-			break;
-		}
-
-		// if ray bounced off of glass and hits sky
-		if (t == INFINITY && previousIntersecType == REFR)
-		{
-	    		if (diffuseCount == 0) // camera looking through glass, hitting the sky
+			// ray hits sky first
+			if (bounces == 0)
 			{
 				pixelSharpness = 1.01;
-				mask *= Get_HDR_Color(rayDirection);
-			}	
-			else if (sampleSunLight) // sun rays going through glass, hitting another surface
-				mask *= uSunColor * uSunLightIntensity;
-			else  // sky rays going through glass, hitting another surface
-				mask *= Get_HDR_Color(rayDirection) * uSkyLightIntensity;
 
-			if (bounceIsSpecular) // prevents sun 'fireflies' on diffuse surfaces
-				accumCol = mask;
+				accumCol += Get_HDR_Color(rayDirection);
+				break;
+			}
 
+			// if ray bounced off of diffuse material and hits sky
+			if (previousIntersecType == DIFF)
+			{
+				if (sampleLight == TRUE)
+					accumCol += mask * uSunColor * uSunLightIntensity * 0.5;
+				else
+					accumCol += mask * Get_HDR_Color(rayDirection) * uSkyLightIntensity * 0.5;
+			}
+
+			// if ray bounced off of glass and hits sky
+			if (previousIntersecType == REFR)
+			{
+				if (diffuseCount == 0) // camera looking through glass, hitting the sky
+				{
+					pixelSharpness = 1.01;
+					mask *= Get_HDR_Color(rayDirection);
+				}	
+				else if (sampleLight == TRUE) // sun rays going through glass, hitting another surface
+					mask *= uSunColor * uSunLightIntensity;
+				else  // sky rays going through glass, hitting another surface
+					mask *= Get_HDR_Color(rayDirection) * uSkyLightIntensity;
+
+				if (bounceIsSpecular == TRUE) // prevents sun 'fireflies' on diffuse surfaces
+					accumCol += mask;
+			}
+
+			if (willNeedReflectionRay == TRUE)
+			{
+				mask = reflectionMask;
+				rayOrigin = reflectionRayOrigin;
+				rayDirection = reflectionRayDirection;
+
+				willNeedReflectionRay = FALSE;
+				bounceIsSpecular = TRUE;
+				sampleLight = FALSE;
+				diffuseCount = 0;
+				continue;
+			}
+			// reached a light, so we can exit
 			break;
-		}
+
+		} // end if (t == INFINITY)
+
 
 		/* // other lights, like houselights, could be added to the scene
 		// if we reached light material, don't spawn any more rays
 		if (hitType == LIGHT)
 		{
 	    		accumCol = mask * hitEmission * 0.5;
-
 			break;
 		} */
 
 		/* // Since we want fast direct sunlight caustics through windows, we don't use the following early out
-		if (sampleSunLight)
+		if (sampleLight == TRUE)
 			break; */
 
 		// useful data
-		vec3 n = normalize(hitNormal);
-		vec3 nl = dot(n, rayDirection) < 0.0 ? n : -n;
-		vec3 x = rayOrigin + rayDirection * t;
+		n = normalize(hitNormal);
+		nl = dot(n, rayDirection) < 0.0 ? n : -n;
+		x = rayOrigin + rayDirection * t;
 
 		if (bounces == 0)
 		{
@@ -353,23 +373,22 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			objectColor = hitColor;
 			objectID = hitObjectID;
 		}
-		if (bounces == 1 && diffuseCount == 0)
-		{
-			objectNormal = nl;
-		}
+		// if (bounces == 1 && diffuseCount == 0)
+		// {
+		// 	objectNormal = nl;
+		// }
 
 
 
 		if (hitType == DIFF) // Ideal DIFFUSE reflection
 		{
-			if (diffuseCount == 0)
-				objectColor = hitColor;
+			// if (diffuseCount == 0)
+			// 	objectColor = hitColor;
 
 			diffuseCount++;
-			previousIntersecType = DIFF;
 
 			mask *= hitColor;
-	    		bounceIsSpecular = false;
+	    		bounceIsSpecular = FALSE;
 
 			if (diffuseCount == 1 && rand() < 0.5)
 			{
@@ -391,41 +410,48 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			mask *= diffuseCount == 1 ? 2.0 : 1.0;
 			mask *= weight;
 			
-			sampleSunLight = true;
+			sampleLight = TRUE;
 			continue;
 			
 		} // end if (hitType == DIFF)
 
 		if (hitType == SPEC)  // Ideal SPECULAR reflection
 		{
-			previousIntersecType = SPEC;
 			mask *= hitColor;
 
 			rayDirection = reflect(rayDirection, nl);
 			rayOrigin = x + rayDirection * epsIntersect;
 
-			//bounceIsSpecular = true; // turn on mirror caustics
+			//bounceIsSpecular = TRUE; // turn on mirror caustics
 			continue;
 		}
 
 		if (hitType == REFR)  // Ideal dielectric REFRACTION
 		{
 			pixelSharpness = diffuseCount == 0 ? -1.0 : pixelSharpness;
-			previousIntersecType = REFR;
 
 			nc = 1.0; // IOR of Air
 			nt = 1.5; // IOR of common Glass
 			Re = calcFresnelReflectance(rayDirection, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
-			P  = 0.25 + (0.5 * Re);
-                	RP = Re / P;
-                	TP = Tr / (1.0 - P);
 
-			if (diffuseCount == 0 && rand() < P)
+			if (bounces == 0)// || (bounces == 1 && hitObjectID != objectID && bounceIsSpecular == TRUE))
 			{
-				mask *= RP;
-				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
-				rayOrigin = x + nl * epsIntersect;
+				reflectionMask = mask * Re;
+				reflectionRayDirection = reflect(rayDirection, nl); // reflect ray from surface
+				reflectionRayOrigin = x + nl * epsIntersect;
+				willNeedReflectionRay = TRUE;
+			}
+
+			if (Re == 1.0)
+			{
+				mask = reflectionMask;
+				rayOrigin = reflectionRayOrigin;
+				rayDirection = reflectionRayDirection;
+
+				willNeedReflectionRay = FALSE;
+				bounceIsSpecular = TRUE;
+				sampleLight = FALSE;
 				continue;
 			}
 			
@@ -433,13 +459,13 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			
 			//mask *= 1.0 - (hitColor * hitOpacity);
 			mask *= hitColor;
-			mask *= TP;
+			mask *= Tr;
 			//tdir = refract(rayDirection, nl, ratioIoR);
 			rayDirection = rayDirection; // TODO using rayDirection instead of tdir, because going through common Glass makes everything spherical from up close...
 			rayOrigin = x + rayDirection * epsIntersect;
-			
+
 			if (diffuseCount < 2)
-				bounceIsSpecular = true;
+				bounceIsSpecular = TRUE;
 			continue;
 			
 
