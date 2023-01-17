@@ -92,8 +92,8 @@ float SceneIntersect( )
 
 	hitObjectID = -INFINITY;
 	
-	bool skip = false;
-	bool triangleLookupNeeded = false;
+	int skip = FALSE;
+	int triangleLookupNeeded = FALSE;
 
 
 	for (int i = 0; i < N_SPHERES; i++)
@@ -115,11 +115,11 @@ float SceneIntersect( )
 	GetBoxNodeData(stackptr, currentBoxNodeData0, currentBoxNodeData1);
 	currentStackData = vec2(stackptr, BoundingBoxIntersect(currentBoxNodeData0.yzw, currentBoxNodeData1.yzw, rayOrigin, inverseDir));
 	stackLevels[0] = currentStackData;
-	skip = (currentStackData.y < t);
+	skip = (currentStackData.y < t) ? TRUE : FALSE;
 
 	while (true)
         {
-		if (!skip) 
+		if (skip == FALSE) 
                 {
                         // decrease pointer by 1 (0.0 is root level, 27.0 is maximum depth)
                         if (--stackptr < 0.0) // went past the root level, terminate loop
@@ -132,7 +132,7 @@ float SceneIntersect( )
 			
 			GetBoxNodeData(currentStackData.x, currentBoxNodeData0, currentBoxNodeData1);
                 }
-		skip = false; // reset skip
+		skip = FALSE; // reset skip
 		
 
 		if (currentBoxNodeData0.x < 0.0) // < 0.0 signifies an inner node
@@ -159,18 +159,18 @@ float SceneIntersect( )
 				currentStackData = stackDataB;
 				currentBoxNodeData0 = nodeBData0;
 				currentBoxNodeData1 = nodeBData1;
-				skip = true; // this will prevent the stackptr from decreasing by 1
+				skip = TRUE; // this will prevent the stackptr from decreasing by 1
 			}
 			if (stackDataA.y < t) // see if branch 'a' (the smaller rayT) needs to be processed 
 			{
-				if (skip) // if larger branch 'b' needed to be processed also,
+				if (skip == TRUE) // if larger branch 'b' needed to be processed also,
 					stackLevels[int(stackptr++)] = stackDataB; // cue larger branch 'b' for future round
 							// also, increase pointer by 1
 				
 				currentStackData = stackDataA;
 				currentBoxNodeData0 = nodeAData0; 
 				currentBoxNodeData1 = nodeAData1;
-				skip = true; // this will prevent the stackptr from decreasing by 1
+				skip = TRUE; // this will prevent the stackptr from decreasing by 1
 			}
 
 			continue;
@@ -198,14 +198,14 @@ float SceneIntersect( )
 			triangleID = id;
 			triangleU = tu;
 			triangleV = tv;
-			triangleLookupNeeded = true;
+			triangleLookupNeeded = TRUE;
 		}
 	      
-        } // end while (true)
+        } // end while (TRUE)
 
 
 
-	if (triangleLookupNeeded)
+	if (triangleLookupNeeded == TRUE)
 	{
 		// IMPORTANT NOTE: value below Must be 4096.0 and not 2048.0!
 
@@ -269,8 +269,8 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	
 	int diffuseCount = 0;
 
-	bool bounceIsSpecular = true;
-	bool sampleLight = false;
+	int bounceIsSpecular = TRUE;
+	int sampleLight = FALSE;
 
 	
         for (int bounces = 0; bounces < 2; bounces++)
@@ -316,7 +316,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			
 			mask *= hitColor;
 
-			bounceIsSpecular = false;
+			bounceIsSpecular = FALSE;
 
 			// choose random Diffuse sample vector
 			rayDirection = randomCosWeightedDirectionInHemisphere(nl);
