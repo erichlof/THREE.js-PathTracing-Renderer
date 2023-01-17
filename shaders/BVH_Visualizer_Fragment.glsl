@@ -70,7 +70,7 @@ void GetBoxNodeData(const in float i, inout vec4 boxNodeData0, inout vec4 boxNod
 
 
 //-------------------------------------------------------------------------------------------------------------------
-float SceneIntersect( out bool finalIsRayExiting )
+float SceneIntersect( out int finalIsRayExiting )
 //-------------------------------------------------------------------------------------------------------------------
 {
 	vec4 currentBoxNodeData0, nodeAData0, nodeBData0, tmpNodeData0;
@@ -99,9 +99,9 @@ float SceneIntersect( out bool finalIsRayExiting )
 	
 	hitObjectID = -INFINITY;
 	
-	bool skip = false;
-	bool triangleLookupNeeded = false;
-	bool isRayExiting = false;
+	int skip = FALSE;
+	//int triangleLookupNeeded = FALSE;
+	int isRayExiting = FALSE;
 
 	
 	for (int i = 0; i < N_SPHERES; i++)
@@ -139,11 +139,11 @@ float SceneIntersect( out bool finalIsRayExiting )
 	GetBoxNodeData(stackptr, currentBoxNodeData0, currentBoxNodeData1);
 	currentStackData = vec2(stackptr, BoundingBoxIntersect(currentBoxNodeData0.yzw, currentBoxNodeData1.yzw, rayOrigin, inverseDir));
 	stackLevels[0] = currentStackData;
-	skip = (currentStackData.y < t);
+	skip = (currentStackData.y < t) ? TRUE : FALSE;
 
 	while (true)
         {
-		if (!skip) 
+		if (skip == FALSE) 
                 {
                         // decrease pointer by 1 (0.0 is root level, 27.0 is maximum depth)
                         if (--stackptr < 0.0) // went past the root level, terminate loop
@@ -158,7 +158,7 @@ float SceneIntersect( out bool finalIsRayExiting )
 			
 			GetBoxNodeData(currentStackData.x, currentBoxNodeData0, currentBoxNodeData1);
                 }
-		skip = false; // reset skip
+		skip = FALSE; // reset skip
 
 		
 		// render selected nodes
@@ -204,18 +204,18 @@ float SceneIntersect( out bool finalIsRayExiting )
 				currentStackData = stackDataB;
 				currentBoxNodeData0 = nodeBData0;
 				currentBoxNodeData1 = nodeBData1;
-				skip = true; // this will prevent the stackptr from decreasing by 1
+				skip = TRUE; // this will prevent the stackptr from decreasing by 1
 			}
 			if (stackDataA.y < t) // see if branch 'a' (the smaller rayT) needs to be processed 
 			{
-				if (skip) // if larger branch 'b' needed to be processed also,
+				if (skip == TRUE) // if larger branch 'b' needed to be processed also,
 					stackLevels[int(stackptr++)] = stackDataB; // cue larger branch 'b' for future round
 							// also, increase pointer by 1
 				
 				currentStackData = stackDataA;
 				currentBoxNodeData0 = nodeAData0; 
 				currentBoxNodeData1 = nodeAData1;
-				skip = true; // this will prevent the stackptr from decreasing by 1
+				skip = TRUE; // this will prevent the stackptr from decreasing by 1
 			}
 
 			continue;
@@ -245,12 +245,12 @@ float SceneIntersect( out bool finalIsRayExiting )
 			hitObjectID = float(objectCount);
 		}
                         
-        } // end while (true)
+        } // end while (TRUE)
 
 
 	return t;
 
-} // end float SceneIntersect( out bool finalIsRayExiting )
+} // end float SceneIntersect( out int finalIsRayExiting )
 
 
 //----------------------------------------------------------------------------------------------------------------------------------------------------
@@ -259,6 +259,9 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 {
 	vec3 accumCol = vec3(0);
         vec3 mask = vec3(1);
+	vec3 reflectionMask = vec3(1);
+	vec3 reflectionRayOrigin = vec3(0);
+	vec3 reflectionRayDirection = vec3(0);
 	vec3 checkCol0 = vec3(1);
 	vec3 checkCol1 = vec3(0.5);
         vec3 tdir;
@@ -266,20 +269,23 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
         
 	float t;
         float nc, nt, ratioIoR, Re, Tr;
-	float P, RP, TP;
+	//float P, RP, TP;
 	float thickness = 0.1;
 
 	int diffuseCount = 0;
-
-	bool coatTypeIntersected = false;
-	bool bounceIsSpecular = true;
-	bool isRayExiting = false;
+	int previousIntersecType = -100;
+	hitType = -100;
+	int coatTypeIntersected = FALSE;
+	int bounceIsSpecular = TRUE;
+	int isRayExiting = FALSE;
+	int willNeedReflectionRay = FALSE;
 
 	
 	// need more bounces than usual, because there could be lots of yellow glass boxes in a row
-	for (int bounces = 0; bounces < 10; bounces++)
+	for (int bounces = 0; bounces < 20; bounces++)
 	{
-		
+		previousIntersecType = hitType;
+
 		t = SceneIntersect(isRayExiting);
 		
 		/*
@@ -290,13 +296,24 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		*/
 		if (hitType == LIGHT)
 		{	
-			if (diffuseCount == 0 && hitEmission == vec3(1, 0, 1))
+			if (diffuseCount == 0 && hitEmission == vec3(1, 0, 1) && coatTypeIntersected == FALSE)
 				pixelSharpness = 1.01;
 			
-			if (bounces == 0)
-				objectID = hitObjectID;
-			
-			accumCol = mask * hitEmission;
+			accumCol += mask * hitEmission;
+
+			if (willNeedReflectionRay == TRUE)
+			{
+				mask = reflectionMask;
+				rayOrigin = reflectionRayOrigin;
+				rayDirection = reflectionRayDirection;
+
+				willNeedReflectionRay = FALSE;
+				bounceIsSpecular = TRUE;
+				//sampleLight = FALSE;
+				diffuseCount = 0;
+				continue;
+			}
+			// reached a light, so we can exit
 			break;
 		}
 		
@@ -324,7 +341,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				hitColor = checkCol0 * q + checkCol1 * (1.0 - q);	
 			}
 
-			if (diffuseCount == 0 && !coatTypeIntersected)	
+			if (diffuseCount == 0 && coatTypeIntersected == FALSE)	
 				objectColor = hitColor;
 
 			
@@ -332,7 +349,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			diffuseCount++;
 
-			bounceIsSpecular = false;
+			bounceIsSpecular = FALSE;
                         
 			// choose random Diffuse sample vector
 			rayDirection = randomCosWeightedDirectionInHemisphere(nl);
@@ -358,15 +375,24 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			nt = 1.5; // IOR of common Glass
 			Re = calcFresnelReflectance(rayDirection, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
-			P  = 0.25 + (0.5 * Re);
-                	RP = Re / P;
-                	TP = Tr / (1.0 - P);
 			
-			if (diffuseCount == 0 && rand() < P)
+			if (bounces == 0 || (bounces == 1 && previousIntersecType == SPEC))
 			{
-				mask *= RP;
-				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
-				rayOrigin = x + nl * uEPS_intersect;
+				reflectionMask = mask * Re;
+				reflectionRayDirection = reflect(rayDirection, nl); // reflect ray from surface
+				reflectionRayOrigin = x + nl * uEPS_intersect;
+				willNeedReflectionRay = TRUE;
+			}
+
+			if (Re == 1.0)
+			{
+				mask = reflectionMask;
+				rayOrigin = reflectionRayOrigin;
+				rayDirection = reflectionRayDirection;
+
+				willNeedReflectionRay = FALSE;
+				bounceIsSpecular = TRUE;
+				//sampleLight = FALSE;
 				continue;
 			}
 
@@ -374,13 +400,13 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			// is ray leaving a solid object from the inside? 
 			// If so, attenuate ray color with object color by how far ray has travelled through the medium
-			if (isRayExiting || (distance(n, nl) > 0.1))
+			if (isRayExiting == TRUE || (distance(n, nl) > 0.1))
 			{
-				isRayExiting = false;
+				isRayExiting = FALSE;
 				mask *= exp(log(hitColor) * thickness * t);
 			}
 
-			mask *= TP;
+			mask *= Tr;
 			
 			tdir = refract(rayDirection, nl, ratioIoR);
 			rayDirection = tdir;
@@ -392,30 +418,27 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		
 		if (hitType == COAT)  // Diffuse object underneath with ClearCoat on top (like car, or shiny pool ball)
 		{
-			coatTypeIntersected = true;
+			coatTypeIntersected = TRUE;
 			
 			nc = 1.0; // IOR of Air
 			nt = 1.6; // IOR of Clear Coat (a little thicker for this demo)
 			Re = calcFresnelReflectance(rayDirection, nl, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
-			P  = 0.25 + (0.5 * Re);
-                	RP = Re / P;
-                	TP = Tr / (1.0 - P);
-
-			if (bounces == 0 && rand() < P)
-			{	
-				mask *= RP;
-				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
-				rayOrigin = x + nl * uEPS_intersect;
-				continue;
+			
+			if (bounces == 0)// || (bounces == 1 && hitObjectID != objectID && bounceIsSpecular == TRUE))
+			{
+				reflectionMask = mask * Re;
+				reflectionRayDirection = reflect(rayDirection, nl); // reflect ray from surface
+				reflectionRayOrigin = x + nl * uEPS_intersect;
+				willNeedReflectionRay = TRUE;
 			}
 
 			diffuseCount++;
 
-			bounceIsSpecular = false;
+			bounceIsSpecular = FALSE;
 			
 			mask *= hitColor;
-			mask *= TP;
+			mask *= Tr;
 			
 			// choose random Diffuse sample vector
 			rayDirection = randomCosWeightedDirectionInHemisphere(nl);
