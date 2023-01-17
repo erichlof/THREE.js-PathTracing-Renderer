@@ -382,10 +382,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	float t = INFINITY;
 	float weight;
 
-	int diffuseCount = 0;
-
-	bool bounceIsSpecular = true;
-	bool sampleLight = false;
+	int sampleLight = FALSE;
 
 	pixelSharpness = 1.01;
 	objectID = -INFINITY;
@@ -401,7 +398,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			if (bounces == 0)
 				accumCol = GetBackgroundColor(rayDirection);
 			
-			if (sampleLight)
+			if (sampleLight == TRUE)
 			{
 
 				pixelOffset = vec2( tentFilter(rng()), tentFilter(rng()) );
@@ -435,8 +432,9 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			break;
 		}
 
-		// if we get here and sampleLight is still true, shadow ray failed to find a light source
-		if (sampleLight)
+		// if we get here and sampleLight is still true, shadow ray failed to find the light source 
+		// the ray hit an occluding object along its way to the light
+		if (sampleLight == TRUE)
 		{
 			pixelOffset = vec2( tentFilter(rng()), tentFilter(rng()) );
 
@@ -467,9 +465,6 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		    
 		if (hitType == DIFF) // Ideal DIFFUSE reflection
 		{	
-			diffuseCount++;
-
-			bounceIsSpecular = false;
 			
 			weight = max(0.0, dot(uSunDirection, nl));
 
@@ -477,7 +472,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			rayDirection = uSunDirection;
 			rayOrigin = x + nl * uEPS_intersect;
 
-			sampleLight = true;
+			sampleLight = TRUE;
 			continue;
 			
 		} // end if (hitType == DIFF)
