@@ -59,7 +59,7 @@ float getWaterWaveHeight( vec3 pos )
 }
 
 //--------------------------------------------------------------------------------------------------------
-float SceneIntersect( bool checkWater )
+float SceneIntersect( int checkWater )
 //--------------------------------------------------------------------------------------------------------
 {
 	vec3 rObjOrigin, rObjDirection;
@@ -72,10 +72,10 @@ float SceneIntersect( bool checkWater )
 
 	int objectCount = 0;
 	
-	bool isRayExiting = false;
+	int isRayExiting = FALSE;
 	
 	
-	d = QuadIntersect( quads[0].v0, quads[0].v1, quads[0].v2, quads[0].v3, rayOrigin, rayDirection, false );
+	d = QuadIntersect( quads[0].v0, quads[0].v1, quads[0].v2, quads[0].v3, rayOrigin, rayDirection, FALSE );
 	if (d < t)
 	{
 		t = d;
@@ -155,7 +155,7 @@ float SceneIntersect( bool checkWater )
 		hitColor *= WATER_COLOR;
 	}
 
-	if ( !checkWater )
+	if (checkWater == FALSE)
 	{
 		return t;
 	}
@@ -205,13 +205,16 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 	vec3 accumCol = vec3(0);
         vec3 mask = vec3(1);
+	vec3 reflectionMask = vec3(1);
+	vec3 reflectionRayOrigin = vec3(0);
+	vec3 reflectionRayDirection = vec3(0);
         vec3 n, nl, x;
 	vec3 dirToLight;
 	vec3 tdir;
 	
 	float t = INFINITY;
 	float nc, nt, ratioIoR, Re, Tr;
-	float P, RP, TP;
+	//float P, RP, TP;
 	float weight;
 	float thickness = 0.01; // 0.02
 	float hitObjectID;
@@ -220,22 +223,39 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	int previousIntersecType = -100;
 	hitType = -100;
 
-	bool bounceIsSpecular = true;
-	bool sampleLight = false;
-	bool checkWater = true;
-	bool rayEnteredWater = false;
+	int coatTypeIntersected = FALSE;
+	int bounceIsSpecular = TRUE;
+	int sampleLight = FALSE;
+	int checkWater = TRUE;
+	int rayEnteredWater = FALSE;
+	int willNeedReflectionRay = FALSE;
 
 
-	for (int bounces = 0; bounces < 5; bounces++)
+	for (int bounces = 0; bounces < 6; bounces++)
 	{
 		previousIntersecType = hitType;
 
 		t = SceneIntersect(checkWater);
-		checkWater = false;
+		checkWater = FALSE;
 
 		
 		if (t == INFINITY)
+		{
+			if (willNeedReflectionRay == TRUE)
+			{
+				mask = reflectionMask;
+				rayOrigin = reflectionRayOrigin;
+				rayDirection = reflectionRayDirection;
+
+				willNeedReflectionRay = FALSE;
+				bounceIsSpecular = TRUE;
+				sampleLight = FALSE;
+				diffuseCount = 0;
+				continue;
+			}
+
 			break;
+		}
 
 		// useful data 
 		n = normalize(hitNormal);
@@ -256,36 +276,72 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		
 		if (hitType == LIGHT)
 		{	
-			if (diffuseCount == 0)
+			if (bounces == 0 || (bounces == 1 && previousIntersecType == SPEC))
 				pixelSharpness = 1.01;
 
-			if (sampleLight || bounceIsSpecular)
-				accumCol = mask * hitEmission;
+			if (diffuseCount == 0)
+			{
+				objectNormal = nl;
+				objectColor = hitColor;
+				objectID = hitObjectID;
+			}
+
+			if (sampleLight == TRUE || bounceIsSpecular == TRUE)
+				accumCol += mask * hitEmission;
+
+			if (willNeedReflectionRay == TRUE)
+			{
+				mask = reflectionMask;
+				rayOrigin = reflectionRayOrigin;
+				rayDirection = reflectionRayDirection;
+
+				willNeedReflectionRay = FALSE;
+				bounceIsSpecular = TRUE;
+				sampleLight = FALSE;
+				diffuseCount = 0;
+				continue;
+			}
 			// reached a light, so we can exit
 			break;
 		}
 		
 
-		// if we get here and sampleLight is still true, shadow ray failed to find a light source
-		if (sampleLight) 	
+		// if we get here and sampleLight is still TRUE, shadow ray failed to find the light source 
+		// the ray hit an occluding object along its way to the light
+		if (sampleLight == TRUE)
+		{
+			if (willNeedReflectionRay == TRUE)
+			{
+				mask = reflectionMask;
+				rayOrigin = reflectionRayOrigin;
+				rayDirection = reflectionRayDirection;
+
+				willNeedReflectionRay = FALSE;
+				bounceIsSpecular = TRUE;
+				sampleLight = FALSE;
+				diffuseCount = 0;
+				continue;
+			}
+
 			break;
+		}
 		
 
 		
                 if (hitType == DIFF) // Ideal DIFFUSE reflection
 		{
 
-			if (!rayEnteredWater)
+			if (rayEnteredWater == FALSE)
 				mask *= hitColor;
 			else
 			{
-				rayEnteredWater = false;
+				rayEnteredWater = FALSE;
 				mask *= exp(log(WATER_COLOR) * thickness * t); 
 			}
 
 			diffuseCount++;
 
-			bounceIsSpecular = false;
+			bounceIsSpecular = FALSE;
 
 			if (diffuseCount == 1 && rand() < 0.4)
 			{
@@ -303,14 +359,14 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			rayDirection = dirToLight;
 			rayOrigin = x + nl * uEPS_intersect;
 
-			sampleLight = true;
+			sampleLight = TRUE;
 			continue;
                         
 		} // end if (hitType == DIFF)
 		
                 if (hitType == SPEC)  // Ideal SPECULAR reflection
 		{
-			if (!rayEnteredWater)
+			if (rayEnteredWater == FALSE)
 				mask *= hitColor;
 			else
 			{
@@ -321,44 +377,52 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			rayOrigin = x + nl * uEPS_intersect;
 
 			if (bounces == 0)
-				checkWater = true;
+				checkWater = TRUE;
 			
 			continue;
 		}
 
 		if (hitType == REFR)  // Ideal dielectric REFRACTION
 		{
-			pixelSharpness = diffuseCount == 0 ? -1.0 : pixelSharpness;
+			pixelSharpness = diffuseCount == 0 && coatTypeIntersected == FALSE ? -1.0 : pixelSharpness;
 
 			nc = 1.0; // IOR of Air
 			nt = 1.33; // IOR of Water
 			Re = calcFresnelReflectance(rayDirection, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
-			P  = 0.25 + (0.5 * Re);
-                	RP = Re / P;
-                	TP = Tr / (1.0 - P);
-			
-			if (diffuseCount == 0 && rand() < P)
-			{	
-				mask *= RP;
 
-				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
-				rayOrigin = x + nl * uEPS_intersect;
+			if (bounces == 0 || (bounces == 1 && hitObjectID != objectID && bounceIsSpecular == TRUE))
+			{
+				reflectionMask = mask * Re;
+				reflectionRayDirection = reflect(rayDirection, nl); // reflect ray from surface
+				reflectionRayOrigin = x + nl * uEPS_intersect;
+				willNeedReflectionRay = TRUE;
+			}
+
+			if (Re == 1.0)
+			{
+				mask = reflectionMask;
+				rayOrigin = reflectionRayOrigin;
+				rayDirection = reflectionRayDirection;
+
+				willNeedReflectionRay = FALSE;
+				bounceIsSpecular = TRUE;
+				sampleLight = FALSE;
 				continue;
 			}
 
 			// transmit ray through surface	
-			rayEnteredWater = true;
+			rayEnteredWater = TRUE;
 
 			// is ray leaving a solid object from the inside? 
 			// If so, attenuate ray color with object color by how far ray has travelled through the medium
 			if (distance(n, nl) > 0.1)
 			{
-				rayEnteredWater = false;
+				rayEnteredWater = FALSE;
 				mask *= exp(log(WATER_COLOR) * thickness * t);
 			}
 
-			mask *= TP;
+			mask *= Tr;
 			
 			tdir = refract(rayDirection, nl, ratioIoR);
 			rayDirection = tdir;
