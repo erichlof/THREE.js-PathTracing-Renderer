@@ -41,12 +41,12 @@ float SceneIntersect( )
 	vec3 rObjOrigin, rObjDirection;
         float d;
 	float t = INFINITY;
-	bool isRayExiting = false;
 	int objectCount = 0;
+	int isRayExiting = FALSE;
 	
 	hitObjectID = -INFINITY;
 	
-	d = QuadIntersect( quads[0].v0, quads[0].v1, quads[0].v2, quads[0].v3, rayOrigin, rayDirection, false );
+	d = QuadIntersect( quads[0].v0, quads[0].v1, quads[0].v2, quads[0].v3, rayOrigin, rayDirection, FALSE );
 	if (d < t)
 	{
 		t = d;
@@ -151,7 +151,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	int diffuseCount = 0;
 	int previousIntersecType = -100;
 
-	bool bounceIsSpecular = true;
+	//int bounceIsSpecular = TRUE;
 
 	pixelSharpness = 1.01; // can't really use de-noiser on this demo
 
@@ -193,7 +193,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			
 			mask *= hitColor;
 
-			bounceIsSpecular = false;
+			//bounceIsSpecular = FALSE;
 
 			// Russian Roulette
 			float p = max(mask.r, max(mask.g, mask.b));
