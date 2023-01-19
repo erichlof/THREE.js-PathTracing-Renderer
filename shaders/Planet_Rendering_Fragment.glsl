@@ -386,7 +386,7 @@ float WaterIntersect()
 
 
 //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-float SceneIntersect( bool checkWater )
+float SceneIntersect( int checkWater )
 //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 {
         float d = INFINITY;
@@ -442,7 +442,7 @@ float SceneIntersect( bool checkWater )
 		hitType = TERRAIN;
 	}
 	
-	if (!checkWater)
+	if (checkWater == FALSE)
 		return t;
 
 	d = INFINITY; // reset d
@@ -480,39 +480,39 @@ float SceneIntersect( bool checkWater )
 vec3 CalculateRadiance()
 //-----------------------------------------------------------------------
 {
-	vec3 firstRayOrigin, firstRayDirection;
-	vec3 cameraRayOrigin, cameraRayDirection;
-	cameraRayOrigin = rayOrigin;
-	cameraRayDirection = rayDirection;
 
 	vec3 randVec = vec3(rng() * 2.0 - 1.0, rng() * 2.0 - 1.0, rng() * 2.0 - 1.0);
 	
-
 	vec3 accumCol = vec3(0);
         vec3 mask = vec3(1);
-	vec3 firstMask = vec3(1);
+	vec3 reflectionMask = vec3(1);
+	vec3 reflectionRayOrigin = vec3(0);
+	vec3 reflectionRayDirection = vec3(0);
 	vec3 n, nl, x;
 	vec3 initialSkyColor = vec3(0);
+	vec3 cameraRayOrigin = rayOrigin;
 	vec3 firstX = cameraRayOrigin;
 	vec3 tdir;
 	
 	float nc, nt, ratioIoR, Re, Tr;
-	float P, RP, TP;
+	//float P, RP, TP;
 	float t0, t1, tMax = INFINITY;
 	float t = INFINITY;
 	
-	int previousIntersecType = -100;
+	//int previousIntersecType = -100;
 
-	bool waterHit = false;
-	bool terrainHit = false;
-	bool bounceIsSpecular = true;
-	bool checkWater = true;
-	bool isDayTime = true;
+	int waterHit = FALSE;
+	int terrainHit = FALSE;
+	int bounceIsSpecular = TRUE;
+	int checkWater = TRUE;
+	int isDayTime = TRUE;
+	//int sampleLight = FALSE;
+	int willNeedReflectionRay = FALSE;
 	
 	
 	if (dot(uSunDirection, uCameraFrameUp) < 0.0)
 	{
-		isDayTime = false;
+		isDayTime = FALSE;
 	}
 
 	if (PlanetSphereIntersect(rayOrigin, rayDirection, EARTH_RADIUS, vec3(0), t0, t1) && t1 > 0.0)
@@ -523,11 +523,11 @@ vec3 CalculateRadiance()
 
 	initialSkyColor = computeIncidentLight(rayOrigin, rayDirection, 0.0, tMax);
 
-        for (int bounces = 0; bounces < 3; bounces++)
+        for (int bounces = 0; bounces < 4; bounces++)
 	{
 		
 		t = SceneIntersect(checkWater);
-		checkWater = false; // no need to check water a second time
+		checkWater = FALSE; // no need to check water a second time
 		
 		tMax = INFINITY; //reset tMax
 
@@ -541,15 +541,26 @@ vec3 CalculateRadiance()
 		{
 			if (bounces == 0) // ray hits sky first	
 			{
-				accumCol = initialSkyColor;
+				accumCol += initialSkyColor;
 				break; // exit early	
 			}
 
-			if (previousIntersecType == REFR)
+			if (bounceIsSpecular == TRUE)
 			{
-				accumCol = mask * computeIncidentLight(rayOrigin, rayDirection, 0.0, tMax);
-				break;
+				accumCol += mask * computeIncidentLight(rayOrigin, rayDirection, 0.0, tMax);
 			}
+			// the following code caused a crash on mobile, so it is commented out
+			/* if (willNeedReflectionRay == TRUE)
+			{
+				mask = reflectionMask;
+				rayOrigin = reflectionRayOrigin;
+				rayDirection = reflectionRayDirection;
+
+				willNeedReflectionRay = FALSE;
+				bounceIsSpecular = TRUE;
+				//sampleLight = FALSE;
+				continue;
+			} */
 
 			// reached the sky light, so we can exit
 			break;
@@ -562,23 +573,26 @@ vec3 CalculateRadiance()
 		x = rayOrigin + rayDirection * t;
 
 		// SUN
-		//if ((uCameraUnderWater > 0.0 || uCameraWithinAtmosphere || !terrainHit) && hitType == LIGHT)
+		//if ((uCameraUnderWater > 0.0 || uCameraWithinAtmosphere || terrainHit == FALSE) && hitType == LIGHT)
 		if (hitType == LIGHT)
 		{	
-			if ( bounces == 0 || (bounces == 1 && (uCameraUnderWater > 0.0 || uCameraWithinAtmosphere)) )
+			if ( bounces == 0 || (bounceIsSpecular == TRUE && (uCameraUnderWater > 0.0 || uCameraWithinAtmosphere)) )
 			{
 				vec3 sampleSkyCol = computeIncidentLight(rayOrigin, rayDirection, 0.0, tMax);
 				mask = mix(sampleSkyCol, hitEmission, 0.5);
-				accumCol = mask;
-				break;
+				accumCol += mask;
+				
 			}
+			
+			// reached the sky light, so we can exit
+			break;
 		}
 		
 		// MOON
-		//if ((uCameraUnderWater > 0.0 || uCameraWithinAtmosphere || !terrainHit) && hitType == DIFF)
+		//if ((uCameraUnderWater > 0.0 || uCameraWithinAtmosphere || terrainHit == FALSE) && hitType == DIFF)
 		if (hitType == DIFF)
 		{
-			if ( bounces == 0 || (bounces == 1 && (uCameraUnderWater > 0.0 || uCameraWithinAtmosphere)) )
+			if ( bounces == 0 || (bounceIsSpecular == TRUE && (uCameraUnderWater > 0.0 || uCameraWithinAtmosphere)) )
 			{
 				vec2 uv;
 				vec3 mn = hitNormal;
@@ -591,9 +605,12 @@ vec3 CalculateRadiance()
 				mask = mix(hitColor, sampleSkyCol, clamp(0.7 * (sampleSkyCol.r + sampleSkyCol.b), 0.0, 1.0));
 						// * max(0.0, dot(nl, uSunDirection)); // for moon phases
 				hitColor = mask;
-				accumCol = mask;
-				break;
+				accumCol += mask;
+				
 			}
+			
+			// reached the sky light, so we can exit
+			break;
 		}
 
 
@@ -605,8 +622,8 @@ vec3 CalculateRadiance()
 		// ray hits terrain
 		if (hitType == TERRAIN)
 		{
-			terrainHit = true;
-			previousIntersecType = TERRAIN;
+			terrainHit = TRUE;
+			//previousIntersecType = TERRAIN;
 
 			float altitude = length(x) - EARTH_RADIUS;
 			vec2 uv;
@@ -624,7 +641,7 @@ vec3 CalculateRadiance()
 			vec3 sunColor = computeIncidentLight(x, normalize(sunDirection + (randomSkyVec * 0.02)), 0.0, tMax);
 			float terrainLayer = clamp( (altitude + (rockNoise * 1.0) * nY) / (TERRAIN_HEIGHT * 1.5 + TERRAIN_LIFT), 0.0, 1.0 );
 
-			if (!isDayTime)
+			if (isDayTime == FALSE)
 				sunDirection = -sunDirection;
 			else
 				sunColor = sunColor + 0.3;
@@ -643,47 +660,69 @@ vec3 CalculateRadiance()
 			}		
 				
 			vec3 shadowRayDirection = normalize(sunDirection + (randomSkyVec * 0.05));
-									
+			//or bounces < 2 (if terrain lighting just below water surface is desired)						
 			if ( bounces == 0 && dot(n, shadowRayDirection) > 0.1 && terrain_isSunVisible(x, n, shadowRayDirection) ) // in direct sunlight
 			{
-				if (isDayTime)
+				if (isDayTime == TRUE)
 					mask = hitColor * sunColor;
 				else 	
 					mask = hitColor * 0.002;
 			}
 			
-			if (isDayTime && altitude < 1.0) // terrain is under water
+			if (isDayTime == TRUE && altitude < 1.0) // terrain is under water
 			{
 				mask = mix(rockColor0, mask, clamp(0.1*altitude, 0.0, 1.0)) * 0.1;
 			}
 			
-			accumCol = mask;
+			accumCol += mask;
+
+			if (willNeedReflectionRay == TRUE)
+			{
+				mask = reflectionMask;
+				rayOrigin = reflectionRayOrigin;
+				rayDirection = reflectionRayDirection;
+
+				willNeedReflectionRay = FALSE;
+				bounceIsSpecular = TRUE;
+				//sampleLight = FALSE;
+				continue;
+			}
+
 			break;
 		}
                 
                 if (hitType == REFR)  // Ideal dielectric REFRACTION
 		{
-			waterHit = true;
-			previousIntersecType = REFR;
+			waterHit = TRUE;
+			//previousIntersecType = REFR;
 
 			nc = 1.0; // IOR of air
 			nt = 1.33; // IOR of water
 			Re = calcFresnelReflectance(rayDirection, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
-			P  = 0.25 + (0.5 * Re);
-                	RP = Re / P;
-                	TP = Tr / (1.0 - P);
-			
-			if (bounces == 0 && rand() < P)
-			{	
-				mask *= RP;
-				rayDirection = reflect(rayDirection, nl); // reflect ray from surface
-				rayOrigin = x + nl * uEPS_intersect;
+
+			if (bounces == 0)
+			{
+				reflectionMask = mask * Re;
+				reflectionRayDirection = reflect(rayDirection, nl); // reflect ray from surface
+				reflectionRayOrigin = x + nl * uEPS_intersect;
+				willNeedReflectionRay = TRUE;
+			}
+
+			if (Re == 1.0)
+			{
+				mask = reflectionMask;
+				rayOrigin = reflectionRayOrigin;
+				rayDirection = reflectionRayDirection;
+
+				willNeedReflectionRay = FALSE;
+				bounceIsSpecular = TRUE;
+				//sampleLight = FALSE;
 				continue;
 			}
 			
 			// transmit ray through surface
-			mask *= TP;
+			mask *= Tr;
 			mask *= hitColor;
 			
 			tdir = refract(rayDirection, nl, ratioIoR);
@@ -699,7 +738,7 @@ vec3 CalculateRadiance()
 	// atmospheric haze effect (aerial perspective)
 	float hitDistance;
 
-	if (terrainHit)
+	if (terrainHit == TRUE)
 	{
 		hitDistance = distance(cameraRayOrigin, firstX);
 		accumCol = mix( initialSkyColor, accumCol, clamp( exp2( -log(hitDistance * 0.02) ), 0.0, 1.0 ) );
@@ -710,14 +749,14 @@ vec3 CalculateRadiance()
 	
 	
 	// stars
-	if (t == INFINITY && !waterHit)
+	if (t == INFINITY && waterHit == FALSE)
 	{
 		vec3 rotatedStarDir = rayDirection;
 		rotatedStarDir.x = rayDirection.x * cos(uSunAngle) + rayDirection.z * sin(uSunAngle);
 		rotatedStarDir.z = rayDirection.x * -sin(uSunAngle) + rayDirection.z * cos(uSunAngle);
 		vec3 starVal = stars(normalize(rotatedStarDir));
 		float altitude = length(cameraRayOrigin); 
-		if (altitude < ATMOSPHERE_RADIUS && isDayTime)
+		if (altitude < ATMOSPHERE_RADIUS && isDayTime == TRUE)
 		{
 			float starAlt = EARTH_RADIUS + 15.0; // in Km
 			if (altitude > starAlt)
