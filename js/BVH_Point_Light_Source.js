@@ -158,6 +158,7 @@ function initSceneData()
 	// set camera's field of view
 	worldCamera.fov = 60;
 	focusDistance = 95.0;
+	apertureChangeSpeed = 5;
 
 	// position and orient camera
 	cameraControlsObject.position.set(0, 30, 60);
@@ -314,10 +315,16 @@ function initSceneData()
 	}
 
 
-	// Build the BVH acceleration structure, which places a bounding box ('root' of the tree) around all of the 
+	console.time("BvhGeneration");
+	console.log("BvhGeneration...");
+
+	// Build the BVH acceleration structure, which places a bounding box ('root' of the tree) around all of the
 	// triangles of the entire mesh, then subdivides each box into 2 smaller boxes.  It continues until it reaches 1 triangle,
 	// which it then designates as a 'leaf'
 	BVH_Build_Iterative(totalWork, aabb_array);
+	//console.log(buildnodes);
+
+	console.timeEnd("BvhGeneration");
 
 
 	triangleDataTexture = new THREE.DataTexture(triangle_array,
