@@ -43,9 +43,10 @@ function load_GLTF_Model()
 {
 
 	let gltfLoader = new THREE.GLTFLoader();
-
+	//modelScale = 0.04; heightScale = 1;
 	gltfLoader.load("models/Landscape.glb", function (meshGroup) // Triangles: 734,464
-	{ 
+	//gltfLoader.load("models/sponza.glb", function (meshGroup)
+	{
 
 		if (meshGroup.scene)
 			meshGroup = meshGroup.scene;
@@ -130,7 +131,7 @@ function initSceneData()
 
 	// scene/demo-specific three.js objects setup goes here
 	sceneIsDynamic = false;
-	
+
 	cameraFlightSpeed = 60;
 
 	// pixelRatio is resolution - range: 0.5(half resolution) to 1.0(full resolution)
@@ -140,6 +141,7 @@ function initSceneData()
 
 	// set camera's field of view
 	worldCamera.fov = 60;
+	apertureChangeSpeed = 0.1;
 
 	// position and orient camera
 	cameraControlsObject.position.set(0, 30, 70);
@@ -283,6 +285,7 @@ function initSceneData()
 		triangle_b_box_max.copy(triangle_b_box_max.max(vp2));
 
 		triangle_b_box_centroid.copy(triangle_b_box_min).add(triangle_b_box_max).multiplyScalar(0.5);
+		//triangle_b_box_centroid.copy(vp0).add(vp1).add(vp2).multiplyScalar(0.33333333);
 
 		aabb_array[9 * i + 0] = triangle_b_box_min.x;
 		aabb_array[9 * i + 1] = triangle_b_box_min.y;
@@ -298,11 +301,17 @@ function initSceneData()
 	}
 
 
-	// Build the BVH acceleration structure, which places a bounding box ('root' of the tree) around all of the 
+	console.time("BvhGeneration");
+	console.log("BvhGeneration...");
+
+	// Build the BVH acceleration structure, which places a bounding box ('root' of the tree) around all of the
 	// triangles of the entire mesh, then subdivides each box into 2 smaller boxes.  It continues until it reaches 1 triangle,
 	// which it then designates as a 'leaf'
 	BVH_Build_Iterative(totalWork, aabb_array);
-	
+	//console.log(buildnodes);
+
+	console.timeEnd("BvhGeneration");
+
 
 	triangleDataTexture = new THREE.DataTexture(triangle_array,
 		4096,
