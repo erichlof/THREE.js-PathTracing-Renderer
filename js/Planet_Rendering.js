@@ -41,6 +41,7 @@ function initSceneData()
 	// set camera's field of view
 	worldCamera.fov = 60;
 	focusDistance = 10.0;
+	apertureChangeSpeed = 0.005;
 
 	// position and orient camera
 	// camera starts in space
@@ -89,6 +90,9 @@ function initSceneData()
 	pathTracingUniforms.uCameraFrameRight = { value: new THREE.Vector3() };
 	pathTracingUniforms.uCameraFrameForward = { value: new THREE.Vector3() };
 	pathTracingUniforms.uCameraFrameUp = { value: new THREE.Vector3() };
+
+	// debug: start demo on planet surface instead
+	//handleCameraViewpointPositionChange();
 
 } // end function initSceneData()
 
