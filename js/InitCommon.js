@@ -31,6 +31,7 @@ let dollyCameraOut = false;
 let apertureSize = 0.0;
 let increaseAperture = false;
 let decreaseAperture = false;
+let apertureChangeSpeed = 1;
 let focusDistance = 132.0;
 let increaseFocusDist = false;
 let decreaseFocusDist = false;
@@ -840,16 +841,16 @@ function animate()
 
 	if (increaseAperture)
 	{
-		apertureSize += 0.1;
-		if (apertureSize > 100.0)
-			apertureSize = 100.0;
+		apertureSize += (0.1 * apertureChangeSpeed);
+		if (apertureSize > 10000.0)
+			apertureSize = 10000.0;
 		pathTracingUniforms.uApertureSize.value = apertureSize;
 		cameraIsMoving = true;
 		increaseAperture = false;
 	}
 	if (decreaseAperture)
 	{
-		apertureSize -= 0.1;
+		apertureSize -= (0.1 * apertureChangeSpeed);
 		if (apertureSize < 0.0)
 			apertureSize = 0.0;
 		pathTracingUniforms.uApertureSize.value = apertureSize;
