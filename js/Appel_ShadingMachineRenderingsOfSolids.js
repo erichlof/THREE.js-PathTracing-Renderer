@@ -691,6 +691,8 @@ function initSceneData()
 	
 	cameraFlightSpeed = 100;
 
+	apertureChangeSpeed = 20;
+
 	// This is a classic black and white digital plotter scene, so we don't have light source values exceeding 1.0.
 	//  All color values will already be in the normalized rgb 0.0-1.0 range, so no tone mapper is needed.
 	useToneMapping = false;
