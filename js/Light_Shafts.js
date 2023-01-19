@@ -17,11 +17,12 @@ function initSceneData()
 	EPS_intersect = 0.001;
 
 	// set camera's field of view
-	worldCamera.fov = 60;
+	worldCamera.fov = 70;
 	focusDistance = 100;
+	apertureChangeSpeed = 20;
 
 	// position and orient camera
-	cameraControlsObject.position.set(0, 0, 70);
+	cameraControlsObject.position.set(0, 0, 51);
 	///cameraControlsYawObject.rotation.y = 0.0;
 	// look slightly upward
 	cameraControlsPitchObject.rotation.x = 0.005;
