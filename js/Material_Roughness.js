@@ -25,6 +25,7 @@ function initSceneData()
 	// set camera's field of view
 	worldCamera.fov = 60;
 	focusDistance = 130.0;
+	apertureChangeSpeed = 2;
 
 	// position and orient camera
 	cameraControlsObject.position.set(0, 20, 120);
