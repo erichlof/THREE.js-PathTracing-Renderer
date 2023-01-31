@@ -239,6 +239,160 @@ float UnitBoundingSphereIntersect( vec3 ro, vec3 rd, out int insideSphere )
 }
 `;
 
+THREE.ShaderChunk[ 'pathtracing_unit_sphere_intersect' ] = `
+
+float UnitSphereIntersect( vec3 ro, vec3 rd, out vec3 n )
+{
+	vec3 hitPoint;
+	float t0, t1;
+	float a = dot(rd, rd);
+	float b = 2.0 * dot(rd, ro);
+	float c = dot(ro, ro) - 1.0;// radius * radius = 1.0 * 1.0 = 1.0 
+	solveQuadratic(a, b, c, t0, t1);
+	
+	// first, try t0
+	if (t0 > 0.0)
+	{
+		hitPoint = ro + rd * t0;
+		n = hitPoint;
+		return t0;
+	}
+	// if t0 was invalid, try t1
+	if (t1 > 0.0)
+	{
+		hitPoint = ro + rd * t1;
+		n = hitPoint;
+		return t1;
+	}
+
+	return 0.0;
+}
+`;
+
+THREE.ShaderChunk[ 'pathtracing_unit_cylinder_intersect' ] = `
+
+float UnitCylinderIntersect( vec3 ro, vec3 rd, out vec3 n )
+{
+	vec3 hitPoint;
+	float t0, t1;
+	float a = rd.x * rd.x + rd.z * rd.z;
+	float b = 2.0 * (rd.x * ro.x + rd.z * ro.z);
+	float c = (ro.x * ro.x + ro.z * ro.z) - 0.99;// 0.99 prevents clipping at cylinder walls 
+	solveQuadratic(a, b, c, t0, t1);
+	
+	// first, try t0
+	hitPoint = ro + rd * t0;
+	if (t0 > 0.0 && abs(hitPoint.y) <= 1.0)
+	{
+		n = vec3(hitPoint.x, 0.0, hitPoint.z);
+		return t0;
+	}
+	// if t0 was invalid, try t1
+	hitPoint = ro + rd * t1;
+	if (t1 > 0.0 && abs(hitPoint.y) <= 1.0)
+	{
+		n = vec3(hitPoint.x, 0.0, hitPoint.z);
+		return t1;
+	}
+
+	return 0.0;
+}
+`;
+
+THREE.ShaderChunk[ 'pathtracing_unit_cone_intersect' ] = `
+
+float UnitConeIntersect( vec3 ro, vec3 rd, out vec3 n )
+{
+	// the '(ro.y - h)' parts below truncate the top half of the double-cone, leaving a single cone with apex at top
+	vec3 hitPoint;
+	float t0, t1;
+	float h = 1.0;	      // 0.25 makes the circular base of cone end up as radius of 1, unit length
+	float a = rd.x * rd.x - (0.25 * rd.y * rd.y) + rd.z * rd.z;
+	float b = 2.0 * (rd.x * ro.x - (0.25 * rd.y * (ro.y - h)) + rd.z * ro.z);
+	float c = ro.x * ro.x - (0.25 * (ro.y - h) * (ro.y - h)) + ro.z * ro.z;
+	solveQuadratic(a, b, c, t0, t1);
+	
+	// first, try t0
+	hitPoint = ro + rd * t0;
+	if (t0 > 0.0 && abs(hitPoint.y) <= 1.0)
+	{
+		n = vec3(hitPoint.x, (h - hitPoint.y) * 0.25, hitPoint.z);
+		return t0;
+	}
+	// if t0 was invalid, try t1
+	hitPoint = ro + rd * t1;
+	if (t1 > 0.0 && abs(hitPoint.y) <= 1.0)
+	{
+		n = vec3(hitPoint.x, (h - hitPoint.y) * 0.25, hitPoint.z);
+		return t1;
+	}
+
+	return 0.0;
+}
+`;
+
+THREE.ShaderChunk[ 'pathtracing_unit_paraboloid_intersect' ] = `
+
+float UnitParaboloidIntersect( vec3 ro, vec3 rd, out vec3 n )
+{
+	vec3 hitPoint;
+	float t0, t1;
+	float k = 0.5;
+	float a = rd.x * rd.x + rd.z * rd.z;
+    	float b = 2.0 * (rd.x * ro.x + rd.z * ro.z) + k * rd.y;
+    	float c = ro.x * ro.x + (k * (ro.y - 1.0)) + ro.z * ro.z; 
+	solveQuadratic(a, b, c, t0, t1);
+	
+	// first, try t0
+	hitPoint = ro + rd * t0;
+	if (t0 > 0.0 && abs(hitPoint.y) <= 1.0)
+	{
+		n = vec3(2.0 * hitPoint.x, k, 2.0 * hitPoint.z);
+		return t0;
+	}
+	// if t0 was invalid, try t1
+	hitPoint = ro + rd * t1;
+	if (t1 > 0.0 && abs(hitPoint.y) <= 1.0)
+	{
+		n = vec3(2.0 * hitPoint.x, k, 2.0 * hitPoint.z);
+		return t1;
+	}
+
+	return 0.0;
+}
+`;
+
+THREE.ShaderChunk[ 'pathtracing_unit_box_intersect' ] = `
+
+float UnitBoxIntersect( vec3 ro, vec3 rd, out vec3 n )
+{
+	vec3 invDir = 1.0 / rd;
+	vec3 near = (vec3(-1) - ro) * invDir; // unit radius box: vec3(-1,-1,-1) min corner
+	vec3 far  = (vec3( 1) - ro) * invDir;  // unit radius box: vec3(+1,+1,+1) max corner
+	
+	vec3 tmin = min(near, far);
+	vec3 tmax = max(near, far);
+	float t0 = max( max(tmin.x, tmin.y), tmin.z);
+	float t1 = min( min(tmax.x, tmax.y), tmax.z);
+
+	if (t0 > t1) // test for invalid intersection
+		return 0.0;
+
+	if (t0 > 0.0)
+	{
+		n = -sign(rd) * step(tmin.yzx, tmin) * step(tmin.zxy, tmin);
+		return t0;
+	}
+	if (t1 > 0.0)
+	{
+		n = -sign(rd) * step(tmax, tmax.yzx) * step(tmax, tmax.zxy);
+		return t1;
+	}
+	
+	return 0.0;
+}
+`;
+
 THREE.ShaderChunk[ 'pathtracing_quadric_intersect' ] = `
 
 /*
@@ -2583,7 +2737,6 @@ float BoundingBoxIntersect( vec3 minCorner, vec3 maxCorner, vec3 rayOrigin, vec3
 	float t0 = max( max(tmin.x, tmin.y), tmin.z);
 	float t1 = min( min(tmax.x, tmax.y), tmax.z);
 	
-	//return t1 >= max(t0, 0.0) ? t0 : INFINITY;
 	return max(t0, 0.0) > t1 ? INFINITY : t0;
 }
 `;
