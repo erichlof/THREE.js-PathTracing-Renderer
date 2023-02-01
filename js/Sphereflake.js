@@ -298,8 +298,9 @@ function initSceneData()
 		for (let s1 = totalNumberOfShapes; s1 < (totalNumberOfShapes + 6); s1++)
 		{
 			tangentVector.applyAxisAngle(normalVector, s1_Angle);
-			normalVectors[s1] = new THREE.Vector3();
-			normalVectors[s1].copy(tangentVector).normalize();
+			// the following 2 lines are not needed for this final iteration
+			///normalVectors[s1] = new THREE.Vector3();
+			///normalVectors[s1].copy(tangentVector).normalize();
 			spheres[s1] = new THREE.Object3D();
 			spheres[s1].position.copy(currentParentSpherePosition);
 			spheres[s1].position.add(tangentVector);
@@ -314,8 +315,9 @@ function initSceneData()
 		for (let s2 = totalNumberOfShapes; s2 < (totalNumberOfShapes + 3); s2++)
 		{
 			tangentVector.applyAxisAngle(normalVector, s2_Angle);
-			normalVectors[s2] = new THREE.Vector3();
-			normalVectors[s2].copy(tangentVector).normalize();
+			// the following 2 lines are not needed for this final iteration
+			///normalVectors[s2] = new THREE.Vector3();
+			///normalVectors[s2].copy(tangentVector).normalize();
 			spheres[s2] = new THREE.Object3D();
 			spheres[s2].position.copy(currentParentSpherePosition);
 			spheres[s2].position.add(tangentVector);
@@ -328,7 +330,7 @@ function initSceneData()
 
 
 
-	console.log("Shape count:" + totalNumberOfShapes);
+	console.log("Shape count: " + totalNumberOfShapes);
 
 	totalWork = new Uint32Array(totalNumberOfShapes);
 
@@ -344,29 +346,29 @@ function initSceneData()
 		invMatrix.copy(spheres[i].matrixWorld).invert();
 		el = invMatrix.elements;
 
-		//slot 0                       Shape transform Matrix 4x4 (16 elements total)
-		shape_array[32 * i + 0] = el[0]; // r or x // shape transform Matrix element[0]
-		shape_array[32 * i + 1] = el[1]; // g or y // shape transform Matrix element[1] 
-		shape_array[32 * i + 2] = el[2]; // b or z // shape transform Matrix element[2]
-		shape_array[32 * i + 3] = el[3]; // a or w // shape transform Matrix element[3]
+		//slot 0                       Shape inverse transform Matrix 4x4 (16 elements total)
+		shape_array[32 * i + 0] = el[0]; // r or x // shape inv transform Matrix elements[0]
+		shape_array[32 * i + 1] = el[1]; // g or y // shape inv transform Matrix elements[1] 
+		shape_array[32 * i + 2] = el[2]; // b or z // shape inv transform Matrix elements[2]
+		shape_array[32 * i + 3] = el[3]; // a or w // shape inv transform Matrix elements[3]
 
 		//slot 1
-		shape_array[32 * i + 4] = el[4]; // r or x // shape transform Matrix element[4]
-		shape_array[32 * i + 5] = el[5]; // g or y // shape transform Matrix element[5]
-		shape_array[32 * i + 6] = el[6]; // b or z // shape transform Matrix element[6]
-		shape_array[32 * i + 7] = el[7]; // a or w // shape transform Matrix element[7]
+		shape_array[32 * i + 4] = el[4]; // r or x // shape inv transform Matrix elements[4]
+		shape_array[32 * i + 5] = el[5]; // g or y // shape inv transform Matrix elements[5]
+		shape_array[32 * i + 6] = el[6]; // b or z // shape inv transform Matrix elements[6]
+		shape_array[32 * i + 7] = el[7]; // a or w // shape inv transform Matrix elements[7]
 
 		//slot 2
-		shape_array[32 * i + 8] = el[8]; // r or x // shape transform Matrix element[8]
-		shape_array[32 * i + 9] = el[9]; // g or y // shape transform Matrix element[9]
-		shape_array[32 * i + 10] = el[10]; // b or z // shape transform Matrix element[10]
-		shape_array[32 * i + 11] = el[11]; // a or w // shape transform Matrix element[11]
+		shape_array[32 * i + 8] = el[8]; // r or x // shape inv transform Matrix elements[8]
+		shape_array[32 * i + 9] = el[9]; // g or y // shape inv transform Matrix elements[9]
+		shape_array[32 * i + 10] = el[10]; // b or z // shape inv transform Matrix elements[10]
+		shape_array[32 * i + 11] = el[11]; // a or w // shape inv transform Matrix elements[11]
 
 		//slot 3
-		shape_array[32 * i + 12] = el[12]; // r or x // shape transform Matrix element[12]
-		shape_array[32 * i + 13] = el[13]; // g or y // shape transform Matrix element[13]
-		shape_array[32 * i + 14] = el[14]; // b or z // shape transform Matrix element[14]
-		shape_array[32 * i + 15] = el[15]; // a or w // shape transform Matrix element[15]
+		shape_array[32 * i + 12] = el[12]; // r or x // shape transform Matrix elements[12]
+		shape_array[32 * i + 13] = el[13]; // g or y // shape transform Matrix elements[13]
+		shape_array[32 * i + 14] = el[14]; // b or z // shape transform Matrix elements[14]
+		shape_array[32 * i + 15] = el[15]; // a or w // shape transform Matrix elements[15]
 
 		//slot 4
 		shape_array[32 * i + 16] = 1; // r or x // shape type id#  (0: box, 1: sphere, 2: cylinder, 3: cone, 4: paraboloid, etc)
@@ -499,27 +501,22 @@ function updateVariablesAndUniforms()
 		if (matType == 'Diffuse') 
 		{
 			pathTracingUniforms.uMaterialType.value = 1;
-			
 		}
 		else if (matType == 'Transparent Refractive') 
 		{
 			pathTracingUniforms.uMaterialType.value = 2;
-			
 		}
 		else if (matType == 'Metal') 
 		{
-			pathTracingUniforms.uMaterialType.value = 3;
-			
+			pathTracingUniforms.uMaterialType.value = 3;	
 		}
 		else if (matType == 'ClearCoat Diffuse') 
 		{
-			pathTracingUniforms.uMaterialType.value = 4;
-			
+			pathTracingUniforms.uMaterialType.value = 4;	
 		}
 		else if (matType == 'Random') 
 		{
-			pathTracingUniforms.uMaterialType.value = 1000;
-			
+			pathTracingUniforms.uMaterialType.value = 1000;	
 		}
 			
 		cameraIsMoving = true;
