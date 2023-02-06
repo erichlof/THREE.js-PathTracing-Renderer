@@ -176,6 +176,16 @@ For more intuition and a direct comparison between regular path tracing and bi-d
 Enter Bi-Directional path tracing to the rescue!:
 * [Bi-Directional Approach to Blocked Light Source](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Compare_Bi-Directional_Approach.html) Like magic, the difficult scene comes into focus - in real-time! <br> <br> <br>
 
+<h3> Quadric Shapes BVH </h3>
+
+![](readme-Images/invisible_date.png)
+
+
+<br>
+
+* ['Invisible Date' classic scene Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Invisible_Date.html) <br>
+
+
 <h3>Game Engine path tracer for Desktop and Mobile</h3>
 
 Before I got into this world of path tracing, I was a 3D game programmer (and still am, although path tracing is consuming most of my coding time!).  My first game was way back in 1998, using OpenGL 1 and the C language, back when these new things called graphics cards were all the rage! [my old Binary Brotherz page](https://web.archive.org/web/20010405004141/http://www.binarybrotherz.com/games.html)  Although using OpenGL back then and WebGL today was/is cool, I always wanted more in terms of lighting, shadows, reflections, diffuse color sharing, etc., in my game engines that I just couldn't get from rasterizing graphics APIs.  Well, fast forward to 2019 and NVidia is releasing graphics cards dedicated to real-time ray tracing!  I couldn't have imagined this back in the 90's! However, at the time I'm writing this, NVidia is only doing specular ray tracing as a bonus feature on top of the old rasterization technique. I wanted to see if I could 'overclock' my full path tracer's convergence so that you could see the beautiful light effects in real time, being able to possibly move a game character or 1st-person camera through a path-traced dynamic game environment at 30-60 fps, even on mobile.  If you're willing to sacrifice some ultimate physical reality (like perfect converged reflected/refracted caustics), then you can have this!: <br>
