@@ -95,6 +95,18 @@ This demo showcases different surface material possibilities. The materials that
 Demonstrates increasing levels of roughness on different materials.  From left to right, roughness on the left sphere is set at 0.0, then 0.1, 0.2, 0.3 etc., all the way to the max: 1.0 roughness on the right sphere. The demo starts out with a clearcoat cyan plastic-like material, but you can choose different material presets from the selection menu, as well as change the material color in realtime.  I have researched and improved the importance sampling of specular lobes for various amounts of roughness, which results in very fast convergence, especially with smoother to medium-rough materials.  Try all the presets for yourself! <br>
 <br>
 
+<h3> Quadric Shapes BVH </h3>
+
+![](readme-Images/invisible_date.png)
+
+The above image of the classic scene entitled 'Invisible Date'(by Christa Marx, 2000) inspired me to try and render it in real time with the browser.  I knew the amount of geometry was going to be a challenge, simply because the original scene was composed of several thousands of triangles. Now my standard triangle BVH system could have handled it, and it would have run smoothly on a desktop with a nice GPU - but not so much for mobile devices.  Devices like cell phones have a harder time traversing the deep BVH trees that these kind of triangle-heavy scenes produce.  Then, I noticed that most of 'Invisible Date's geometry (except for the Utah Teapot) was built up from simple, quadric shapes like spheres, cylinders, cones, and rectangular boxes of various dimensions. So I decided to put together a custom 'Shapes BVH' system - instead of handling thousands of small triangles as all other ray tracing BVH builders do, it instead works with larger, simpler shapes like spheres and boxes that are ray tracing-friendly. Since a larger, quadric shape can cover an area that would have required hundreds of triangles, now the geometry count goes down exponentially!  Instead of several thousands of triangles and all of their bounding boxes required for the original scene, our new 'Shapes BVH' boils everything down to... 54 shapes! And a BVH tree with only 54 leaves (the shapes themselves) will basically run on a toaster, lol! When I first tried out this classic scene on my phone, I was delightfully surprised that it ran at 30 to 60 FPS!  Check it out for yourself: <br>
+
+* ['Invisible Date' scene / Shapes BVH Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Invisible_Date.html) <br>
+
+I think that this system might help us get closer to the dream of having most graphics ray traced in real-time with the browser, especially when it comes to under-powered devices like cell phones, tablets, and mobile VR headsets. I don't believe that we can just throw the standard 'triangle BVH' system at phones and tablets and expect them to perform like a desktop with an NVIDIA RTX ray tracing card.  I think that for the time being, until small mobile devices get way faster and more energy efficient, that we will have to rely on more 'outside-the-box' thinking and techniques, if we are to have any hope of having high quality ray-traced graphics available everywhere around us, on any device. I'm really excited to see what the future of graphics on the web has in store for us.  Imagine visiting a website or playing a game in a photorealistic real-time path traced environment...in VR...on the go!
+<br>
+<br>
+
 <h3>Classic Scenes / Ray Tracing History</h3>
 
 <img src="https://github.com/erichlof/THREE.js-PathTracing-Renderer/blob/gh-pages/readme-Images/4-Figure7-1.png" width=30% height=30%>
@@ -175,15 +187,6 @@ For more intuition and a direct comparison between regular path tracing and bi-d
 * [Naive Approach to Blocked Light Source](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Compare_Uni-Directional_Approach.html) As we can painfully see, we will have to wait a long time to get a decent image!
 Enter Bi-Directional path tracing to the rescue!:
 * [Bi-Directional Approach to Blocked Light Source](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Compare_Bi-Directional_Approach.html) Like magic, the difficult scene comes into focus - in real-time! <br> <br> <br>
-
-<h3> Quadric Shapes BVH </h3>
-
-![](readme-Images/invisible_date.png)
-
-
-<br>
-
-* ['Invisible Date' classic scene Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Invisible_Date.html) <br>
 
 
 <h3>Game Engine path tracer for Desktop and Mobile</h3>
