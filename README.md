@@ -220,6 +220,44 @@ Creating this remake forced me to figure out how to make a dynamic top-level BVH
 
 <br>
 <br>
+
+<h2> My New YouTube series! The <em>Joy</em> of Ray Tracing </h2>
+You may be interested to know that I have started my own video tutorial series on YouTube all about ray tracing!  It's called <strong> The <em>Joy</em> of Ray Tracing </strong> and together we will make several different kinds of ray tracers - <strong><em> from scratch </em></strong>! 
+
+<br>
+<br>
+
+![JoyOfRayTracing_thumbnail7](https://user-images.githubusercontent.com/3434843/217344929-bf083956-242d-446f-90b2-0bc2d33b579c.png)
+![JoyOfRayTracing_thumbnail](https://user-images.githubusercontent.com/3434843/217345576-d1225757-5bf8-4987-856f-f597de98f48d.png)
+![JoyOfRayTracing_thumbnail4](https://user-images.githubusercontent.com/3434843/217345617-3910befe-23a5-4849-a3b4-beae6a1011f3.png)
+
+<br>
+
+[My YouTube Channel intro](https://www.youtube.com/watch?v=bI9MzhqBcH4)
+
+<br>
+
+[The Joy of Ray Tracing Video Series](https://www.youtube.com/playlist?list=PL3NuKUKozjGTJRKB4duG2dxpyUu_Pj7jV)
+
+<br>
+
+If you want to know how all of my demos work under the hood, then look no further.  And when I say 'from scratch', I really mean it!  Chapter 0 of my video series is all about installing and setting up a productive coding environment for the web (mainly VS Code and some helpful plugins), the basics of HTML/CSS/JavaScript, GitHub basics plus how to use GitHub's integration with VS Code to easily create your 1st project repo, how to use VS Code's awesome Live Server plugin to automatically run and test your code on any device on your WiFi network and to instantly see changes you make to your code, and finally an introduction to the web's Canvas element that allows us to draw our 1st pixels to the screen! <br>
+
+Therefore, if you're an experienced web developer who has a working coding environment and who already comfortable with HTML/CSS/JavaScript basics, then you can safely skip Chapter 0 and meet us in Chapter 1.  In this chapter we start talking about concepts and techniques that are specific to Ray Tracing.  As of this readme update today (2/7/2023), I am still inthe process of filming the rest of the videos for Chapter 1.  But by the end of this chapter, you will have created your first basic ray tracer that runs on any device!  The following chapters will explore more intermediate techniques and our ray tracers will get more sophisticated (and awesome!).  Along the way we'll also learn about the fascinating history of Ray Tracing, which is over 55 years old by now! <br>
+
+As we go through the series, I code every single line on-screen, and then all of the code (and live demos!) will be placed in a dedicated GitHub repository with the same name (Joy of Ray Tracing):
+
+[The Joy of Ray Tracing companion GitHub page](https://github.com/erichlof/Joy-of-Ray-Tracing)
+<br>
+
+I hope to see you over on YouTube! I'm really excited to have you along for the ride! <br>
+So...
+<h3> Let's get started on our journey to discover... The <em> Joy </em> of Ray Tracing!
+</h3>
+
+<br>
+<br>
+<br>
 A random sample rendering from the three.js pathtracing renderer as it was back in 2015!
 <br>
 
