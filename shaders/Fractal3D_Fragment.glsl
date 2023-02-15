@@ -9,8 +9,8 @@ uniform sampler2D tAABB_DataTexture;
 uniform vec3 uSunDirection;
 
 //#include <pathtracing_skymodel_defines>
-#define TURBIDITY 0.5
-#define RAYLEIGH_COEFFICIENT 3.0//2.0
+#define TURBIDITY 1.0
+#define RAYLEIGH_COEFFICIENT 2.0
 #define MIE_COEFFICIENT 0.005
 #define MIE_DIRECTIONAL_G 0.76
 // constants for atmospheric scattering
@@ -18,8 +18,11 @@ uniform vec3 uSunDirection;
 #define ONE_OVER_FOURPI 0.07957747154594767
 // wavelength of used primaries, according to preetham
 #define LAMBDA vec3( 680E-9, 550E-9, 450E-9 )
-#define TOTAL_RAYLEIGH vec3( 5.804542996261093E-6, 1.3562911419845635E-5, 3.0265902468824876E-5 )
 
+// original Rayleigh colors, from Preetham's sky model paper
+//#define TOTAL_RAYLEIGH vec3( 5.804542996261093E-6, 1.3562911419845635E-5, 3.0265902468824876E-5 )
+// I lowered the red portion of this Rayleigh color, in order to make the sky a brighter blue
+#define TOTAL_RAYLEIGH vec3( 2.804542996261093E-6, 1.3562911419845635E-5, 3.0265902468824876E-5 )
 
 // mie stuff
 #define UP_VECTOR vec3(0,1,0)
