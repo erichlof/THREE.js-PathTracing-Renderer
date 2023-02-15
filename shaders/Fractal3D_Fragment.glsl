@@ -485,7 +485,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			
 		} // end if (hitType == DIFF)
 		
-		if (hitType == SPEC)  // Ideal SPECULAR reflection
+		/* if (hitType == SPEC)  // Ideal SPECULAR reflection
 		{
 			mask *= hitColor;
 
@@ -590,7 +590,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			sampleLight = TRUE;
 			continue;
 			
-		} //end if (hitType == COAT)
+		} //end if (hitType == COAT) */
 		
 	} // end for (int bounces = 0; bounces < 6; bounces++)
 	
