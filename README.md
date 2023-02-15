@@ -107,6 +107,17 @@ I think that this system might help us get closer to the dream of having most gr
 <br>
 <br>
 
+<h3>Path Tracing 3D Fractals</h3>
+
+![CubeFractal](https://user-images.githubusercontent.com/3434843/218933143-d5db77db-2cc8-4a1a-9b55-b9bd73934b72.png)
+
+Another good use case for my Shapes BVH technique is for path tracing 3D fractals.  By using these raytracing-friendly shapes, we can have over 200,000 shapes, each with their own unique transform and material, all running at 30-60 fps...even on your cell phone!  Here is a demo that generates many iterations of the 'cube-frame' 3D fractal.  This scene also features a physical sky model that renders a realistic, atmospheric sky as seen from Earth.  In the GUI menu, you can rotate the Sun to get different times of day as well as play with the lighting and soft shadows in real time.  You can also select from 10 interesting camera viewpoint presets that show off the epic fractal nature of the building as well as its dramatic lighting effects.
+<br>
+* [Cube-Frame 3D Fractal demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Fractal3D.html) <em> Note: It may take up to 10 seconds to compile this complex scene, but it's worth the wait! :) </em> <br>
+<br>
+<br>
+
+
 <h3>Classic Scenes / Ray Tracing History</h3>
 
 <img src="https://github.com/erichlof/THREE.js-PathTracing-Renderer/blob/gh-pages/readme-Images/4-Figure7-1.png" width=30% height=30%>
