@@ -287,7 +287,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	float nc, nt, ratioIoR, Re, Tr;
 	//float P, RP, TP;
 	float weight;
-	float thickness = 0.1;
+	float thickness = 0.1;//0.1;
 	float scatteringDistance;
 
 	int diffuseCount = 0;
@@ -470,8 +470,9 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			// transmit ray through surface
 			
-			// is ray leaving a solid object from the inside? 
-			// If so, attenuate ray color with object color by how far ray has travelled through the medium
+			//is ray leaving a solid object from the inside? 
+			//If so, attenuate ray color with object color by how far ray has travelled through the medium
+			
 			// if (distance(n, nl) > 0.1)
 			// {
 			// 	mask *= exp( log(clamp(hitColor, 0.01, 0.99)) * thickness * t ); 
@@ -480,7 +481,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			mask *= hitColor;
 			mask *= Tr;
 			
-			tdir = rayDirection;//refract(rayDirection, nl, ratioIoR);
+			tdir = refract(rayDirection, nl, ratioIoR);
 			rayDirection = tdir;
 			rayOrigin = x - nl * uEPS_intersect;
 
