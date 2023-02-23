@@ -2,6 +2,8 @@
 let doorObject;
 let paintingTexture, darkWoodTexture, lightWoodTexture, marbleTexture;
 let hammeredMetalNormalMapTexture;
+let imageTexturesTotalCount = 5;
+let numOfImageTexturesLoaded = 0;
 let increaseDoorAngle = false;
 let decreaseDoorAngle = false;
 
@@ -598,43 +600,6 @@ function initSceneData()
 	doorObject.updateMatrixWorld(true); // 'true' forces immediate matrix update
 
 
-	paintingTexture = new THREE.TextureLoader().load('textures/painting.jpg');
-	paintingTexture.wrapS = THREE.RepeatWrapping;
-	paintingTexture.wrapT = THREE.RepeatWrapping;
-	paintingTexture.minFilter = THREE.NearestFilter;
-	paintingTexture.magFilter = THREE.NearestFilter;
-	paintingTexture.generateMipmaps = false;
-
-	darkWoodTexture = new THREE.TextureLoader().load('textures/darkWood.jpg');
-	darkWoodTexture.wrapS = THREE.RepeatWrapping;
-	darkWoodTexture.wrapT = THREE.RepeatWrapping;
-	darkWoodTexture.minFilter = THREE.NearestFilter;
-	darkWoodTexture.magFilter = THREE.NearestFilter;
-	darkWoodTexture.generateMipmaps = false;
-
-	lightWoodTexture = new THREE.TextureLoader().load('textures/tableWood.jpg');
-	lightWoodTexture.wrapS = THREE.RepeatWrapping;
-	lightWoodTexture.wrapT = THREE.RepeatWrapping;
-	lightWoodTexture.minFilter = THREE.NearestFilter;
-	lightWoodTexture.magFilter = THREE.NearestFilter;
-	lightWoodTexture.generateMipmaps = false;
-
-	marbleTexture = new THREE.TextureLoader().load('textures/whiteMarbleThinVein.jpg');
-	marbleTexture.wrapS = THREE.RepeatWrapping;
-	marbleTexture.wrapT = THREE.RepeatWrapping;
-	//marbleTexture.flipY = true;
-	marbleTexture.minFilter = THREE.NearestFilter;
-	marbleTexture.magFilter = THREE.NearestFilter;
-	marbleTexture.generateMipmaps = false;
-
-	hammeredMetalNormalMapTexture = new THREE.TextureLoader().load('textures/hammeredMetal_NormalMap.jpg');
-	hammeredMetalNormalMapTexture.wrapS = THREE.RepeatWrapping;
-	hammeredMetalNormalMapTexture.wrapT = THREE.RepeatWrapping;
-	//hammeredMetalNormalMapTexture.flipY = true;
-	hammeredMetalNormalMapTexture.minFilter = THREE.NearestFilter;
-	hammeredMetalNormalMapTexture.magFilter = THREE.NearestFilter;
-	hammeredMetalNormalMapTexture.generateMipmaps = false;
-
 	
 	// In addition to the default GUI on all demos, add any special GUI elements that this particular demo requires
 	door_OpenCloseObject = {
@@ -684,5 +649,103 @@ function updateVariablesAndUniforms()
 } // end function updateVariablesAndUniforms()
 
 
+// load all resources
+paintingTexture = textureLoader.load(
+	// resource URL
+	'textures/painting.jpg',
 
-load_GLTF_Models(); // load models, init app, and start animating
+	// onLoad callback
+	function (texture)
+	{
+		texture.wrapS = THREE.RepeatWrapping;
+		texture.wrapT = THREE.RepeatWrapping;
+		texture.minFilter = THREE.NearestFilter;
+		texture.magFilter = THREE.NearestFilter;
+		texture.generateMipmaps = false;
+
+		numOfImageTexturesLoaded++;
+		// if all textures have been loaded, we can load the models
+		if (numOfImageTexturesLoaded == imageTexturesTotalCount)
+			load_GLTF_Models(); // load models, init app, and start animating
+	}
+);
+
+darkWoodTexture = textureLoader.load(
+	// resource URL
+	'textures/darkWood.jpg',
+
+	// onLoad callback
+	function (texture)
+	{
+		texture.wrapS = THREE.RepeatWrapping;
+		texture.wrapT = THREE.RepeatWrapping;
+		texture.minFilter = THREE.NearestFilter;
+		texture.magFilter = THREE.NearestFilter;
+		texture.generateMipmaps = false;
+
+		numOfImageTexturesLoaded++;
+		// if all textures have been loaded, we can load the models
+		if (numOfImageTexturesLoaded == imageTexturesTotalCount)
+			load_GLTF_Models(); // load models, init app, and start animating
+	}
+);
+
+lightWoodTexture = textureLoader.load(
+	// resource URL
+	'textures/tableWood.jpg',
+
+	// onLoad callback
+	function (texture)
+	{
+		texture.wrapS = THREE.RepeatWrapping;
+		texture.wrapT = THREE.RepeatWrapping;
+		texture.minFilter = THREE.NearestFilter;
+		texture.magFilter = THREE.NearestFilter;
+		texture.generateMipmaps = false;
+
+		numOfImageTexturesLoaded++;
+		// if all textures have been loaded, we can load the models
+		if (numOfImageTexturesLoaded == imageTexturesTotalCount)
+			load_GLTF_Models(); // load models, init app, and start animating
+	}
+);
+
+marbleTexture = textureLoader.load(
+	// resource URL
+	'textures/whiteMarbleThinVein.jpg',
+
+	// onLoad callback
+	function (texture)
+	{
+		texture.wrapS = THREE.RepeatWrapping;
+		texture.wrapT = THREE.RepeatWrapping;
+		texture.minFilter = THREE.NearestFilter;
+		texture.magFilter = THREE.NearestFilter;
+		texture.generateMipmaps = false;
+
+		numOfImageTexturesLoaded++;
+		// if all textures have been loaded, we can load the models
+		if (numOfImageTexturesLoaded == imageTexturesTotalCount)
+			load_GLTF_Models(); // load models, init app, and start animating
+	}
+);
+
+hammeredMetalNormalMapTexture = textureLoader.load(
+	// resource URL
+	'textures/hammeredMetal_NormalMap.jpg',
+
+	// onLoad callback
+	function (texture)
+	{
+		texture.wrapS = THREE.RepeatWrapping;
+		texture.wrapT = THREE.RepeatWrapping;
+		texture.minFilter = THREE.NearestFilter;
+		texture.magFilter = THREE.NearestFilter;
+		texture.generateMipmaps = false;
+
+		numOfImageTexturesLoaded++;
+		// if all textures have been loaded, we can load the models
+		if (numOfImageTexturesLoaded == imageTexturesTotalCount)
+			load_GLTF_Models(); // load models, init app, and start animating
+	}
+);
