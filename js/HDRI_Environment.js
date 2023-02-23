@@ -2,7 +2,7 @@
 let hdrPath, hdrTexture, hdrLoader, hdrImgData;
 let hdrImgWidth = 0;
 let hdrImgHeight = 0;
-let highestExponent, highestIndex, brightestPixelX, brightestPixelY; 
+let highestExponent, highestIndex, brightestPixelX, brightestPixelY;
 let modelMesh;
 let modelScale = 1.0;
 let modelPositionOffset = new THREE.Vector3();
@@ -52,7 +52,7 @@ function init_GUI()
 		Material_Type: 3
 	};
 	material_ColorObject = {
-		Material_Color: [ 1, 1, 1 ]
+		Material_Color: [1, 1, 1]
 	};
 	material_RoughnessObject = {
 		Material_Roughness: 0.0
@@ -74,11 +74,11 @@ function init_GUI()
 		changeMaterialRoughness = true;
 	}
 
-	
-	HDRI_ExposureController = gui.add( HDRI_ExposureObject, 'HDRI_Exposure', 0, 3, 0.05 ).onChange( HDRI_ExposureChanger );
-	material_TypeController = gui.add( material_TypeObject, 'Material_Type', 2, 4, 1 ).onChange( materialTypeChanger );
+
+	HDRI_ExposureController = gui.add(HDRI_ExposureObject, 'HDRI_Exposure', 0, 3, 0.05).onChange(HDRI_ExposureChanger);
+	material_TypeController = gui.add(material_TypeObject, 'Material_Type', 2, 4, 1).onChange(materialTypeChanger);
 	material_ColorController = gui.addColor(material_ColorObject, 'Material_Color').onChange(materialColorChanger);
-	material_RoughnessController = gui.add( material_RoughnessObject, 'Material_Roughness', 0.0, 1.0, 0.01 ).onChange( materialRoughnessChanger );
+	material_RoughnessController = gui.add(material_RoughnessObject, 'Material_Roughness', 0.0, 1.0, 0.01).onChange(materialRoughnessChanger);
 
 	HDRI_ExposureChanger();
 	materialTypeChanger();
@@ -106,20 +106,20 @@ function load_GLTF_Model()
 
 	let gltfLoader = new THREE.GLTFLoader();
 
-	gltfLoader.load("models/StanfordDragon.glb", function( meshGroup ) // Triangles: 100,000
+	gltfLoader.load("models/StanfordDragon.glb", function (meshGroup) // Triangles: 100,000
 	// if you choose to load in the different models below, scroll down and change the *GLTF model settings* for this particular model
 	//gltfLoader.load("models/TronTank.gltf", function( meshGroup ) // Triangles: 17,533
 	//gltfLoader.load("models/StanfordBunny.glb", function( meshGroup ) // Triangles: 30,338
 	{
-	
-		if (meshGroup.scene) 
+
+		if (meshGroup.scene)
 			meshGroup = meshGroup.scene;
 
-		meshGroup.traverse( function ( child ) 
+		meshGroup.traverse(function (child) 
 		{
 
-			if ( child.isMesh ) 
-			{ 
+			if (child.isMesh) 
+			{
 				let mat = new MaterialObject();
 				mat.type = 1;
 				mat.albedoTextureID = -1;
@@ -132,7 +132,7 @@ function load_GLTF_Model()
 				triangleMaterialMarkers.push(child.geometry.attributes.position.array.length / 9);
 				meshList.push(child);
 			}
-		} );
+		});
 
 		modelMesh = meshList[0].clone();
 
@@ -142,23 +142,23 @@ function load_GLTF_Model()
 		}
 
 		modelMesh.geometry = THREE.BufferGeometryUtils.mergeBufferGeometries(geoList);
-		
+
 		if (modelMesh.geometry.index)
 			modelMesh.geometry = modelMesh.geometry.toNonIndexed();
 
 		modelMesh.geometry.center();
-		
+
 		for (let i = 1; i < triangleMaterialMarkers.length; i++) 
 		{
-			triangleMaterialMarkers[i] += triangleMaterialMarkers[i-1];
+			triangleMaterialMarkers[i] += triangleMaterialMarkers[i - 1];
 		}
-			
+
 		for (let i = 0; i < meshList.length; i++) 
 		{
 			if (meshList[i].material.map != undefined)
-				uniqueMaterialTextures.push(meshList[i].material.map);		
+				uniqueMaterialTextures.push(meshList[i].material.map);
 		}
-		
+
 		for (let i = 0; i < uniqueMaterialTextures.length; i++) 
 		{
 			for (let j = i + 1; j < uniqueMaterialTextures.length; j++) 
@@ -168,9 +168,9 @@ function load_GLTF_Model()
 					uniqueMaterialTextures.splice(j, 1);
 					j -= 1;
 				}
-			}	
+			}
 		}
-		
+
 		for (let i = 0; i < meshList.length; i++) 
 		{
 			if (meshList[i].material.map != undefined) 
@@ -182,7 +182,7 @@ function load_GLTF_Model()
 						pathTracingMaterialList[i].albedoTextureID = j;
 					}
 				}
-			}				
+			}
 		}
 
 		// ********* different GLTF Model Settings **********
@@ -190,7 +190,7 @@ function load_GLTF_Model()
 		// settings for StanfordDragon model
 		modelScale = 2.0;
 		modelPositionOffset.set(0, 28, -40);
-		
+
 		// settings for TronTank model
 		// modelScale = 3.0;
 		// modelMesh.geometry.rotateX(-Math.PI * 0.5);
@@ -215,7 +215,7 @@ function initSceneData()
 
 	// scene/demo-specific three.js objects setup goes here
 	sceneIsDynamic = false;
-	
+
 	cameraFlightSpeed = 60;
 
 	// pixelRatio is resolution - range: 0.5(half resolution) to 1.0(full resolution)
@@ -234,7 +234,7 @@ function initSceneData()
 
 
 
-	
+
 	total_number_of_triangles = modelMesh.geometry.attributes.position.array.length / 9;
 	console.log("Triangle count:" + total_number_of_triangles);
 
@@ -242,15 +242,15 @@ function initSceneData()
 
 	triangle_array = new Float32Array(2048 * 2048 * 4);
 	// 2048 = width of texture, 2048 = height of texture, 4 = r,g,b, and a components
-	
+
 	aabb_array = new Float32Array(2048 * 2048 * 4);
 	// 2048 = width of texture, 2048 = height of texture, 4 = r,g,b, and a components
 
-	
+
 	let triangle_b_box_min = new THREE.Vector3();
 	let triangle_b_box_max = new THREE.Vector3();
 	let triangle_b_box_centroid = new THREE.Vector3();
-	
+
 
 	let vpa = new Float32Array(modelMesh.geometry.attributes.position.array);
 	let vna = new Float32Array(modelMesh.geometry.attributes.normal.array);
@@ -261,12 +261,12 @@ function initSceneData()
 		vta = new Float32Array(modelMesh.geometry.attributes.uv.array);
 		modelHasUVs = true;
 	}
-		
+
 	let materialNumber = 0;
 
 	for (let i = 0; i < total_number_of_triangles; i++) 
 	{
-	
+
 		triangle_b_box_min.set(Infinity, Infinity, Infinity);
 		triangle_b_box_max.set(-Infinity, -Infinity, -Infinity);
 
@@ -282,26 +282,26 @@ function initSceneData()
 		// record vertex texture coordinates (UVs)
 		if (modelHasUVs) 
 		{
-			vt0.set( vta[6 * i + 0], vta[6 * i + 1] );
-			vt1.set( vta[6 * i + 2], vta[6 * i + 3] );
-			vt2.set( vta[6 * i + 4], vta[6 * i + 5] );
+			vt0.set(vta[6 * i + 0], vta[6 * i + 1]);
+			vt1.set(vta[6 * i + 2], vta[6 * i + 3]);
+			vt2.set(vta[6 * i + 4], vta[6 * i + 5]);
 		}
 		else 
 		{
-			vt0.set( -1, -1 );
-			vt1.set( -1, -1 );
-			vt2.set( -1, -1 );
+			vt0.set(-1, -1);
+			vt1.set(-1, -1);
+			vt2.set(-1, -1);
 		}
-		
+
 		// record vertex normals
-		vn0.set( vna[9 * i + 0], vna[9 * i + 1], vna[9 * i + 2] ).normalize();
-		vn1.set( vna[9 * i + 3], vna[9 * i + 4], vna[9 * i + 5] ).normalize();
-		vn2.set( vna[9 * i + 6], vna[9 * i + 7], vna[9 * i + 8] ).normalize();
-		
+		vn0.set(vna[9 * i + 0], vna[9 * i + 1], vna[9 * i + 2]).normalize();
+		vn1.set(vna[9 * i + 3], vna[9 * i + 4], vna[9 * i + 5]).normalize();
+		vn2.set(vna[9 * i + 6], vna[9 * i + 7], vna[9 * i + 8]).normalize();
+
 		// record vertex positions
-		vp0.set( vpa[9 * i + 0], vpa[9 * i + 1], vpa[9 * i + 2] );
-		vp1.set( vpa[9 * i + 3], vpa[9 * i + 4], vpa[9 * i + 5] );
-		vp2.set( vpa[9 * i + 6], vpa[9 * i + 7], vpa[9 * i + 8] );
+		vp0.set(vpa[9 * i + 0], vpa[9 * i + 1], vpa[9 * i + 2]);
+		vp1.set(vpa[9 * i + 3], vpa[9 * i + 4], vpa[9 * i + 5]);
+		vp2.set(vpa[9 * i + 6], vpa[9 * i + 7], vpa[9 * i + 8]);
 
 		vp0.multiplyScalar(modelScale);
 		vp1.multiplyScalar(modelScale);
@@ -312,20 +312,20 @@ function initSceneData()
 		vp2.add(modelPositionOffset);
 
 		//slot 0
-		triangle_array[32 * i +  0] = vp0.x; // r or x
-		triangle_array[32 * i +  1] = vp0.y; // g or y 
-		triangle_array[32 * i +  2] = vp0.z; // b or z
-		triangle_array[32 * i +  3] = vp1.x; // a or w
+		triangle_array[32 * i + 0] = vp0.x; // r or x
+		triangle_array[32 * i + 1] = vp0.y; // g or y 
+		triangle_array[32 * i + 2] = vp0.z; // b or z
+		triangle_array[32 * i + 3] = vp1.x; // a or w
 
 		//slot 1
-		triangle_array[32 * i +  4] = vp1.y; // r or x
-		triangle_array[32 * i +  5] = vp1.z; // g or y
-		triangle_array[32 * i +  6] = vp2.x; // b or z
-		triangle_array[32 * i +  7] = vp2.y; // a or w
+		triangle_array[32 * i + 4] = vp1.y; // r or x
+		triangle_array[32 * i + 5] = vp1.z; // g or y
+		triangle_array[32 * i + 6] = vp2.x; // b or z
+		triangle_array[32 * i + 7] = vp2.y; // a or w
 
 		//slot 2
-		triangle_array[32 * i +  8] = vp2.z; // r or x
-		triangle_array[32 * i +  9] = vn0.x; // g or y
+		triangle_array[32 * i + 8] = vp2.z; // r or x
+		triangle_array[32 * i + 9] = vn0.x; // g or y
 		triangle_array[32 * i + 10] = vn0.y; // b or z
 		triangle_array[32 * i + 11] = vn0.z; // a or w
 
@@ -386,14 +386,14 @@ function initSceneData()
 
 	console.time("BvhGeneration");
 	console.log("BvhGeneration...");
-	
+
 	// Build the BVH acceleration structure, which places a bounding box ('root' of the tree) around all of the 
 	// triangles of the entire mesh, then subdivides each box into 2 smaller boxes.  It continues until it reaches 1 triangle,
 	// which it then designates as a 'leaf'
 	BVH_Build_Iterative(totalWork, aabb_array);
 
 	console.timeEnd("BvhGeneration");
-	
+
 
 	triangleDataTexture = new THREE.DataTexture(triangle_array,
 		2048,
@@ -430,90 +430,6 @@ function initSceneData()
 	aabbDataTexture.needsUpdate = true;
 
 
-	hdrLoader = new THREE.RGBELoader();
-	// override THREE's default of HalfFloatType (full float precision needed in brightest pixel calculations below)
-	hdrLoader.type = THREE.FloatType;
-
-	hdrPath = 'textures/symmetrical_garden_2k.hdr';
-	//hdrPath = 'textures/cloud_layers_2k.hdr';
-	//hdrPath = 'textures/delta_2_2k.hdr';
-	//hdrPath = 'textures/kiara_5_noon_2k.hdr';
-	//hdrPath = 'textures/noon_grass_2k.hdr';
-
-	hdrTexture = hdrLoader.load( hdrPath, function ( texture, textureData ) 
-	{
-		texture.encoding = THREE.LinearEncoding;
-		texture.minFilter = THREE.LinearFilter;
-		texture.magFilter = THREE.LinearFilter;
-		texture.generateMipmaps = false;
-		texture.flipY = false;
-
-		hdrImgWidth = texture.image.width;
-		hdrImgHeight = texture.image.height;
-		hdrImgData = texture.image.data;
-		let dataLength = hdrImgData.length;
-		let red, green, blue;
-
-		let texel = 0;
-		let max = 0;
-		for (let i = 0; i < dataLength; i += 4)
-		{
-			red = hdrImgData[i + 0];
-			green = hdrImgData[i + 1];
-			blue = hdrImgData[i + 2];
-
-			if (max < red)
-			{
-				texel = i;
-				max = red;
-			}
-			if (max < green)
-			{
-				texel = i;
-				max = green;
-			}
-			if (max < blue)
-			{
-				texel = i;
-				max = blue;
-			}
-		}
-
-		console.log("brightest texel index: " + texel + " | max luminance value: " + max);
-		// the raw flat array has 4 elements (R,G,B,A) for every single pixel, but we just want the index of the brightest pixel
-		// so divide the brightest pixel array index by 4, in order to get back to the '0 to hdrImgWidth*hdrImgHeight' range
-		texel /= 4;
-
-		// map this texel's 1D array index into 2D (x and y) coordinates
-		brightestPixelX = texel % hdrImgWidth;
-		brightestPixelY = Math.floor(texel / hdrImgWidth);
-
-		console.log("brightestPixelX: " + brightestPixelX + " brightestPixelY: " + brightestPixelY); // for debug
-
-		/*  
-		HDRI image dimensions: (hdrImgWidth x hdrImgHeight)
-		center of brightest pixel location: (brightestPixelX, brightestPixelY) 
-		now normalize into float (u,v) texture coords, range: (0.0-1.0, 0.0-1.0)
-		HDRI_bright_u = brightestPixelX / hdrImgWidth
-		HDRI_bright_v = brightestPixelY / hdrImgHeight
-		
-		Must map these brightest-light texture location(u, v) coordinates to Spherical coordinates(phi, theta):
-		phi   = HDRI_bright_v * PI   note: V is used for phi
-		theta = HDRI_bright_u * 2PI  note: U is used for theta
-		lastly, convert Spherical coordinates into 3D Cartesian coordinates(x, y, z):
-		sunDirectionVector.setFromSphericalCoords(1, phi, theta);
-		*/
-
-		HDRI_bright_u = brightestPixelX / hdrImgWidth;
-		HDRI_bright_v = brightestPixelY / hdrImgHeight;
-		
-		phi = HDRI_bright_v * Math.PI; // use 'v'
-		theta = HDRI_bright_u * 2 * Math.PI; // use 'u'
-
-		sunDirectionVector.setFromSphericalCoords(1, phi, theta); // 1 = radius of 1, or unit sphere
-		// finally, x must be negated, I believe because of three.js' R-handed coordinate system
-		sunDirectionVector.x *= -1;
-	} );
 
 
 	init_GUI();
@@ -537,7 +453,7 @@ function initSceneData()
 // called automatically from within the animate() function (located in InitCommon.js file)
 function updateVariablesAndUniforms()
 {
-	
+
 	if (changeHDRI_Exposure) 
 	{
 		renderer.toneMappingExposure = HDRI_ExposureController.getValue();
@@ -545,7 +461,7 @@ function updateVariablesAndUniforms()
 		cameraIsMoving = true;
 		changeHDRI_Exposure = false;
 	}
-	
+
 	if (changeMaterialType) 
 	{
 		pathTracingUniforms.uMaterialType.value = material_TypeController.getValue();
@@ -577,4 +493,90 @@ function updateVariablesAndUniforms()
 
 
 
-load_GLTF_Model(); // load model, init app, and start animating
+hdrLoader = new THREE.RGBELoader();
+// override THREE's default of HalfFloatType (full float precision needed in brightest pixel calculations below)
+hdrLoader.type = THREE.FloatType;
+
+hdrPath = 'textures/symmetrical_garden_2k.hdr';
+//hdrPath = 'textures/cloud_layers_2k.hdr';
+//hdrPath = 'textures/delta_2_2k.hdr';
+//hdrPath = 'textures/kiara_5_noon_2k.hdr';
+//hdrPath = 'textures/noon_grass_2k.hdr';
+
+hdrTexture = hdrLoader.load(hdrPath, function (texture) 
+{
+	texture.encoding = THREE.LinearEncoding;
+	texture.minFilter = THREE.LinearFilter;
+	texture.magFilter = THREE.LinearFilter;
+	texture.generateMipmaps = false;
+	texture.flipY = false;
+
+	hdrImgWidth = texture.image.width;
+	hdrImgHeight = texture.image.height;
+	hdrImgData = texture.image.data;
+	let dataLength = hdrImgData.length;
+	let red, green, blue;
+
+	let texel = 0;
+	let max = 0;
+	for (let i = 0; i < dataLength; i += 4)
+	{
+		red = hdrImgData[i + 0];
+		green = hdrImgData[i + 1];
+		blue = hdrImgData[i + 2];
+
+		if (max < red)
+		{
+			texel = i;
+			max = red;
+		}
+		if (max < green)
+		{
+			texel = i;
+			max = green;
+		}
+		if (max < blue)
+		{
+			texel = i;
+			max = blue;
+		}
+	}
+
+	console.log("brightest texel index: " + texel + " | max luminance value: " + max);
+	// the raw flat array has 4 elements (R,G,B,A) for every single pixel, but we just want the index of the brightest pixel
+	// so divide the brightest pixel array index by 4, in order to get back to the '0 to hdrImgWidth*hdrImgHeight' range
+	texel /= 4;
+
+	// map this texel's 1D array index into 2D (x and y) coordinates
+	brightestPixelX = texel % hdrImgWidth;
+	brightestPixelY = Math.floor(texel / hdrImgWidth);
+
+	console.log("brightestPixelX: " + brightestPixelX + " brightestPixelY: " + brightestPixelY); // for debug
+
+	/*  
+	HDRI image dimensions: (hdrImgWidth x hdrImgHeight)
+	center of brightest pixel location: (brightestPixelX, brightestPixelY) 
+	now normalize into float (u,v) texture coords, range: (0.0-1.0, 0.0-1.0)
+	HDRI_bright_u = brightestPixelX / hdrImgWidth
+	HDRI_bright_v = brightestPixelY / hdrImgHeight
+	
+	Must map these brightest-light texture location(u, v) coordinates to Spherical coordinates(phi, theta):
+	phi   = HDRI_bright_v * PI   note: V is used for phi
+	theta = HDRI_bright_u * 2PI  note: U is used for theta
+	lastly, convert Spherical coordinates into 3D Cartesian coordinates(x, y, z):
+	sunDirectionVector.setFromSphericalCoords(1, phi, theta);
+	*/
+
+	HDRI_bright_u = brightestPixelX / hdrImgWidth;
+	HDRI_bright_v = brightestPixelY / hdrImgHeight;
+
+	phi = HDRI_bright_v * Math.PI; // use 'v'
+	theta = HDRI_bright_u * 2 * Math.PI; // use 'u'
+
+	sunDirectionVector.setFromSphericalCoords(1, phi, theta); // 1 = radius of 1, or unit sphere
+	// finally, x must be negated, I believe because of three.js' R-handed coordinate system
+	sunDirectionVector.x *= -1;
+
+	// now that the HDR image has loaded, we can load the model
+	load_GLTF_Model(); // load model, init app, and start animating
+});
