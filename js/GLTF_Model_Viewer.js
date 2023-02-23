@@ -4,7 +4,7 @@
 let triangleDataTexture, aabbDataTexture;
 
 // HDR image variables
-let hdrPath, hdrTexture, hdrLoader, hdrExposure = 1.0;
+let hdrTexture, hdrLoader, hdrExposure = 1.0;
 
 // Environment variables
 let skyLightIntensity = 2.0, sunLightIntensity = 2.0, sunColor = [1.0, 0.98, 0.92];
@@ -27,7 +27,7 @@ let modelPaths = [
 	"models/00_001_011.gltf", "models/00_002_003.gltf", "models/00_003_000.gltf", "models/00_004_003.gltf",
 	"models/00_005_025.gltf", "models/00_006_004.gltf", "models/00_007_003.gltf", "models/00_008_004.gltf",
 	"models/00_009_008.gltf", "models/00_010_013.gltf", "models/00_011_013.gltf", "models/00_012_001.gltf",
-	"models/00_013_003.gltf", "models/00_014_004.gltf", "models/00_015_004.gltf", "models/00_017_001.gltf", 
+	"models/00_013_003.gltf", "models/00_014_004.gltf", "models/00_015_004.gltf", "models/00_017_001.gltf",
 	"models/00_019_001.gltf", "models/00_020_002.gltf", "models/00_standard.gltf"
 ];
 
@@ -114,7 +114,7 @@ function MaterialObject(material, pathTracingMaterialList)
 
 function loadModels(modelPaths)
 {
-	
+
 	console.time("LoadingGltf");
 	// Show the loading spinner
 	loadingSpinner.classList.remove("hidden");
@@ -129,7 +129,7 @@ function loadModels(modelPaths)
 		let modelPath = modelPaths[i];
 		console.log(`Loading model ${modelPath}`);
 
-		gltfLoader.load(modelPath, function(meshGroup)
+		gltfLoader.load(modelPath, function (meshGroup)
 		{
 			if (meshGroup.scene)
 				meshGroup = meshGroup.scene;
@@ -197,7 +197,7 @@ function loadModels(modelPaths)
 			}
 
 		}); // end gltfLoader.load()
-			
+
 	} // end for (let i = 0; i < modelPaths.length; i++)
 
 } // end function loadModels(modelPaths)
@@ -467,19 +467,6 @@ function prepareGeometryForPT(meshList, pathTracingMaterialList, triangleMateria
 	aabbDataTexture.needsUpdate = true;
 
 
-	hdrLoader = new THREE.RGBELoader();
-	hdrLoader.type = THREE.FloatType; // override THREE's default of HalfFloatType
-
-	hdrPath = 'textures/daytime.hdr';
-
-	hdrTexture = hdrLoader.load(hdrPath, function (texture, textureData)
-	{
-		texture.encoding = THREE.LinearEncoding;
-		texture.minFilter = THREE.NearestFilter;
-		texture.magFilter = THREE.NearestFilter;
-		texture.flipY = true;
-	});
-
 } // end function prepareGeometryForPT(meshList, pathTracingMaterialList, triangleMaterialMarkers)
 
 
@@ -527,8 +514,8 @@ function initSceneData()
 	pathTracingUniforms.uSunDirection = { value: new THREE.Vector3() };
 
 	// jumpstart the gui variables so that when the demo starts, all the uniforms are up to date
-	hdrExposureChanged = skyLightIntensityChanged = sunAngleChanged = 
-	sunLightIntensityChanged = sunColorChanged = true;
+	hdrExposureChanged = skyLightIntensityChanged = sunAngleChanged =
+		sunLightIntensityChanged = sunColorChanged = true;
 
 } // end function initSceneData()
 
@@ -544,7 +531,7 @@ function updateVariablesAndUniforms()
 		cameraIsMoving = true;
 		hdrExposureChanged = false;
 	}
-	
+
 	if (skyLightIntensityChanged)
 	{
 		pathTracingUniforms.uSkyLightIntensity.value = skyLight_IntensityController.getValue();
@@ -573,7 +560,7 @@ function updateVariablesAndUniforms()
 	{
 		sunColor = sun_ColorController.getValue();
 		pathTracingUniforms.uSunColor.value.setRGB(sunColor[0], sunColor[1], sunColor[2]);
-		
+
 		cameraIsMoving = true;
 		sunColorChanged = false;
 	}
@@ -585,4 +572,19 @@ function updateVariablesAndUniforms()
 } // end function updateVariablesAndUniforms()
 
 
-loadModels(modelPaths); // load models, init app, and start animating
+hdrLoader = new THREE.RGBELoader();
+hdrLoader.type = THREE.FloatType; // override THREE's default of HalfFloatType
+
+hdrTexture = hdrLoader.load(
+	'textures/daytime.hdr',
+	function (texture)
+	{
+		texture.encoding = THREE.LinearEncoding;
+		texture.minFilter = THREE.NearestFilter;
+		texture.magFilter = THREE.NearestFilter;
+		texture.flipY = true;
+
+		// now that the HDR image has loaded, we can load the models
+		loadModels(modelPaths); // load models, init app, and start animating
+	}
+);
