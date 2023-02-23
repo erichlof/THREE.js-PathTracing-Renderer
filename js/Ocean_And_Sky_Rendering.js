@@ -3,6 +3,7 @@ let sunAngle = 0;
 let sunDirection = new THREE.Vector3();
 let tallBoxGeometry, tallBoxMaterial, tallBoxMesh;
 let shortBoxGeometry, shortBoxMaterial, shortBoxMesh;
+let PerlinNoiseTexture;
 
 // called automatically from within initTHREEjs() function (located in InitCommon.js file)
 function initSceneData()
@@ -64,14 +65,7 @@ function initSceneData()
 	// look slightly upward
 	cameraControlsPitchObject.rotation.x = 0.005;
 
-	PerlinNoiseTexture = new THREE.TextureLoader().load('textures/perlin256.png');
-	PerlinNoiseTexture.wrapS = THREE.RepeatWrapping;
-	PerlinNoiseTexture.wrapT = THREE.RepeatWrapping;
-	PerlinNoiseTexture.flipY = false;
-	PerlinNoiseTexture.minFilter = THREE.LinearFilter;
-	PerlinNoiseTexture.magFilter = THREE.LinearFilter;
-	PerlinNoiseTexture.generateMipmaps = false;
-
+	
 
 	// scene/demo-specific uniforms go here
 	pathTracingUniforms.t_PerlinNoise = { value: PerlinNoiseTexture };
@@ -113,4 +107,22 @@ function updateVariablesAndUniforms()
 
 
 
-init(); // init app and start animating
+// load a resource
+PerlinNoiseTexture = textureLoader.load(
+	// resource URL
+	'textures/perlin256.png',
+
+	// onLoad callback
+	function (texture)
+	{
+		texture.wrapS = THREE.RepeatWrapping;
+		texture.wrapT = THREE.RepeatWrapping;
+		texture.flipY = false;
+		texture.minFilter = THREE.LinearFilter;
+		texture.magFilter = THREE.LinearFilter;
+		texture.generateMipmaps = false;
+
+		// now that the texture has been loaded, we can init 
+		init();
+	}
+);
