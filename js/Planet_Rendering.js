@@ -20,6 +20,7 @@ let cameraViewpoint_PositionController, cameraViewpoint_PositionObject;
 let needChangeCameraViewpoint = false;
 let timePaused_ToggleController, timePaused_ToggleObject;
 let needChangeTimePausedToggle = false;
+let PerlinNoiseTexture;
 
 
 // called automatically from within initTHREEjs() function (located in InitCommon.js file)
@@ -73,13 +74,6 @@ function initSceneData()
 	timePaused_ToggleController = gui.add(timePaused_ToggleObject, 'Pause Time');
 	
 	
-	PerlinNoiseTexture = new THREE.TextureLoader().load( 'textures/perlin256.png' );
-	PerlinNoiseTexture.wrapS = THREE.RepeatWrapping;
-	PerlinNoiseTexture.wrapT = THREE.RepeatWrapping;
-	PerlinNoiseTexture.flipY = false;
-	PerlinNoiseTexture.minFilter = THREE.LinearFilter;
-	PerlinNoiseTexture.magFilter = THREE.LinearFilter;
-	PerlinNoiseTexture.generateMipmaps = false;
 
 	// scene/demo-specific uniforms go here	
 	pathTracingUniforms.t_PerlinNoise = { value: PerlinNoiseTexture };
@@ -260,4 +254,22 @@ function updateVariablesAndUniforms()
 
 
 
-init(); // init app and start animating
+// load a resource
+PerlinNoiseTexture = textureLoader.load(
+	// resource URL
+	'textures/perlin256.png',
+
+	// onLoad callback
+	function (texture)
+	{
+		texture.wrapS = THREE.RepeatWrapping;
+		texture.wrapT = THREE.RepeatWrapping;
+		texture.flipY = false;
+		texture.minFilter = THREE.LinearFilter;
+		texture.magFilter = THREE.LinearFilter;
+		texture.generateMipmaps = false;
+
+		// now that the texture has been loaded, we can init 
+		init();
+	}
+);
