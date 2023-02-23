@@ -14,7 +14,7 @@ precision highp sampler2D;
 // now we have Width(#segments) * Height(#segments) * 2(triangles per quad) to get the total triangles...
 // so in this case 1024.0 x 1024.0 x 2 = 2,097,152 raytraced triangles with shadows in realtime!
 
-uniform sampler2D t_PerlinNoise;
+uniform sampler2D t_Heightmap;
 float displacementMultiplier;
 
 vec3 rayOrigin, rayDirection;
@@ -113,10 +113,10 @@ float getDisplacement(vec2 uv)
 	//return 0.9 * sin(uTime - length(vec2(0.5) - uv) * 20.0) * 0.5 + 0.5;
 
 	// landscape with animated lowering and raising
-	return (sin(uTime * 0.4) * 0.5 + 0.5) * texture(t_PerlinNoise, uv).x;
+	return (sin(uTime * 0.4) * 0.5 + 0.5) * texture(t_Heightmap, uv).x;
 
 	// stationary landscape
-	//return texture(t_PerlinNoise, uv).x;
+	//return texture(t_Heightmap, uv).x;
 }
 
 
