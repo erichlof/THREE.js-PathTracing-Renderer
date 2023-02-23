@@ -1,5 +1,5 @@
 // scene/demo-specific variables go here
-let PerlinNoiseTexture;
+let HeightmapTexture;
 
 // called automatically from within initTHREEjs() function (located in InitCommon.js file)
 function initSceneData()
@@ -30,17 +30,10 @@ function initSceneData()
 	// look slightly downward
 	cameraControlsPitchObject.rotation.x = -0.5;
 
-	PerlinNoiseTexture = new THREE.TextureLoader().load('textures/DinoIsland1024.png');
-	//PerlinNoiseTexture.wrapS = THREE.RepeatWrapping;
-	//PerlinNoiseTexture.wrapT = THREE.RepeatWrapping;
-	PerlinNoiseTexture.flipY = false;
-	PerlinNoiseTexture.minFilter = THREE.NearestFilter;
-	PerlinNoiseTexture.magFilter = THREE.NearestFilter;
-	PerlinNoiseTexture.generateMipmaps = false;
-
+	
 
 	// scene/demo-specific uniforms go here
-	pathTracingUniforms.t_PerlinNoise = { value: PerlinNoiseTexture };
+	pathTracingUniforms.t_Heightmap = { value: HeightmapTexture };
 
 } // end function initSceneData()
 
@@ -57,4 +50,22 @@ function updateVariablesAndUniforms()
 
 
 
-init(); // init app and start animating
+// load a resource
+HeightmapTexture = textureLoader.load(
+	// resource URL
+	'textures/DinoIsland1024.png',
+
+	// onLoad callback
+	function (texture)
+	{
+		//texture.wrapS = THREE.RepeatWrapping;
+		//texture.wrapT = THREE.RepeatWrapping;
+		texture.flipY = false;
+		texture.minFilter = THREE.LinearFilter;
+		texture.magFilter = THREE.LinearFilter;
+		texture.generateMipmaps = false;
+
+		// now that the texture has been loaded, we can init 
+		init();
+	}
+);
