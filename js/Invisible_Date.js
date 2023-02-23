@@ -121,12 +121,13 @@ function MaterialObject()
 }
 
 
-function load_GLTF_Models() 
+function load_GLTF_Model() 
 {
 
 	let gltfLoader = new THREE.GLTFLoader();
 
-	gltfLoader.load("models/UtahTeapot.glb", function (meshGroup) { // Triangles: 992
+	gltfLoader.load("models/UtahTeapot.glb", function (meshGroup)
+	{ // Triangles: 992
 
 		if (meshGroup.scene)
 			meshGroup = meshGroup.scene;
@@ -163,16 +164,17 @@ function load_GLTF_Models()
 			modelMesh.geometry = modelMesh.geometry.toNonIndexed();
 
 		modelMesh.geometry.center();
-		
+
 		/* // settings for UtahTeapot model
 		modelScale = 0.75;
 		modelPositionOffset.set(0, 20, -20); */
 
-		// now that the models have been loaded, we can init 
+		// now that the model has loaded, we can init
 		init();
+
 	}); // end gltfLoader.load()
 
-} // end function load_GLTF_Models()
+} // end function load_GLTF_Model()
 
 
 // called automatically from within initTHREEjs() function (located in InitCommon.js file)
@@ -210,7 +212,7 @@ function initSceneData()
 
 	// In addition to the default GUI on all demos, add any special GUI elements that this particular demo requires
 	door_OpenCloseObject = {
-		Door_Open_Close : 6.0
+		Door_Open_Close: 6.0
 	}
 	function handleDoorOpenCloseChange() 
 	{
@@ -232,14 +234,6 @@ function initSceneData()
 
 	// jumpstart initial door rotation
 	handleDoorOpenCloseChange();
-
-
-	paintingTexture = new THREE.TextureLoader().load('textures/Piet_Mondrian_Tableau2.png');
-	paintingTexture.wrapS = THREE.RepeatWrapping;
-	paintingTexture.wrapT = THREE.RepeatWrapping;
-	paintingTexture.minFilter = THREE.NearestFilter;
-	paintingTexture.magFilter = THREE.NearestFilter;
-	paintingTexture.generateMipmaps = false;
 
 
 
@@ -265,11 +259,11 @@ function initSceneData()
 
 	let materialNumber = 0;
 	let ix32, ix9;
-	
+
 	for (let i = 0; i < total_number_of_triangles; i++)
 	{
 		ix32 = i * 32;
-		ix9  = i * 9;
+		ix9 = i * 9;
 
 		triangle_b_box_min.set(Infinity, Infinity, Infinity);
 		triangle_b_box_max.set(-Infinity, -Infinity, -Infinity);
@@ -446,14 +440,14 @@ function initSceneData()
 
 	// glass coffee table top
 	tableGeometry = new THREE.BoxGeometry();
-	tableMaterial = new THREE.MeshPhysicalMaterial( {
+	tableMaterial = new THREE.MeshPhysicalMaterial({
 		color: new THREE.Color(0.1, 0.8, 1.0), // (r,g,b) range: 0.0 to 1.0 / default is rgb(1,1,1) white
 		opacity: 0.0, // range: 0.0 to 1.0 / default is 1.0 (fully opaque)
 		ior: 1.5, // range: 1.0(air) to 2.33(diamond) / default is 1.5(glass) / other useful ior is 1.33(water)
 		clearcoat: 0.0, // range: 0.0 to 1.0 / default is 0.0 (no clearcoat)
 		metalness: 0.0, // range: either 0.0 or 1.0 / default is 0.0 (not metal)
 		roughness: 0.0 // range: 0.0 to 1.0 / default is 0.0 (no roughness, perfectly smooth)
-	} );
+	});
 	tableMesh = new THREE.Mesh(tableGeometry, tableMaterial);
 	tableMesh.scale.set(13, 0.3, 12);
 	tableMesh.position.set(-10, 20, -50);
@@ -461,28 +455,28 @@ function initSceneData()
 
 	// coffee table metal Legs
 	tableLegGeometry1 = new THREE.BoxGeometry();
-	tableLegMaterial1 = new THREE.MeshPhysicalMaterial({color: new THREE.Color(1.0, 1.0, 1.0), metalness: 1.0, roughness: 0.2});
+	tableLegMaterial1 = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(1.0, 1.0, 1.0), metalness: 1.0, roughness: 0.2 });
 	tableLegMesh1 = new THREE.Mesh(tableLegGeometry1, tableLegMaterial1);
 	tableLegMesh1.scale.set(0.5, 10, 0.5);
 	tableLegMesh1.position.set(-19, 10, -58);
 	sceneShapeMeshes.push(tableLegMesh1);
 
 	tableLegGeometry2 = new THREE.BoxGeometry();
-	tableLegMaterial2 = new THREE.MeshPhysicalMaterial({color: new THREE.Color(1.0, 1.0, 1.0), metalness: 1.0, roughness: 0.2});
+	tableLegMaterial2 = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(1.0, 1.0, 1.0), metalness: 1.0, roughness: 0.2 });
 	tableLegMesh2 = new THREE.Mesh(tableLegGeometry2, tableLegMaterial2);
 	tableLegMesh2.scale.set(0.5, 10, 0.5);
 	tableLegMesh2.position.set(-1, 10, -58);
 	sceneShapeMeshes.push(tableLegMesh2);
 
 	tableLegGeometry3 = new THREE.BoxGeometry();
-	tableLegMaterial3 = new THREE.MeshPhysicalMaterial({color: new THREE.Color(1.0, 1.0, 1.0), metalness: 1.0, roughness: 0.2});
+	tableLegMaterial3 = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(1.0, 1.0, 1.0), metalness: 1.0, roughness: 0.2 });
 	tableLegMesh3 = new THREE.Mesh(tableLegGeometry3, tableLegMaterial3);
 	tableLegMesh3.scale.set(0.5, 10, 0.5);
 	tableLegMesh3.position.set(-1, 10, -42);
 	sceneShapeMeshes.push(tableLegMesh3);
 
 	tableLegGeometry4 = new THREE.BoxGeometry();
-	tableLegMaterial4 = new THREE.MeshPhysicalMaterial({color: new THREE.Color(1.0, 1.0, 1.0), metalness: 1.0, roughness: 0.2});
+	tableLegMaterial4 = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(1.0, 1.0, 1.0), metalness: 1.0, roughness: 0.2 });
 	tableLegMesh4 = new THREE.Mesh(tableLegGeometry4, tableLegMaterial4);
 	tableLegMesh4.scale.set(0.5, 10, 0.5);
 	tableLegMesh4.position.set(-19, 10, -42);
@@ -490,28 +484,28 @@ function initSceneData()
 
 	// coffee table Leg feet
 	tableLegFootGeometry1 = new THREE.BoxGeometry();
-	tableLegFootMaterial1 = new THREE.MeshPhysicalMaterial({color: new THREE.Color(0.0, 0.0, 0.0)});
+	tableLegFootMaterial1 = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.0, 0.0, 0.0) });
 	tableLegFootMesh1 = new THREE.Mesh(tableLegFootGeometry1, tableLegFootMaterial1);
 	tableLegFootMesh1.scale.set(0.75, 0.2, 0.75);
 	tableLegFootMesh1.position.set(-19, 0.2, -58);
 	sceneShapeMeshes.push(tableLegFootMesh1);
 
 	tableLegFootGeometry2 = new THREE.BoxGeometry();
-	tableLegFootMaterial2 = new THREE.MeshPhysicalMaterial({color: new THREE.Color(0.0, 0.0, 0.0)});
+	tableLegFootMaterial2 = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.0, 0.0, 0.0) });
 	tableLegFootMesh2 = new THREE.Mesh(tableLegFootGeometry2, tableLegFootMaterial2);
 	tableLegFootMesh2.scale.set(0.75, 0.2, 0.75);
 	tableLegFootMesh2.position.set(-1, 0.2, -58);
 	sceneShapeMeshes.push(tableLegFootMesh2);
 
 	tableLegFootGeometry3 = new THREE.BoxGeometry();
-	tableLegFootMaterial3 = new THREE.MeshPhysicalMaterial({color: new THREE.Color(0.0, 0.0, 0.0)});
+	tableLegFootMaterial3 = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.0, 0.0, 0.0) });
 	tableLegFootMesh3 = new THREE.Mesh(tableLegFootGeometry3, tableLegFootMaterial3);
 	tableLegFootMesh3.scale.set(0.75, 0.2, 0.75);
 	tableLegFootMesh3.position.set(-1, 0.2, -42);
 	sceneShapeMeshes.push(tableLegFootMesh3);
 
 	tableLegFootGeometry4 = new THREE.BoxGeometry();
-	tableLegFootMaterial4 = new THREE.MeshPhysicalMaterial({color: new THREE.Color(0.0, 0.0, 0.0)});
+	tableLegFootMaterial4 = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.0, 0.0, 0.0) });
 	tableLegFootMesh4 = new THREE.Mesh(tableLegFootGeometry4, tableLegFootMaterial4);
 	tableLegFootMesh4.scale.set(0.75, 0.2, 0.75);
 	tableLegFootMesh4.position.set(-19, 0.2, -42);
@@ -519,7 +513,7 @@ function initSceneData()
 
 	// drinking glasses
 	drinkingGlassGeometry1 = new THREE.CylinderGeometry();
-	drinkingGlassMaterial1 = new THREE.MeshPhysicalMaterial({color: new THREE.Color(0.0, 3.0, 2.0), opacity: 0.0, ior: 1.5});
+	drinkingGlassMaterial1 = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.0, 3.0, 2.0), opacity: 0.0, ior: 1.5 });
 	drinkingGlassMesh1 = new THREE.Mesh(drinkingGlassGeometry1, drinkingGlassMaterial1);
 	drinkingGlassMesh1.scale.set(1.1, 3.25, 1.1);
 	//position(-10, 20, -40); // coffee table
@@ -527,7 +521,7 @@ function initSceneData()
 	sceneShapeMeshes.push(drinkingGlassMesh1);
 
 	drinkingGlassGeometry2 = new THREE.CylinderGeometry();
-	drinkingGlassMaterial2 = new THREE.MeshPhysicalMaterial({color: new THREE.Color(0.0, 3.0, 2.0), opacity: 0.0, ior: 1.5});
+	drinkingGlassMaterial2 = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.0, 3.0, 2.0), opacity: 0.0, ior: 1.5 });
 	drinkingGlassMesh2 = new THREE.Mesh(drinkingGlassGeometry2, drinkingGlassMaterial2);
 	drinkingGlassMesh2.scale.set(1.1, 3.25, 1.1);
 	//position(-10, 20, -40); // coffee table
@@ -536,14 +530,14 @@ function initSceneData()
 
 	// glass bottom of drinking glasses
 	glassBottomGeometry1 = new THREE.SphereGeometry();
-	glassBottomMaterial1 = new THREE.MeshPhysicalMaterial({color: new THREE.Color(0.0, 3.0, 2.0), opacity: 0.0, ior: 1.5});
+	glassBottomMaterial1 = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.0, 3.0, 2.0), opacity: 0.0, ior: 1.5 });
 	glassBottomMesh1 = new THREE.Mesh(glassBottomGeometry1, glassBottomMaterial1);
 	glassBottomMesh1.scale.set(1.25, 0.5, 1.25);
 	glassBottomMesh1.position.set(-14, 20.8, -54);
 	sceneShapeMeshes.push(glassBottomMesh1);
 
 	glassBottomGeometry2 = new THREE.SphereGeometry();
-	glassBottomMaterial2 = new THREE.MeshPhysicalMaterial({color: new THREE.Color(0.0, 3.0, 2.0), opacity: 0.0, ior: 1.5});
+	glassBottomMaterial2 = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.0, 3.0, 2.0), opacity: 0.0, ior: 1.5 });
 	glassBottomMesh2 = new THREE.Mesh(glassBottomGeometry2, glassBottomMaterial2);
 	glassBottomMesh2.scale.set(1.25, 0.5, 1.25);
 	glassBottomMesh2.position.set(-9, 20.8, -50);
@@ -551,14 +545,14 @@ function initSceneData()
 
 	// liquid top inside drinking glasses
 	liquidTopGeometry1 = new THREE.SphereGeometry();
-	liquidTopMaterial1 = new THREE.MeshPhysicalMaterial({color: new THREE.Color(1.0, 1.0, 1.0), opacity: 0.0, ior: 1.33});
+	liquidTopMaterial1 = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(1.0, 1.0, 1.0), opacity: 0.0, ior: 1.33 });
 	liquidTopMesh1 = new THREE.Mesh(liquidTopGeometry1, liquidTopMaterial1);
 	liquidTopMesh1.scale.set(1.0, 0.1, 1.0);
 	liquidTopMesh1.position.set(-14, 24.5, -54);
 	sceneShapeMeshes.push(liquidTopMesh1);
 
 	liquidTopGeometry2 = new THREE.SphereGeometry();
-	liquidTopMaterial2 = new THREE.MeshPhysicalMaterial({color: new THREE.Color(1.0, 1.0, 1.0), opacity: 0.0, ior: 1.33});
+	liquidTopMaterial2 = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(1.0, 1.0, 1.0), opacity: 0.0, ior: 1.33 });
 	liquidTopMesh2 = new THREE.Mesh(liquidTopGeometry2, liquidTopMaterial2);
 	liquidTopMesh2.scale.set(1.0, 0.1, 1.0);
 	liquidTopMesh2.position.set(-9, 22.5, -50);
@@ -566,42 +560,42 @@ function initSceneData()
 
 	// bookshelf
 	bookshelfTopHorizontalGeometry = new THREE.BoxGeometry();
-	bookshelfTopHorizontalMaterial = new THREE.MeshPhysicalMaterial({color: new THREE.Color(0.1, 0.1, 0.1)});
+	bookshelfTopHorizontalMaterial = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.1, 0.1, 0.1) });
 	bookshelfTopHorizontalMesh = new THREE.Mesh(bookshelfTopHorizontalGeometry, bookshelfTopHorizontalMaterial);
 	bookshelfTopHorizontalMesh.scale.set(6, 0.5, 28);
 	bookshelfTopHorizontalMesh.position.set(-93, 36, -30);
 	sceneShapeMeshes.push(bookshelfTopHorizontalMesh);
 
 	bookshelfMidHorizontalGeometry = new THREE.BoxGeometry();
-	bookshelfMidHorizontalMaterial = new THREE.MeshPhysicalMaterial({color: new THREE.Color(0.1, 0.1, 0.1)});
+	bookshelfMidHorizontalMaterial = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.1, 0.1, 0.1) });
 	bookshelfMidHorizontalMesh = new THREE.Mesh(bookshelfMidHorizontalGeometry, bookshelfMidHorizontalMaterial);
 	bookshelfMidHorizontalMesh.scale.set(6, 0.5, 28);
 	bookshelfMidHorizontalMesh.position.set(-93, 23, -30);
 	sceneShapeMeshes.push(bookshelfMidHorizontalMesh);
 
 	bookshelfLowHorizontalGeometry = new THREE.BoxGeometry();
-	bookshelfLowHorizontalMaterial = new THREE.MeshPhysicalMaterial({color: new THREE.Color(0.1, 0.1, 0.1)});
+	bookshelfLowHorizontalMaterial = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.1, 0.1, 0.1) });
 	bookshelfLowHorizontalMesh = new THREE.Mesh(bookshelfLowHorizontalGeometry, bookshelfLowHorizontalMaterial);
 	bookshelfLowHorizontalMesh.scale.set(6, 0.5, 28);
 	bookshelfLowHorizontalMesh.position.set(-93, 10, -30);
 	sceneShapeMeshes.push(bookshelfLowHorizontalMesh);
 
 	bookshelfLeftVerticalGeometry = new THREE.BoxGeometry();
-	bookshelfLeftVerticalMaterial = new THREE.MeshPhysicalMaterial({color: new THREE.Color(0.1, 0.1, 0.1)});
+	bookshelfLeftVerticalMaterial = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.1, 0.1, 0.1) });
 	bookshelfLeftVerticalMesh = new THREE.Mesh(bookshelfLeftVerticalGeometry, bookshelfLeftVerticalMaterial);
 	bookshelfLeftVerticalMesh.scale.set(5, 19.5, 0.5);
 	bookshelfLeftVerticalMesh.position.set(-93, 19.5, -4);
 	sceneShapeMeshes.push(bookshelfLeftVerticalMesh);
 
 	bookshelfMidVerticalGeometry = new THREE.BoxGeometry();
-	bookshelfMidVerticalMaterial = new THREE.MeshPhysicalMaterial({color: new THREE.Color(0.1, 0.1, 0.1)});
+	bookshelfMidVerticalMaterial = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.1, 0.1, 0.1) });
 	bookshelfMidVerticalMesh = new THREE.Mesh(bookshelfMidVerticalGeometry, bookshelfMidVerticalMaterial);
 	bookshelfMidVerticalMesh.scale.set(5, 19.5, 0.5);
 	bookshelfMidVerticalMesh.position.set(-93, 19.5, -30);
 	sceneShapeMeshes.push(bookshelfMidVerticalMesh);
 
 	bookshelfRightVerticalGeometry = new THREE.BoxGeometry();
-	bookshelfRightVerticalMaterial = new THREE.MeshPhysicalMaterial({color: new THREE.Color(0.1, 0.1, 0.1)});
+	bookshelfRightVerticalMaterial = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.1, 0.1, 0.1) });
 	bookshelfRightVerticalMesh = new THREE.Mesh(bookshelfRightVerticalGeometry, bookshelfRightVerticalMaterial);
 	bookshelfRightVerticalMesh.scale.set(5, 19.5, 0.5);
 	bookshelfRightVerticalMesh.position.set(-93, 19.5, -56);
@@ -609,7 +603,7 @@ function initSceneData()
 
 	// large glass sphere on top of bookshelf
 	glassSphereGeometry = new THREE.SphereGeometry();
-	glassSphereMaterial = new THREE.MeshPhysicalMaterial({color: new THREE.Color(0.0, 1.0, 1.0), opacity: 0.0, ior: 1.5});
+	glassSphereMaterial = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.0, 1.0, 1.0), opacity: 0.0, ior: 1.5 });
 	glassSphereMesh = new THREE.Mesh(glassSphereGeometry, glassSphereMaterial);
 	glassSphereMesh.scale.set(6, 6, 6);
 	glassSphereMesh.position.set(-93, 42, -11);
@@ -617,21 +611,21 @@ function initSceneData()
 
 	// 3 books on bookshelf
 	blueBookGeometry = new THREE.BoxGeometry();
-	blueBookMaterial = new THREE.MeshPhysicalMaterial({color: new THREE.Color(0.0, 0.3, 1.0)});
+	blueBookMaterial = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.0, 0.3, 1.0) });
 	blueBookMesh = new THREE.Mesh(blueBookGeometry, blueBookMaterial);
 	blueBookMesh.scale.set(4.5, 4, 1);
 	blueBookMesh.position.set(-93, 14, -49.5);
 	sceneShapeMeshes.push(blueBookMesh);
 
 	orangeBookGeometry = new THREE.BoxGeometry();
-	orangeBookMaterial = new THREE.MeshPhysicalMaterial({color: new THREE.Color(1.0, 0.2, 0.0)});
+	orangeBookMaterial = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(1.0, 0.2, 0.0) });
 	orangeBookMesh = new THREE.Mesh(orangeBookGeometry, orangeBookMaterial);
 	orangeBookMesh.scale.set(4.5, 5, 1);
 	orangeBookMesh.position.set(-93, 15, -52);
 	sceneShapeMeshes.push(orangeBookMesh);
 
 	yellowBookGeometry = new THREE.BoxGeometry();
-	yellowBookMaterial = new THREE.MeshPhysicalMaterial({color: new THREE.Color(1.0, 1.0, 0.0)});
+	yellowBookMaterial = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(1.0, 1.0, 0.0) });
 	yellowBookMesh = new THREE.Mesh(yellowBookGeometry, yellowBookMaterial);
 	yellowBookMesh.scale.set(4.5, 5.5, 0.5);
 	yellowBookMesh.position.set(-93, 15.5, -54);
@@ -639,14 +633,14 @@ function initSceneData()
 
 	// glass candlestick holders on top of bookshelf
 	glassCandleHolderGeometry1 = new THREE.SphereGeometry();
-	glassCandleHolderMaterial1 = new THREE.MeshPhysicalMaterial({color: new THREE.Color(1.0, 1.0, 1.0), opacity: 0.0, ior: 1.5});
+	glassCandleHolderMaterial1 = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(1.0, 1.0, 1.0), opacity: 0.0, ior: 1.5 });
 	glassCandleHolderMesh1 = new THREE.Mesh(glassCandleHolderGeometry1, glassCandleHolderMaterial1);
 	glassCandleHolderMesh1.scale.set(3, 1.5, 3);
 	glassCandleHolderMesh1.position.set(-92, 38, -38);
 	sceneShapeMeshes.push(glassCandleHolderMesh1);
 
 	glassCandleHolderGeometry2 = new THREE.SphereGeometry();
-	glassCandleHolderMaterial2 = new THREE.MeshPhysicalMaterial({color: new THREE.Color(1.0, 1.0, 1.0), opacity: 0.0, ior: 1.5});
+	glassCandleHolderMaterial2 = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(1.0, 1.0, 1.0), opacity: 0.0, ior: 1.5 });
 	glassCandleHolderMesh2 = new THREE.Mesh(glassCandleHolderGeometry2, glassCandleHolderMaterial2);
 	glassCandleHolderMesh2.scale.set(3.5, 2, 3.5);
 	glassCandleHolderMesh2.position.set(-93, 38, -46);
@@ -654,14 +648,14 @@ function initSceneData()
 
 	// red candle sticks on top of bookshelf
 	candleGeometry1 = new THREE.CylinderGeometry();
-	candleMaterial1 = new THREE.MeshPhysicalMaterial({color: new THREE.Color(1.0, 0.0, 0.0), clearcoat: 1.0});
+	candleMaterial1 = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(1.0, 0.0, 0.0), clearcoat: 1.0 });
 	candleMesh1 = new THREE.Mesh(candleGeometry1, candleMaterial1);
 	candleMesh1.scale.set(0.5, 4, 0.5);
 	candleMesh1.position.set(-92, 42, -38);
 	sceneShapeMeshes.push(candleMesh1);
 
 	candleGeometry2 = new THREE.CylinderGeometry();
-	candleMaterial2 = new THREE.MeshPhysicalMaterial({color: new THREE.Color(1.0, 0.0, 0.0), clearcoat: 1.0});
+	candleMaterial2 = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(1.0, 0.0, 0.0), clearcoat: 1.0 });
 	candleMesh2 = new THREE.Mesh(candleGeometry2, candleMaterial2);
 	candleMesh2.scale.set(0.5, 5.5, 0.5);
 	candleMesh2.position.set(-93, 43.5, -46);
@@ -669,14 +663,14 @@ function initSceneData()
 
 	// the tops (flattened spheres) of the 2 red candle sticks
 	candleTopGeometry1 = new THREE.SphereGeometry();
-	candleTopMaterial1 = new THREE.MeshPhysicalMaterial({color: new THREE.Color(1.0, 0.0, 0.0), clearcoat: 1.0});
+	candleTopMaterial1 = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(1.0, 0.0, 0.0), clearcoat: 1.0 });
 	candleTopMesh1 = new THREE.Mesh(candleTopGeometry1, candleTopMaterial1);
 	candleTopMesh1.scale.set(0.5, 0.2, 0.5);
 	candleTopMesh1.position.set(-92, 46, -38);
 	sceneShapeMeshes.push(candleTopMesh1);
 
 	candleTopGeometry2 = new THREE.SphereGeometry();
-	candleTopMaterial2 = new THREE.MeshPhysicalMaterial({color: new THREE.Color(1.0, 0.0, 0.0), clearcoat: 1.0});
+	candleTopMaterial2 = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(1.0, 0.0, 0.0), clearcoat: 1.0 });
 	candleTopMesh2 = new THREE.Mesh(candleTopGeometry2, candleTopMaterial2);
 	candleTopMesh2.scale.set(0.5, 0.2, 0.5);
 	candleTopMesh2.position.set(-93, 49, -46);
@@ -684,14 +678,14 @@ function initSceneData()
 
 	// the wicks for the 2 red candle sticks
 	candleWickGeometry1 = new THREE.CylinderGeometry();
-	candleWickMaterial1 = new THREE.MeshPhysicalMaterial({color: new THREE.Color(0.0, 0.0, 0.0)});
+	candleWickMaterial1 = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.0, 0.0, 0.0) });
 	candleWickMesh1 = new THREE.Mesh(candleWickGeometry1, candleWickMaterial1);
 	candleWickMesh1.scale.set(0.075, 0.5, 0.075);
 	candleWickMesh1.position.set(-92, 46.25, -38);
 	sceneShapeMeshes.push(candleWickMesh1);
 
 	candleWickGeometry2 = new THREE.CylinderGeometry();
-	candleWickMaterial2 = new THREE.MeshPhysicalMaterial({color: new THREE.Color(0.0, 0.0, 0.0)});
+	candleWickMaterial2 = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.0, 0.0, 0.0) });
 	candleWickMesh2 = new THREE.Mesh(candleWickGeometry2, candleWickMaterial2);
 	candleWickMesh2.scale.set(0.075, 0.5, 0.075);
 	candleWickMesh2.position.set(-93, 49.25, -46);
@@ -699,14 +693,14 @@ function initSceneData()
 
 	// the 2 floor lamps' bases
 	floorLampBaseGeometry1 = new THREE.BoxGeometry();
-	floorLampBaseMaterial1 = new THREE.MeshPhysicalMaterial({color: new THREE.Color(0.2, 0.2, 0.2), metalness: 1.0, roughness: 0.2});
+	floorLampBaseMaterial1 = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.2, 0.2, 0.2), metalness: 1.0, roughness: 0.2 });
 	floorLampBaseMesh1 = new THREE.Mesh(floorLampBaseGeometry1, floorLampBaseMaterial1);
 	floorLampBaseMesh1.scale.set(4, 0.5, 4);
 	floorLampBaseMesh1.position.set(20, 0.5, -80);
 	sceneShapeMeshes.push(floorLampBaseMesh1);
 
 	floorLampBaseGeometry2 = new THREE.BoxGeometry();
-	floorLampBaseMaterial2 = new THREE.MeshPhysicalMaterial({color: new THREE.Color(0.2, 0.2, 0.2), metalness: 1.0, roughness: 0.2});
+	floorLampBaseMaterial2 = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.2, 0.2, 0.2), metalness: 1.0, roughness: 0.2 });
 	floorLampBaseMesh2 = new THREE.Mesh(floorLampBaseGeometry2, floorLampBaseMaterial2);
 	floorLampBaseMesh2.scale.set(6, 0.5, 6);
 	floorLampBaseMesh2.position.set(33, 0.5, -85);
@@ -714,14 +708,14 @@ function initSceneData()
 
 	// the 2 floor lamps' poles
 	floorLampPoleGeometry1 = new THREE.BoxGeometry();
-	floorLampPoleMaterial1 = new THREE.MeshPhysicalMaterial({color: new THREE.Color(0.2, 0.2, 0.2), metalness: 1.0, roughness: 0.2});
+	floorLampPoleMaterial1 = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.2, 0.2, 0.2), metalness: 1.0, roughness: 0.2 });
 	floorLampPoleMesh1 = new THREE.Mesh(floorLampPoleGeometry1, floorLampPoleMaterial1);
 	floorLampPoleMesh1.scale.set(0.7, 26, 0.7);
 	floorLampPoleMesh1.position.set(20, 27, -80);
 	sceneShapeMeshes.push(floorLampPoleMesh1);
 
 	floorLampPoleGeometry2 = new THREE.BoxGeometry();
-	floorLampPoleMaterial2 = new THREE.MeshPhysicalMaterial({color: new THREE.Color(0.2, 0.2, 0.2), metalness: 1.0, roughness: 0.2});
+	floorLampPoleMaterial2 = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.2, 0.2, 0.2), metalness: 1.0, roughness: 0.2 });
 	floorLampPoleMesh2 = new THREE.Mesh(floorLampPoleGeometry2, floorLampPoleMaterial2);
 	floorLampPoleMesh2.scale.set(0.7, 31, 0.7);
 	floorLampPoleMesh2.position.set(33, 32, -85);
@@ -729,7 +723,7 @@ function initSceneData()
 
 	// the 2 floor lamps' shades
 	floorLampShadeGeometry1 = new THREE.ConeGeometry();
-	floorLampShadeMaterial1 = new THREE.MeshPhysicalMaterial({color: new THREE.Color(0.2, 0.2, 0.2), metalness: 1.0, roughness: 0.2});
+	floorLampShadeMaterial1 = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.2, 0.2, 0.2), metalness: 1.0, roughness: 0.2 });
 	floorLampShadeMesh1 = new THREE.Mesh(floorLampShadeGeometry1, floorLampShadeMaterial1);
 	floorLampShadeMesh1.scale.set(5, 2.5, 5);
 	floorLampShadeMesh1.rotation.set(0, 0, Math.PI);
@@ -737,7 +731,7 @@ function initSceneData()
 	sceneShapeMeshes.push(floorLampShadeMesh1);
 
 	floorLampShadeGeometry2 = new THREE.ConeGeometry();
-	floorLampShadeMaterial2 = new THREE.MeshPhysicalMaterial({color: new THREE.Color(0.2, 0.2, 0.2), metalness: 1.0, roughness: 0.2});
+	floorLampShadeMaterial2 = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.2, 0.2, 0.2), metalness: 1.0, roughness: 0.2 });
 	floorLampShadeMesh2 = new THREE.Mesh(floorLampShadeGeometry2, floorLampShadeMaterial2);
 	floorLampShadeMesh2.scale.set(7, 3, 7);
 	floorLampShadeMesh2.rotation.set(0, 0, Math.PI);
@@ -746,7 +740,7 @@ function initSceneData()
 
 	// couch bottom metal frame
 	couchBottomFrameGeometry = new THREE.BoxGeometry();
-	couchBottomFrameMaterial = new THREE.MeshPhysicalMaterial({color: new THREE.Color(1.0, 1.0, 1.0), metalness: 1.0, roughness: 0.2});
+	couchBottomFrameMaterial = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(1.0, 1.0, 1.0), metalness: 1.0, roughness: 0.2 });
 	couchBottomFrameMesh = new THREE.Mesh(couchBottomFrameGeometry, couchBottomFrameMaterial);
 	//couchSeatMesh.scale(31, 3, 12);
 	//couchSeatMesh.position(-25, 13, -84);
@@ -758,7 +752,7 @@ function initSceneData()
 	//couchBottomFrameMesh.scale(30, 1, 11); // for reference
 	//couchBottomFrameMesh.position(-25, 9, -84); // for reference
 	couchFootGeometry1 = new THREE.BoxGeometry();
-	couchFootMaterial1 = new THREE.MeshPhysicalMaterial({color: new THREE.Color(1.0, 1.0, 1.0), metalness: 1.0, roughness: 0.2});
+	couchFootMaterial1 = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(1.0, 1.0, 1.0), metalness: 1.0, roughness: 0.2 });
 	couchFootMesh1 = new THREE.Mesh(couchFootGeometry1, couchFootMaterial1);
 	couchFootMesh1.scale.set(0.4, 4, 0.4);
 	couchFootMesh1.rotation.set(0, 0, -0.1);
@@ -766,7 +760,7 @@ function initSceneData()
 	sceneShapeMeshes.push(couchFootMesh1);
 
 	couchFootGeometry2 = new THREE.BoxGeometry();
-	couchFootMaterial2 = new THREE.MeshPhysicalMaterial({color: new THREE.Color(1.0, 1.0, 1.0), metalness: 1.0, roughness: 0.2});
+	couchFootMaterial2 = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(1.0, 1.0, 1.0), metalness: 1.0, roughness: 0.2 });
 	couchFootMesh2 = new THREE.Mesh(couchFootGeometry2, couchFootMaterial2);
 	couchFootMesh2.scale.set(0.4, 4, 0.4);
 	couchFootMesh2.rotation.set(0, 0, 0.1);
@@ -774,7 +768,7 @@ function initSceneData()
 	sceneShapeMeshes.push(couchFootMesh2);
 
 	couchFootGeometry3 = new THREE.BoxGeometry();
-	couchFootMaterial3 = new THREE.MeshPhysicalMaterial({color: new THREE.Color(1.0, 1.0, 1.0), metalness: 1.0, roughness: 0.2});
+	couchFootMaterial3 = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(1.0, 1.0, 1.0), metalness: 1.0, roughness: 0.2 });
 	couchFootMesh3 = new THREE.Mesh(couchFootGeometry3, couchFootMaterial3);
 	couchFootMesh3.scale.set(0.4, 4, 0.4);
 	couchFootMesh3.rotation.set(0, 0, 0.1);
@@ -782,16 +776,16 @@ function initSceneData()
 	sceneShapeMeshes.push(couchFootMesh3);
 
 	couchFootGeometry4 = new THREE.BoxGeometry();
-	couchFootMaterial4 = new THREE.MeshPhysicalMaterial({color: new THREE.Color(1.0, 1.0, 1.0), metalness: 1.0, roughness: 0.2});
+	couchFootMaterial4 = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(1.0, 1.0, 1.0), metalness: 1.0, roughness: 0.2 });
 	couchFootMesh4 = new THREE.Mesh(couchFootGeometry4, couchFootMaterial4);
 	couchFootMesh4.scale.set(0.4, 4, 0.4);
 	couchFootMesh4.rotation.set(0, 0, -0.1);
 	couchFootMesh4.position.set(-52, 4, -93);
 	sceneShapeMeshes.push(couchFootMesh4);
-	
+
 	// couch seat cushion
 	couchSeatGeometry = new THREE.BoxGeometry();
-	couchSeatMaterial = new THREE.MeshPhysicalMaterial({color: new THREE.Color(0.0, 0.0, 0.02)});
+	couchSeatMaterial = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.0, 0.0, 0.02) });
 	couchSeatMesh = new THREE.Mesh(couchSeatGeometry, couchSeatMaterial);
 	couchSeatMesh.scale.set(33, 3, 12);
 	couchSeatMesh.position.set(-25, 13, -84);
@@ -799,7 +793,7 @@ function initSceneData()
 
 	// couch back cushion
 	couchBackGeometry = new THREE.BoxGeometry();
-	couchBackMaterial = new THREE.MeshPhysicalMaterial({color: new THREE.Color(0.0, 0.0, 0.02)});
+	couchBackMaterial = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.0, 0.0, 0.02) });
 	couchBackMesh = new THREE.Mesh(couchBackGeometry, couchBackMaterial);
 	couchBackMesh.scale.set(33, 9, 3);
 	couchBackMesh.position.set(-25, 25, -93);
@@ -807,7 +801,7 @@ function initSceneData()
 
 	// couch left side
 	couchLeftSideGeometry = new THREE.BoxGeometry();
-	couchLeftSideMaterial = new THREE.MeshPhysicalMaterial({color: new THREE.Color(0.0, 0.0, 0.02)});
+	couchLeftSideMaterial = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.0, 0.0, 0.02) });
 	couchLeftSideMesh = new THREE.Mesh(couchLeftSideGeometry, couchLeftSideMaterial);
 	couchLeftSideMesh.scale.set(3, 9, 12);
 	couchLeftSideMesh.position.set(-55, 25, -84);
@@ -815,7 +809,7 @@ function initSceneData()
 
 	// couch right side
 	couchRightSideGeometry = new THREE.BoxGeometry();
-	couchRightSideMaterial = new THREE.MeshPhysicalMaterial({color: new THREE.Color(0.0, 0.0, 0.02)});
+	couchRightSideMaterial = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.0, 0.0, 0.02) });
 	couchRightSideMesh = new THREE.Mesh(couchRightSideGeometry, couchRightSideMaterial);
 	couchRightSideMesh.scale.set(3, 9, 12);
 	couchRightSideMesh.position.set(5, 25, -84);
@@ -823,7 +817,7 @@ function initSceneData()
 
 	// couch back top
 	couchBackTopGeometry = new THREE.CylinderGeometry();
-	couchBackTopMaterial = new THREE.MeshPhysicalMaterial({color: new THREE.Color(0.0, 0.0, 0.02)});
+	couchBackTopMaterial = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.0, 0.0, 0.02) });
 	couchBackTopMesh = new THREE.Mesh(couchBackTopGeometry, couchBackTopMaterial);
 	couchBackTopMesh.scale.set(3, 32, 4);
 	couchBackTopMesh.rotation.set(0, 0, Math.PI * 0.5)
@@ -832,7 +826,7 @@ function initSceneData()
 
 	// couch left arm top
 	couchLeftArmGeometry = new THREE.CylinderGeometry();
-	couchLeftArmMaterial = new THREE.MeshPhysicalMaterial({color: new THREE.Color(0.0, 0.0, 0.02)});
+	couchLeftArmMaterial = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.0, 0.0, 0.02) });
 	couchLeftArmMesh = new THREE.Mesh(couchLeftArmGeometry, couchLeftArmMaterial);
 	couchLeftArmMesh.scale.set(4, 12, 3);
 	couchLeftArmMesh.rotation.set(Math.PI * 0.5, -0.6, 0);
@@ -841,7 +835,7 @@ function initSceneData()
 
 	// couch right arm top
 	couchRightArmGeometry = new THREE.CylinderGeometry();
-	couchRightArmMaterial = new THREE.MeshPhysicalMaterial({color: new THREE.Color(0.0, 0.0, 0.02)});
+	couchRightArmMaterial = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.0, 0.0, 0.02) });
 	couchRightArmMesh = new THREE.Mesh(couchRightArmGeometry, couchRightArmMaterial);
 	couchRightArmMesh.scale.set(4, 12, 3);
 	couchRightArmMesh.rotation.set(Math.PI * 0.5, 0.6, 0);
@@ -850,7 +844,7 @@ function initSceneData()
 
 	// couch left arm cap (flattened sphere cap)
 	couchLeftArmCapGeometry = new THREE.SphereGeometry();
-	couchLeftArmCapMaterial = new THREE.MeshPhysicalMaterial({color: new THREE.Color(0.0, 0.0, 0.02)});
+	couchLeftArmCapMaterial = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.0, 0.0, 0.02) });
 	couchLeftArmCapMesh = new THREE.Mesh(couchLeftArmCapGeometry, couchLeftArmCapMaterial);
 	couchLeftArmCapMesh.scale.set(4, 3, 0.75);
 	couchLeftArmCapMesh.rotation.set(0, 0, -0.6);
@@ -859,7 +853,7 @@ function initSceneData()
 
 	// couch right arm cap (flattened sphere cap)
 	couchRightArmCapGeometry = new THREE.SphereGeometry();
-	couchRightArmCapMaterial = new THREE.MeshPhysicalMaterial({color: new THREE.Color(0.0, 0.0, 0.02)});
+	couchRightArmCapMaterial = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.0, 0.0, 0.02) });
 	couchRightArmCapMesh = new THREE.Mesh(couchRightArmCapGeometry, couchRightArmCapMaterial);
 	couchRightArmCapMesh.scale.set(4, 3, 0.75);
 	couchRightArmCapMesh.rotation.set(0, 0, 0.6);
@@ -868,7 +862,7 @@ function initSceneData()
 
 	// red pillow
 	redPillowGeometry = new THREE.SphereGeometry();
-	redPillowMaterial = new THREE.MeshPhysicalMaterial({color: new THREE.Color(1.0, 0.0, 0.0)});
+	redPillowMaterial = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(1.0, 0.0, 0.0) });
 	redPillowMesh = new THREE.Mesh(redPillowGeometry, redPillowMaterial);
 	redPillowMesh.scale.set(7, 3, 7);
 	redPillowMesh.rotation.set(0.1, 0, -0.6);
@@ -932,7 +926,7 @@ function initSceneData()
 		else // "ParaboloidGeometry"
 			shapes_array[32 * i + 16] = 4; // r or x // shape type id#  (0: box, 1: sphere, 2: cylinder, 3: cone, 4: paraboloid, etc)
 
-				// default = 1 = Diffuse material
+		// default = 1 = Diffuse material
 		shapes_array[32 * i + 17] = 1; // g or y // material type id# (0: LIGHT, 1: DIFF, 2: REFR, 3: SPEC, 4: COAT, etc)
 		if (sceneShapeMeshes[i].material.metalness > 0.0)
 			shapes_array[32 * i + 17] = 3; // g or y // material type id# (0: LIGHT, 1: DIFF, 2: REFR, 3: SPEC, 4: COAT, etc)
@@ -963,11 +957,11 @@ function initSceneData()
 
 
 		boundingBoxGeometries[i] = new THREE.BoxGeometry(2, 2, 2); // Box with Unit Radius of 1, so a Diameter(length) of 2 in each dimension / min:(-1,-1,-1), max(+1,+1,+1)
-		boundingBoxMeshes[i] = new THREE.Mesh( boundingBoxGeometries[i], boundingBoxMaterial );
-		
+		boundingBoxMeshes[i] = new THREE.Mesh(boundingBoxGeometries[i], boundingBoxMaterial);
+
 		boundingBoxMeshes[i].geometry.applyMatrix4(sceneShapeMeshes[i].matrixWorld);
 		boundingBoxMeshes[i].geometry.computeBoundingBox();
-		
+
 		shapeBoundingBox_minCorner.copy(boundingBoxMeshes[i].geometry.boundingBox.min);
 		shapeBoundingBox_maxCorner.copy(boundingBoxMeshes[i].geometry.boundingBox.max);
 		boundingBoxMeshes[i].geometry.boundingBox.getCenter(shapeBoundingBox_centroid);
@@ -1072,4 +1066,21 @@ function updateVariablesAndUniforms()
 
 
 
-load_GLTF_Models(); // load models, init app, and start animating
+// load a resource
+paintingTexture = textureLoader.load(
+	// resource URL
+	'textures/Piet_Mondrian_Tableau2.png',
+
+	// onLoad callback
+	function (texture)
+	{
+		texture.wrapS = THREE.RepeatWrapping;
+		texture.wrapT = THREE.RepeatWrapping;
+		texture.minFilter = THREE.NearestFilter;
+		texture.magFilter = THREE.NearestFilter;
+		texture.generateMipmaps = false;
+		
+		// now that the texture has been loaded, we can load the model
+		load_GLTF_Model(); // load model, init app, and start animating
+	}
+);
