@@ -9,7 +9,7 @@ function initSceneData()
 
 	// scene/demo-specific three.js objects setup goes here
 	sceneIsDynamic = true;
-	
+
 	cameraFlightSpeed = 60;
 
 	// pixelRatio is resolution - range: 0.5(half resolution) to 1.0(full resolution)
@@ -28,15 +28,7 @@ function initSceneData()
 	// look slightly downward
 	cameraControlsPitchObject.rotation.x = -0.05;
 
-	tileNormalMapTexture = new THREE.TextureLoader().load('textures/tileNormalMap.png');
-	tileNormalMapTexture.wrapS = THREE.RepeatWrapping;
-	tileNormalMapTexture.wrapT = THREE.RepeatWrapping;
-	tileNormalMapTexture.flipY = true;
-	tileNormalMapTexture.minFilter = THREE.LinearFilter;
-	tileNormalMapTexture.magFilter = THREE.LinearFilter;
-	tileNormalMapTexture.generateMipmaps = false;
-
-
+	
 	// scene/demo-specific uniforms go here
 	pathTracingUniforms.tTileNormalMapTexture = { value: tileNormalMapTexture };
 
@@ -55,4 +47,22 @@ function updateVariablesAndUniforms()
 
 
 
-init(); // init app and start animating
+// load a resource
+tileNormalMapTexture = textureLoader.load(
+	// resource URL
+	'textures/tileNormalMap.png',
+
+	// onLoad callback
+	function (texture)
+	{
+		texture.wrapS = THREE.RepeatWrapping;
+		texture.wrapT = THREE.RepeatWrapping;
+		texture.flipY = true;
+		texture.minFilter = THREE.NearestFilter;
+		texture.magFilter = THREE.NearestFilter;
+		texture.generateMipmaps = false;
+
+		// now that the texture has been loaded, we can init 
+		init();
+	}
+);
