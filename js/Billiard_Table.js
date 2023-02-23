@@ -1,5 +1,7 @@
 // scene/demo-specific variables go here
 let clothTexture, darkWoodTexture, lightWoodTexture;
+let imageTexturesTotalCount = 3;
+let numOfImageTexturesLoaded = 0;
 let increaseDoorAngle = false;
 let decreaseDoorAngle = false;
 
@@ -35,30 +37,6 @@ function initSceneData()
 	cameraControlsPitchObject.rotation.x = -0.2;
 	
 	
-	clothTexture = new THREE.TextureLoader().load( 'textures/cloth.jpg' );
-	clothTexture.wrapS = THREE.RepeatWrapping;
-	clothTexture.wrapT = THREE.RepeatWrapping;
-	clothTexture.flipY = false;
-	clothTexture.minFilter = THREE.LinearFilter; 
-	clothTexture.magFilter = THREE.LinearFilter;
-	clothTexture.generateMipmaps = false;
-	
-	darkWoodTexture = new THREE.TextureLoader().load( 'textures/darkWood.jpg' );
-	darkWoodTexture.wrapS = THREE.RepeatWrapping;
-	darkWoodTexture.wrapT = THREE.RepeatWrapping;
-	darkWoodTexture.flipY = false;
-	darkWoodTexture.minFilter = THREE.LinearFilter; 
-	darkWoodTexture.magFilter = THREE.LinearFilter;
-	darkWoodTexture.generateMipmaps = false;
-	
-	lightWoodTexture = new THREE.TextureLoader().load( 'textures/lightWood.jpg' );
-	lightWoodTexture.wrapS = THREE.RepeatWrapping;
-	lightWoodTexture.wrapT = THREE.RepeatWrapping;
-	lightWoodTexture.flipY = false;
-	lightWoodTexture.minFilter = THREE.LinearFilter; 
-	lightWoodTexture.magFilter = THREE.LinearFilter;
-	lightWoodTexture.generateMipmaps = false;
-
 
 	// scene/demo-specific uniforms go here   
 	pathTracingUniforms.tClothTexture = { value: clothTexture };
@@ -79,4 +57,65 @@ function updateVariablesAndUniforms()
 
 
 
-init(); // init app and start animating
+clothTexture = textureLoader.load(
+	// resource URL
+	'textures/cloth.jpg',
+
+	// onLoad callback
+	function (texture)
+	{
+		texture.wrapS = THREE.RepeatWrapping;
+		texture.wrapT = THREE.RepeatWrapping;
+		texture.flipY = false;
+		texture.minFilter = THREE.NearestFilter;
+		texture.magFilter = THREE.NearestFilter;
+		texture.generateMipmaps = false;
+
+		numOfImageTexturesLoaded++;
+		// if all textures have been loaded, we can init 
+		if (numOfImageTexturesLoaded == imageTexturesTotalCount)
+			init();
+	}
+);
+
+darkWoodTexture = textureLoader.load(
+	// resource URL
+	'textures/darkWood.jpg',
+
+	// onLoad callback
+	function (texture)
+	{
+		texture.wrapS = THREE.RepeatWrapping;
+		texture.wrapT = THREE.RepeatWrapping;
+		texture.flipY = false;
+		texture.minFilter = THREE.NearestFilter;
+		texture.magFilter = THREE.NearestFilter;
+		texture.generateMipmaps = false;
+
+		numOfImageTexturesLoaded++;
+		// if all textures have been loaded, we can init 
+		if (numOfImageTexturesLoaded == imageTexturesTotalCount)
+			init();
+	}
+);
+
+lightWoodTexture = textureLoader.load(
+	// resource URL
+	'textures/lightWood.jpg',
+
+	// onLoad callback
+	function (texture)
+	{
+		texture.wrapS = THREE.RepeatWrapping;
+		texture.wrapT = THREE.RepeatWrapping;
+		texture.flipY = false;
+		texture.minFilter = THREE.NearestFilter;
+		texture.magFilter = THREE.NearestFilter;
+		texture.generateMipmaps = false;
+
+		numOfImageTexturesLoaded++;
+		// if all textures have been loaded, we can init 
+		if (numOfImageTexturesLoaded == imageTexturesTotalCount)
+			init();
+	}
+);
