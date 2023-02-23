@@ -8,6 +8,8 @@ let E_SkewMatrix = new THREE.Matrix4();
 let F_SkewMatrix = new THREE.Matrix4();
 let uniformScale = 1;
 let lightTexture, medLightTexture, mediumTexture, medDarkTexture, darkTexture;
+let imageTexturesTotalCount = 5;
+let numOfImageTexturesLoaded = 0;
 
 let sceneFrom1968Paper_PresetController, sceneFrom1968Paper_PresetObject;
 let needChangeScenePreset = false;
@@ -722,42 +724,7 @@ function initSceneData()
 	pathTracingScene.add(CSG_shapeF);
 
 
-	lightTexture = new THREE.TextureLoader().load('textures/plusSignLight.png');
-	lightTexture.wrapS = THREE.RepeatWrapping;
-	lightTexture.wrapT = THREE.RepeatWrapping;
-	lightTexture.minFilter = THREE.NearestFilter;
-	lightTexture.magFilter = THREE.NearestFilter;
-	lightTexture.generateMipmaps = false;
-
-	medLightTexture = new THREE.TextureLoader().load('textures/plusSignMedLight.png');
-	medLightTexture.wrapS = THREE.RepeatWrapping;
-	medLightTexture.wrapT = THREE.RepeatWrapping;
-	medLightTexture.minFilter = THREE.NearestFilter;
-	medLightTexture.magFilter = THREE.NearestFilter;
-	medLightTexture.generateMipmaps = false;
-
-	mediumTexture = new THREE.TextureLoader().load('textures/plusSignMedium.png');
-	mediumTexture.wrapS = THREE.RepeatWrapping;
-	mediumTexture.wrapT = THREE.RepeatWrapping;
-	mediumTexture.minFilter = THREE.NearestFilter;
-	mediumTexture.magFilter = THREE.NearestFilter;
-	mediumTexture.generateMipmaps = false;
-
-	medDarkTexture = new THREE.TextureLoader().load('textures/plusSignMedDark.png');
-	medDarkTexture.wrapS = THREE.RepeatWrapping;
-	medDarkTexture.wrapT = THREE.RepeatWrapping;
-	medDarkTexture.minFilter = THREE.NearestFilter;
-	medDarkTexture.magFilter = THREE.NearestFilter;
-	medDarkTexture.generateMipmaps = false;
-
-	darkTexture = new THREE.TextureLoader().load('textures/plusSignDark.png');
-	darkTexture.wrapS = THREE.RepeatWrapping;
-	darkTexture.wrapT = THREE.RepeatWrapping;
-	darkTexture.minFilter = THREE.NearestFilter;
-	darkTexture.magFilter = THREE.NearestFilter;
-	darkTexture.generateMipmaps = false;
-
-
+	
 	init_GUI();
 
 
@@ -2088,4 +2055,103 @@ function updateVariablesAndUniforms()
 
 
 
-init(); // init app and start animating
+// load all resources
+lightTexture = textureLoader.load(
+	// resource URL
+	'textures/plusSignLight.png',
+
+	// onLoad callback
+	function (texture)
+	{
+		texture.wrapS = THREE.RepeatWrapping;
+		texture.wrapT = THREE.RepeatWrapping;
+		texture.minFilter = THREE.NearestFilter;
+		texture.magFilter = THREE.NearestFilter;
+		texture.generateMipmaps = false;
+
+		numOfImageTexturesLoaded++;
+		// if all textures have been loaded, we can init 
+		if (numOfImageTexturesLoaded == imageTexturesTotalCount)
+			init();
+	}
+);
+
+medLightTexture = textureLoader.load(
+	// resource URL
+	'textures/plusSignMedLight.png',
+
+	// onLoad callback
+	function (texture)
+	{
+		texture.wrapS = THREE.RepeatWrapping;
+		texture.wrapT = THREE.RepeatWrapping;
+		texture.minFilter = THREE.NearestFilter;
+		texture.magFilter = THREE.NearestFilter;
+		texture.generateMipmaps = false;
+
+		numOfImageTexturesLoaded++;
+		// if all textures have been loaded, we can init 
+		if (numOfImageTexturesLoaded == imageTexturesTotalCount)
+			init();
+	}
+);
+
+mediumTexture = textureLoader.load(
+	// resource URL
+	'textures/plusSignMedium.png',
+
+	// onLoad callback
+	function (texture)
+	{
+		texture.wrapS = THREE.RepeatWrapping;
+		texture.wrapT = THREE.RepeatWrapping;
+		texture.minFilter = THREE.NearestFilter;
+		texture.magFilter = THREE.NearestFilter;
+		texture.generateMipmaps = false;
+
+		numOfImageTexturesLoaded++;
+		// if all textures have been loaded, we can init 
+		if (numOfImageTexturesLoaded == imageTexturesTotalCount)
+			init();
+	}
+);
+
+medDarkTexture = textureLoader.load(
+	// resource URL
+	'textures/plusSignMedDark.png',
+
+	// onLoad callback
+	function (texture)
+	{
+		texture.wrapS = THREE.RepeatWrapping;
+		texture.wrapT = THREE.RepeatWrapping;
+		texture.minFilter = THREE.NearestFilter;
+		texture.magFilter = THREE.NearestFilter;
+		texture.generateMipmaps = false;
+
+		numOfImageTexturesLoaded++;
+		// if all textures have been loaded, we can init 
+		if (numOfImageTexturesLoaded == imageTexturesTotalCount)
+			init();
+	}
+);
+
+darkTexture = textureLoader.load(
+	// resource URL
+	'textures/plusSignDark.png',
+
+	// onLoad callback
+	function (texture)
+	{
+		texture.wrapS = THREE.RepeatWrapping;
+		texture.wrapT = THREE.RepeatWrapping;
+		texture.minFilter = THREE.NearestFilter;
+		texture.magFilter = THREE.NearestFilter;
+		texture.generateMipmaps = false;
+
+		numOfImageTexturesLoaded++;
+		// if all textures have been loaded, we can init 
+		if (numOfImageTexturesLoaded == imageTexturesTotalCount)
+			init();
+	}
+);
