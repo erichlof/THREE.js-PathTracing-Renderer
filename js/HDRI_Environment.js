@@ -104,7 +104,7 @@ function MaterialObject()
 function load_GLTF_Model() 
 {
 
-	let gltfLoader = new THREE.GLTFLoader();
+	let gltfLoader = new GLTFLoader();
 
 	gltfLoader.load("models/StanfordDragon.glb", function (meshGroup) // Triangles: 100,000
 	// if you choose to load in the different models below, scroll down and change the *GLTF model settings* for this particular model
@@ -141,7 +141,7 @@ function load_GLTF_Model()
 			geoList.push(meshList[i].geometry);
 		}
 
-		modelMesh.geometry = THREE.BufferGeometryUtils.mergeBufferGeometries(geoList);
+		modelMesh.geometry = mergeBufferGeometries(geoList);
 
 		if (modelMesh.geometry.index)
 			modelMesh.geometry = modelMesh.geometry.toNonIndexed();
@@ -493,7 +493,7 @@ function updateVariablesAndUniforms()
 
 
 
-hdrLoader = new THREE.RGBELoader();
+hdrLoader = new RGBELoader();
 // override THREE's default of HalfFloatType (full float precision needed in brightest pixel calculations below)
 hdrLoader.type = THREE.FloatType;
 
