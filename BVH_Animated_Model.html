@@ -1,32 +1,51 @@
 <!DOCTYPE html>
 <html lang="en">
 
-<head>
-	<title>three.js PathTracing Renderer - Animated BVH Model</title>
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1">
-	<link href="css/default.css" rel="stylesheet"/>
-</head>
+	<head>
+		<title>three.js PathTracing Renderer - Animated BVH Model</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1">
+		<link href="css/default.css" rel="stylesheet">
 
-<body>
+		<script async src="js/es-module-shims.js"></script>
+		<script type="importmap">
+		{
+			"imports": {
+				"three": "./js/three.module.min.js",
+				"BufferGeometryUtils": "./js/BufferGeometryUtils.js"
+			}
+		}
+		</script>
 
-	<div id="container"> </div>
-	<div id="info">three.js PathTracing Renderer - Animated BVH Model</div>
+		<script type="module">
+			import * as THREE from 'three';
+			window.THREE = THREE;
+			import Stats from './js/stats.module.js';
+			window.Stats = Stats;
+			import GUI from './js/lil-gui.module.min.js';
+			window.GUI = GUI;
+				
+			import {mergeBufferGeometries} from 'BufferGeometryUtils';
+			window.mergeBufferGeometries = mergeBufferGeometries;
+			import {GLTFLoader} from './js/GLTFLoader.js';
+			window.GLTFLoader = GLTFLoader;
+		</script>
+	</head>
 
-	<div id="cameraInfo" style="position:fixed; left:3%; bottom:2%; font-family:arial; color:rgb(255,255,255);"></div>
+	<body>
 
-	<script src="js/three.min.js"> </script>
-	<script src="js/BufferGeometryUtils.js"> </script>
-	<script src="js/GLTFLoader.js"></script>
-	<script src="js/BVH_Acc_Structure_Iterative_SAH_Builder.js"> </script>
-	<script src="js/FirstPersonCameraControls.js"> </script>
-	<script src="js/MobileJoystickControls.js"> </script>
-	<script src="js/stats.min.js"> </script>
-	<script src='js/lil-gui.min.js'></script>
-	<script src="js/PathTracingCommon.js"> </script>
-	<script src="js/InitCommon.js"> </script>
+		<div id="container"> </div>
+		<div id="info">three.js PathTracing Renderer - Animated BVH Model</div>
 
-	<script src="js/BVH_Animated_Model.js"> </script>
+		<div id="cameraInfo" style="position:fixed; left:3%; bottom:2%; font-family:arial; color:rgb(255,255,255);"></div>
+
+		<script defer src="js/BVH_Acc_Structure_Iterative_SAH_Builder.js"> </script>
+		<script defer src="js/FirstPersonCameraControls.js"> </script>
+		<script defer src="js/MobileJoystickControls.js"> </script>
+		<script defer src="js/PathTracingCommon.js"> </script>
+		<script defer src="js/InitCommon.js"> </script>
+
+		<script defer src="js/BVH_Animated_Model.js"> </script>
 
 	</body>
 </html>
