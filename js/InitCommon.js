@@ -280,9 +280,8 @@ function init()
 		currentlyUsingOrthographicCamera = !currentlyUsingOrthographicCamera;
 	}
 
-	// since I use the lil-gui.min.js minified version of lil-gui without modern exports, 
-	//'g()' is 'GUI()' ('g' is the shortened version of 'GUI' inside the lil-gui.min.js file)
-	gui = new g(); // same as gui = new GUI();
+
+	gui = new GUI();
 
 	pixel_ResolutionController = gui.add(pixel_ResolutionObject, 'pixel_Resolution', 0.5, 1.0, 0.05).onChange(handlePixelResolutionChange);
 	if (!mouseControl)
