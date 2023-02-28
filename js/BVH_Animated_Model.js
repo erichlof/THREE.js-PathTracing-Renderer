@@ -46,7 +46,7 @@ function MaterialObject()
 function load_GLTF_Model()
 {
 
-	let gltfLoader = new THREE.GLTFLoader();
+	let gltfLoader = new GLTFLoader();
 
 	modelScale = 10.0; // good scale size for DamagedHelmet model
 	//modelScale = 0.1; // good scale size for Duck model
@@ -87,7 +87,7 @@ function load_GLTF_Model()
 			geoList.push(meshList[i].geometry);
 		}
 
-		modelMesh.geometry = THREE.BufferGeometryUtils.mergeBufferGeometries(geoList);
+		modelMesh.geometry = mergeBufferGeometries(geoList);
 
 		if (modelMesh.geometry.index)
 			modelMesh.geometry = modelMesh.geometry.toNonIndexed();
