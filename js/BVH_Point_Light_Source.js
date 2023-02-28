@@ -41,7 +41,7 @@ function MaterialObject()
 function load_GLTF_Model() 
 {
 
-	let gltfLoader = new THREE.GLTFLoader();
+	let gltfLoader = new GLTFLoader();
 
 	gltfLoader.load("models/StanfordBunny.glb", function (meshGroup) // Triangles: 30,338
 	//gltfLoader.load("models/UtahTeapot.glb", function( meshGroup )
@@ -76,7 +76,7 @@ function load_GLTF_Model()
 			geoList.push(meshList[i].geometry);
 		}
 
-		modelMesh.geometry = THREE.BufferGeometryUtils.mergeBufferGeometries(geoList);
+		modelMesh.geometry = mergeBufferGeometries(geoList);
 
 		if (modelMesh.geometry.index)
 			modelMesh.geometry = modelMesh.geometry.toNonIndexed();
