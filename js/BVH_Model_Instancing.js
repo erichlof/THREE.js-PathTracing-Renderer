@@ -55,7 +55,7 @@ function MaterialObject()
 
 // Load in the model either in glTF or glb format  /////////////////////////////////////////////////////
 
-gltfLoader = new THREE.GLTFLoader();
+gltfLoader = new GLTFLoader();
 modelNameAndExtension = "UtahTeapot.glb";
 modelInitialScale = 1;
 
@@ -99,7 +99,7 @@ function load_GLTF_Model()
 			geoList.push(meshList[i].geometry);
 		}
 
-		modelMesh.geometry = THREE.BufferGeometryUtils.mergeBufferGeometries(geoList);
+		modelMesh.geometry = mergeBufferGeometries(geoList);
 		
 		if (modelMesh.geometry.index)
 			modelMesh.geometry = modelMesh.geometry.toNonIndexed();
