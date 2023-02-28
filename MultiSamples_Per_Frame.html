@@ -4,7 +4,25 @@
 		<title>three.js PathTracing Renderer - MultiSamples Per Frame</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1">
-		<link href="css/default.css" rel="stylesheet"/>
+		<link href="css/default.css" rel="stylesheet">
+
+		<script async src="js/es-module-shims.js"></script>
+		<script type="importmap">
+		{
+			"imports": {
+				"three": "./js/three.module.min.js"
+			}
+		}
+		</script>
+
+		<script type="module">
+			import * as THREE from 'three';
+			window.THREE = THREE;
+			import Stats from './js/stats.module.js';
+			window.Stats = Stats;
+			import GUI from './js/lil-gui.module.min.js';
+			window.GUI = GUI;
+		</script>
 	</head>
 	
 	<body>
@@ -14,16 +32,12 @@
 		
 		<div id="cameraInfo"> </div>
 		
-		<script src="js/three.min.js"> </script>
-		<script src="js/FirstPersonCameraControls.js"> </script>
-		<script src="js/MobileJoystickControls.js"> </script>
-		<script src="js/stats.min.js"> </script>
-		<script src='js/lil-gui.min.js'></script>
-		<script src="js/PathTracingCommon.js"> </script>
-		<script src="js/InitCommon.js"> </script>
+		<script defer src="js/FirstPersonCameraControls.js"> </script>
+		<script defer src="js/MobileJoystickControls.js"> </script>
+		<script defer src="js/PathTracingCommon.js"> </script>
+		<script defer src="js/InitCommon.js"> </script>
 		
-
-		<script src="js/MultiSamples_Per_Frame.js"> </script>
+		<script defer src="js/MultiSamples_Per_Frame.js"> </script>
 
 	</body>
 </html>
