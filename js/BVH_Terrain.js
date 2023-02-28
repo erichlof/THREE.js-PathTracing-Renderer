@@ -42,7 +42,7 @@ function MaterialObject()
 function load_GLTF_Model()
 {
 
-	let gltfLoader = new THREE.GLTFLoader();
+	let gltfLoader = new GLTFLoader();
 	//modelScale = 0.04; heightScale = 1;
 	gltfLoader.load("models/Landscape.glb", function (meshGroup) // Triangles: 734,464
 	//gltfLoader.load("models/sponza.glb", function (meshGroup)
@@ -78,7 +78,7 @@ function load_GLTF_Model()
 			geoList.push(meshList[i].geometry);
 		}
 
-		modelMesh.geometry = THREE.BufferGeometryUtils.mergeBufferGeometries(geoList);
+		modelMesh.geometry = mergeBufferGeometries(geoList);
 
 		if (modelMesh.geometry.index)
 			modelMesh.geometry = modelMesh.geometry.toNonIndexed();
