@@ -38,7 +38,7 @@ let modelPositionOffset = new THREE.Vector3();
 let sunDirection = new THREE.Vector3();
 
 // Loaders
-let gltfLoader = new THREE.GLTFLoader();
+let gltfLoader = new GLTFLoader();
 let modelLoadedCount = 0;
 
 // GUI menu variables
@@ -215,7 +215,7 @@ function prepareGeometryForPT(meshList, pathTracingMaterialList, triangleMateria
 		geoList.push(meshList[i].geometry);
 
 	// Merge geometry from all models into one new mesh
-	let modelMesh = new THREE.Mesh(THREE.BufferGeometryUtils.mergeBufferGeometries(geoList));
+	let modelMesh = new THREE.Mesh(mergeBufferGeometries(geoList));
 	if (modelMesh.geometry.index)
 		modelMesh.geometry = modelMesh.geometry.toNonIndexed(); // why do we need NonIndexed geometry?
 
@@ -572,7 +572,7 @@ function updateVariablesAndUniforms()
 } // end function updateVariablesAndUniforms()
 
 
-hdrLoader = new THREE.RGBELoader();
+hdrLoader = new RGBELoader();
 hdrLoader.type = THREE.FloatType; // override THREE's default of HalfFloatType
 
 hdrTexture = hdrLoader.load(
