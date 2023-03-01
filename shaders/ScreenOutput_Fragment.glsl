@@ -14,47 +14,52 @@ uniform bool uUseToneMapping;
 
 void main()
 {
-	
+	// first, start with a large blur kernel (5x5), which will be used on all diffuse
+	// surfaces.  It will blur out the noise, giving a smoother, more uniform color.
+
 	// 5x5 kernel
 	vec4 m25[25];
 
-	m25[ 0] = texelFetch(tPathTracedImageTexture, ivec2(gl_FragCoord.xy + vec2(-2, 2)), 0);
-	m25[ 1] = texelFetch(tPathTracedImageTexture, ivec2(gl_FragCoord.xy + vec2(-1, 2)), 0);
-	m25[ 2] = texelFetch(tPathTracedImageTexture, ivec2(gl_FragCoord.xy + vec2( 0, 2)), 0);
-	m25[ 3] = texelFetch(tPathTracedImageTexture, ivec2(gl_FragCoord.xy + vec2( 1, 2)), 0);
-	m25[ 4] = texelFetch(tPathTracedImageTexture, ivec2(gl_FragCoord.xy + vec2( 2, 2)), 0);
+	vec2 glFragCoord_xy = gl_FragCoord.xy;
 
-	m25[ 5] = texelFetch(tPathTracedImageTexture, ivec2(gl_FragCoord.xy + vec2(-2, 1)), 0);
-	m25[ 6] = texelFetch(tPathTracedImageTexture, ivec2(gl_FragCoord.xy + vec2(-1, 1)), 0);
-	m25[ 7] = texelFetch(tPathTracedImageTexture, ivec2(gl_FragCoord.xy + vec2( 0, 1)), 0);
-	m25[ 8] = texelFetch(tPathTracedImageTexture, ivec2(gl_FragCoord.xy + vec2( 1, 1)), 0);
-	m25[ 9] = texelFetch(tPathTracedImageTexture, ivec2(gl_FragCoord.xy + vec2( 2, 1)), 0);
+	m25[ 0] = texelFetch(tPathTracedImageTexture, ivec2(glFragCoord_xy + vec2(-2, 2)), 0);
+	m25[ 1] = texelFetch(tPathTracedImageTexture, ivec2(glFragCoord_xy + vec2(-1, 2)), 0);
+	m25[ 2] = texelFetch(tPathTracedImageTexture, ivec2(glFragCoord_xy + vec2( 0, 2)), 0);
+	m25[ 3] = texelFetch(tPathTracedImageTexture, ivec2(glFragCoord_xy + vec2( 1, 2)), 0);
+	m25[ 4] = texelFetch(tPathTracedImageTexture, ivec2(glFragCoord_xy + vec2( 2, 2)), 0);
 
-	m25[10] = texelFetch(tPathTracedImageTexture, ivec2(gl_FragCoord.xy + vec2(-2, 0)), 0);
-	m25[11] = texelFetch(tPathTracedImageTexture, ivec2(gl_FragCoord.xy + vec2(-1, 0)), 0);
-	m25[12] = texelFetch(tPathTracedImageTexture, ivec2(gl_FragCoord.xy + vec2( 0, 0)), 0);
-	m25[13] = texelFetch(tPathTracedImageTexture, ivec2(gl_FragCoord.xy + vec2( 1, 0)), 0);
-	m25[14] = texelFetch(tPathTracedImageTexture, ivec2(gl_FragCoord.xy + vec2( 2, 0)), 0);
+	m25[ 5] = texelFetch(tPathTracedImageTexture, ivec2(glFragCoord_xy + vec2(-2, 1)), 0);
+	m25[ 6] = texelFetch(tPathTracedImageTexture, ivec2(glFragCoord_xy + vec2(-1, 1)), 0);
+	m25[ 7] = texelFetch(tPathTracedImageTexture, ivec2(glFragCoord_xy + vec2( 0, 1)), 0);
+	m25[ 8] = texelFetch(tPathTracedImageTexture, ivec2(glFragCoord_xy + vec2( 1, 1)), 0);
+	m25[ 9] = texelFetch(tPathTracedImageTexture, ivec2(glFragCoord_xy + vec2( 2, 1)), 0);
 
-	m25[15] = texelFetch(tPathTracedImageTexture, ivec2(gl_FragCoord.xy + vec2(-2,-1)), 0);
-	m25[16] = texelFetch(tPathTracedImageTexture, ivec2(gl_FragCoord.xy + vec2(-1,-1)), 0);
-	m25[17] = texelFetch(tPathTracedImageTexture, ivec2(gl_FragCoord.xy + vec2( 0,-1)), 0);
-	m25[18] = texelFetch(tPathTracedImageTexture, ivec2(gl_FragCoord.xy + vec2( 1,-1)), 0);
-	m25[19] = texelFetch(tPathTracedImageTexture, ivec2(gl_FragCoord.xy + vec2( 2,-1)), 0);
+	m25[10] = texelFetch(tPathTracedImageTexture, ivec2(glFragCoord_xy + vec2(-2, 0)), 0);
+	m25[11] = texelFetch(tPathTracedImageTexture, ivec2(glFragCoord_xy + vec2(-1, 0)), 0);
+	m25[12] = texelFetch(tPathTracedImageTexture, ivec2(glFragCoord_xy + vec2( 0, 0)), 0);
+	m25[13] = texelFetch(tPathTracedImageTexture, ivec2(glFragCoord_xy + vec2( 1, 0)), 0);
+	m25[14] = texelFetch(tPathTracedImageTexture, ivec2(glFragCoord_xy + vec2( 2, 0)), 0);
 
-	m25[20] = texelFetch(tPathTracedImageTexture, ivec2(gl_FragCoord.xy + vec2(-2,-2)), 0);
-	m25[21] = texelFetch(tPathTracedImageTexture, ivec2(gl_FragCoord.xy + vec2(-1,-2)), 0);
-	m25[22] = texelFetch(tPathTracedImageTexture, ivec2(gl_FragCoord.xy + vec2( 0,-2)), 0);
-	m25[23] = texelFetch(tPathTracedImageTexture, ivec2(gl_FragCoord.xy + vec2( 1,-2)), 0);
-	m25[24] = texelFetch(tPathTracedImageTexture, ivec2(gl_FragCoord.xy + vec2( 2,-2)), 0);
+	m25[15] = texelFetch(tPathTracedImageTexture, ivec2(glFragCoord_xy + vec2(-2,-1)), 0);
+	m25[16] = texelFetch(tPathTracedImageTexture, ivec2(glFragCoord_xy + vec2(-1,-1)), 0);
+	m25[17] = texelFetch(tPathTracedImageTexture, ivec2(glFragCoord_xy + vec2( 0,-1)), 0);
+	m25[18] = texelFetch(tPathTracedImageTexture, ivec2(glFragCoord_xy + vec2( 1,-1)), 0);
+	m25[19] = texelFetch(tPathTracedImageTexture, ivec2(glFragCoord_xy + vec2( 2,-1)), 0);
+
+	m25[20] = texelFetch(tPathTracedImageTexture, ivec2(glFragCoord_xy + vec2(-2,-2)), 0);
+	m25[21] = texelFetch(tPathTracedImageTexture, ivec2(glFragCoord_xy + vec2(-1,-2)), 0);
+	m25[22] = texelFetch(tPathTracedImageTexture, ivec2(glFragCoord_xy + vec2( 0,-2)), 0);
+	m25[23] = texelFetch(tPathTracedImageTexture, ivec2(glFragCoord_xy + vec2( 1,-2)), 0);
+	m25[24] = texelFetch(tPathTracedImageTexture, ivec2(glFragCoord_xy + vec2( 2,-2)), 0);
 	
 	vec4 centerPixel = m25[12];
-	vec3 filteredPixelColor;
+	vec3 filteredPixelColor, edgePixelColor;
 	float threshold = 1.0;
 	int count = 1;
 
 	// start with center pixel
 	filteredPixelColor = m25[12].rgb;
+
 	// search left
 	if (m25[11].a < threshold)
 	{
@@ -185,8 +190,11 @@ void main()
 		}
 	}
 	
-	filteredPixelColor /= float(count);
+	filteredPixelColor *= (1.0 / float(count));
 
+
+	// next, use a smaller blur kernel (3x3), which helps with 
+	// objects when seen through glass/transparent objects 
 
 	// 3x3 kernel
 	vec4 m9[9];
@@ -202,7 +210,7 @@ void main()
 	m9[7] = m25[17];
 	m9[8] = m25[18];
 
-	if (centerPixel.a == -1.0)
+	if (centerPixel.a == -1.0) // transparent surface pixel
 	{
 		// reset variables
 		centerPixel = m9[4];
@@ -265,6 +273,72 @@ void main()
 
 	} // end if (centerPixel.a == -1.0)
 
+	// finally, if this is a sharp edge pixel, look for immediate neighbors that are 
+	//  also sharp edge pixels and blend with them. This helps make a more smooth, uniformly-colored 
+	// 'line' along edges, rather than leaving each line edge pixel as a pure random, noisy color.
+	if (centerPixel.a == 1.01) // edge pixel
+	{
+		// reset variables
+		centerPixel = m9[4];
+		count = 1;
+
+		// start with center pixel
+		edgePixelColor = m9[4].rgb;
+
+		// search left
+		if (m9[3].a == 1.01)
+		{
+			edgePixelColor += m9[3].rgb;
+			count++; 
+		}
+		// search right
+		if (m9[5].a == 1.01)
+		{
+			edgePixelColor += m9[5].rgb;
+			count++; 
+		}
+		// search above
+		if (m9[1].a == 1.01)
+		{
+			edgePixelColor += m9[1].rgb;
+			count++; 
+		}
+		// search below
+		if (m9[7].a == 1.01)
+		{
+			edgePixelColor += m9[7].rgb;
+			count++; 
+		}
+
+		// search upper-left
+		if (m9[0].a == 1.01)
+		{
+			edgePixelColor += m9[0].rgb;
+			count++; 
+		}
+		// search upper-right
+		if (m9[2].a == 1.01)
+		{
+			edgePixelColor += m9[2].rgb;
+			count++; 
+		}
+		// search lower-left
+		if (m9[6].a == 1.01)
+		{
+			edgePixelColor += m9[6].rgb;
+			count++; 
+		}
+		// search lower-right
+		if (m9[8].a == 1.01)
+		{
+			edgePixelColor += m9[8].rgb;
+			count++; 
+		}
+
+		edgePixelColor /= float(count);
+
+	} // end if (centerPixel.a == 1.01)
+
 	
 	if ( !uSceneIsDynamic ) // static scene
 	{
@@ -272,11 +346,11 @@ void main()
 		if (uSampleCounter > 1.0) // is camera still?
 		{
 			if (centerPixel.a == 1.01) // 1.01 means pixel is on an edge, must get sharper quickest
-				filteredPixelColor = mix(filteredPixelColor, centerPixel.rgb, clamp(uSampleCounter * uEdgeSharpenSpeed, 0.0, 1.0));
+				filteredPixelColor = mix(edgePixelColor, centerPixel.rgb, clamp(uSampleCounter * uEdgeSharpenSpeed, 0.0, 1.0));
 			else if (centerPixel.a == -1.0) // -1.0 means glass / transparent surfaces, must get sharper fairly quickly
 				filteredPixelColor = mix(filteredPixelColor, centerPixel.rgb, clamp(uSampleCounter * 0.01, 0.0, 1.0));
-			else // else this is a diffuse surface, so we can take our time converging. That way, there will be minimal noise 
-				filteredPixelColor = mix(filteredPixelColor, centerPixel.rgb, clamp(uSampleCounter * uFilterDecaySpeed, 0.0, 1.0));
+			// else // else this is a diffuse surface, so we can take our time converging. That way, there will be minimal noise 
+			//  	filteredPixelColor = mix(filteredPixelColor, centerPixel.rgb, clamp(uSampleCounter * uFilterDecaySpeed, 0.0, 1.0));
 		} // else camera is moving
 		else if (centerPixel.a == 1.01) // 1.01 means pixel is on an edge, must remain sharper
 		{
