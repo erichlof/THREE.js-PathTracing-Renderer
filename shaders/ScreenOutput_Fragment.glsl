@@ -276,7 +276,7 @@ void main()
 	// finally, if this is a sharp edge pixel, look for immediate neighbors that are 
 	//  also sharp edge pixels and blend with them. This helps make a more smooth, uniformly-colored 
 	// 'line' along edges, rather than leaving each line edge pixel as a pure random, noisy color.
-	if (centerPixel.a == 1.01) // edge pixel
+	if (!uSceneIsDynamic && centerPixel.a == 1.01) // edge pixel
 	{
 		// reset variables
 		centerPixel = m9[4];
@@ -336,8 +336,8 @@ void main()
 		}
 
 		edgePixelColor /= float(count);
-
-	} // end if (centerPixel.a == 1.01)
+		
+	} // end if (!uSceneIsDynamic && centerPixel.a == 1.01)
 
 	
 	if ( !uSceneIsDynamic ) // static scene
