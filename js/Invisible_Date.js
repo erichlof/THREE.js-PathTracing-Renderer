@@ -158,7 +158,7 @@ function load_GLTF_Model()
 			geoList.push(meshList[i].geometry);
 		}
 
-		modelMesh.geometry = mergeBufferGeometries(geoList);
+		modelMesh.geometry = mergeGeometries(geoList);
 
 		if (modelMesh.geometry.index)
 			modelMesh.geometry = modelMesh.geometry.toNonIndexed();
