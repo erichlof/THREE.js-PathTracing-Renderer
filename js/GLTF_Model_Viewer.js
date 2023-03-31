@@ -215,7 +215,7 @@ function prepareGeometryForPT(meshList, pathTracingMaterialList, triangleMateria
 		geoList.push(meshList[i].geometry);
 
 	// Merge geometry from all models into one new mesh
-	let modelMesh = new THREE.Mesh(mergeBufferGeometries(geoList));
+	let modelMesh = new THREE.Mesh(mergeGeometries(geoList));
 	if (modelMesh.geometry.index)
 		modelMesh.geometry = modelMesh.geometry.toNonIndexed(); // why do we need NonIndexed geometry?
 
