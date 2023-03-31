@@ -1246,121 +1246,149 @@ void Box_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1, out vec3 n
 }
 `;
 
-/* THREE.ShaderChunk[ 'pathtracing_convexpolyhedron_csg_intersect' ] = `
-// This convexPolyhedron routine works with any number of user-defined cutting planes (a plane is defined by its unit normal (vec3) and an offset distance (float) from the shape's origin along this normal)
-// Examples of shapes that can be made from a list of pure convex cutting planes: cube, frustum, triangular pyramid (tetrahedron), rectangular pyramid, triangular bipyramid (hexahedron), rectangular bipyramid (octahedron), other Platonic/Archimedean solids, etc.)
-// Although I am proud of coming up with this ray casting / ray intersection algo for arbitrary mathematical convex polyhedra, and it does indeed give pixel-perfect sharp cut convex polygon faces (tris, quads, pentagons, hexagons, etc), 
-// I'm not currently using it because it runs too slowly on mobile, probably due to the nested for loops that have to compare each plane against all of its neighbor planes: big O(N-squared) - ouch! Hopefully I can optimize someday!
-// -Erich  erichlof on GitHub
+THREE.ShaderChunk[ 'pathtracing_convexpolyhedron_csg_intersect' ] = `
+// This convexPolyhedron routine works with any number of user-defined cutting planes - a plane is defined by its unit normal (vec3) and an offset distance (float) 
+//  from the plane origin to the shape's origin.  Examples of shapes that can be made from a list of pure convex cutting planes: cube, frustum, 
+//  triangular pyramid (tetrahedron), rectangular pyramid, triangular bipyramid (hexahedron), rectangular bipyramid (octahedron), and other polyhedra.
 
 const int numPlanes = 8;
 vec4 convex_planes[numPlanes];
+
 //------------------------------------------------------------------------------------------------------------
 float ConvexPolyhedron_Intersect( vec3 ro, vec3 rd, out vec3 n )
 //------------------------------------------------------------------------------------------------------------
 {
-	vec3 hit;
+	vec3 n0, n1;
 	float t;
-	float smallestT = INFINITY;
+	float t0 = -INFINITY;
+	float t1 = INFINITY;
+	float plane_dot_rayDir;
 
-	// to get triangular bipyramid (hexahedron), set numPlanes = 6 above
-	//convex_planes[0] = vec4(normalize(vec3(1, 1, -1)), 0.5);
-	//convex_planes[1] = vec4(normalize(vec3(-1, 1, -1)), 0.5);
-	//convex_planes[2] = vec4(normalize(vec3(0, 1, 1)), 0.5);
-	//convex_planes[3] = vec4(normalize(vec3(0, -1, 1)), 0.5);
-	//convex_planes[4] = vec4(normalize(vec3(1, -1, -1)), 0.5);
-	//convex_planes[5] = vec4(normalize(vec3(-1, -1, -1)), 0.5);
+	// for triangular pyramid (tetrahedron), set numPlanes = 4 above
+	// convex_planes[0] = vec4(normalize(vec3( 1, 0.45, 0.6)), -0.3);
+	// convex_planes[1] = vec4(normalize(vec3(-1, 0.45, 0.6)), -0.3);
+	// convex_planes[2] = vec4(normalize(vec3( 0,  0.3,  -1)), -0.3);
+	// convex_planes[3] = vec4(normalize(vec3( 0,-1, 0)), -1.0);
 
-	// to get rectangular bipyramid (octahedron), set numPlanes = 8 above
-	convex_planes[0] = vec4(normalize(vec3(1, 1, 0)), 0.5);
-	convex_planes[1] = vec4(normalize(vec3(-1, 1, 0)), 0.5);
-	convex_planes[2] = vec4(normalize(vec3(0, 1, 1)), 0.5);
-	convex_planes[3] = vec4(normalize(vec3(0, 1, -1)), 0.5);
-	convex_planes[4] = vec4(normalize(vec3(1, -1, 0)), 0.5);
-	convex_planes[5] = vec4(normalize(vec3(-1, -1, 0)), 0.5);
-	convex_planes[6] = vec4(normalize(vec3(0, -1, 1)), 0.5);
-	convex_planes[7] = vec4(normalize(vec3(0, -1, -1)), 0.5);
+	// for rectangular pyramid, set numPlanes = 5 above
+	// convex_planes[0] = vec4(normalize(vec3( 1, 0.5, 0)), -0.4);
+	// convex_planes[1] = vec4(normalize(vec3(-1, 0.5, 0)), -0.4);
+	// convex_planes[2] = vec4(normalize(vec3( 0, 0.5, 1)), -0.4);
+	// convex_planes[3] = vec4(normalize(vec3( 0, 0.5,-1)), -0.4);
+	// convex_planes[4] = vec4(normalize(vec3( 0,-1, 0)), -1.0);
+
+	// for triangular prism, set numPlanes = 5 above
+	// convex_planes[0] = vec4(normalize(vec3( 0, 0, 1)), -0.5);
+	// convex_planes[1] = vec4(normalize(vec3( 1, 0,-0.577)), -0.5);
+	// convex_planes[2] = vec4(normalize(vec3(-1, 0,-0.577)), -0.5);
+	// convex_planes[3] = vec4(normalize(vec3( 0, 1, 0)), -1.0);
+	// convex_planes[4] = vec4(normalize(vec3( 0,-1, 0)), -1.0);
+
+	// for cube, set numPlanes = 6 above
+	// convex_planes[0] = vec4((vec3( 1, 0, 0)), -1.0);
+	// convex_planes[1] = vec4((vec3(-1, 0, 0)), -1.0);
+	// convex_planes[2] = vec4((vec3( 0, 1, 0)), -1.0);
+	// convex_planes[3] = vec4((vec3( 0,-1, 0)), -1.0);
+	// convex_planes[4] = vec4((vec3( 0, 0, 1)), -1.0);
+	// convex_planes[5] = vec4((vec3( 0, 0,-1)), -1.0);
+
+	// for frustum (rectangular pyramid with apex cut off), set numPlanes = 6 above
+	// convex_planes[0] = vec4(normalize(vec3( 1, 0.35, 0)), -0.6);
+	// convex_planes[1] = vec4(normalize(vec3(-1, 0.35, 0)), -0.6);
+	// convex_planes[2] = vec4(normalize(vec3( 0, 0.35, 1)), -0.6);
+	// convex_planes[3] = vec4(normalize(vec3( 0, 0.35,-1)), -0.6);
+	// convex_planes[4] = vec4(normalize(vec3( 0,   1, 0)), -1.0);
+	// convex_planes[5] = vec4(normalize(vec3( 0,  -1, 0)), -1.0);
+
+	// for triangular bipyramid (hexahedron), set numPlanes = 6 above
+	// convex_planes[0] = vec4(normalize(vec3( 1, 0.7, 0.6)), -0.5);
+	// convex_planes[1] = vec4(normalize(vec3(-1, 0.7, 0.6)), -0.5);
+	// convex_planes[2] = vec4(normalize(vec3( 0, 0.6,  -1)), -0.5);
+	// convex_planes[3] = vec4(normalize(vec3( 1,-0.7, 0.6)), -0.5);
+	// convex_planes[4] = vec4(normalize(vec3(-1,-0.7, 0.6)), -0.5);
+	// convex_planes[5] = vec4(normalize(vec3( 0,-0.6,  -1)), -0.5);
+
+	// for pentagonal prism, set numPlanes = 7 above
+	// convex_planes[0] = vec4(normalize(vec3(cos(TWO_PI * 0.25), 0, sin(TWO_PI * 0.25))), -0.8);
+	// convex_planes[1] = vec4(normalize(vec3(cos(TWO_PI * 0.45), 0, sin(TWO_PI * 0.45))), -0.8);
+	// convex_planes[2] = vec4(normalize(vec3(cos(TWO_PI * 0.65), 0, sin(TWO_PI * 0.65))), -0.8);
+	// convex_planes[3] = vec4(normalize(vec3(cos(TWO_PI * 0.85), 0, sin(TWO_PI * 0.85))), -0.8);
+	// convex_planes[4] = vec4(normalize(vec3(cos(TWO_PI * 1.05), 0, sin(TWO_PI * 1.05))), -0.8);
+	// convex_planes[5] = vec4(normalize(vec3( 0, 1, 0)), -1.0);
+	// convex_planes[6] = vec4(normalize(vec3( 0,-1, 0)), -1.0);
+
+	// for rectangular bipyramid (octahedron), set numPlanes = 8 above
+	convex_planes[0] = vec4(normalize(vec3( 1, 0.75, 0)), -0.6);
+	convex_planes[1] = vec4(normalize(vec3(-1, 0.75, 0)), -0.6);
+	convex_planes[2] = vec4(normalize(vec3( 0, 0.75, 1)), -0.6);
+	convex_planes[3] = vec4(normalize(vec3( 0, 0.75,-1)), -0.6);
+	convex_planes[4] = vec4(normalize(vec3( 1,-0.75, 0)), -0.6);
+	convex_planes[5] = vec4(normalize(vec3(-1,-0.75, 0)), -0.6);
+	convex_planes[6] = vec4(normalize(vec3( 0,-0.75, 1)), -0.6);
+	convex_planes[7] = vec4(normalize(vec3( 0,-0.75,-1)), -0.6);
+
+	// for hexagonal prism, set numPlanes = 8 above
+	// convex_planes[0] = vec4(normalize(vec3( 0, 0,     1)), -0.9);
+	// convex_planes[1] = vec4(normalize(vec3( 0, 0,    -1)), -0.9);
+	// convex_planes[2] = vec4(normalize(vec3( 1, 0, 0.577)), -0.9);
+	// convex_planes[3] = vec4(normalize(vec3( 1, 0,-0.577)), -0.9);
+	// convex_planes[4] = vec4(normalize(vec3(-1, 0, 0.577)), -0.9);
+	// convex_planes[5] = vec4(normalize(vec3(-1, 0,-0.577)), -0.9);
+	// convex_planes[6] = vec4(normalize(vec3( 0, 1, 0)), -1.0);
+	// convex_planes[7] = vec4(normalize(vec3( 0,-1, 0)), -1.0);
+
 	
 	for (int i = 0; i < numPlanes; i++)
 	{
-		t = (-dot(convex_planes[i].xyz, ro) + convex_planes[i].w) / dot(convex_planes[i].xyz, rd);
-		if (t <= 0.0)
+		plane_dot_rayDir = dot(convex_planes[i].xyz, rd);
+		if (plane_dot_rayDir == 0.0)
 			continue;
-		hit = ro + rd * t;
 
-		for (int j = 0; j < numPlanes; j++)
+		t = (-dot(convex_planes[i].xyz, ro) - convex_planes[i].w) / plane_dot_rayDir;
+
+		if (plane_dot_rayDir < 0.0 && t > t0)
 		{
-			if (i != j)
-				t = dot(convex_planes[j].xyz, (hit - (convex_planes[j].xyz * convex_planes[j].w))) > 0.0 ? INFINITY : t;
-		}
+			t0 = t;
+			n0 = convex_planes[i].xyz;
+		}	
+	
+		if (plane_dot_rayDir > 0.0 && t < t1)
+		{
+			t1 = t;
+			n1 = convex_planes[i].xyz;
+		}	
 		
-		if (t < smallestT)
-		{
-			smallestT = t;
-			n = convex_planes[i].xyz;
-		}
 	}
 
-	return smallestT;
+	if (t0 > t1)
+		return INFINITY;
+
+	if (t0 > 0.0)
+	{
+		n = n0;
+		return t0;
+	}
+	if (t1 > 0.0)
+	{
+		n = n1;
+		return t1;
+	}
+
+	return INFINITY;
 }
 
+/*
 //const int numPlanes = 8;
 //vec4 convex_planes[numPlanes];
 //------------------------------------------------------------------------------------------------------------
 void ConvexPolyhedron_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1, out vec3 n0, out vec3 n1 )
 //------------------------------------------------------------------------------------------------------------
 {
-	vec3 hit;
-	float smallestT = INFINITY;
-	float largestT = -INFINITY;
-	float t = 0.0;
 	
-	// to get triangular bipyramid (hexahedron), set numPlanes = 6 above
-	//convex_planes[0] = vec4(normalize(vec3(1, 1, -1)), 0.5);
-	//convex_planes[1] = vec4(normalize(vec3(-1, 1, -1)), 0.5);
-	//convex_planes[2] = vec4(normalize(vec3(0, 1, 1)), 0.5);
-	//convex_planes[3] = vec4(normalize(vec3(0, -1, 1)), 0.5);
-	//convex_planes[4] = vec4(normalize(vec3(1, -1, -1)), 0.5);
-	//convex_planes[5] = vec4(normalize(vec3(-1, -1, -1)), 0.5);
-
-	// to get rectangular bipyramid (octahedron), set numPlanes = 8 above
-	convex_planes[0] = vec4(normalize(vec3(1, 1, 0)), 0.5);
-	convex_planes[1] = vec4(normalize(vec3(-1, 1, 0)), 0.5);
-	convex_planes[2] = vec4(normalize(vec3(0, 1, 1)), 0.5);
-	convex_planes[3] = vec4(normalize(vec3(0, 1, -1)), 0.5);
-	convex_planes[4] = vec4(normalize(vec3(1, -1, 0)), 0.5);
-	convex_planes[5] = vec4(normalize(vec3(-1, -1, 0)), 0.5);
-	convex_planes[6] = vec4(normalize(vec3(0, -1, 1)), 0.5);
-	convex_planes[7] = vec4(normalize(vec3(0, -1, -1)), 0.5);
-
-	for (int i = 0; i < numPlanes; i++)
-	{
-		t = (-dot(convex_planes[i].xyz, ro) + convex_planes[i].w) / dot(convex_planes[i].xyz, rd);
-		hit = ro + rd * t;
-		for (int j = 0; j < numPlanes; j++)
-		{
-			if (i != j)
-				t = dot(convex_planes[j].xyz, (hit - (convex_planes[j].xyz * convex_planes[j].w))) > 0.0 ? 0.0 : t;
-		}
-		if (t == 0.0) 
-			continue;
-		
-		if (t < smallestT)
-		{
-			smallestT = t;
-			t0 = t;
-			n0 = convex_planes[i].xyz;
-		}
-		if (t > largestT)
-		{
-			largestT = t;
-			t1 = t;
-			n1 = convex_planes[i].xyz;
-		}
-		
-	} // end for (int i = 0; i < numPlanes; i++)
 }
-`; */
+*/
+
+`; 
 
 THREE.ShaderChunk[ 'pathtracing_pyramidfrustum_csg_intersect' ] = `
 //------------------------------------------------------------------------------------------------------------
