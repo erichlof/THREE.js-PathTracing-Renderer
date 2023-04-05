@@ -248,7 +248,7 @@ function updateVariablesAndUniforms()
 		else if (matType == 'ClearCoat Diffuse') 
 		{
 			pathTracingUniforms.uMaterialType.value = 4;
-			pathTracingUniforms.uMaterialColor.value.setRGB(0.4, 0.0, 1.0);
+			pathTracingUniforms.uMaterialColor.value.setRGB(0.35, 0.0, 1.0);
 		}
 		else if (matType == 'Transparent Refractive') 
 		{
