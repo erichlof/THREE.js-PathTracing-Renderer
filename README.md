@@ -84,6 +84,12 @@ All of the following 4 demos feature a large dark glass sculpture in the center 
 * [CSG_Museum Demo #4](https://erichlof.github.io/THREE.js-PathTracing-Renderer/CSG_Museum_4.html) Along the left wall, a study in Box vs. Cone CSG <br>
 
 Important note! - There is a hidden Easter Egg in one of these 4 Museum demo rooms.  Happy hunting!
+<br>
+<br>
+
+
+* [Convex Polyhedra Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Convex_Polyhedra.html)
+ <br>
 
 
 <h3>Materials Demos</h3>
