@@ -602,77 +602,77 @@ void SetupScene(void)
 	float lightRadius = 10.0;
 
 	// tetrahedron (triangular pyramid)
-	tetrahedron_planes[0] = vec4(normalize(vec3( 1, 0.45, 0.6)), -0.3);
-	tetrahedron_planes[1] = vec4(normalize(vec3(-1, 0.45, 0.6)), -0.3);
-	tetrahedron_planes[2] = vec4(normalize(vec3( 0,  0.3,  -1)), -0.3);
-	tetrahedron_planes[3] = vec4((vec3( 0,-1, 0)), -1.0);
+	tetrahedron_planes[0] = vec4(normalize(vec3( 1, 0.45, 0.6)), 0.3);
+	tetrahedron_planes[1] = vec4(normalize(vec3(-1, 0.45, 0.6)), 0.3);
+	tetrahedron_planes[2] = vec4(normalize(vec3( 0,  0.3,  -1)), 0.3);
+	tetrahedron_planes[3] = vec4((vec3( 0,-1, 0)), 1.0);
 
 	// rectangular pyramid
-	rectangularPyramid_planes[0] = vec4(normalize(vec3( 1, 0.5, 0)), -0.4);
-	rectangularPyramid_planes[1] = vec4(normalize(vec3(-1, 0.5, 0)), -0.4);
-	rectangularPyramid_planes[2] = vec4(normalize(vec3( 0, 0.5, 1)), -0.4);
-	rectangularPyramid_planes[3] = vec4(normalize(vec3( 0, 0.5,-1)), -0.4);
-	rectangularPyramid_planes[4] = vec4((vec3( 0,-1, 0)), -1.0);
+	rectangularPyramid_planes[0] = vec4(normalize(vec3( 1, 0.5, 0)), 0.4);
+	rectangularPyramid_planes[1] = vec4(normalize(vec3(-1, 0.5, 0)), 0.4);
+	rectangularPyramid_planes[2] = vec4(normalize(vec3( 0, 0.5, 1)), 0.4);
+	rectangularPyramid_planes[3] = vec4(normalize(vec3( 0, 0.5,-1)), 0.4);
+	rectangularPyramid_planes[4] = vec4((vec3( 0,-1, 0)), 1.0);
 
 	// triangular prism
-	triangularPrism_planes[0] = vec4((vec3( 0, -1, 0)), -0.5);
-	triangularPrism_planes[1] = vec4(normalize(vec3( 1, 0.577, 0)), -0.5);
-	triangularPrism_planes[2] = vec4(normalize(vec3(-1, 0.577, 0)), -0.5);
-	triangularPrism_planes[3] = vec4((vec3( 0, 0, 1)), -1.0);
-	triangularPrism_planes[4] = vec4((vec3( 0, 0,-1)), -1.0);
+	triangularPrism_planes[0] = vec4((vec3( 0, -1, 0)), 0.5);
+	triangularPrism_planes[1] = vec4(normalize(vec3( 1, 0.577, 0)), 0.5);
+	triangularPrism_planes[2] = vec4(normalize(vec3(-1, 0.577, 0)), 0.5);
+	triangularPrism_planes[3] = vec4((vec3( 0, 0, 1)), 1.0);
+	triangularPrism_planes[4] = vec4((vec3( 0, 0,-1)), 1.0);
 
 	// cube
-	cube_planes[0] = vec4((vec3( 1, 0, 0)), -1.0);
-	cube_planes[1] = vec4((vec3(-1, 0, 0)), -1.0);
-	cube_planes[2] = vec4((vec3( 0, 1, 0)), -1.0);
-	cube_planes[3] = vec4((vec3( 0,-1, 0)), -1.0);
-	cube_planes[4] = vec4((vec3( 0, 0, 1)), -1.0);
-	cube_planes[5] = vec4((vec3( 0, 0,-1)), -1.0);
+	cube_planes[0] = vec4((vec3( 1, 0, 0)), 1.0);
+	cube_planes[1] = vec4((vec3(-1, 0, 0)), 1.0);
+	cube_planes[2] = vec4((vec3( 0, 1, 0)), 1.0);
+	cube_planes[3] = vec4((vec3( 0,-1, 0)), 1.0);
+	cube_planes[4] = vec4((vec3( 0, 0, 1)), 1.0);
+	cube_planes[5] = vec4((vec3( 0, 0,-1)), 1.0);
 
 	// frustum (rectangular pyramid with apex cut off)
-	frustum_planes[0] = vec4(normalize(vec3( 1, 0.35, 0)), -0.6);
-	frustum_planes[1] = vec4(normalize(vec3(-1, 0.35, 0)), -0.6);
-	frustum_planes[2] = vec4(normalize(vec3( 0, 0.35, 1)), -0.6);
-	frustum_planes[3] = vec4(normalize(vec3( 0, 0.35,-1)), -0.6);
-	frustum_planes[4] = vec4((vec3( 0, 1, 0)), -1.0);
-	frustum_planes[5] = vec4((vec3( 0,-1, 0)), -1.0);
+	frustum_planes[0] = vec4(normalize(vec3( 1, 0.35, 0)), 0.6);
+	frustum_planes[1] = vec4(normalize(vec3(-1, 0.35, 0)), 0.6);
+	frustum_planes[2] = vec4(normalize(vec3( 0, 0.35, 1)), 0.6);
+	frustum_planes[3] = vec4(normalize(vec3( 0, 0.35,-1)), 0.6);
+	frustum_planes[4] = vec4((vec3( 0, 1, 0)), 1.0);
+	frustum_planes[5] = vec4((vec3( 0,-1, 0)), 1.0);
 
 	// hexahedron (triangular bipyramid)
-	hexahedron_planes[0] = vec4(normalize(vec3( 1, 0.7, 0.6)), -0.5);
-	hexahedron_planes[1] = vec4(normalize(vec3(-1, 0.7, 0.6)), -0.5);
-	hexahedron_planes[2] = vec4(normalize(vec3( 0, 0.6,  -1)), -0.5);
-	hexahedron_planes[3] = vec4(normalize(vec3( 1,-0.7, 0.6)), -0.5);
-	hexahedron_planes[4] = vec4(normalize(vec3(-1,-0.7, 0.6)), -0.5);
-	hexahedron_planes[5] = vec4(normalize(vec3( 0,-0.6,  -1)), -0.5);
+	hexahedron_planes[0] = vec4(normalize(vec3( 1, 0.7, 0.6)), 0.5);
+	hexahedron_planes[1] = vec4(normalize(vec3(-1, 0.7, 0.6)), 0.5);
+	hexahedron_planes[2] = vec4(normalize(vec3( 0, 0.6,  -1)), 0.5);
+	hexahedron_planes[3] = vec4(normalize(vec3( 1,-0.7, 0.6)), 0.5);
+	hexahedron_planes[4] = vec4(normalize(vec3(-1,-0.7, 0.6)), 0.5);
+	hexahedron_planes[5] = vec4(normalize(vec3( 0,-0.6,  -1)), 0.5);
 
 	// pentagonal prism
-	pentagonalPrism_planes[0] = vec4(normalize(vec3(cos(TWO_PI * 0.15), sin(TWO_PI * 0.15), 0)), -0.8);
-	pentagonalPrism_planes[1] = vec4(normalize(vec3(cos(TWO_PI * 0.35), sin(TWO_PI * 0.35), 0)), -0.8);
-	pentagonalPrism_planes[2] = vec4(normalize(vec3(cos(TWO_PI * 0.55), sin(TWO_PI * 0.55), 0)), -0.8);
-	pentagonalPrism_planes[3] = vec4(normalize(vec3(cos(TWO_PI * 0.75), sin(TWO_PI * 0.75), 0)), -0.8);
-	pentagonalPrism_planes[4] = vec4(normalize(vec3(cos(TWO_PI * 0.95), sin(TWO_PI * 0.95), 0)), -0.8);
-	pentagonalPrism_planes[5] = vec4((vec3(0, 0, 1)), -1.0);
-	pentagonalPrism_planes[6] = vec4((vec3(0, 0,-1)), -1.0);
+	pentagonalPrism_planes[0] = vec4(normalize(vec3(cos(TWO_PI * 0.15), sin(TWO_PI * 0.15), 0)), 0.8);
+	pentagonalPrism_planes[1] = vec4(normalize(vec3(cos(TWO_PI * 0.35), sin(TWO_PI * 0.35), 0)), 0.8);
+	pentagonalPrism_planes[2] = vec4(normalize(vec3(cos(TWO_PI * 0.55), sin(TWO_PI * 0.55), 0)), 0.8);
+	pentagonalPrism_planes[3] = vec4(normalize(vec3(cos(TWO_PI * 0.75), sin(TWO_PI * 0.75), 0)), 0.8);
+	pentagonalPrism_planes[4] = vec4(normalize(vec3(cos(TWO_PI * 0.95), sin(TWO_PI * 0.95), 0)), 0.8);
+	pentagonalPrism_planes[5] = vec4((vec3(0, 0, 1)), 1.0);
+	pentagonalPrism_planes[6] = vec4((vec3(0, 0,-1)), 1.0);
 
 	// octahedron (rectangular bipyramid) 
-	octahedron_planes[0] = vec4(normalize(vec3( 1, 0.75, 0)), -0.6);
-	octahedron_planes[1] = vec4(normalize(vec3(-1, 0.75, 0)), -0.6);
-	octahedron_planes[2] = vec4(normalize(vec3( 0, 0.75, 1)), -0.6);
-	octahedron_planes[3] = vec4(normalize(vec3( 0, 0.75,-1)), -0.6);
-	octahedron_planes[4] = vec4(normalize(vec3( 1,-0.75, 0)), -0.6);
-	octahedron_planes[5] = vec4(normalize(vec3(-1,-0.75, 0)), -0.6);
-	octahedron_planes[6] = vec4(normalize(vec3( 0,-0.75, 1)), -0.6);
-	octahedron_planes[7] = vec4(normalize(vec3( 0,-0.75,-1)), -0.6);
+	octahedron_planes[0] = vec4(normalize(vec3( 1, 0.75, 0)), 0.6);
+	octahedron_planes[1] = vec4(normalize(vec3(-1, 0.75, 0)), 0.6);
+	octahedron_planes[2] = vec4(normalize(vec3( 0, 0.75, 1)), 0.6);
+	octahedron_planes[3] = vec4(normalize(vec3( 0, 0.75,-1)), 0.6);
+	octahedron_planes[4] = vec4(normalize(vec3( 1,-0.75, 0)), 0.6);
+	octahedron_planes[5] = vec4(normalize(vec3(-1,-0.75, 0)), 0.6);
+	octahedron_planes[6] = vec4(normalize(vec3( 0,-0.75, 1)), 0.6);
+	octahedron_planes[7] = vec4(normalize(vec3( 0,-0.75,-1)), 0.6);
 
 	// hexagonal prism
-	hexagonalPrism_planes[0] = vec4((vec3( 0, 1, 0)), -0.9);
-	hexagonalPrism_planes[1] = vec4((vec3( 0,-1, 0)), -0.9);
-	hexagonalPrism_planes[2] = vec4(normalize(vec3( 1, 0.57735, 0)), -0.9);
-	hexagonalPrism_planes[3] = vec4(normalize(vec3( 1,-0.57735, 0)), -0.9);
-	hexagonalPrism_planes[4] = vec4(normalize(vec3(-1, 0.57735, 0)), -0.9);
-	hexagonalPrism_planes[5] = vec4(normalize(vec3(-1,-0.57735, 0)), -0.9);
-	hexagonalPrism_planes[6] = vec4((vec3(0, 0, 1)), -1.0);
-	hexagonalPrism_planes[7] = vec4((vec3(0, 0,-1)), -1.0);
+	hexagonalPrism_planes[0] = vec4((vec3( 0, 1, 0)), 0.9);
+	hexagonalPrism_planes[1] = vec4((vec3( 0,-1, 0)), 0.9);
+	hexagonalPrism_planes[2] = vec4(normalize(vec3( 1, 0.57735, 0)), 0.9);
+	hexagonalPrism_planes[3] = vec4(normalize(vec3( 1,-0.57735, 0)), 0.9);
+	hexagonalPrism_planes[4] = vec4(normalize(vec3(-1, 0.57735, 0)), 0.9);
+	hexagonalPrism_planes[5] = vec4(normalize(vec3(-1,-0.57735, 0)), 0.9);
+	hexagonalPrism_planes[6] = vec4((vec3(0, 0, 1)), 1.0);
+	hexagonalPrism_planes[7] = vec4((vec3(0, 0,-1)), 1.0);
 
 	
 	quads[0] = Quad( vec3(0,-1, 0), vec3(-lightRadius, wallRadius-1.0,-lightRadius), vec3(lightRadius, wallRadius-1.0,-lightRadius), vec3(lightRadius, wallRadius-1.0, lightRadius), vec3(-lightRadius, wallRadius-1.0, lightRadius), L1, z, LIGHT);// Quad Area Light on ceiling
