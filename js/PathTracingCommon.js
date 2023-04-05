@@ -1267,7 +1267,7 @@ float ConvexPolyhedron_4faces_Intersect( vec3 ro, vec3 rd, out vec3 n, vec4 plan
 		if (plane_dot_rayDir == 0.0)
 			continue;
 
-		t = (-dot(planes[i].xyz, ro) - planes[i].w) / plane_dot_rayDir;
+		t = (-dot(planes[i].xyz, ro) + planes[i].w) / plane_dot_rayDir;
 
 		if (plane_dot_rayDir < 0.0 && t > t0)
 		{
@@ -1313,7 +1313,7 @@ float ConvexPolyhedron_5faces_Intersect( vec3 ro, vec3 rd, out vec3 n, vec4 plan
 		if (plane_dot_rayDir == 0.0)
 			continue;
 
-		t = (-dot(planes[i].xyz, ro) - planes[i].w) / plane_dot_rayDir;
+		t = (-dot(planes[i].xyz, ro) + planes[i].w) / plane_dot_rayDir;
 
 		if (plane_dot_rayDir < 0.0 && t > t0)
 		{
@@ -1359,7 +1359,7 @@ float ConvexPolyhedron_6faces_Intersect( vec3 ro, vec3 rd, out vec3 n, vec4 plan
 		if (plane_dot_rayDir == 0.0)
 			continue;
 
-		t = (-dot(planes[i].xyz, ro) - planes[i].w) / plane_dot_rayDir;
+		t = (-dot(planes[i].xyz, ro) + planes[i].w) / plane_dot_rayDir;
 
 		if (plane_dot_rayDir < 0.0 && t > t0)
 		{
@@ -1405,7 +1405,7 @@ float ConvexPolyhedron_7faces_Intersect( vec3 ro, vec3 rd, out vec3 n, vec4 plan
 		if (plane_dot_rayDir == 0.0)
 			continue;
 
-		t = (-dot(planes[i].xyz, ro) - planes[i].w) / plane_dot_rayDir;
+		t = (-dot(planes[i].xyz, ro) + planes[i].w) / plane_dot_rayDir;
 
 		if (plane_dot_rayDir < 0.0 && t > t0)
 		{
@@ -1451,7 +1451,7 @@ float ConvexPolyhedron_8faces_Intersect( vec3 ro, vec3 rd, out vec3 n, vec4 plan
 		if (plane_dot_rayDir == 0.0)
 			continue;
 
-		t = (-dot(planes[i].xyz, ro) - planes[i].w) / plane_dot_rayDir;
+		t = (-dot(planes[i].xyz, ro) + planes[i].w) / plane_dot_rayDir;
 
 		if (plane_dot_rayDir < 0.0 && t > t0)
 		{
