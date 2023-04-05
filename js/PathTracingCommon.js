@@ -3042,12 +3042,12 @@ vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
     	return normalize(nl + vec3(r * cos(phi), r * sin(phi), z));
 }
 
-vec3 randomDirectionInSpecularLobe(vec3 reflectionDir, vec3 nl, float roughness)
+vec3 randomDirectionInSpecularLobe(vec3 reflectionDir, float roughness)
 {
 	float z = rng() * 2.0 - 1.0;
 	float phi = rng() * TWO_PI;
 	float r = sqrt(1.0 - z * z);
-    	vec3 cosDiffuseDir = normalize(nl + vec3(r * cos(phi), r * sin(phi), z));
+    	vec3 cosDiffuseDir = normalize(reflectionDir + vec3(r * cos(phi), r * sin(phi), z));
 	return normalize( mix(reflectionDir, cosDiffuseDir, roughness * roughness) );
 }
 
