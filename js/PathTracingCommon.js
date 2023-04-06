@@ -1481,6 +1481,98 @@ float ConvexPolyhedron_8faces_Intersect( vec3 ro, vec3 rd, out vec3 n, vec4 plan
 	return INFINITY;
 }
 
+//------------------------------------------------------------------------------------------------------------
+float ConvexPolyhedron_12faces_Intersect( vec3 ro, vec3 rd, out vec3 n, vec4 planes[12] )
+//------------------------------------------------------------------------------------------------------------
+{
+	vec3 n0, n1;
+	float t;
+	float t0 = -INFINITY;
+	float t1 = INFINITY;
+	float plane_dot_rayDir;
+	
+	for (int i = 0; i < 12; i++)
+	{
+		plane_dot_rayDir = dot(planes[i].xyz, rd);
+		if (plane_dot_rayDir == 0.0)
+			continue;
+
+		t = (-dot(planes[i].xyz, ro) + planes[i].w) / plane_dot_rayDir;
+
+		if (plane_dot_rayDir < 0.0 && t > t0)
+		{
+			t0 = t;
+			n0 = planes[i].xyz;
+		}	
+		if (plane_dot_rayDir > 0.0 && t < t1)
+		{
+			t1 = t;
+			n1 = planes[i].xyz;
+		}	
+	}
+
+	if (t0 > t1) // check for invalid t0/t1 intersection pair
+		return INFINITY;
+	if (t0 > 0.0)
+	{
+		n = n0;
+		return t0;
+	}
+	if (t1 > 0.0)
+	{
+		n = n1;
+		return t1;
+	}
+
+	return INFINITY;
+}
+
+//------------------------------------------------------------------------------------------------------------
+float ConvexPolyhedron_20faces_Intersect( vec3 ro, vec3 rd, out vec3 n, vec4 planes[20] )
+//------------------------------------------------------------------------------------------------------------
+{
+	vec3 n0, n1;
+	float t;
+	float t0 = -INFINITY;
+	float t1 = INFINITY;
+	float plane_dot_rayDir;
+	
+	for (int i = 0; i < 20; i++)
+	{
+		plane_dot_rayDir = dot(planes[i].xyz, rd);
+		if (plane_dot_rayDir == 0.0)
+			continue;
+
+		t = (-dot(planes[i].xyz, ro) + planes[i].w) / plane_dot_rayDir;
+
+		if (plane_dot_rayDir < 0.0 && t > t0)
+		{
+			t0 = t;
+			n0 = planes[i].xyz;
+		}	
+		if (plane_dot_rayDir > 0.0 && t < t1)
+		{
+			t1 = t;
+			n1 = planes[i].xyz;
+		}	
+	}
+
+	if (t0 > t1) // check for invalid t0/t1 intersection pair
+		return INFINITY;
+	if (t0 > 0.0)
+	{
+		n = n0;
+		return t0;
+	}
+	if (t1 > 0.0)
+	{
+		n = n1;
+		return t1;
+	}
+
+	return INFINITY;
+}
+
 /*
 //const int numPlanes = 8;
 //vec4 convex_planes[numPlanes];
