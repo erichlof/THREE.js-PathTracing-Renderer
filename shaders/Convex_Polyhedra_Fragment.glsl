@@ -52,6 +52,8 @@ vec4 hexahedron_planes[6];
 vec4 pentagonalPrism_planes[7];
 vec4 octahedron_planes[8];
 vec4 hexagonalPrism_planes[8];
+vec4 dodecahedron_planes[12];
+vec4 icosahedron_planes[20];
 
 //---------------------------------------------------------------------------------------
 float SceneIntersect( )
@@ -125,7 +127,7 @@ float SceneIntersect( )
 	// RECTANGULAR PYRAMID - 5 faces
 	// transform ray into convexPolyhedron's object space
 	rObjOrigin = rayOrigin;
-	rObjOrigin += vec3(0, 0, -35);
+	rObjOrigin += vec3(0, 0, -37);
 	rObjOrigin = vec3( uConvexPolyhedronInvMatrix * vec4(rObjOrigin, 1.0) );
 	rObjDirection = vec3( uConvexPolyhedronInvMatrix * vec4(rayDirection, 0.0) );
 	
@@ -263,6 +265,44 @@ float SceneIntersect( )
 	rObjDirection = vec3( uConvexPolyhedronInvMatrix * vec4(rayDirection, 0.0) );
 	
 	d = ConvexPolyhedron_8faces_Intersect( rObjOrigin, rObjDirection, n, hexagonalPrism_planes );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = transpose(mat3(uConvexPolyhedronInvMatrix)) * n;
+		hitEmission = vec3(0);
+		hitColor = uMaterialColor;
+		hitType = uMaterialType;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	// DODECAHEDRON - 12 faces
+	// transform ray into convexPolyhedron's object space
+	rObjOrigin = rayOrigin;
+	rObjOrigin += vec3(19, 0, -18);
+	rObjOrigin = vec3( uConvexPolyhedronInvMatrix * vec4(rObjOrigin, 1.0) );
+	rObjDirection = vec3( uConvexPolyhedronInvMatrix * vec4(rayDirection, 0.0) );
+	
+	d = ConvexPolyhedron_12faces_Intersect( rObjOrigin, rObjDirection, n, dodecahedron_planes );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = transpose(mat3(uConvexPolyhedronInvMatrix)) * n;
+		hitEmission = vec3(0);
+		hitColor = uMaterialColor;
+		hitType = uMaterialType;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	// ICOSAHEDRON - 20 faces
+	// transform ray into convexPolyhedron's object space
+	rObjOrigin = rayOrigin;
+	rObjOrigin += vec3(-18, 0, -18);
+	rObjOrigin = vec3( uConvexPolyhedronInvMatrix * vec4(rObjOrigin, 1.0) );
+	rObjDirection = vec3( uConvexPolyhedronInvMatrix * vec4(rayDirection, 0.0) );
+	
+	d = ConvexPolyhedron_20faces_Intersect( rObjOrigin, rObjDirection, n, icosahedron_planes );
 	if (d < t)
 	{
 		t = d;
@@ -602,10 +642,10 @@ void SetupScene(void)
 	float lightRadius = 10.0;
 
 	// tetrahedron (triangular pyramid)
-	tetrahedron_planes[0] = vec4(normalize(vec3( 1, 0.45, 0.6)), 0.3);
-	tetrahedron_planes[1] = vec4(normalize(vec3(-1, 0.45, 0.6)), 0.3);
-	tetrahedron_planes[2] = vec4(normalize(vec3( 0,  0.3,  -1)), 0.3);
-	tetrahedron_planes[3] = vec4((vec3( 0,-1, 0)), 1.0);
+	tetrahedron_planes[0] = vec4(vec3(-0.5773502588272095, 0.5773502588272095, 0.5773502588272095), 0.5);
+	tetrahedron_planes[1] = vec4(vec3( 0.5773502588272095, 0.5773502588272095,-0.5773502588272095), 0.5);
+	tetrahedron_planes[2] = vec4(vec3( 0.5773502588272095,-0.5773502588272095, 0.5773502588272095), 0.5);
+	tetrahedron_planes[3] = vec4(vec3(-0.5773502588272095,-0.5773502588272095,-0.5773502588272095), 0.5);
 
 	// rectangular pyramid
 	rectangularPyramid_planes[0] = vec4(normalize(vec3( 1, 0.5, 0)), 0.4);
@@ -638,12 +678,12 @@ void SetupScene(void)
 	frustum_planes[5] = vec4((vec3( 0,-1, 0)), 1.0);
 
 	// hexahedron (triangular bipyramid)
-	hexahedron_planes[0] = vec4(normalize(vec3( 1, 0.7, 0.6)), 0.5);
-	hexahedron_planes[1] = vec4(normalize(vec3(-1, 0.7, 0.6)), 0.5);
-	hexahedron_planes[2] = vec4(normalize(vec3( 0, 0.6,  -1)), 0.5);
-	hexahedron_planes[3] = vec4(normalize(vec3( 1,-0.7, 0.6)), 0.5);
-	hexahedron_planes[4] = vec4(normalize(vec3(-1,-0.7, 0.6)), 0.5);
-	hexahedron_planes[5] = vec4(normalize(vec3( 0,-0.6,  -1)), 0.5);
+	hexahedron_planes[0] = vec4(normalize(vec3( 1, 0.7, 0.6)), 0.55);
+	hexahedron_planes[1] = vec4(normalize(vec3(-1, 0.7, 0.6)), 0.55);
+	hexahedron_planes[2] = vec4(normalize(vec3( 0, 0.6,  -1)), 0.55);
+	hexahedron_planes[3] = vec4(normalize(vec3( 1,-0.7, 0.6)), 0.55);
+	hexahedron_planes[4] = vec4(normalize(vec3(-1,-0.7, 0.6)), 0.55);
+	hexahedron_planes[5] = vec4(normalize(vec3( 0,-0.6,  -1)), 0.55);
 
 	// pentagonal prism
 	pentagonalPrism_planes[0] = vec4(normalize(vec3(cos(TWO_PI * 0.15), sin(TWO_PI * 0.15), 0)), 0.8);
@@ -655,14 +695,14 @@ void SetupScene(void)
 	pentagonalPrism_planes[6] = vec4((vec3(0, 0,-1)), 1.0);
 
 	// octahedron (rectangular bipyramid) 
-	octahedron_planes[0] = vec4(normalize(vec3( 1, 0.75, 0)), 0.6);
-	octahedron_planes[1] = vec4(normalize(vec3(-1, 0.75, 0)), 0.6);
-	octahedron_planes[2] = vec4(normalize(vec3( 0, 0.75, 1)), 0.6);
-	octahedron_planes[3] = vec4(normalize(vec3( 0, 0.75,-1)), 0.6);
-	octahedron_planes[4] = vec4(normalize(vec3( 1,-0.75, 0)), 0.6);
-	octahedron_planes[5] = vec4(normalize(vec3(-1,-0.75, 0)), 0.6);
-	octahedron_planes[6] = vec4(normalize(vec3( 0,-0.75, 1)), 0.6);
-	octahedron_planes[7] = vec4(normalize(vec3( 0,-0.75,-1)), 0.6);
+	octahedron_planes[0] = vec4(vec3( 0.5773502588272095, 0.5773502588272095, 0.5773502588272095), 0.6);
+	octahedron_planes[1] = vec4(vec3( 0.5773502588272095,-0.5773502588272095, 0.5773502588272095), 0.6);
+	octahedron_planes[2] = vec4(vec3( 0.5773502588272095,-0.5773502588272095,-0.5773502588272095), 0.6);
+	octahedron_planes[3] = vec4(vec3( 0.5773502588272095, 0.5773502588272095,-0.5773502588272095), 0.6);
+	octahedron_planes[4] = vec4(vec3(-0.5773502588272095, 0.5773502588272095,-0.5773502588272095), 0.6);
+	octahedron_planes[5] = vec4(vec3(-0.5773502588272095,-0.5773502588272095,-0.5773502588272095), 0.6);
+	octahedron_planes[6] = vec4(vec3(-0.5773502588272095,-0.5773502588272095, 0.5773502588272095), 0.6);
+	octahedron_planes[7] = vec4(vec3(-0.5773502588272095, 0.5773502588272095, 0.5773502588272095), 0.6);
 
 	// hexagonal prism
 	hexagonalPrism_planes[0] = vec4((vec3( 0, 1, 0)), 0.9);
@@ -673,6 +713,43 @@ void SetupScene(void)
 	hexagonalPrism_planes[5] = vec4(normalize(vec3(-1,-0.57735, 0)), 0.9);
 	hexagonalPrism_planes[6] = vec4((vec3(0, 0, 1)), 1.0);
 	hexagonalPrism_planes[7] = vec4((vec3(0, 0,-1)), 1.0);
+
+	// dodecahedron
+	dodecahedron_planes[ 0] = vec4(vec3(0, 0.8506507873535156, 0.525731086730957), 0.9);
+	dodecahedron_planes[ 1] = vec4(vec3(0.8506507873535156, 0.525731086730957, 0), 0.9);
+	dodecahedron_planes[ 2] = vec4(vec3(0.525731086730957, 0, -0.8506508469581604), 0.9);
+	dodecahedron_planes[ 3] = vec4(vec3(-0.525731086730957, 0, -0.8506508469581604), 0.9);
+	dodecahedron_planes[ 4] = vec4(vec3(-0.8506507873535156, -0.525731086730957, 0), 0.9);
+	dodecahedron_planes[ 5] = vec4(vec3(0, 0.8506507873535156, -0.525731086730957), 0.9);
+	dodecahedron_planes[ 6] = vec4(vec3(-0.8506508469581604, 0.525731086730957, 0), 0.9);
+	dodecahedron_planes[ 7] = vec4(vec3(-0.525731086730957, 0, 0.8506508469581604), 0.9);
+	dodecahedron_planes[ 8] = vec4(vec3(0, -0.8506508469581604, -0.525731086730957), 0.9);
+	dodecahedron_planes[ 9] = vec4(vec3(0.525731086730957, 0, 0.8506508469581604), 0.9);
+	dodecahedron_planes[10] = vec4(vec3(0.8506508469581604, -0.525731086730957, 0), 0.9);
+	dodecahedron_planes[11] = vec4(vec3(0, -0.8506508469581604, 0.525731086730957), 0.9);
+
+	// icosahedron
+	icosahedron_planes[ 0] = vec4(vec3(-0.5773502588272095, 0.5773502588272095, 0.5773502588272095), 0.9);
+	icosahedron_planes[ 1] = vec4(vec3(0, 0.9341723322868347, 0.35682210326194763), 0.9);
+	icosahedron_planes[ 2] = vec4(vec3(0, 0.9341723322868347, -0.35682210326194763), 0.9);
+	icosahedron_planes[ 3] = vec4(vec3(-0.5773502588272095, 0.5773502588272095, -0.5773502588272095), 0.9);
+	icosahedron_planes[ 4] = vec4(vec3(-0.9341723322868347, 0.35682210326194763, 0), 0.9);
+	icosahedron_planes[ 5] = vec4(vec3(0.5773502588272095, 0.5773502588272095, 0.5773502588272095), 0.9);
+	icosahedron_planes[ 6] = vec4(vec3(-0.35682210326194763, 0, 0.9341723322868347), 0.9);
+	icosahedron_planes[ 7] = vec4(vec3(-0.9341723322868347, -0.35682210326194763, 0), 0.9);
+	icosahedron_planes[ 8] = vec4(vec3(-0.35682210326194763, 0, -0.9341723322868347), 0.9);
+	icosahedron_planes[ 9] = vec4(vec3(0.5773502588272095, 0.5773502588272095, -0.5773502588272095), 0.9);
+	icosahedron_planes[10] = vec4(vec3(0.5773502588272095, -0.5773502588272095, 0.5773502588272095), 0.9);
+	icosahedron_planes[11] = vec4(vec3(0, -0.9341723322868347, 0.35682210326194763), 0.9);
+	icosahedron_planes[12] = vec4(vec3(0, -0.9341723322868347, -0.35682210326194763), 0.9);
+	icosahedron_planes[13] = vec4(vec3(0.5773502588272095, -0.5773502588272095, -0.5773502588272095), 0.9);
+	icosahedron_planes[14] = vec4(vec3(0.9341723322868347, -0.35682210326194763, 0), 0.9);
+	icosahedron_planes[15] = vec4(vec3(0.35682210326194763, 0, 0.9341723322868347), 0.9);
+	icosahedron_planes[16] = vec4(vec3(-0.5773502588272095, -0.5773502588272095, 0.5773502588272095), 0.9);
+	icosahedron_planes[17] = vec4(vec3(-0.5773502588272095, -0.5773502588272095, -0.5773502588272095), 0.9);
+	icosahedron_planes[18] = vec4(vec3(0.35682210326194763, 0, -0.9341723322868347), 0.9);
+	icosahedron_planes[19] = vec4(vec3(0.9341723322868347, 0.35682210326194763, 0), 0.9);
+	
 
 	
 	quads[0] = Quad( vec3(0,-1, 0), vec3(-lightRadius, wallRadius-1.0,-lightRadius), vec3(lightRadius, wallRadius-1.0,-lightRadius), vec3(lightRadius, wallRadius-1.0, lightRadius), vec3(-lightRadius, wallRadius-1.0, lightRadius), L1, z, LIGHT);// Quad Area Light on ceiling
