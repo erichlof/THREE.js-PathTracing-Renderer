@@ -560,7 +560,7 @@ function initSceneData()
 		THREE.NearestFilter,
 		THREE.NearestFilter,
 		1,
-		THREE.LinearEncoding
+		THREE.NoColorSpace
 	);
 
 	triangleDataTexture.flipY = false;
@@ -580,7 +580,7 @@ function initSceneData()
 		THREE.NearestFilter,
 		THREE.NearestFilter,
 		1,
-		THREE.LinearEncoding
+		THREE.NoColorSpace
 	);
 
 	aabbDataTexture.flipY = false;
