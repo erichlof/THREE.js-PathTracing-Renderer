@@ -440,7 +440,7 @@ function initSceneData()
 		THREE.NearestFilter,
 		THREE.NearestFilter,
 		1,
-		THREE.LinearEncoding);
+		THREE.NoColorSpace);
 
 	shapeDataTexture.flipY = false;
 	shapeDataTexture.generateMipmaps = false;
@@ -457,7 +457,7 @@ function initSceneData()
 		THREE.NearestFilter,
 		THREE.NearestFilter,
 		1,
-		THREE.LinearEncoding);
+		THREE.NoColorSpace);
 
 	aabbDataTexture.flipY = false;
 	aabbDataTexture.generateMipmaps = false;
