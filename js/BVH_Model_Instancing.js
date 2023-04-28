@@ -293,7 +293,7 @@ function Prepare_Model_For_PathTracing()
 		THREE.NearestFilter,
 		THREE.NearestFilter,
 		1,
-		THREE.LinearEncoding);
+		THREE.NoColorSpace);
 
 	triangleDataTexture.flipY = false;
 	triangleDataTexture.generateMipmaps = false;
@@ -310,7 +310,7 @@ function Prepare_Model_For_PathTracing()
 		THREE.NearestFilter,
 		THREE.NearestFilter,
 		1,
-		THREE.LinearEncoding);
+		THREE.NoColorSpace);
 
 	aabbDataTexture.flipY = false;
 	aabbDataTexture.generateMipmaps = false;
