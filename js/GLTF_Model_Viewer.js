@@ -441,7 +441,7 @@ function prepareGeometryForPT(meshList, pathTracingMaterialList, triangleMateria
 		THREE.NearestFilter,
 		THREE.NearestFilter,
 		1,
-		THREE.LinearEncoding
+		THREE.NoColorSpace
 	);
 
 	triangleDataTexture.flipY = false;
@@ -459,7 +459,7 @@ function prepareGeometryForPT(meshList, pathTracingMaterialList, triangleMateria
 		THREE.NearestFilter,
 		THREE.NearestFilter,
 		1,
-		THREE.LinearEncoding
+		THREE.NoColorSpace
 	);
 
 	aabbDataTexture.flipY = false;
@@ -579,10 +579,8 @@ hdrTexture = hdrLoader.load(
 	'textures/daytime.hdr',
 	function (texture)
 	{
-		texture.encoding = THREE.LinearEncoding;
-		texture.minFilter = THREE.NearestFilter;
-		texture.magFilter = THREE.NearestFilter;
-		texture.flipY = true;
+		// texture.colorSpace = THREE.LinearSRGBColorSpace; // Three.js default
+		// texture.flipY = true; // Three.js default
 
 		// now that the HDR image has loaded, we can load the models
 		loadModels(modelPaths); // load models, init app, and start animating
