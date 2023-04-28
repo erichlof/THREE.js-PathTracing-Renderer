@@ -406,7 +406,7 @@ function initSceneData()
 		THREE.NearestFilter,
 		THREE.NearestFilter,
 		1,
-		THREE.LinearEncoding);
+		THREE.NoColorSpace);
 
 	triangleDataTexture.flipY = false;
 	triangleDataTexture.generateMipmaps = false;
@@ -423,7 +423,7 @@ function initSceneData()
 		THREE.NearestFilter,
 		THREE.NearestFilter,
 		1,
-		THREE.LinearEncoding);
+		THREE.NoColorSpace);
 
 	aabbDataTexture.flipY = false;
 	aabbDataTexture.generateMipmaps = false;
@@ -505,10 +505,9 @@ hdrPath = 'textures/symmetrical_garden_2k.hdr';
 
 hdrTexture = hdrLoader.load(hdrPath, function (texture) 
 {
-	texture.encoding = THREE.LinearEncoding;
-	texture.minFilter = THREE.LinearFilter;
-	texture.magFilter = THREE.LinearFilter;
-	texture.generateMipmaps = false;
+	// texture.colorSpace = THREE.LinearSRGBColorSpace; // Three.js default
+	// texture.minFilter = THREE.LinearFilter; // Three.js default
+	// texture.magFilter = THREE.LinearFilter; // Three.js default
 	texture.flipY = false;
 
 	hdrImgWidth = texture.image.width;
