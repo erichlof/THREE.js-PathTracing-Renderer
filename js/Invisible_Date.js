@@ -407,7 +407,7 @@ function initSceneData()
 		THREE.NearestFilter,
 		THREE.NearestFilter,
 		1,
-		THREE.LinearEncoding
+		THREE.NoColorSpace
 	);
 
 	triangleDataTexture.flipY = false;
@@ -427,7 +427,7 @@ function initSceneData()
 		THREE.NearestFilter,
 		THREE.NearestFilter,
 		1,
-		THREE.LinearEncoding
+		THREE.NoColorSpace
 	);
 
 	aabbDataTexture.flipY = false;
@@ -1004,7 +1004,7 @@ function initSceneData()
 		THREE.NearestFilter,
 		THREE.NearestFilter,
 		1,
-		THREE.LinearEncoding);
+		THREE.NoColorSpace);
 
 	shapesDataTexture.flipY = false;
 	shapesDataTexture.generateMipmaps = false;
@@ -1021,7 +1021,7 @@ function initSceneData()
 		THREE.NearestFilter,
 		THREE.NearestFilter,
 		1,
-		THREE.LinearEncoding);
+		THREE.NoColorSpace);
 
 	shapes_aabbDataTexture.flipY = false;
 	shapes_aabbDataTexture.generateMipmaps = false;
