@@ -3272,19 +3272,22 @@ void main( void )
 	channel = 0; // the final selected color channel to use for rand() calc (range: 0 to 3, corresponds to R,G,B, or A)
 	randNumber = 0.0; // the final randomly-generated number (range: 0.0 to 1.0)
 	randVec4 = vec4(0); // samples and holds the RGBA blueNoise texture value for this pixel
-	randVec4 = texelFetch(tBlueNoiseTexture, ivec2(mod(gl_FragCoord.xy + floor(uRandomVec2 * 256.0), 256.0)), 0);
+	randVec4 = texelFetch(tBlueNoiseTexture, ivec2(mod(floor(gl_FragCoord.xy) + floor(uRandomVec2 * 256.0), 256.0)), 0);
 	
 	// rand() produces higher FPS and almost immediate convergence, but may have very slight jagged diagonal edges on higher frequency color patterns, i.e. checkerboards.
 	// rng() has a little less FPS on mobile, and a little more noisy initially, but eventually converges on perfect anti-aliased edges - use this if 'beauty-render' is desired.
-	vec2 pixelOffset = uFrameCounter < 150.0 ? vec2( tentFilter(rand()), tentFilter(rand()) ) :
-					      	   vec2( tentFilter(rng()), tentFilter(rng()) );
+	vec2 pixelOffset;
+	if (uFrameCounter < 150.0) 
+		pixelOffset = vec2( tentFilter(rand()), tentFilter(rand()) );
+	else 
+		pixelOffset = vec2( tentFilter(rng()), tentFilter(rng()) );
 	
 	// we must map pixelPos into the range -1.0 to +1.0: (-1.0,-1.0) is bottom-left screen corner, (1.0,1.0) is top-right
 	vec2 pixelPos = ((gl_FragCoord.xy + pixelOffset) / uResolution) * 2.0 - 1.0;
 
-	vec3 rayDir = uUseOrthographicCamera ? camForward : 
-					       normalize( pixelPos.x * camRight * uULen + pixelPos.y * camUp * uVLen + camForward );
-
+	vec3 rayDir = uUseOrthographicCamera ? camForward :
+		      normalize( pixelPos.x * camRight * uULen + pixelPos.y * camUp * uVLen + camForward ); 
+					       
 	// depth of field
 	vec3 focalPoint = uFocusDistance * rayDir;
 	float randomAngle = rng() * TWO_PI; // pick random point on aperture
@@ -3293,8 +3296,10 @@ void main( void )
 	// point on aperture to focal point
 	vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
 
-	rayOrigin = uUseOrthographicCamera ? cameraPosition + (camRight * pixelPos.x * uULen * 100.0) + (camUp * pixelPos.y * uVLen * 100.0) + randomAperturePos :
-					     cameraPosition + randomAperturePos;
+	rayOrigin = cameraPosition + randomAperturePos;
+	rayOrigin += !uUseOrthographicCamera ? vec3(0) : 
+		     (camRight * pixelPos.x * uULen * 100.0) + (camUp * pixelPos.y * uVLen * 100.0);
+					     
 	rayDirection = finalRayDir;
 	
 
