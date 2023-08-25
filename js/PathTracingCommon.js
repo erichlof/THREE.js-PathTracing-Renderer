@@ -3283,7 +3283,7 @@ void main( void )
 		pixelOffset = vec2( tentFilter(rng()), tentFilter(rng()) );
 	
 	// we must map pixelPos into the range -1.0 to +1.0: (-1.0,-1.0) is bottom-left screen corner, (1.0,1.0) is top-right
-	vec2 pixelPos = ((gl_FragCoord.xy + pixelOffset) / uResolution) * 2.0 - 1.0;
+	vec2 pixelPos = ((gl_FragCoord.xy + vec2(0.5) + pixelOffset) / uResolution) * 2.0 - 1.0;
 
 	vec3 rayDir = uUseOrthographicCamera ? camForward :
 		      normalize( pixelPos.x * camRight * uULen + pixelPos.y * camUp * uVLen + camForward ); 
