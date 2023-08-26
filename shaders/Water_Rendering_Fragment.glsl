@@ -483,10 +483,10 @@ void main( void )
 	randVec4 = vec4(0); // samples and holds the RGBA blueNoise texture value for this pixel
 	randVec4 = texelFetch(tBlueNoiseTexture, ivec2(mod(gl_FragCoord.xy + floor(uRandomVec2 * 256.0), 256.0)), 0);
 	
-	vec2 pixelOffset = vec2( tentFilter(rand()), tentFilter(rand()) ) * 1.0;
+	vec2 pixelOffset = vec2( tentFilter(rand()), tentFilter(rand()) );
 
 	// we must map pixelPos into the range -1.0 to +1.0
-	vec2 pixelPos = ((gl_FragCoord.xy + pixelOffset) / uResolution) * 2.0 - 1.0;
+	vec2 pixelPos = ((gl_FragCoord.xy + vec2(0.5) + pixelOffset) / uResolution) * 2.0 - 1.0;
 
         vec3 rayDir = uUseOrthographicCamera ? camForward : 
 					       normalize( pixelPos.x * camRight * uULen + pixelPos.y * camUp * uVLen + camForward );
