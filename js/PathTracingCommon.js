@@ -1246,346 +1246,6 @@ void Box_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1, out vec3 n
 }
 `;
 
-THREE.ShaderChunk[ 'pathtracing_convexpolyhedron_intersect' ] = `
-// This convexPolyhedron routine works with any number of user-defined cutting planes - a plane is defined by its unit normal (vec3) and an offset distance (float) 
-//  from the plane origin to the shape's origin.  Examples of shapes that can be made from a list of pure convex cutting planes: cube, frustum, 
-//  triangular pyramid (tetrahedron), rectangular pyramid, triangular bipyramid (hexahedron), rectangular bipyramid (octahedron), and other polyhedra.
-
-//------------------------------------------------------------------------------------------------------------
-float ConvexPolyhedron_4faces_Intersect( vec3 ro, vec3 rd, out vec3 n, vec4 planes[4] )
-//------------------------------------------------------------------------------------------------------------
-{
-	vec3 n0, n1;
-	float t;
-	float t0 = -INFINITY;
-	float t1 = INFINITY;
-	float plane_dot_rayDir;
-	
-	for (int i = 0; i < 4; i++)
-	{
-		plane_dot_rayDir = dot(planes[i].xyz, rd);
-		if (plane_dot_rayDir == 0.0)
-			continue;
-
-		t = (-dot(planes[i].xyz, ro) + planes[i].w) / plane_dot_rayDir;
-
-		if (plane_dot_rayDir < 0.0 && t > t0)
-		{
-			t0 = t;
-			n0 = planes[i].xyz;
-		}	
-		if (plane_dot_rayDir > 0.0 && t < t1)
-		{
-			t1 = t;
-			n1 = planes[i].xyz;
-		}	
-	}
-
-	if (t0 > t1) // check for invalid t0/t1 intersection pair
-		return INFINITY;
-	if (t0 > 0.0)
-	{
-		n = n0;
-		return t0;
-	}
-	if (t1 > 0.0)
-	{
-		n = n1;
-		return t1;
-	}
-
-	return INFINITY;
-}
-
-//------------------------------------------------------------------------------------------------------------
-float ConvexPolyhedron_5faces_Intersect( vec3 ro, vec3 rd, out vec3 n, vec4 planes[5] )
-//------------------------------------------------------------------------------------------------------------
-{
-	vec3 n0, n1;
-	float t;
-	float t0 = -INFINITY;
-	float t1 = INFINITY;
-	float plane_dot_rayDir;
-	
-	for (int i = 0; i < 5; i++)
-	{
-		plane_dot_rayDir = dot(planes[i].xyz, rd);
-		if (plane_dot_rayDir == 0.0)
-			continue;
-
-		t = (-dot(planes[i].xyz, ro) + planes[i].w) / plane_dot_rayDir;
-
-		if (plane_dot_rayDir < 0.0 && t > t0)
-		{
-			t0 = t;
-			n0 = planes[i].xyz;
-		}	
-		if (plane_dot_rayDir > 0.0 && t < t1)
-		{
-			t1 = t;
-			n1 = planes[i].xyz;
-		}	
-	}
-
-	if (t0 > t1) // check for invalid t0/t1 intersection pair
-		return INFINITY;
-	if (t0 > 0.0)
-	{
-		n = n0;
-		return t0;
-	}
-	if (t1 > 0.0)
-	{
-		n = n1;
-		return t1;
-	}
-
-	return INFINITY;
-}
-
-//------------------------------------------------------------------------------------------------------------
-float ConvexPolyhedron_6faces_Intersect( vec3 ro, vec3 rd, out vec3 n, vec4 planes[6] )
-//------------------------------------------------------------------------------------------------------------
-{
-	vec3 n0, n1;
-	float t;
-	float t0 = -INFINITY;
-	float t1 = INFINITY;
-	float plane_dot_rayDir;
-	
-	for (int i = 0; i < 6; i++)
-	{
-		plane_dot_rayDir = dot(planes[i].xyz, rd);
-		if (plane_dot_rayDir == 0.0)
-			continue;
-
-		t = (-dot(planes[i].xyz, ro) + planes[i].w) / plane_dot_rayDir;
-
-		if (plane_dot_rayDir < 0.0 && t > t0)
-		{
-			t0 = t;
-			n0 = planes[i].xyz;
-		}	
-		if (plane_dot_rayDir > 0.0 && t < t1)
-		{
-			t1 = t;
-			n1 = planes[i].xyz;
-		}	
-	}
-
-	if (t0 > t1) // check for invalid t0/t1 intersection pair
-		return INFINITY;
-	if (t0 > 0.0)
-	{
-		n = n0;
-		return t0;
-	}
-	if (t1 > 0.0)
-	{
-		n = n1;
-		return t1;
-	}
-
-	return INFINITY;
-}
-
-//------------------------------------------------------------------------------------------------------------
-float ConvexPolyhedron_7faces_Intersect( vec3 ro, vec3 rd, out vec3 n, vec4 planes[7] )
-//------------------------------------------------------------------------------------------------------------
-{
-	vec3 n0, n1;
-	float t;
-	float t0 = -INFINITY;
-	float t1 = INFINITY;
-	float plane_dot_rayDir;
-	
-	for (int i = 0; i < 7; i++)
-	{
-		plane_dot_rayDir = dot(planes[i].xyz, rd);
-		if (plane_dot_rayDir == 0.0)
-			continue;
-
-		t = (-dot(planes[i].xyz, ro) + planes[i].w) / plane_dot_rayDir;
-
-		if (plane_dot_rayDir < 0.0 && t > t0)
-		{
-			t0 = t;
-			n0 = planes[i].xyz;
-		}	
-		if (plane_dot_rayDir > 0.0 && t < t1)
-		{
-			t1 = t;
-			n1 = planes[i].xyz;
-		}	
-	}
-
-	if (t0 > t1) // check for invalid t0/t1 intersection pair
-		return INFINITY;
-	if (t0 > 0.0)
-	{
-		n = n0;
-		return t0;
-	}
-	if (t1 > 0.0)
-	{
-		n = n1;
-		return t1;
-	}
-
-	return INFINITY;
-}
-
-//------------------------------------------------------------------------------------------------------------
-float ConvexPolyhedron_8faces_Intersect( vec3 ro, vec3 rd, out vec3 n, vec4 planes[8] )
-//------------------------------------------------------------------------------------------------------------
-{
-	vec3 n0, n1;
-	float t;
-	float t0 = -INFINITY;
-	float t1 = INFINITY;
-	float plane_dot_rayDir;
-	
-	for (int i = 0; i < 8; i++)
-	{
-		plane_dot_rayDir = dot(planes[i].xyz, rd);
-		if (plane_dot_rayDir == 0.0)
-			continue;
-
-		t = (-dot(planes[i].xyz, ro) + planes[i].w) / plane_dot_rayDir;
-
-		if (plane_dot_rayDir < 0.0 && t > t0)
-		{
-			t0 = t;
-			n0 = planes[i].xyz;
-		}	
-		if (plane_dot_rayDir > 0.0 && t < t1)
-		{
-			t1 = t;
-			n1 = planes[i].xyz;
-		}	
-	}
-
-	if (t0 > t1) // check for invalid t0/t1 intersection pair
-		return INFINITY;
-	if (t0 > 0.0)
-	{
-		n = n0;
-		return t0;
-	}
-	if (t1 > 0.0)
-	{
-		n = n1;
-		return t1;
-	}
-
-	return INFINITY;
-}
-
-//------------------------------------------------------------------------------------------------------------
-float ConvexPolyhedron_12faces_Intersect( vec3 ro, vec3 rd, out vec3 n, vec4 planes[12] )
-//------------------------------------------------------------------------------------------------------------
-{
-	vec3 n0, n1;
-	float t;
-	float t0 = -INFINITY;
-	float t1 = INFINITY;
-	float plane_dot_rayDir;
-	
-	for (int i = 0; i < 12; i++)
-	{
-		plane_dot_rayDir = dot(planes[i].xyz, rd);
-		if (plane_dot_rayDir == 0.0)
-			continue;
-
-		t = (-dot(planes[i].xyz, ro) + planes[i].w) / plane_dot_rayDir;
-
-		if (plane_dot_rayDir < 0.0 && t > t0)
-		{
-			t0 = t;
-			n0 = planes[i].xyz;
-		}	
-		if (plane_dot_rayDir > 0.0 && t < t1)
-		{
-			t1 = t;
-			n1 = planes[i].xyz;
-		}	
-	}
-
-	if (t0 > t1) // check for invalid t0/t1 intersection pair
-		return INFINITY;
-	if (t0 > 0.0)
-	{
-		n = n0;
-		return t0;
-	}
-	if (t1 > 0.0)
-	{
-		n = n1;
-		return t1;
-	}
-
-	return INFINITY;
-}
-
-//------------------------------------------------------------------------------------------------------------
-float ConvexPolyhedron_20faces_Intersect( vec3 ro, vec3 rd, out vec3 n, vec4 planes[20] )
-//------------------------------------------------------------------------------------------------------------
-{
-	vec3 n0, n1;
-	float t;
-	float t0 = -INFINITY;
-	float t1 = INFINITY;
-	float plane_dot_rayDir;
-	
-	for (int i = 0; i < 20; i++)
-	{
-		plane_dot_rayDir = dot(planes[i].xyz, rd);
-		if (plane_dot_rayDir == 0.0)
-			continue;
-
-		t = (-dot(planes[i].xyz, ro) + planes[i].w) / plane_dot_rayDir;
-
-		if (plane_dot_rayDir < 0.0 && t > t0)
-		{
-			t0 = t;
-			n0 = planes[i].xyz;
-		}	
-		if (plane_dot_rayDir > 0.0 && t < t1)
-		{
-			t1 = t;
-			n1 = planes[i].xyz;
-		}	
-	}
-
-	if (t0 > t1) // check for invalid t0/t1 intersection pair
-		return INFINITY;
-	if (t0 > 0.0)
-	{
-		n = n0;
-		return t0;
-	}
-	if (t1 > 0.0)
-	{
-		n = n1;
-		return t1;
-	}
-
-	return INFINITY;
-}
-
-/*
-//const int numPlanes = 8;
-//vec4 convex_planes[numPlanes];
-//------------------------------------------------------------------------------------------------------------
-void ConvexPolyhedron_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1, out vec3 n0, out vec3 n1 )
-//------------------------------------------------------------------------------------------------------------
-{
-	
-}
-*/
-
-`; 
-
 THREE.ShaderChunk[ 'pathtracing_pyramidfrustum_csg_intersect' ] = `
 //------------------------------------------------------------------------------------------------------------
 void PyramidFrustum_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out float t1, out vec3 n0, out vec3 n1 )
@@ -1728,6 +1388,68 @@ void PyramidFrustum_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out 
 		n1 = dn1;
 	}
 }
+`;
+
+THREE.ShaderChunk[ 'pathtracing_convexpolyhedron_intersect' ] = `
+// This convexPolyhedron routine works with any number of user-defined cutting planes (up to 20) - a plane is defined by its unit normal (vec3) and an 
+// offset distance (float) from the plane origin to the shape's origin.  Examples of shapes that can be made from a list of pure convex cutting planes: 
+// cube, frustum, triangular pyramid (tetrahedron), rectangular pyramid, triangular bipyramid (hexahedron), rectangular bipyramid (octahedron), and other polyhedra.
+
+//------------------------------------------------------------------------------------------------------------
+float ConvexPolyhedronIntersect( vec3 ro, vec3 rd, out vec3 n, int numPlanes, vec4 planes[20] )
+//------------------------------------------------------------------------------------------------------------
+{
+	vec3 n0, n1;
+	float t;
+	float t0 = -INFINITY;
+	float t1 = INFINITY;
+	float plane_dot_rayDir;
+	
+	for (int i = 0; i < numPlanes; i++)
+	{
+		plane_dot_rayDir = dot(planes[i].xyz, rd);
+		if (plane_dot_rayDir == 0.0)
+			continue;
+
+		t = (-dot(planes[i].xyz, ro) + planes[i].w) / plane_dot_rayDir;
+
+		if (plane_dot_rayDir < 0.0 && t > t0)
+		{
+			t0 = t;
+			n0 = planes[i].xyz;
+		}	
+		if (plane_dot_rayDir > 0.0 && t < t1)
+		{
+			t1 = t;
+			n1 = planes[i].xyz;
+		}	
+	}
+
+	if (t0 > t1) // check for invalid t0/t1 intersection pair
+		return INFINITY;
+	if (t0 > 0.0)
+	{
+		n = n0;
+		return t0;
+	}
+	if (t1 > 0.0)
+	{
+		n = n1;
+		return t1;
+	}
+
+	return INFINITY;
+}
+
+/*
+//----------------------------------------------------------------------------------------------------------------------------------
+void ConvexPolyhedron_CSG_Intersect( vec3 ro, vec3 rd, int numPlanes, vec4 planes[20], out float t0, out float t1, out vec3 n0, out vec3 n1 )
+//----------------------------------------------------------------------------------------------------------------------------------
+{
+	
+}
+*/
+
 `;
 
 THREE.ShaderChunk[ 'pathtracing_csg_operations' ] = `
