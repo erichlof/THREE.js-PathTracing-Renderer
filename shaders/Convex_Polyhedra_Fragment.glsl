@@ -54,6 +54,7 @@ vec4 octahedron_planes[8];
 vec4 hexagonalPrism_planes[8];
 vec4 dodecahedron_planes[12];
 vec4 icosahedron_planes[20];
+vec4 planes[20];
 
 //---------------------------------------------------------------------------------------
 float SceneIntersect( )
@@ -111,8 +112,13 @@ float SceneIntersect( )
 	rObjOrigin += vec3(35, 0, 0);
 	rObjOrigin = vec3( uConvexPolyhedronInvMatrix * vec4(rObjOrigin, 1.0) );
 	rObjDirection = vec3( uConvexPolyhedronInvMatrix * vec4(rayDirection, 0.0) );
+
+	planes[0] = tetrahedron_planes[0];
+	planes[1] = tetrahedron_planes[1];
+	planes[2] = tetrahedron_planes[2];
+	planes[3] = tetrahedron_planes[3];
 	
-	d = ConvexPolyhedron_4faces_Intersect( rObjOrigin, rObjDirection, n, tetrahedron_planes );
+	d = ConvexPolyhedronIntersect( rObjOrigin, rObjDirection, n, 4, planes );
 	if (d < t)
 	{
 		t = d;
@@ -131,7 +137,13 @@ float SceneIntersect( )
 	rObjOrigin = vec3( uConvexPolyhedronInvMatrix * vec4(rObjOrigin, 1.0) );
 	rObjDirection = vec3( uConvexPolyhedronInvMatrix * vec4(rayDirection, 0.0) );
 	
-	d = ConvexPolyhedron_5faces_Intersect( rObjOrigin, rObjDirection, n, rectangularPyramid_planes );
+	planes[0] = rectangularPyramid_planes[0];
+	planes[1] = rectangularPyramid_planes[1];
+	planes[2] = rectangularPyramid_planes[2];
+	planes[3] = rectangularPyramid_planes[3];
+	planes[4] = rectangularPyramid_planes[4];
+
+	d = ConvexPolyhedronIntersect( rObjOrigin, rObjDirection, n, 5, planes );
 	if (d < t)
 	{
 		t = d;
@@ -149,8 +161,14 @@ float SceneIntersect( )
 	rObjOrigin += vec3(0, 0, 0);
 	rObjOrigin = vec3( uConvexPolyhedronInvMatrix * vec4(rObjOrigin, 1.0) );
 	rObjDirection = vec3( uConvexPolyhedronInvMatrix * vec4(rayDirection, 0.0) );
+
+	planes[0] = triangularPrism_planes[0];
+	planes[1] = triangularPrism_planes[1];
+	planes[2] = triangularPrism_planes[2];
+	planes[3] = triangularPrism_planes[3];
+	planes[4] = triangularPrism_planes[4];
 	
-	d = ConvexPolyhedron_5faces_Intersect( rObjOrigin, rObjDirection, n, triangularPrism_planes );
+	d = ConvexPolyhedronIntersect( rObjOrigin, rObjDirection, n, 5, planes );
 	if (d < t)
 	{
 		t = d;
@@ -168,8 +186,15 @@ float SceneIntersect( )
 	rObjOrigin += vec3(0, 0, 35);
 	rObjOrigin = vec3( uConvexPolyhedronInvMatrix * vec4(rObjOrigin, 1.0) );
 	rObjDirection = vec3( uConvexPolyhedronInvMatrix * vec4(rayDirection, 0.0) );
+
+	planes[0] = cube_planes[0];
+	planes[1] = cube_planes[1];
+	planes[2] = cube_planes[2];
+	planes[3] = cube_planes[3];
+	planes[4] = cube_planes[4];
+	planes[5] = cube_planes[5];
 	
-	d = ConvexPolyhedron_6faces_Intersect( rObjOrigin, rObjDirection, n, cube_planes );
+	d = ConvexPolyhedronIntersect( rObjOrigin, rObjDirection, n, 6, planes );
 	if (d < t)
 	{
 		t = d;
@@ -188,7 +213,14 @@ float SceneIntersect( )
 	rObjOrigin = vec3( uConvexPolyhedronInvMatrix * vec4(rObjOrigin, 1.0) );
 	rObjDirection = vec3( uConvexPolyhedronInvMatrix * vec4(rayDirection, 0.0) );
 	
-	d = ConvexPolyhedron_6faces_Intersect( rObjOrigin, rObjDirection, n, frustum_planes );
+	planes[0] = frustum_planes[0];
+	planes[1] = frustum_planes[1];
+	planes[2] = frustum_planes[2];
+	planes[3] = frustum_planes[3];
+	planes[4] = frustum_planes[4];
+	planes[5] = frustum_planes[5];
+
+	d = ConvexPolyhedronIntersect( rObjOrigin, rObjDirection, n, 6, planes );
 	if (d < t)
 	{
 		t = d;
@@ -207,7 +239,14 @@ float SceneIntersect( )
 	rObjOrigin = vec3( uConvexPolyhedronInvMatrix * vec4(rObjOrigin, 1.0) );
 	rObjDirection = vec3( uConvexPolyhedronInvMatrix * vec4(rayDirection, 0.0) );
 	
-	d = ConvexPolyhedron_6faces_Intersect( rObjOrigin, rObjDirection, n, hexahedron_planes );
+	planes[0] = hexahedron_planes[0];
+	planes[1] = hexahedron_planes[1];
+	planes[2] = hexahedron_planes[2];
+	planes[3] = hexahedron_planes[3];
+	planes[4] = hexahedron_planes[4];
+	planes[5] = hexahedron_planes[5];
+
+	d = ConvexPolyhedronIntersect( rObjOrigin, rObjDirection, n, 6, planes );
 	if (d < t)
 	{
 		t = d;
@@ -226,7 +265,15 @@ float SceneIntersect( )
 	rObjOrigin = vec3( uConvexPolyhedronInvMatrix * vec4(rObjOrigin, 1.0) );
 	rObjDirection = vec3( uConvexPolyhedronInvMatrix * vec4(rayDirection, 0.0) );
 	
-	d = ConvexPolyhedron_7faces_Intersect( rObjOrigin, rObjDirection, n, pentagonalPrism_planes );
+	planes[0] = pentagonalPrism_planes[0];
+	planes[1] = pentagonalPrism_planes[1];
+	planes[2] = pentagonalPrism_planes[2];
+	planes[3] = pentagonalPrism_planes[3];
+	planes[4] = pentagonalPrism_planes[4];
+	planes[5] = pentagonalPrism_planes[5];
+	planes[6] = pentagonalPrism_planes[6];
+
+	d = ConvexPolyhedronIntersect( rObjOrigin, rObjDirection, n, 7, planes );
 	if (d < t)
 	{
 		t = d;
@@ -244,8 +291,17 @@ float SceneIntersect( )
 	rObjOrigin += vec3(35, 0, -35);
 	rObjOrigin = vec3( uConvexPolyhedronInvMatrix * vec4(rObjOrigin, 1.0) );
 	rObjDirection = vec3( uConvexPolyhedronInvMatrix * vec4(rayDirection, 0.0) );
+
+	planes[0] = octahedron_planes[0];
+	planes[1] = octahedron_planes[1];
+	planes[2] = octahedron_planes[2];
+	planes[3] = octahedron_planes[3];
+	planes[4] = octahedron_planes[4];
+	planes[5] = octahedron_planes[5];
+	planes[6] = octahedron_planes[6];
+	planes[7] = octahedron_planes[7];
 	
-	d = ConvexPolyhedron_8faces_Intersect( rObjOrigin, rObjDirection, n, octahedron_planes );
+	d = ConvexPolyhedronIntersect( rObjOrigin, rObjDirection, n, 8, planes );
 	if (d < t)
 	{
 		t = d;
@@ -263,8 +319,17 @@ float SceneIntersect( )
 	rObjOrigin += vec3(-35, 0, 35);
 	rObjOrigin = vec3( uConvexPolyhedronInvMatrix * vec4(rObjOrigin, 1.0) );
 	rObjDirection = vec3( uConvexPolyhedronInvMatrix * vec4(rayDirection, 0.0) );
+
+	planes[0] = hexagonalPrism_planes[0];
+	planes[1] = hexagonalPrism_planes[1];
+	planes[2] = hexagonalPrism_planes[2];
+	planes[3] = hexagonalPrism_planes[3];
+	planes[4] = hexagonalPrism_planes[4];
+	planes[5] = hexagonalPrism_planes[5];
+	planes[6] = hexagonalPrism_planes[6];
+	planes[7] = hexagonalPrism_planes[7];
 	
-	d = ConvexPolyhedron_8faces_Intersect( rObjOrigin, rObjDirection, n, hexagonalPrism_planes );
+	d = ConvexPolyhedronIntersect( rObjOrigin, rObjDirection, n, 8, planes );
 	if (d < t)
 	{
 		t = d;
@@ -282,8 +347,21 @@ float SceneIntersect( )
 	rObjOrigin += vec3(19, 0, -18);
 	rObjOrigin = vec3( uConvexPolyhedronInvMatrix * vec4(rObjOrigin, 1.0) );
 	rObjDirection = vec3( uConvexPolyhedronInvMatrix * vec4(rayDirection, 0.0) );
+
+	planes[0] = dodecahedron_planes[0];
+	planes[1] = dodecahedron_planes[1];
+	planes[2] = dodecahedron_planes[2];
+	planes[3] = dodecahedron_planes[3];
+	planes[4] = dodecahedron_planes[4];
+	planes[5] = dodecahedron_planes[5];
+	planes[6] = dodecahedron_planes[6];
+	planes[7] = dodecahedron_planes[7];
+	planes[8] = dodecahedron_planes[8];
+	planes[9] = dodecahedron_planes[9];
+	planes[10] = dodecahedron_planes[10];
+	planes[11] = dodecahedron_planes[11];
 	
-	d = ConvexPolyhedron_12faces_Intersect( rObjOrigin, rObjDirection, n, dodecahedron_planes );
+	d = ConvexPolyhedronIntersect( rObjOrigin, rObjDirection, n, 12, planes );
 	if (d < t)
 	{
 		t = d;
@@ -302,7 +380,28 @@ float SceneIntersect( )
 	rObjOrigin = vec3( uConvexPolyhedronInvMatrix * vec4(rObjOrigin, 1.0) );
 	rObjDirection = vec3( uConvexPolyhedronInvMatrix * vec4(rayDirection, 0.0) );
 	
-	d = ConvexPolyhedron_20faces_Intersect( rObjOrigin, rObjDirection, n, icosahedron_planes );
+	planes[0] = icosahedron_planes[0];
+	planes[1] = icosahedron_planes[1];
+	planes[2] = icosahedron_planes[2];
+	planes[3] = icosahedron_planes[3];
+	planes[4] = icosahedron_planes[4];
+	planes[5] = icosahedron_planes[5];
+	planes[6] = icosahedron_planes[6];
+	planes[7] = icosahedron_planes[7];
+	planes[8] = icosahedron_planes[8];
+	planes[9] = icosahedron_planes[9];
+	planes[10] = icosahedron_planes[10];
+	planes[11] = icosahedron_planes[11];
+	planes[12] = icosahedron_planes[12];
+	planes[13] = icosahedron_planes[13];
+	planes[14] = icosahedron_planes[14];
+	planes[15] = icosahedron_planes[15];
+	planes[16] = icosahedron_planes[16];
+	planes[17] = icosahedron_planes[17];
+	planes[18] = icosahedron_planes[18];
+	planes[19] = icosahedron_planes[19];
+
+	d = ConvexPolyhedronIntersect( rObjOrigin, rObjDirection, n, 20, planes );
 	if (d < t)
 	{
 		t = d;
