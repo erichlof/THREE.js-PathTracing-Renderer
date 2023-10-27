@@ -376,5 +376,5 @@ void main()
 	//filteredPixelColor = ACESFilmicToneMapping(filteredPixelColor);
 
 	// lastly, apply gamma correction (gives more intensity/brightness range where it's needed)
-	pc_fragColor = clamp(vec4( pow(filteredPixelColor, vec3(0.4545)), 1.0 ), 0.0, 1.0);
+	pc_fragColor = vec4(sqrt(filteredPixelColor), 1.0);
 }
