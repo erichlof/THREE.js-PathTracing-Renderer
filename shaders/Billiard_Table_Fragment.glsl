@@ -172,6 +172,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	vec3 tdir;
 	vec3 dirToLight;
 	vec3 x, n, nl;
+	vec3 textureColor;
         
 	float t;
         float weight;
@@ -285,8 +286,10 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		{
 			
 			if (hitType == CLOTH)
-				hitColor *= pow(clamp(texture(tClothTexture, (10.0 * x.xz) / 512.0).rgb, 0.0, 1.0), vec3(2.2));
-
+			{
+				textureColor = texture(tClothTexture, (10.0 * x.xz) / 512.0).rgb;
+				hitColor *= (textureColor * textureColor);
+			}
 			if (bounces == 0)
 				objectColor = hitColor;
 				
@@ -408,14 +411,20 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				isSpot = TRUE;
 			
 			if (hitType == DARKWOOD)
-				hitColor *= pow(clamp(texture(tDarkWoodTexture, 3.5 * x.xz / 512.0).rgb, 0.0, 1.0), vec3(2.2));
+			{
+				textureColor = texture(tDarkWoodTexture, 3.5 * x.xz / 512.0).rgb;
+				hitColor *= (textureColor * textureColor);
+			}
+				
 			if (isSpot == TRUE)
 				hitColor = clamp(hitColor + 0.5, 0.0, 1.0);
 				
-			if (hitType == LIGHTWOOD)	
-				hitColor *= pow(clamp(texture(tLightWoodTexture, 6.0 * x.xz / 512.0).rgb, 0.0, 1.0), vec3(2.2));
-		
-			
+			if (hitType == LIGHTWOOD)
+			{
+				textureColor = texture(tLightWoodTexture, 6.0 * x.xz / 512.0).rgb;
+				hitColor *= (textureColor * textureColor);
+			}
+				
 			if (bounces == 0)
 				objectColor = hitColor;
 
