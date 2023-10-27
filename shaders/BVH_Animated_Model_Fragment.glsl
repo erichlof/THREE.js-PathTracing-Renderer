@@ -508,10 +508,10 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		if (hitType == PBR_MATERIAL)
 		{
 			hitColor = texture(tAlbedoMap, hitUV).rgb;
-			hitColor = pow(hitColor,vec3(2.2));
+			hitColor *= hitColor;
 			
 			hitEmission = texture(tEmissiveMap, hitUV).rgb;
-			hitEmission = pow(hitEmission,vec3(2.2));
+			hitEmission *= hitEmission;
 			
 			float maxEmission = max(hitEmission.r, max(hitEmission.g, hitEmission.b));
 			if (bounceIsSpecular == TRUE && maxEmission > 0.01)
@@ -523,7 +523,8 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			hitType = DIFF;
 			
-			metallicRoughness = pow(texture(tMetallicRoughnessMap, hitUV).rgb, vec3(2.2));
+			metallicRoughness = texture(tMetallicRoughnessMap, hitUV).rgb;
+			metallicRoughness *= metallicRoughness;
 			
 			if (metallicRoughness.g > 0.01) // roughness
 			{
