@@ -2997,10 +2997,12 @@ void main( void )
 	randVec4 = texelFetch(tBlueNoiseTexture, ivec2(mod(floor(gl_FragCoord.xy) + floor(uRandomVec2 * 256.0), 256.0)), 0);
 	
 	vec2 pixelOffset;
-	if (uCameraIsMoving)
-		pixelOffset = vec2( tentFilter(rand()), tentFilter(rand()) ) * 0.5;
-	else 
-		pixelOffset = vec2( tentFilter(uRandomVec2.x), tentFilter(uRandomVec2.y) );
+	if (uSampleCounter < 100.0)
+	{
+		pixelOffset = vec2( tentFilter(rand()), tentFilter(rand()) );
+		pixelOffset *= uCameraIsMoving ? 0.5 : 1.0;
+	}	
+	else pixelOffset = vec2( tentFilter(uRandomVec2.x), tentFilter(uRandomVec2.y) );
 	
 	// we must map pixelPos into the range -1.0 to +1.0: (-1.0,-1.0) is bottom-left screen corner, (1.0,1.0) is top-right
 	vec2 pixelPos = ((gl_FragCoord.xy + vec2(0.5) + pixelOffset) / uResolution) * 2.0 - 1.0;
