@@ -142,20 +142,114 @@ float SceneIntersect( int checkModels )
 	int triangleLookupNeeded = FALSE;
 	int isRayExiting = FALSE;
 
-	for (int i = 0; i < N_BOXES - 2; i++)
-        {
-		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, rayOrigin, rayDirection, normal, isRayExiting );
-		if (d < t)
-		{
-			t = d;
-			hitNormal = normal;
-			hitEmission = boxes[i].emission;
-			hitColor = boxes[i].color;
-			hitType = boxes[i].type;
-			hitObjectID = float(objectCount);
-		}
-		objectCount++;
+
+	d = BoxIntersect( boxes[0].minCorner, boxes[0].maxCorner, rayOrigin, rayDirection, normal, isRayExiting );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = normal;
+		hitEmission = boxes[0].emission;
+		hitColor = boxes[0].color;
+		hitType = boxes[0].type;
+		hitObjectID = float(objectCount);
 	}
+	objectCount++;
+
+	d = BoxIntersect( boxes[1].minCorner, boxes[1].maxCorner, rayOrigin, rayDirection, normal, isRayExiting );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = normal;
+		hitEmission = boxes[1].emission;
+		hitColor = boxes[1].color;
+		hitType = boxes[1].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = BoxIntersect( boxes[2].minCorner, boxes[2].maxCorner, rayOrigin, rayDirection, normal, isRayExiting );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = normal;
+		hitEmission = boxes[2].emission;
+		hitColor = boxes[2].color;
+		hitType = boxes[2].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = BoxIntersect( boxes[3].minCorner, boxes[3].maxCorner, rayOrigin, rayDirection, normal, isRayExiting );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = normal;
+		hitEmission = boxes[3].emission;
+		hitColor = boxes[3].color;
+		hitType = boxes[3].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = BoxIntersect( boxes[4].minCorner, boxes[4].maxCorner, rayOrigin, rayDirection, normal, isRayExiting );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = normal;
+		hitEmission = boxes[4].emission;
+		hitColor = boxes[4].color;
+		hitType = boxes[4].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = BoxIntersect( boxes[5].minCorner, boxes[5].maxCorner, rayOrigin, rayDirection, normal, isRayExiting );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = normal;
+		hitEmission = boxes[5].emission;
+		hitColor = boxes[5].color;
+		hitType = boxes[5].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = BoxIntersect( boxes[6].minCorner, boxes[6].maxCorner, rayOrigin, rayDirection, normal, isRayExiting );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = normal;
+		hitEmission = boxes[6].emission;
+		hitColor = boxes[6].color;
+		hitType = boxes[6].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = BoxIntersect( boxes[7].minCorner, boxes[7].maxCorner, rayOrigin, rayDirection, normal, isRayExiting );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = normal;
+		hitEmission = boxes[7].emission;
+		hitColor = boxes[7].color;
+		hitType = boxes[7].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = BoxIntersect( boxes[8].minCorner, boxes[8].maxCorner, rayOrigin, rayDirection, normal, isRayExiting );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = normal;
+		hitEmission = boxes[8].emission;
+		hitColor = boxes[8].color;
+		hitType = boxes[8].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
 
 	// ROOM
 	d = BoxInteriorIntersect( boxes[10].minCorner, boxes[10].maxCorner, rayOrigin, rayDirection, n );
@@ -190,35 +284,66 @@ float SceneIntersect( int checkModels )
 	objectCount++;
 
 	
-	for (int i = 0; i < N_QUADS; i++)
-        {
-		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, rayOrigin, rayDirection, TRUE );
-		if (d < t)
-		{
-			t = d;
-			hitNormal = quads[i].normal;
-			hitEmission = quads[i].emission;
-			hitColor = quads[i].color;
-			hitType = quads[i].type;
-			hitObjectID = float(objectCount);
-		}
-		objectCount++;
-        }
+	d = QuadIntersect( quads[0].v0, quads[0].v1, quads[0].v2, quads[0].v3, rayOrigin, rayDirection, TRUE );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = quads[0].normal;
+		hitEmission = quads[0].emission;
+		hitColor = quads[0].color;
+		hitType = quads[0].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
 
-	for (int i = 0; i < N_OPENCYLINDERS; i++)
-        {
-		d = OpenCylinderIntersect( openCylinders[i].pos1, openCylinders[i].pos2, openCylinders[i].radius, rayOrigin, rayDirection, normal );
-		if (d < t)
-		{
-			t = d;
-			hitNormal = normal;
-			hitEmission = openCylinders[i].emission;
-			hitColor = openCylinders[i].color;
-			hitType = openCylinders[i].type;
-			hitObjectID = float(objectCount);
-		}
-		objectCount++;
-        }
+	d = QuadIntersect( quads[1].v0, quads[1].v1, quads[1].v2, quads[1].v3, rayOrigin, rayDirection, TRUE );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = quads[1].normal;
+		hitEmission = quads[1].emission;
+		hitColor = quads[1].color;
+		hitType = quads[1].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+
+	d = OpenCylinderIntersect( openCylinders[0].pos1, openCylinders[0].pos2, openCylinders[0].radius, rayOrigin, rayDirection, normal );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = normal;
+		hitEmission = openCylinders[0].emission;
+		hitColor = openCylinders[0].color;
+		hitType = openCylinders[0].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = OpenCylinderIntersect( openCylinders[1].pos1, openCylinders[1].pos2, openCylinders[1].radius, rayOrigin, rayDirection, normal );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = normal;
+		hitEmission = openCylinders[1].emission;
+		hitColor = openCylinders[1].color;
+		hitType = openCylinders[1].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = OpenCylinderIntersect( openCylinders[2].pos1, openCylinders[2].pos2, openCylinders[2].radius, rayOrigin, rayDirection, normal );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = normal;
+		hitEmission = openCylinders[2].emission;
+		hitColor = openCylinders[2].color;
+		hitType = openCylinders[2].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
 
 	
 	// DOOR (TALL BOX)
@@ -242,24 +367,33 @@ float SceneIntersect( int checkModels )
 	objectCount++;
 	
 	
-	for (int i = 0; i < N_SPHERES; i++)
-        {
-		d = SphereIntersect( spheres[i].radius, spheres[i].position, rObjOrigin, rObjDirection );
-		if (d < t)
-		{
-			t = d;
+	d = SphereIntersect( spheres[0].radius, spheres[0].position, rObjOrigin, rObjDirection );
+	if (d < t)
+	{
+		t = d;
 
-			normal = (rObjOrigin + rObjDirection * t) - spheres[i].position;
-			hitNormal = transpose(mat3(uDoorObjectInvMatrix)) * normal;
-			hitEmission = spheres[i].emission;
-			hitColor = spheres[i].color;
-			hitType = spheres[i].type;
-			hitObjectID = float(objectCount);
-		}
-		objectCount++;
+		normal = (rObjOrigin + rObjDirection * t) - spheres[0].position;
+		hitNormal = transpose(mat3(uDoorObjectInvMatrix)) * normal;
+		hitEmission = spheres[0].emission;
+		hitColor = spheres[0].color;
+		hitType = spheres[0].type;
+		hitObjectID = float(objectCount);
 	}
+	objectCount++;
 
-	
+	d = SphereIntersect( spheres[1].radius, spheres[1].position, rObjOrigin, rObjDirection );
+	if (d < t)
+	{
+		t = d;
+
+		normal = (rObjOrigin + rObjDirection * t) - spheres[1].position;
+		hitNormal = transpose(mat3(uDoorObjectInvMatrix)) * normal;
+		hitEmission = spheres[1].emission;
+		hitColor = spheres[1].color;
+		hitType = spheres[1].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
 	
 
 	if (checkModels == FALSE)
