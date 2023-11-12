@@ -45,7 +45,7 @@ float SceneIntersect( )
 	
 	hitObjectID = -INFINITY;
 	
-        for (int i = 0; i < N_SPHERES; i++)
+        /* for (int i = 0; i < N_SPHERES; i++)
         {
 		d = SphereIntersect( spheres[i].radius, spheres[i].position, rayOrigin, rayDirection );
 		if (d < t)
@@ -59,7 +59,204 @@ float SceneIntersect( )
 			hitObjectID = float(objectCount);
 		}
 		objectCount++;
+	} */
+
+	// manually unroll the loop above - performs 2x faster on mobile!
+
+	d = SphereIntersect( spheres[0].radius, spheres[0].position, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (rayOrigin + rayDirection * t) - spheres[0].position;
+		hitEmission = spheres[0].emission;
+		hitColor = spheres[0].color;
+		hitRoughness = spheres[0].roughness;
+		hitType = spheres[0].type;
+		hitObjectID = float(objectCount);
 	}
+	objectCount++;
+
+	d = SphereIntersect( spheres[1].radius, spheres[1].position, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (rayOrigin + rayDirection * t) - spheres[1].position;
+		hitEmission = spheres[1].emission;
+		hitColor = spheres[1].color;
+		hitRoughness = spheres[1].roughness;
+		hitType = spheres[1].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = SphereIntersect( spheres[2].radius, spheres[2].position, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (rayOrigin + rayDirection * t) - spheres[2].position;
+		hitEmission = spheres[2].emission;
+		hitColor = spheres[2].color;
+		hitRoughness = spheres[2].roughness;
+		hitType = spheres[2].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = SphereIntersect( spheres[3].radius, spheres[3].position, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (rayOrigin + rayDirection * t) - spheres[3].position;
+		hitEmission = spheres[3].emission;
+		hitColor = spheres[3].color;
+		hitRoughness = spheres[3].roughness;
+		hitType = spheres[3].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = SphereIntersect( spheres[4].radius, spheres[4].position, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (rayOrigin + rayDirection * t) - spheres[4].position;
+		hitEmission = spheres[4].emission;
+		hitColor = spheres[4].color;
+		hitRoughness = spheres[4].roughness;
+		hitType = spheres[4].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = SphereIntersect( spheres[5].radius, spheres[5].position, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (rayOrigin + rayDirection * t) - spheres[5].position;
+		hitEmission = spheres[5].emission;
+		hitColor = spheres[5].color;
+		hitRoughness = spheres[5].roughness;
+		hitType = spheres[5].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = SphereIntersect( spheres[6].radius, spheres[6].position, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (rayOrigin + rayDirection * t) - spheres[6].position;
+		hitEmission = spheres[6].emission;
+		hitColor = spheres[6].color;
+		hitRoughness = spheres[6].roughness;
+		hitType = spheres[6].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = SphereIntersect( spheres[7].radius, spheres[7].position, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (rayOrigin + rayDirection * t) - spheres[7].position;
+		hitEmission = spheres[7].emission;
+		hitColor = spheres[7].color;
+		hitRoughness = spheres[7].roughness;
+		hitType = spheres[7].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = SphereIntersect( spheres[8].radius, spheres[8].position, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (rayOrigin + rayDirection * t) - spheres[8].position;
+		hitEmission = spheres[8].emission;
+		hitColor = spheres[8].color;
+		hitRoughness = spheres[8].roughness;
+		hitType = spheres[8].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = SphereIntersect( spheres[9].radius, spheres[9].position, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (rayOrigin + rayDirection * t) - spheres[9].position;
+		hitEmission = spheres[9].emission;
+		hitColor = spheres[9].color;
+		hitRoughness = spheres[9].roughness;
+		hitType = spheres[9].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = SphereIntersect( spheres[10].radius, spheres[10].position, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (rayOrigin + rayDirection * t) - spheres[10].position;
+		hitEmission = spheres[10].emission;
+		hitColor = spheres[10].color;
+		hitRoughness = spheres[10].roughness;
+		hitType = spheres[10].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = SphereIntersect( spheres[11].radius, spheres[11].position, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (rayOrigin + rayDirection * t) - spheres[11].position;
+		hitEmission = spheres[11].emission;
+		hitColor = spheres[11].color;
+		hitRoughness = spheres[11].roughness;
+		hitType = spheres[11].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = SphereIntersect( spheres[12].radius, spheres[12].position, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (rayOrigin + rayDirection * t) - spheres[12].position;
+		hitEmission = spheres[12].emission;
+		hitColor = spheres[12].color;
+		hitRoughness = spheres[12].roughness;
+		hitType = spheres[12].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = SphereIntersect( spheres[13].radius, spheres[13].position, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (rayOrigin + rayDirection * t) - spheres[13].position;
+		hitEmission = spheres[13].emission;
+		hitColor = spheres[13].color;
+		hitRoughness = spheres[13].roughness;
+		hitType = spheres[13].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = SphereIntersect( spheres[14].radius, spheres[14].position, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (rayOrigin + rayDirection * t) - spheres[14].position;
+		hitEmission = spheres[14].emission;
+		hitColor = spheres[14].color;
+		hitRoughness = spheres[14].roughness;
+		hitType = spheres[14].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
         
 	return t;
 	
