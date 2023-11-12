@@ -71,9 +71,8 @@ float SceneIntersect( )
 	
 	hitObjectID = -INFINITY;
 	
-	for (int i = 0; i < N_BOXES; i++)
+	/* for (int i = 0; i < N_BOXES; i++)
         {
-	
 		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, rayOrigin, rayDirection, n, isRayExiting );
 		if (d < t)
 		{
@@ -86,71 +85,353 @@ float SceneIntersect( )
 			hitObjectID = float(objectCount);
 		}
 		objectCount++;
-        }
+        } */
 
-	for (int i = 0; i < N_QUADS; i++)
-        {
-		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, rayOrigin, rayDirection, FALSE);
-		if (d < t)
-		{
-			t = d;
-			hitNormal = (quads[i].normal);
-			hitEmission = quads[i].emission;
-			hitColor = quads[i].color;
-			hitRoughness = quads[i].roughness;
-			hitType = quads[i].type;
-			hitObjectID = float(objectCount);
-		}
-		objectCount++;
+	// manually unroll the loop above - performs 2x faster on mobile!
+
+	d = BoxIntersect( boxes[0].minCorner, boxes[0].maxCorner, rayOrigin, rayDirection, n, isRayExiting );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = n;
+		hitEmission = boxes[0].emission;
+		hitColor = boxes[0].color;
+		hitRoughness = boxes[0].roughness;
+		hitType = boxes[0].type;
+		hitObjectID = float(objectCount);
 	}
-	
-	for (int i = 0; i < N_SPHERES; i++)
-        {
-		d = SphereIntersect( spheres[i].radius, spheres[i].position, rayOrigin, rayDirection );
-		if (d < t)
-		{
-			t = d;
-			hitNormal = (rayOrigin + rayDirection * t) - spheres[i].position;
-			hitEmission = spheres[i].emission;
-			hitColor = spheres[i].color;
-			hitRoughness = spheres[i].roughness;
-			hitType = spheres[i].type;
-			hitObjectID = float(objectCount);
-		}
-		objectCount++;
-        }
-	
-	for (int i = 0; i < N_ELLIPSOIDS; i++)
-        {
-		d = EllipsoidIntersect( ellipsoids[i].radii, ellipsoids[i].position, rayOrigin, rayDirection );
-		if (d < t)
-		{
-			t = d;
-			hitNormal = ((rayOrigin + rayDirection * t) - ellipsoids[i].position) / (ellipsoids[i].radii * ellipsoids[i].radii);
-			hitEmission = ellipsoids[i].emission;
-			hitColor = ellipsoids[i].color;
-			hitRoughness = ellipsoids[i].roughness;
-			hitType = ellipsoids[i].type;
-			hitObjectID = float(objectCount);
-		}
-		objectCount++;
+	objectCount++;
+
+	d = BoxIntersect( boxes[1].minCorner, boxes[1].maxCorner, rayOrigin, rayDirection, n, isRayExiting );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = n;
+		hitEmission = boxes[1].emission;
+		hitColor = boxes[1].color;
+		hitRoughness = boxes[1].roughness;
+		hitType = boxes[1].type;
+		hitObjectID = float(objectCount);
 	}
+	objectCount++;
+
+	d = BoxIntersect( boxes[2].minCorner, boxes[2].maxCorner, rayOrigin, rayDirection, n, isRayExiting );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = n;
+		hitEmission = boxes[2].emission;
+		hitColor = boxes[2].color;
+		hitRoughness = boxes[2].roughness;
+		hitType = boxes[2].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = BoxIntersect( boxes[3].minCorner, boxes[3].maxCorner, rayOrigin, rayDirection, n, isRayExiting );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = n;
+		hitEmission = boxes[3].emission;
+		hitColor = boxes[3].color;
+		hitRoughness = boxes[3].roughness;
+		hitType = boxes[3].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = BoxIntersect( boxes[4].minCorner, boxes[4].maxCorner, rayOrigin, rayDirection, n, isRayExiting );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = n;
+		hitEmission = boxes[4].emission;
+		hitColor = boxes[4].color;
+		hitRoughness = boxes[4].roughness;
+		hitType = boxes[4].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = BoxIntersect( boxes[5].minCorner, boxes[5].maxCorner, rayOrigin, rayDirection, n, isRayExiting );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = n;
+		hitEmission = boxes[5].emission;
+		hitColor = boxes[5].color;
+		hitRoughness = boxes[5].roughness;
+		hitType = boxes[5].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = BoxIntersect( boxes[6].minCorner, boxes[6].maxCorner, rayOrigin, rayDirection, n, isRayExiting );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = n;
+		hitEmission = boxes[6].emission;
+		hitColor = boxes[6].color;
+		hitRoughness = boxes[6].roughness;
+		hitType = boxes[6].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = BoxIntersect( boxes[7].minCorner, boxes[7].maxCorner, rayOrigin, rayDirection, n, isRayExiting );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = n;
+		hitEmission = boxes[7].emission;
+		hitColor = boxes[7].color;
+		hitRoughness = boxes[7].roughness;
+		hitType = boxes[7].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = BoxIntersect( boxes[8].minCorner, boxes[8].maxCorner, rayOrigin, rayDirection, n, isRayExiting );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = n;
+		hitEmission = boxes[8].emission;
+		hitColor = boxes[8].color;
+		hitRoughness = boxes[8].roughness;
+		hitType = boxes[8].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = BoxIntersect( boxes[9].minCorner, boxes[9].maxCorner, rayOrigin, rayDirection, n, isRayExiting );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = n;
+		hitEmission = boxes[9].emission;
+		hitColor = boxes[9].color;
+		hitRoughness = boxes[9].roughness;
+		hitType = boxes[9].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+
+	d = QuadIntersect( quads[0].v0, quads[0].v1, quads[0].v2, quads[0].v3, rayOrigin, rayDirection, FALSE);
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (quads[0].normal);
+		hitEmission = quads[0].emission;
+		hitColor = quads[0].color;
+		hitRoughness = quads[0].roughness;
+		hitType = quads[0].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = QuadIntersect( quads[1].v0, quads[1].v1, quads[1].v2, quads[1].v3, rayOrigin, rayDirection, FALSE);
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (quads[1].normal);
+		hitEmission = quads[1].emission;
+		hitColor = quads[1].color;
+		hitRoughness = quads[1].roughness;
+		hitType = quads[1].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = QuadIntersect( quads[2].v0, quads[2].v1, quads[2].v2, quads[2].v3, rayOrigin, rayDirection, FALSE);
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (quads[2].normal);
+		hitEmission = quads[2].emission;
+		hitColor = quads[2].color;
+		hitRoughness = quads[2].roughness;
+		hitType = quads[2].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = QuadIntersect( quads[3].v0, quads[3].v1, quads[3].v2, quads[3].v3, rayOrigin, rayDirection, FALSE);
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (quads[3].normal);
+		hitEmission = quads[3].emission;
+		hitColor = quads[3].color;
+		hitRoughness = quads[3].roughness;
+		hitType = quads[3].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = QuadIntersect( quads[4].v0, quads[4].v1, quads[4].v2, quads[4].v3, rayOrigin, rayDirection, FALSE);
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (quads[4].normal);
+		hitEmission = quads[4].emission;
+		hitColor = quads[4].color;
+		hitRoughness = quads[4].roughness;
+		hitType = quads[4].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = QuadIntersect( quads[5].v0, quads[5].v1, quads[5].v2, quads[5].v3, rayOrigin, rayDirection, FALSE);
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (quads[5].normal);
+		hitEmission = quads[5].emission;
+		hitColor = quads[5].color;
+		hitRoughness = quads[5].roughness;
+		hitType = quads[5].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
 	
-	for (int i = 0; i < N_CONES; i++)
-        {
-		d = ConeIntersect( cones[i].pos0, cones[i].radius0, cones[i].pos1, cones[i].radius1, rayOrigin, rayDirection, n );
-		if (d < t)
-		{
-			t = d;
-			hitNormal = n;
-			hitEmission = cones[i].emission;
-			hitColor = cones[i].color;
-			hitRoughness = cones[i].roughness;
-			hitType = cones[i].type;
-			hitObjectID = float(objectCount);
-		}
-		objectCount++;
-        }
+
+	d = SphereIntersect( spheres[0].radius, spheres[0].position, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (rayOrigin + rayDirection * t) - spheres[0].position;
+		hitEmission = spheres[0].emission;
+		hitColor = spheres[0].color;
+		hitRoughness = spheres[0].roughness;
+		hitType = spheres[0].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = SphereIntersect( spheres[1].radius, spheres[1].position, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (rayOrigin + rayDirection * t) - spheres[1].position;
+		hitEmission = spheres[1].emission;
+		hitColor = spheres[1].color;
+		hitRoughness = spheres[1].roughness;
+		hitType = spheres[1].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = SphereIntersect( spheres[2].radius, spheres[2].position, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (rayOrigin + rayDirection * t) - spheres[2].position;
+		hitEmission = spheres[2].emission;
+		hitColor = spheres[2].color;
+		hitRoughness = spheres[2].roughness;
+		hitType = spheres[2].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	
+
+	d = EllipsoidIntersect( ellipsoids[0].radii, ellipsoids[0].position, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = ((rayOrigin + rayDirection * t) - ellipsoids[0].position) / (ellipsoids[0].radii * ellipsoids[0].radii);
+		hitEmission = ellipsoids[0].emission;
+		hitColor = ellipsoids[0].color;
+		hitRoughness = ellipsoids[0].roughness;
+		hitType = ellipsoids[0].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = EllipsoidIntersect( ellipsoids[1].radii, ellipsoids[1].position, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = ((rayOrigin + rayDirection * t) - ellipsoids[1].position) / (ellipsoids[1].radii * ellipsoids[1].radii);
+		hitEmission = ellipsoids[1].emission;
+		hitColor = ellipsoids[1].color;
+		hitRoughness = ellipsoids[1].roughness;
+		hitType = ellipsoids[1].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+	
+
+	d = ConeIntersect( cones[0].pos0, cones[0].radius0, cones[0].pos1, cones[0].radius1, rayOrigin, rayDirection, n );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = n;
+		hitEmission = cones[0].emission;
+		hitColor = cones[0].color;
+		hitRoughness = cones[0].roughness;
+		hitType = cones[0].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = ConeIntersect( cones[1].pos0, cones[1].radius0, cones[1].pos1, cones[1].radius1, rayOrigin, rayDirection, n );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = n;
+		hitEmission = cones[1].emission;
+		hitColor = cones[1].color;
+		hitRoughness = cones[1].roughness;
+		hitType = cones[1].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = ConeIntersect( cones[2].pos0, cones[2].radius0, cones[2].pos1, cones[2].radius1, rayOrigin, rayDirection, n );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = n;
+		hitEmission = cones[2].emission;
+		hitColor = cones[2].color;
+		hitRoughness = cones[2].roughness;
+		hitType = cones[2].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = ConeIntersect( cones[3].pos0, cones[3].radius0, cones[3].pos1, cones[3].radius1, rayOrigin, rayDirection, n );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = n;
+		hitEmission = cones[3].emission;
+		hitColor = cones[3].color;
+		hitRoughness = cones[3].roughness;
+		hitType = cones[3].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = ConeIntersect( cones[4].pos0, cones[4].radius0, cones[4].pos1, cones[4].radius1, rayOrigin, rayDirection, n );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = n;
+		hitEmission = cones[4].emission;
+		hitColor = cones[4].color;
+		hitRoughness = cones[4].roughness;
+		hitType = cones[4].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
 
 
 	return t;
