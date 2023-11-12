@@ -104,38 +104,73 @@ float SceneIntersect()
 	objectCount++;
 	
 	// LAMP BASE AND FLOOR LAMP BULB
-	for (int i = 0; i < N_SPHERES - 1; i++)
-        {
-		d = SphereIntersect( spheres[i].radius, spheres[i].position, rayOrigin, rayDirection );
-		if (d < t)
-		{
-			t = d;
-			hitNormal = (rayOrigin + rayDirection * t) - spheres[i].position;
-			hitEmission = spheres[i].emission;
-			hitColor = spheres[i].color;
-			hitRoughness = spheres[i].roughness;
-			hitType = spheres[i].type;
-			hitObjectID = float(objectCount);
-		}
-		objectCount++;
-        }
+	d = SphereIntersect( spheres[0].radius, spheres[0].position, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (rayOrigin + rayDirection * t) - spheres[0].position;
+		hitEmission = spheres[0].emission;
+		hitColor = spheres[0].color;
+		hitRoughness = spheres[0].roughness;
+		hitType = spheres[0].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = SphereIntersect( spheres[1].radius, spheres[1].position, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (rayOrigin + rayDirection * t) - spheres[1].position;
+		hitEmission = spheres[1].emission;
+		hitColor = spheres[1].color;
+		hitRoughness = spheres[1].roughness;
+		hitType = spheres[1].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = SphereIntersect( spheres[2].radius, spheres[2].position, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (rayOrigin + rayDirection * t) - spheres[2].position;
+		hitEmission = spheres[2].emission;
+		hitColor = spheres[2].color;
+		hitRoughness = spheres[2].roughness;
+		hitType = spheres[2].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = SphereIntersect( spheres[3].radius, spheres[3].position, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (rayOrigin + rayDirection * t) - spheres[3].position;
+		hitEmission = spheres[3].emission;
+		hitColor = spheres[3].color;
+		hitRoughness = spheres[3].roughness;
+		hitType = spheres[3].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
 	
 	// LIGHT DISK OF SPOTLIGHT AND SPOTLIGHT CASE DISK BACKING
-	for (int i = 0; i < N_DISKS; i++)
-        {
-		d = DiskIntersect( disks[i].radius, disks[i].pos, disks[i].normal, rayOrigin, rayDirection );
-		if (d < t)
-		{
-			t = d;
-			hitNormal = disks[i].normal;
-			hitEmission = disks[i].emission;
-			hitColor = disks[i].color;
-			hitRoughness = disks[i].roughness;
-			hitType = disks[i].type;
-			hitObjectID = float(objectCount);
-		}
-		objectCount++;
+	
+	d = DiskIntersect( disks[0].radius, disks[0].pos, disks[0].normal, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = disks[0].normal;
+		hitEmission = disks[0].emission;
+		hitColor = disks[0].color;
+		hitRoughness = disks[0].roughness;
+		hitType = disks[0].type;
+		hitObjectID = float(objectCount);
 	}
+	objectCount++;
+	
 	
 	// LAMP SHADE
 	d = ConeIntersect( cones[0].pos0, cones[0].radius0, cones[0].pos1, cones[0].radius1, rayOrigin, rayDirection, normal );
@@ -187,21 +222,83 @@ float SceneIntersect()
 	}
 
 	// TABLE LEGS, LAMP POST, and SPOTLIGHT CASING
-	for (int i = 0; i < N_OPENCYLINDERS; i++)
-        {
-		d = OpenCylinderIntersect( openCylinders[i].pos1, openCylinders[i].pos2, openCylinders[i].radius, rayOrigin, rayDirection, normal );
-		if (d < t)
-		{
-			t = d;
-			hitNormal = normal;
-			hitEmission = openCylinders[i].emission;
-			hitColor = openCylinders[i].color;
-			hitRoughness = openCylinders[i].roughness;
-			hitType = openCylinders[i].type;
-			hitObjectID = float(objectCount);
-		}
-		objectCount++;
-        }
+	d = OpenCylinderIntersect( openCylinders[0].pos1, openCylinders[0].pos2, openCylinders[0].radius, rayOrigin, rayDirection, normal );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = normal;
+		hitEmission = openCylinders[0].emission;
+		hitColor = openCylinders[0].color;
+		hitRoughness = openCylinders[0].roughness;
+		hitType = openCylinders[0].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = OpenCylinderIntersect( openCylinders[1].pos1, openCylinders[1].pos2, openCylinders[1].radius, rayOrigin, rayDirection, normal );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = normal;
+		hitEmission = openCylinders[1].emission;
+		hitColor = openCylinders[1].color;
+		hitRoughness = openCylinders[1].roughness;
+		hitType = openCylinders[1].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = OpenCylinderIntersect( openCylinders[2].pos1, openCylinders[2].pos2, openCylinders[2].radius, rayOrigin, rayDirection, normal );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = normal;
+		hitEmission = openCylinders[2].emission;
+		hitColor = openCylinders[2].color;
+		hitRoughness = openCylinders[2].roughness;
+		hitType = openCylinders[2].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = OpenCylinderIntersect( openCylinders[3].pos1, openCylinders[3].pos2, openCylinders[3].radius, rayOrigin, rayDirection, normal );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = normal;
+		hitEmission = openCylinders[3].emission;
+		hitColor = openCylinders[3].color;
+		hitRoughness = openCylinders[3].roughness;
+		hitType = openCylinders[3].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = OpenCylinderIntersect( openCylinders[4].pos1, openCylinders[4].pos2, openCylinders[4].radius, rayOrigin, rayDirection, normal );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = normal;
+		hitEmission = openCylinders[4].emission;
+		hitColor = openCylinders[4].color;
+		hitRoughness = openCylinders[4].roughness;
+		hitType = openCylinders[4].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = OpenCylinderIntersect( openCylinders[5].pos1, openCylinders[5].pos2, openCylinders[5].radius, rayOrigin, rayDirection, normal );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = normal;
+		hitEmission = openCylinders[5].emission;
+		hitColor = openCylinders[5].color;
+		hitRoughness = openCylinders[5].roughness;
+		hitType = openCylinders[5].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
 	
 	
 	return t;
