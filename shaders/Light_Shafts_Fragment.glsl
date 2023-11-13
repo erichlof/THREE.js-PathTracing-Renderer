@@ -141,35 +141,55 @@ float SceneIntersect( vec3 rOrigin, vec3 rDirection, out vec3 hitNormal, out vec
 	}
 	objectCount++;
 
-	for (int i = 0; i < N_SPHERES; i++)
+
+	d = SphereIntersect( spheres[0].radius, spheres[0].position, rOrigin, rDirection );
+	if (d < t)
 	{
-		d = SphereIntersect( spheres[i].radius, spheres[i].position, rOrigin, rDirection );
-		if (d < t)
-		{
-			t = d;
-			hitNormal = (rOrigin + rDirection * t) - spheres[i].position;
-			hitEmission = spheres[i].emission;
-			hitColor = spheres[i].color;
-			hitType = spheres[i].type;
-			hitObjectID = float(objectCount);
-		}
-		objectCount++;
+		t = d;
+		hitNormal = (rOrigin + rDirection * t) - spheres[0].position;
+		hitEmission = spheres[0].emission;
+		hitColor = spheres[0].color;
+		hitType = spheres[0].type;
+		hitObjectID = float(objectCount);
 	}
-	
-	for (int i = 0; i < N_QUADS; i++)
+	objectCount++;
+
+	d = SphereIntersect( spheres[1].radius, spheres[1].position, rOrigin, rDirection );
+	if (d < t)
 	{
-		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, rOrigin, rDirection, TRUE );
-		if (d < t)
-		{
-			t = d;
-			hitNormal = quads[i].normal;
-			hitEmission = quads[i].emission;
-			hitColor = quads[i].color;
-			hitType = quads[i].type;
-			hitObjectID = float(objectCount);
-		}
-		objectCount++;
+		t = d;
+		hitNormal = (rOrigin + rDirection * t) - spheres[1].position;
+		hitEmission = spheres[1].emission;
+		hitColor = spheres[1].color;
+		hitType = spheres[1].type;
+		hitObjectID = float(objectCount);
 	}
+	objectCount++;
+
+
+	d = QuadIntersect( quads[0].v0, quads[0].v1, quads[0].v2, quads[0].v3, rOrigin, rDirection, TRUE );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = quads[0].normal;
+		hitEmission = quads[0].emission;
+		hitColor = quads[0].color;
+		hitType = quads[0].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = QuadIntersect( quads[1].v0, quads[1].v1, quads[1].v2, quads[1].v3, rOrigin, rDirection, TRUE );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = quads[1].normal;
+		hitEmission = quads[1].emission;
+		hitColor = quads[1].color;
+		hitType = quads[1].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
 	
 	
 	return t;
