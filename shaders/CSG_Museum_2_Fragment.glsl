@@ -813,51 +813,104 @@ float SceneIntersect( )
 	}
 	objectCount++;
 
-	for (int i = 0; i < N_QUADS; i++)
-        {
-		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, rayOrigin, rayDirection, FALSE);
-		if (d < t)
-		{
-			t = d;
-			hitNormal = (quads[i].normal);
-			hitEmission = quads[i].emission;
-			hitColor = quads[i].color;
-			hitType = quads[i].type;
-			hitObjectID = float(objectCount);
-		}
-		objectCount++;
+
+	d = QuadIntersect( quads[0].v0, quads[0].v1, quads[0].v2, quads[0].v3, rayOrigin, rayDirection, TRUE );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (quads[0].normal);
+		hitEmission = quads[0].emission;
+		hitColor = quads[0].color;
+		hitType = quads[0].type;
+		hitObjectID = float(objectCount);
 	}
+	objectCount++;
+
+	d = QuadIntersect( quads[1].v0, quads[1].v1, quads[1].v2, quads[1].v3, rayOrigin, rayDirection, TRUE );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (quads[1].normal);
+		hitEmission = quads[1].emission;
+		hitColor = quads[1].color;
+		hitType = quads[1].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
         
-	for (int i = 0; i < N_BOXES; i++)
-        {
+	d = BoxIntersect( boxes[0].minCorner, boxes[0].maxCorner, rayOrigin, rayDirection, n, isRayExiting );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = n;
+		hitEmission = boxes[0].emission;
+		hitColor = boxes[0].color;
+		hitType = boxes[0].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = BoxIntersect( boxes[1].minCorner, boxes[1].maxCorner, rayOrigin, rayDirection, n, isRayExiting );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = n;
+		hitEmission = boxes[1].emission;
+		hitColor = boxes[1].color;
+		hitType = boxes[1].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = BoxIntersect( boxes[2].minCorner, boxes[2].maxCorner, rayOrigin, rayDirection, n, isRayExiting );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = n;
+		hitEmission = boxes[2].emission;
+		hitColor = boxes[2].color;
+		hitType = boxes[2].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
 	
-		d = BoxIntersect( boxes[i].minCorner, boxes[i].maxCorner, rayOrigin, rayDirection, n, isRayExiting );
-		if (d < t)
-		{
-			t = d;
-			hitNormal = n;
-			hitEmission = boxes[i].emission;
-			hitColor = boxes[i].color;
-			hitType = boxes[i].type;
-			hitObjectID = float(objectCount);
-		}
-		objectCount++;
-        }
-	
-	for (int i = 0; i < N_DISKS; i++)
-        {
-		d = DiskIntersect( disks[i].radius, disks[i].pos, disks[i].normal, rayOrigin, rayDirection );
-		if (d < t)
-		{
-			t = d;
-			hitNormal = disks[i].normal;
-			hitEmission = disks[i].emission;
-			hitColor = disks[i].color;
-			hitType = disks[i].type;
-			hitObjectID = float(objectCount);
-		}
-		objectCount++;
-        }
+
+	d = DiskIntersect( disks[0].radius, disks[0].pos, disks[0].normal, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = disks[0].normal;
+		hitEmission = disks[0].emission;
+		hitColor = disks[0].color;
+		hitType = disks[0].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = DiskIntersect( disks[1].radius, disks[1].pos, disks[1].normal, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = disks[1].normal;
+		hitEmission = disks[1].emission;
+		hitColor = disks[1].color;
+		hitType = disks[1].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = DiskIntersect( disks[2].radius, disks[2].pos, disks[2].normal, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = disks[2].normal;
+		hitEmission = disks[2].emission;
+		hitColor = disks[2].color;
+		hitType = disks[2].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
 	
 	
 	// now intersect all CSG objects
