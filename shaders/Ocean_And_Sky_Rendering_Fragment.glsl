@@ -357,20 +357,53 @@ float SceneIntersect( int checkOcean )
 	objectCount++;
 	
 
-	for (int i = 0; i < N_QUADS; i++)
-        {
-		d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, rayOrigin, rayDirection, TRUE );
-		if (d < t)
-		{
-			t = d;
-			hitNormal = quads[i].normal;
-			hitEmission = quads[i].emission;
-			hitColor = quads[i].color;
-			hitType = quads[i].type;
-			hitObjectID = float(objectCount);
-		}
-		objectCount++;
-        }
+	d = QuadIntersect( quads[0].v0, quads[0].v1, quads[0].v2, quads[0].v3, rayOrigin, rayDirection, TRUE );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = quads[0].normal;
+		hitEmission = quads[0].emission;
+		hitColor = quads[0].color;
+		hitType = quads[0].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = QuadIntersect( quads[1].v0, quads[1].v1, quads[1].v2, quads[1].v3, rayOrigin, rayDirection, TRUE );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = quads[1].normal;
+		hitEmission = quads[1].emission;
+		hitColor = quads[1].color;
+		hitType = quads[1].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = QuadIntersect( quads[2].v0, quads[2].v1, quads[2].v2, quads[2].v3, rayOrigin, rayDirection, TRUE );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = quads[2].normal;
+		hitEmission = quads[2].emission;
+		hitColor = quads[2].color;
+		hitType = quads[2].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = QuadIntersect( quads[3].v0, quads[3].v1, quads[3].v2, quads[3].v3, rayOrigin, rayDirection, TRUE );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = quads[3].normal;
+		hitEmission = quads[3].emission;
+		hitColor = quads[3].color;
+		hitType = quads[3].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
 
 	
 	// TALL MIRROR BOX
