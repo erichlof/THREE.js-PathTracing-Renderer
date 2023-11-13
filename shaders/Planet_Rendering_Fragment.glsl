@@ -395,20 +395,29 @@ float SceneIntersect( int checkWater )
 	vec3 hitPos;
 	vec3 normal;
 
-	// sun and moon
-	for (int i = 0; i < N_SPHERES; i++)
-        {
-		// Sun and Moon Spheres
-		d = SphereIntersect( spheres[i].radius, spheres[i].position, rayOrigin, rayDirection );
-		if (d < t)
-		{
-			t = d;
-			hitNormal = (rayOrigin + rayDirection * t) - spheres[i].position;
-			hitEmission = spheres[i].emission;
-			hitColor = spheres[i].color;
-			hitType = spheres[i].type;
-		}
+
+	// Sun and Moon Spheres
+	d = SphereIntersect( spheres[0].radius, spheres[0].position, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (rayOrigin + rayDirection * t) - spheres[0].position;
+		hitEmission = spheres[0].emission;
+		hitColor = spheres[0].color;
+		hitType = spheres[0].type;
 	}
+
+	d = SphereIntersect( spheres[1].radius, spheres[1].position, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (rayOrigin + rayDirection * t) - spheres[1].position;
+		hitEmission = spheres[1].emission;
+		hitColor = spheres[1].color;
+		hitType = spheres[1].type;
+	}
+
+
 
 	d = SphereIntersect(EARTH_RADIUS, vec3(0), rayOrigin, rayDirection);
 	if (d < INFINITY)
