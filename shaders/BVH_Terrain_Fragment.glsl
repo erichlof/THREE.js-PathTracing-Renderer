@@ -96,20 +96,17 @@ float SceneIntersect( )
 	int triangleLookupNeeded = FALSE;
 
 
-	for (int i = 0; i < N_SPHERES; i++)
-        {
-		d = SphereIntersect( spheres[i].radius, spheres[i].position, rayOrigin, rayDirection );
-		if (d < t)
-		{
-			t = d;
-			hitNormal = (rayOrigin + rayDirection * t) - spheres[i].position;
-			hitEmission = spheres[i].emission;
-			hitColor = spheres[i].color;
-			hitType = spheres[i].type;
-			hitObjectID = 0.0;//float(objectCount);
-		}
-		objectCount++;
+	d = SphereIntersect( spheres[0].radius, spheres[0].position, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (rayOrigin + rayDirection * t) - spheres[0].position;
+		hitEmission = spheres[0].emission;
+		hitColor = spheres[0].color;
+		hitType = spheres[0].type;
+		hitObjectID = 0.0;//float(objectCount);
 	}
+	objectCount++;
 	
 	
 	GetBoxNodeData(stackptr, currentBoxNodeData0, currentBoxNodeData1);
