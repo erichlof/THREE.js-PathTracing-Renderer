@@ -40,21 +40,39 @@ float SceneIntersect( vec3 rOrigin, vec3 rDirection, out vec3 hitNormal, out vec
 	
 	hitObjectID = -INFINITY;
 
-	
-        for (int i = 0; i < N_SPHERES; i++)
-        {
-		d = SphereIntersect( spheres[i].radius, spheres[i].position, rOrigin, rDirection );
-		if (d < t)
-		{
-			t = d;
-			hitNormal = (rOrigin + rDirection * t) - spheres[i].position;
-			hitEmission = spheres[i].emission;
-			hitColor = spheres[i].color;
-			hitType = spheres[i].type;
-			hitObjectID = float(objectCount);
-		}
-		objectCount++;
-        }
+
+	d = SphereIntersect( spheres[0].radius, spheres[0].position, rOrigin, rDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (rOrigin + rDirection * t) - spheres[0].position;
+		hitEmission = spheres[0].emission;
+		hitColor = spheres[0].color;
+		hitType = spheres[0].type;
+		hitObjectID = float(objectCount);
+	}
+
+	d = SphereIntersect( spheres[1].radius, spheres[1].position, rOrigin, rDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (rOrigin + rDirection * t) - spheres[1].position;
+		hitEmission = spheres[1].emission;
+		hitColor = spheres[1].color;
+		hitType = spheres[1].type;
+		hitObjectID = float(objectCount);
+	}
+
+	d = SphereIntersect( spheres[2].radius, spheres[2].position, rOrigin, rDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (rOrigin + rDirection * t) - spheres[2].position;
+		hitEmission = spheres[2].emission;
+		hitColor = spheres[2].color;
+		hitType = spheres[2].type;
+		hitObjectID = float(objectCount);
+	}
 	
 	d = BoxInteriorIntersect( boxes[0].minCorner, boxes[0].maxCorner, rayOrigin, rayDirection, n );
 	if (d < t && n != vec3(0,0,-1) && n != vec3(0,1,0) && n != vec3(0,-1,0))
