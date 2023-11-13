@@ -90,22 +90,32 @@ float SceneIntersect( )
 	}
 	objectCount++;
 
-
-	for (int i = 0; i < N_SPHERES; i++)
-        {
-		d = SphereIntersect( spheres[i].radius, spheres[i].position, rayOrigin, rayDirection );
-		if (d < t)
-		{
-			t = d;
-			hitNormal = (rayOrigin + rayDirection * t) - spheres[i].position;
-			hitEmission = spheres[i].emission;
-			hitColor = spheres[i].color;
-                        hitType = spheres[i].type;
-			hitObjectID = float(objectCount);
-		}
-		objectCount++;
-        }
 	
+	d = SphereIntersect( spheres[0].radius, spheres[0].position, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (rayOrigin + rayDirection * t) - spheres[0].position;
+		hitEmission = spheres[0].emission;
+		hitColor = spheres[0].color;
+		hitType = spheres[0].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = SphereIntersect( spheres[1].radius, spheres[1].position, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (rayOrigin + rayDirection * t) - spheres[1].position;
+		hitEmission = spheres[1].emission;
+		hitColor = spheres[1].color;
+		hitType = spheres[1].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+
 	return t;
 } // end float SceneIntersect( )
 
