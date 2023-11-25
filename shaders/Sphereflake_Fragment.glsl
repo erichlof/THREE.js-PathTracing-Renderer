@@ -99,29 +99,6 @@ float SceneIntersect( out int isRayExiting )
 	int shapeLookupNeeded = FALSE;
 
 	
-	d = QuadIntersect( quads[0].v0, quads[0].v1, quads[0].v2, quads[0].v3, rayOrigin, rayDirection, FALSE );
-	if (d < t)
-	{
-		t = d;
-		hitNormal = quads[0].normal;
-		hitColor = quads[0].color;
-		hitType = quads[0].type;
-		hitObjectID = float(objectCount);
-	}
-	objectCount++;
-	
-	d = BoxIntersect(boxes[0].minCorner, boxes[0].maxCorner, rayOrigin, rayDirection, n, isRayExiting);
-	if (d < t)
-	{
-		t = d;
-		hitNormal = n;
-		hitColor = vec3(1);
-		hitType = DIFF;
-		hitObjectID = float(objectCount);
-	}
-	objectCount++;
-
-
 
 	GetBoxNodeData(stackptr, currentBoxNodeData0, currentBoxNodeData1);
 	currentStackData = vec2(stackptr, BoundingBoxIntersect(currentBoxNodeData0.yzw, currentBoxNodeData1.yzw, rayOrigin, inverseDir));
@@ -214,7 +191,7 @@ float SceneIntersect( out int isRayExiting )
 		 			   texelFetch(tShape_DataTexture, uv2, 0), 
 		 			   texelFetch(tShape_DataTexture, uv3, 0) );
 
-		sd4 = texelFetch(tShape_DataTexture, uv4, 0);
+		//sd4 = texelFetch(tShape_DataTexture, uv4, 0);
 
 		// transform ray into shape's object space
 		rObjOrigin = vec3( invTransformMatrix * vec4(rayOrigin, 1.0) );
@@ -258,6 +235,30 @@ float SceneIntersect( out int isRayExiting )
 		hitColor = sd5.rgb;
 		//hitUV =
 		hitType = (uMaterialType == 1000) ? int(sd4.y) : uMaterialType;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+
+
+	d = QuadIntersect( quads[0].v0, quads[0].v1, quads[0].v2, quads[0].v3, rayOrigin, rayDirection, FALSE );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = quads[0].normal;
+		hitColor = quads[0].color;
+		hitType = quads[0].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+	
+	d = BoxIntersect(boxes[0].minCorner, boxes[0].maxCorner, rayOrigin, rayDirection, n, isRayExiting);
+	if (d < t)
+	{
+		t = d;
+		hitNormal = n;
+		hitColor = vec3(1);
+		hitType = DIFF;
 		hitObjectID = float(objectCount);
 	}
 	
