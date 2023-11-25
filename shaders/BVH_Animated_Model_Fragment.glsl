@@ -125,6 +125,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out int isRayExiting )
 	vec3 inverseDir = 1.0 / rayDirection;
 	vec3 normal;
 	vec3 hitPos, toLightBulb;
+	vec3 rObjOrigin, rObjDirection;
 
 	vec2 currentStackData, stackDataA, stackDataB, tmpStackData;
 	ivec2 uv0, uv1, uv2, uv3, uv4, uv5, uv6, uv7;
@@ -144,6 +145,149 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out int isRayExiting )
 
 	int skip = FALSE;
 	int triangleLookupNeeded = FALSE;
+
+
+
+	// transform ray into GLTF_Model's object space
+	rObjOrigin = vec3( uGLTF_Model_InvMatrix * vec4(rayOrigin, 1.0) );
+	rObjDirection = vec3( uGLTF_Model_InvMatrix * vec4(rayDirection, 0.0) );
+	inverseDir = 1.0 / rObjDirection;
+	
+
+	GetBoxNodeData(stackptr, currentBoxNodeData0, currentBoxNodeData1);
+	currentStackData = vec2(stackptr, BoundingBoxIntersect(currentBoxNodeData0.yzw, currentBoxNodeData1.yzw, rObjOrigin, inverseDir));
+	stackLevels[0] = currentStackData;
+	skip = (currentStackData.y < t) ? TRUE : FALSE;
+
+	while (true)
+        {
+		if (skip == FALSE) 
+                {
+                        // decrease pointer by 1 (0.0 is root level, 27.0 is maximum depth)
+                        if (--stackptr < 0.0) // went past the root level, terminate loop
+                                break;
+
+                        currentStackData = stackLevels[int(stackptr)];
+			
+			if (currentStackData.y >= t)
+				continue;
+			
+			GetBoxNodeData(currentStackData.x, currentBoxNodeData0, currentBoxNodeData1);
+                }
+		skip = FALSE; // reset skip
+		
+
+		if (currentBoxNodeData0.x < 0.0) // < 0.0 signifies an inner node
+		{
+			GetBoxNodeData(currentStackData.x + 1.0, nodeAData0, nodeAData1);
+			GetBoxNodeData(currentBoxNodeData1.x, nodeBData0, nodeBData1);
+			stackDataA = vec2(currentStackData.x + 1.0, BoundingBoxIntersect(nodeAData0.yzw, nodeAData1.yzw, rObjOrigin, inverseDir));
+			stackDataB = vec2(currentBoxNodeData1.x, BoundingBoxIntersect(nodeBData0.yzw, nodeBData1.yzw, rObjOrigin, inverseDir));
+			
+			// first sort the branch node data so that 'a' is the smallest
+			if (stackDataB.y < stackDataA.y)
+			{
+				tmpStackData = stackDataB;
+				stackDataB = stackDataA;
+				stackDataA = tmpStackData;
+
+				tmpNodeData0 = nodeBData0;   tmpNodeData1 = nodeBData1;
+				nodeBData0   = nodeAData0;   nodeBData1   = nodeAData1;
+				nodeAData0   = tmpNodeData0; nodeAData1   = tmpNodeData1;
+			} // branch 'b' now has the larger rayT value of 'a' and 'b'
+
+			if (stackDataB.y < t) // see if branch 'b' (the larger rayT) needs to be processed
+			{
+				currentStackData = stackDataB;
+				currentBoxNodeData0 = nodeBData0;
+				currentBoxNodeData1 = nodeBData1;
+				skip = TRUE; // this will prevent the stackptr from decreasing by 1
+			}
+			if (stackDataA.y < t) // see if branch 'a' (the smaller rayT) needs to be processed 
+			{
+				if (skip == TRUE) // if larger branch 'b' needed to be processed also,
+					stackLevels[int(stackptr++)] = stackDataB; // cue larger branch 'b' for future round
+							// also, increase pointer by 1
+				
+				currentStackData = stackDataA;
+				currentBoxNodeData0 = nodeAData0; 
+				currentBoxNodeData1 = nodeAData1;
+				skip = TRUE; // this will prevent the stackptr from decreasing by 1
+			}
+
+			continue;
+		} // end if (currentBoxNodeData0.x < 0.0) // inner node
+
+
+		// else this is a leaf
+
+		// each triangle's data is encoded in 8 rgba(or xyzw) texture slots
+		id = 8.0 * currentBoxNodeData0.x;
+
+		uv0 = ivec2( mod(id + 0.0, 2048.0), (id + 0.0) * INV_TEXTURE_WIDTH );
+		uv1 = ivec2( mod(id + 1.0, 2048.0), (id + 1.0) * INV_TEXTURE_WIDTH );
+		uv2 = ivec2( mod(id + 2.0, 2048.0), (id + 2.0) * INV_TEXTURE_WIDTH );
+		
+		vd0 = texelFetch(tTriangleTexture, uv0, 0);
+		vd1 = texelFetch(tTriangleTexture, uv1, 0);
+		vd2 = texelFetch(tTriangleTexture, uv2, 0);
+
+		d = BVH_TriangleIntersect( vec3(vd0.xyz), vec3(vd0.w, vd1.xy), vec3(vd1.zw, vd2.x), rObjOrigin, rObjDirection, tu, tv );
+
+		if (d < t)
+		{
+			t = d;
+			triangleID = id;
+			triangleU = tu;
+			triangleV = tv;
+			triangleLookupNeeded = TRUE;
+		}
+	      
+        } // end while (TRUE)
+
+
+	if (triangleLookupNeeded == TRUE)
+	{
+		uv0 = ivec2( mod(triangleID + 0.0, 2048.0), (triangleID + 0.0) * INV_TEXTURE_WIDTH );
+		uv1 = ivec2( mod(triangleID + 1.0, 2048.0), (triangleID + 1.0) * INV_TEXTURE_WIDTH );
+		uv2 = ivec2( mod(triangleID + 2.0, 2048.0), (triangleID + 2.0) * INV_TEXTURE_WIDTH );
+		uv3 = ivec2( mod(triangleID + 3.0, 2048.0), (triangleID + 3.0) * INV_TEXTURE_WIDTH );
+		uv4 = ivec2( mod(triangleID + 4.0, 2048.0), (triangleID + 4.0) * INV_TEXTURE_WIDTH );
+		uv5 = ivec2( mod(triangleID + 5.0, 2048.0), (triangleID + 5.0) * INV_TEXTURE_WIDTH );
+		uv6 = ivec2( mod(triangleID + 6.0, 2048.0), (triangleID + 6.0) * INV_TEXTURE_WIDTH );
+		uv7 = ivec2( mod(triangleID + 7.0, 2048.0), (triangleID + 7.0) * INV_TEXTURE_WIDTH );
+		
+		vd0 = texelFetch(tTriangleTexture, uv0, 0);
+		vd1 = texelFetch(tTriangleTexture, uv1, 0);
+		vd2 = texelFetch(tTriangleTexture, uv2, 0);
+		vd3 = texelFetch(tTriangleTexture, uv3, 0);
+		vd4 = texelFetch(tTriangleTexture, uv4, 0);
+		vd5 = texelFetch(tTriangleTexture, uv5, 0);
+		vd6 = texelFetch(tTriangleTexture, uv6, 0);
+		vd7 = texelFetch(tTriangleTexture, uv7, 0);	      
+
+		// face normal for flat-shaded polygon look
+		//hitNormal = normalize( cross(vec3(vd0.w, vd1.xy) - vec3(vd0.xyz), vec3(vd1.zw, vd2.x) - vec3(vd0.xyz)) );
+		
+		// interpolated normal using triangle intersection's uv's
+		triangleW = 1.0 - triangleU - triangleV;
+		hitUV = triangleW * vec2(vd4.zw) + triangleU * vec2(vd5.xy) + triangleV * vec2(vd5.zw);
+		normal = normalize(triangleW * vec3(vd2.yzw) + triangleU * vec3(vd3.xyz) + triangleV * vec3(vd3.w, vd4.xy));
+		
+		normal = perturbNormal(normal, vec2(1.0, 1.0), hitUV);
+
+		// transform normal back into world space
+		hitNormal = transpose(mat3(uGLTF_Model_InvMatrix)) * normal;
+		hitEmission = vec3(1, 0, 1); // use this if intersec.type will be LIGHT
+		hitColor = vd6.yzw;
+		
+		//hitType = int(vd6.x);
+		hitType = PBR_MATERIAL;
+                hitTextureID = int(vd7.x);
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
 
 
 	d = SphereIntersect( spheres[0].radius, spheres[0].position, rayOrigin, rayDirection );
@@ -254,147 +398,7 @@ float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out int isRayExiting )
 		hitObjectID = float(objectCount); // same as spotlight disk backing above
 	}
 
-	objectCount++;
-
-	// transform ray into GLTF_Model's object space
-	rayOrigin = vec3( uGLTF_Model_InvMatrix * vec4(rayOrigin, 1.0) );
-	rayDirection = vec3( uGLTF_Model_InvMatrix * vec4(rayDirection, 0.0) );
-	inverseDir = 1.0 / rayDirection;
 	
-
-	GetBoxNodeData(stackptr, currentBoxNodeData0, currentBoxNodeData1);
-	currentStackData = vec2(stackptr, BoundingBoxIntersect(currentBoxNodeData0.yzw, currentBoxNodeData1.yzw, rayOrigin, inverseDir));
-	stackLevels[0] = currentStackData;
-	skip = (currentStackData.y < t) ? TRUE : FALSE;
-
-	while (true)
-        {
-		if (skip == FALSE) 
-                {
-                        // decrease pointer by 1 (0.0 is root level, 27.0 is maximum depth)
-                        if (--stackptr < 0.0) // went past the root level, terminate loop
-                                break;
-
-                        currentStackData = stackLevels[int(stackptr)];
-			
-			if (currentStackData.y >= t)
-				continue;
-			
-			GetBoxNodeData(currentStackData.x, currentBoxNodeData0, currentBoxNodeData1);
-                }
-		skip = FALSE; // reset skip
-		
-
-		if (currentBoxNodeData0.x < 0.0) // < 0.0 signifies an inner node
-		{
-			GetBoxNodeData(currentStackData.x + 1.0, nodeAData0, nodeAData1);
-			GetBoxNodeData(currentBoxNodeData1.x, nodeBData0, nodeBData1);
-			stackDataA = vec2(currentStackData.x + 1.0, BoundingBoxIntersect(nodeAData0.yzw, nodeAData1.yzw, rayOrigin, inverseDir));
-			stackDataB = vec2(currentBoxNodeData1.x, BoundingBoxIntersect(nodeBData0.yzw, nodeBData1.yzw, rayOrigin, inverseDir));
-			
-			// first sort the branch node data so that 'a' is the smallest
-			if (stackDataB.y < stackDataA.y)
-			{
-				tmpStackData = stackDataB;
-				stackDataB = stackDataA;
-				stackDataA = tmpStackData;
-
-				tmpNodeData0 = nodeBData0;   tmpNodeData1 = nodeBData1;
-				nodeBData0   = nodeAData0;   nodeBData1   = nodeAData1;
-				nodeAData0   = tmpNodeData0; nodeAData1   = tmpNodeData1;
-			} // branch 'b' now has the larger rayT value of 'a' and 'b'
-
-			if (stackDataB.y < t) // see if branch 'b' (the larger rayT) needs to be processed
-			{
-				currentStackData = stackDataB;
-				currentBoxNodeData0 = nodeBData0;
-				currentBoxNodeData1 = nodeBData1;
-				skip = TRUE; // this will prevent the stackptr from decreasing by 1
-			}
-			if (stackDataA.y < t) // see if branch 'a' (the smaller rayT) needs to be processed 
-			{
-				if (skip == TRUE) // if larger branch 'b' needed to be processed also,
-					stackLevels[int(stackptr++)] = stackDataB; // cue larger branch 'b' for future round
-							// also, increase pointer by 1
-				
-				currentStackData = stackDataA;
-				currentBoxNodeData0 = nodeAData0; 
-				currentBoxNodeData1 = nodeAData1;
-				skip = TRUE; // this will prevent the stackptr from decreasing by 1
-			}
-
-			continue;
-		} // end if (currentBoxNodeData0.x < 0.0) // inner node
-
-
-		// else this is a leaf
-
-		// each triangle's data is encoded in 8 rgba(or xyzw) texture slots
-		id = 8.0 * currentBoxNodeData0.x;
-
-		uv0 = ivec2( mod(id + 0.0, 2048.0), (id + 0.0) * INV_TEXTURE_WIDTH );
-		uv1 = ivec2( mod(id + 1.0, 2048.0), (id + 1.0) * INV_TEXTURE_WIDTH );
-		uv2 = ivec2( mod(id + 2.0, 2048.0), (id + 2.0) * INV_TEXTURE_WIDTH );
-		
-		vd0 = texelFetch(tTriangleTexture, uv0, 0);
-		vd1 = texelFetch(tTriangleTexture, uv1, 0);
-		vd2 = texelFetch(tTriangleTexture, uv2, 0);
-
-		d = BVH_TriangleIntersect( vec3(vd0.xyz), vec3(vd0.w, vd1.xy), vec3(vd1.zw, vd2.x), rayOrigin, rayDirection, tu, tv );
-
-		if (d < t)
-		{
-			t = d;
-			triangleID = id;
-			triangleU = tu;
-			triangleV = tv;
-			triangleLookupNeeded = TRUE;
-		}
-	      
-        } // end while (TRUE)
-
-
-	if (triangleLookupNeeded == TRUE)
-	{
-		uv0 = ivec2( mod(triangleID + 0.0, 2048.0), (triangleID + 0.0) * INV_TEXTURE_WIDTH );
-		uv1 = ivec2( mod(triangleID + 1.0, 2048.0), (triangleID + 1.0) * INV_TEXTURE_WIDTH );
-		uv2 = ivec2( mod(triangleID + 2.0, 2048.0), (triangleID + 2.0) * INV_TEXTURE_WIDTH );
-		uv3 = ivec2( mod(triangleID + 3.0, 2048.0), (triangleID + 3.0) * INV_TEXTURE_WIDTH );
-		uv4 = ivec2( mod(triangleID + 4.0, 2048.0), (triangleID + 4.0) * INV_TEXTURE_WIDTH );
-		uv5 = ivec2( mod(triangleID + 5.0, 2048.0), (triangleID + 5.0) * INV_TEXTURE_WIDTH );
-		uv6 = ivec2( mod(triangleID + 6.0, 2048.0), (triangleID + 6.0) * INV_TEXTURE_WIDTH );
-		uv7 = ivec2( mod(triangleID + 7.0, 2048.0), (triangleID + 7.0) * INV_TEXTURE_WIDTH );
-		
-		vd0 = texelFetch(tTriangleTexture, uv0, 0);
-		vd1 = texelFetch(tTriangleTexture, uv1, 0);
-		vd2 = texelFetch(tTriangleTexture, uv2, 0);
-		vd3 = texelFetch(tTriangleTexture, uv3, 0);
-		vd4 = texelFetch(tTriangleTexture, uv4, 0);
-		vd5 = texelFetch(tTriangleTexture, uv5, 0);
-		vd6 = texelFetch(tTriangleTexture, uv6, 0);
-		vd7 = texelFetch(tTriangleTexture, uv7, 0);	      
-
-		// face normal for flat-shaded polygon look
-		//hitNormal = normalize( cross(vec3(vd0.w, vd1.xy) - vec3(vd0.xyz), vec3(vd1.zw, vd2.x) - vec3(vd0.xyz)) );
-		
-		// interpolated normal using triangle intersection's uv's
-		triangleW = 1.0 - triangleU - triangleV;
-		hitUV = triangleW * vec2(vd4.zw) + triangleU * vec2(vd5.xy) + triangleV * vec2(vd5.zw);
-		normal = normalize(triangleW * vec3(vd2.yzw) + triangleU * vec3(vd3.xyz) + triangleV * vec3(vd3.w, vd4.xy));
-		
-		normal = perturbNormal(normal, vec2(1.0, 1.0), hitUV);
-
-		// transform normal back into world space
-		hitNormal = transpose(mat3(uGLTF_Model_InvMatrix)) * normal;
-		hitEmission = vec3(1, 0, 1); // use this if intersec.type will be LIGHT
-		hitColor = vd6.yzw;
-		
-		//hitType = int(vd6.x);
-		hitType = PBR_MATERIAL;
-                hitTextureID = int(vd7.x);
-		hitObjectID = float(objectCount);
-	}
-
 	return t;
 
 } // end float SceneIntersect( vec3 rayOrigin, vec3 rayDirection, out int isRayExiting )
