@@ -114,114 +114,6 @@ float SceneIntersect( out int isRayExiting )
 	int triangleLookupNeeded = FALSE;
 
 
-	d = SphereIntersect( spheres[0].radius, spheres[0].position, rayOrigin, rayDirection );
-	if (d < t)
-	{
-		t = d;
-		hitNormal = (rayOrigin + rayDirection * t) - spheres[0].position;
-		hitEmission = spheres[0].emission;
-		hitColor = spheres[0].color;
-		hitType = spheres[0].type;
-		hitObjectID = float(objectCount);
-	}
-	objectCount++;
-
-	d = SphereIntersect( spheres[1].radius, spheres[1].position, rayOrigin, rayDirection );
-	if (d < t)
-	{
-		t = d;
-		hitNormal = (rayOrigin + rayDirection * t) - spheres[1].position;
-		hitEmission = spheres[1].emission;
-		hitColor = spheres[1].color;
-		hitType = spheres[1].type;
-		hitObjectID = float(objectCount);
-	}
-	objectCount++;
-
-	d = SphereIntersect( spheres[2].radius, spheres[2].position, rayOrigin, rayDirection );
-	if (d < t)
-	{
-		t = d;
-		hitNormal = (rayOrigin + rayDirection * t) - spheres[2].position;
-		hitEmission = spheres[2].emission;
-		hitColor = spheres[2].color;
-		hitType = spheres[2].type;
-		hitObjectID = float(objectCount);
-	}
-	objectCount++;
-	
-
-	d = BoxIntersect( boxes[0].minCorner, boxes[0].maxCorner, rayOrigin, rayDirection, normal, isRayExiting );
-	if (d < t)
-	{
-		t = d;
-		hitNormal = normal;
-		hitEmission = boxes[0].emission;
-		hitColor = boxes[0].color;
-		hitType = boxes[0].type;
-		hitObjectID = float(objectCount);
-	}
-	objectCount++;
-
-	d = BoxIntersect( boxes[1].minCorner, boxes[1].maxCorner, rayOrigin, rayDirection, normal, isRayExiting );
-	if (d < t)
-	{
-		t = d;
-		hitNormal = normal;
-		hitEmission = boxes[1].emission;
-		hitColor = boxes[1].color;
-		hitType = boxes[1].type;
-		hitObjectID = float(objectCount);
-	}
-	objectCount++;
-	
-	d = DiskIntersect( diskRadius, diskPos, diskNormal, rayOrigin, rayDirection );
-	if (d < t)
-	{
-		t = d;
-		hitNormal = dot(diskNormal, rayDirection) <= 0.0 ? diskNormal : -diskNormal;
-		hitEmission = diskEmission;
-		hitPos = rayOrigin + rayDirection * t;
-		toLightBulb = normalize(spheres[1].position - hitPos);
-		
-		if (dot(hitNormal, toLightBulb) > 0.0)
-		{
-			hitColor = diskColor;
-			hitType = diskType;
-		}
-		else
-		{
-			hitColor = vec3(0);
-			hitType = DIFF;
-		}
-		
-		hitObjectID = float(objectCount);
-	}
-
-	d = OpenCylinderIntersect( openCylinderPos0, openCylinderPos1, openCylinderRadius, rayOrigin, rayDirection, normal );
-	if (d < t)
-	{
-		t = d;
-		hitNormal = normal;
-		hitEmission = openCylinderEmission;
-		hitPos = rayOrigin + rayDirection * t;
-		toLightBulb = normalize(spheres[1].position - hitPos);
-		
-		if (dot(hitNormal, toLightBulb) > 0.0)
-		{
-			hitColor = openCylinderColor;
-			hitType = openCylinderType;
-		}
-		else 
-		{
-			hitColor = vec3(0);
-			hitType = DIFF;
-		}
-		
-		hitObjectID = float(objectCount); // same as spotlight disk backing above
-	}
-
-	objectCount++;
 	
 
 	GetBoxNodeData(stackptr, currentBoxNodeData0, currentBoxNodeData1);
@@ -351,6 +243,118 @@ float SceneIntersect( out int isRayExiting )
 		hitType = COAT;
 		hitObjectID = float(objectCount);
 	}
+	objectCount++;
+
+
+
+	d = SphereIntersect( spheres[0].radius, spheres[0].position, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (rayOrigin + rayDirection * t) - spheres[0].position;
+		hitEmission = spheres[0].emission;
+		hitColor = spheres[0].color;
+		hitType = spheres[0].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = SphereIntersect( spheres[1].radius, spheres[1].position, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (rayOrigin + rayDirection * t) - spheres[1].position;
+		hitEmission = spheres[1].emission;
+		hitColor = spheres[1].color;
+		hitType = spheres[1].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = SphereIntersect( spheres[2].radius, spheres[2].position, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (rayOrigin + rayDirection * t) - spheres[2].position;
+		hitEmission = spheres[2].emission;
+		hitColor = spheres[2].color;
+		hitType = spheres[2].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+	
+
+	d = BoxIntersect( boxes[0].minCorner, boxes[0].maxCorner, rayOrigin, rayDirection, normal, isRayExiting );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = normal;
+		hitEmission = boxes[0].emission;
+		hitColor = boxes[0].color;
+		hitType = boxes[0].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	d = BoxIntersect( boxes[1].minCorner, boxes[1].maxCorner, rayOrigin, rayDirection, normal, isRayExiting );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = normal;
+		hitEmission = boxes[1].emission;
+		hitColor = boxes[1].color;
+		hitType = boxes[1].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+	
+	d = DiskIntersect( diskRadius, diskPos, diskNormal, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = dot(diskNormal, rayDirection) <= 0.0 ? diskNormal : -diskNormal;
+		hitEmission = diskEmission;
+		hitPos = rayOrigin + rayDirection * t;
+		toLightBulb = normalize(spheres[1].position - hitPos);
+		
+		if (dot(hitNormal, toLightBulb) > 0.0)
+		{
+			hitColor = diskColor;
+			hitType = diskType;
+		}
+		else
+		{
+			hitColor = vec3(0);
+			hitType = DIFF;
+		}
+		
+		hitObjectID = float(objectCount);
+	}
+
+	d = OpenCylinderIntersect( openCylinderPos0, openCylinderPos1, openCylinderRadius, rayOrigin, rayDirection, normal );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = normal;
+		hitEmission = openCylinderEmission;
+		hitPos = rayOrigin + rayDirection * t;
+		toLightBulb = normalize(spheres[1].position - hitPos);
+		
+		if (dot(hitNormal, toLightBulb) > 0.0)
+		{
+			hitColor = openCylinderColor;
+			hitType = openCylinderType;
+		}
+		else 
+		{
+			hitColor = vec3(0);
+			hitType = DIFF;
+		}
+		
+		hitObjectID = float(objectCount); // same as spotlight disk backing above
+	}
+
+	
 
 	return t;
 
