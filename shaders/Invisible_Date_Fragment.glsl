@@ -141,132 +141,6 @@ float SceneIntersect( out int isRayExiting )
 	int shapeLookupNeeded = FALSE;
 
 
-	// LIGHT IN DOORWAY
-	d = RectangleIntersect( rectangles[0].position, rectangles[0].normal, rectangles[0].radiusU, rectangles[0].radiusV, rayOrigin, rayDirection);
-	if (d < t)
-	{
-		t = d;
-		hitNormal = rectangles[0].normal;
-		hitColor = rectangles[0].color;
-		hitRoughness = rectangles[0].roughness;
-		hitType = rectangles[0].type;
-		hitObjectID = float(objectCount);
-	}
-	objectCount++;
-	
-	// ROOM
-	d = BoxInteriorIntersect( boxes[0].minCorner, boxes[0].maxCorner, rayOrigin, rayDirection, n );
-	hitPoint = rayOrigin + rayDirection * d;
-	if (n == vec3(1,0,0))
-	{
-		if (hitPoint.y < 80.0 && hitPoint.z < 60.0 && hitPoint.z > 20.0)
-			d = INFINITY;
-	}
-		
-	if (d < t)// && n != vec3(0,0,-1))
-	{
-		t = d;
-		hitNormal = n;
-		hitColor = boxes[0].color;
-		hitRoughness = boxes[0].roughness;
-		hitType = boxes[0].type;
-		hitObjectID = float(objectCount);
-	}
-	objectCount++;
-
-	// FLOOR TILES-LEVEL PATTERN (VERY THIN, FLAT BOX)
-	d = BoxIntersect( boxes[1].minCorner, boxes[1].maxCorner, rayOrigin, rayDirection, n, isRayExiting );
-	hitPoint = rayOrigin + rayDirection * d;
-	patternX = cos(hitPoint.x * 0.2);
-	patternZ = cos(hitPoint.z * 0.2);
-	if ((patternX > 0.0 && patternX < 0.2) || (patternZ > 0.0 && patternZ < 0.2))
-		d = INFINITY;
-
-	if (d < t)
-	{
-		t = d;
-		hitNormal = n;
-		hitColor = boxes[1].color;
-		hitRoughness = boxes[1].roughness;
-		hitType = boxes[1].type;
-		hitObjectID = float(objectCount);
-	}
-	objectCount++;
-
-	// MONDRIAN PAINTING
-	d = BoxIntersect( boxes[2].minCorner, boxes[2].maxCorner, rayOrigin, rayDirection, n, isRayExiting );
-	if (d < t)
-	{	
-		t = d;
-		hitNormal = n;
-		hitColor = boxes[2].color;
-		hitRoughness = boxes[2].roughness;
-		hitType = boxes[2].type;
-		hitObjectID = float(objectCount);
-	}
-	objectCount++;
-
-
-	// DOOR (TALL BOX)
-	// transform ray into Tall Box's object space
-	rObjOrigin = vec3( uDoorObject3DInvMatrix * vec4(rayOrigin, 1.0) );
-	rObjDirection = vec3( uDoorObject3DInvMatrix * vec4(rayDirection, 0.0) );
-	d = BoxIntersect( boxes[3].minCorner, boxes[3].maxCorner, rObjOrigin, rObjDirection, n, isRayExiting );
-	if (d < t)
-	{	
-		t = d;
-		// transfom normal back into world space
-		hitNormal = transpose(mat3(uDoorObject3DInvMatrix)) * n;
-		hitColor = boxes[3].color;
-		hitRoughness = boxes[3].roughness;
-		hitType = boxes[3].type;
-		hitObjectID = float(objectCount);
-	}
-	objectCount++;
-
-	// DOOR HANDLE PLATE ATTACHMENT (THIN, FLAT BOX)
-	d = BoxIntersect( boxes[4].minCorner, boxes[4].maxCorner, rObjOrigin, rObjDirection, n, isRayExiting );
-	if (d < t)
-	{	
-		t = d;
-		// transfom normal back into world space
-		hitNormal = transpose(mat3(uDoorObject3DInvMatrix)) * n;
-		hitColor = boxes[4].color;
-		hitRoughness = boxes[4].roughness;
-		hitType = boxes[4].type;
-		hitObjectID = float(objectCount);
-	}
-	objectCount++;
-
-	// DOOR HANDLE BARREL (SMALL BOX)
-	d = BoxIntersect( boxes[5].minCorner, boxes[5].maxCorner, rObjOrigin, rObjDirection, n, isRayExiting );
-	if (d < t)
-	{	
-		t = d;
-		// transfom normal back into world space
-		hitNormal = transpose(mat3(uDoorObject3DInvMatrix)) * n;
-		hitColor = boxes[5].color;
-		hitRoughness = boxes[5].roughness;
-		hitType = boxes[5].type;
-		hitObjectID = float(objectCount);
-	}
-	objectCount++;
-
-	// DOOR HANDLE/LEVER ITSELF (SMALL BOX)
-	d = BoxIntersect( boxes[6].minCorner, boxes[6].maxCorner, rObjOrigin, rObjDirection, n, isRayExiting );
-	if (d < t)
-	{	
-		t = d;
-		// transfom normal back into world space
-		hitNormal = transpose(mat3(uDoorObject3DInvMatrix)) * n;
-		hitColor = boxes[6].color;
-		hitRoughness = boxes[6].roughness;
-		hitType = boxes[6].type;
-		hitObjectID = float(objectCount);
-	}
-	objectCount++;
-
-	
 
 	// UTAH TEAPOT
 
@@ -390,10 +264,11 @@ float SceneIntersect( out int isRayExiting )
 		
 		// interpolated normal using triangle intersection's uv's
 		triangleW = 1.0 - triangleU - triangleV;
-		hitNormal = (triangleW * vec3(vd2.yzw) + triangleU * vec3(vd3.xyz) + triangleV * vec3(vd3.w, vd4.xy));
+		normal = (triangleW * vec3(vd2.yzw) + triangleU * vec3(vd3.xyz) + triangleV * vec3(vd3.w, vd4.xy));
 		// or, triangle face normal for flat-shaded, low-poly look
-		//hitNormal = ( cross(vec3(vd0.w, vd1.xy) - vec3(vd0.xyz), vec3(vd1.zw, vd2.x) - vec3(vd0.xyz)) );
+		//normal = ( cross(vec3(vd0.w, vd1.xy) - vec3(vd0.xyz), vec3(vd1.zw, vd2.x) - vec3(vd0.xyz)) );
 		
+		hitNormal = transpose(mat3(uModelObject3DInvMatrix)) * normal;
 		hitUV = triangleW * vec2(vd4.zw) + triangleU * vec2(vd5.xy) + triangleV * vec2(vd5.zw);
 		//hitType = int(vd6.x);
 		//hitAlbedoTextureID = int(vd7.x);
@@ -531,7 +406,6 @@ float SceneIntersect( out int isRayExiting )
         } // end while (TRUE)
 
 
-
 	if (shapeLookupNeeded == TRUE)
 	{
 		uv0 = ivec2( mod(shapeID + 0.0, 2048.0), (shapeID + 0.0) * INV_TEXTURE_WIDTH );
@@ -560,6 +434,138 @@ float SceneIntersect( out int isRayExiting )
 
 		hitObjectID = float(objectCount);
 	}
+
+	objectCount++;
+
+
+	// LIGHT IN DOORWAY
+	d = RectangleIntersect( rectangles[0].position, rectangles[0].normal, rectangles[0].radiusU, rectangles[0].radiusV, rayOrigin, rayDirection);
+	if (d < t)
+	{
+		t = d;
+		hitNormal = rectangles[0].normal;
+		hitColor = rectangles[0].color;
+		hitRoughness = rectangles[0].roughness;
+		hitType = rectangles[0].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+	
+	// ROOM
+	d = BoxInteriorIntersect( boxes[0].minCorner, boxes[0].maxCorner, rayOrigin, rayDirection, n );
+	hitPoint = rayOrigin + rayDirection * d;
+	if (n == vec3(1,0,0))
+	{
+		if (hitPoint.y < 80.0 && hitPoint.z < 60.0 && hitPoint.z > 20.0)
+			d = INFINITY;
+	}
+		
+	if (d < t)// && n != vec3(0,0,-1))
+	{
+		t = d;
+		hitNormal = n;
+		hitColor = boxes[0].color;
+		hitRoughness = boxes[0].roughness;
+		hitType = boxes[0].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	// FLOOR TILES-LEVEL PATTERN (VERY THIN, FLAT BOX)
+	d = BoxIntersect( boxes[1].minCorner, boxes[1].maxCorner, rayOrigin, rayDirection, n, isRayExiting );
+	hitPoint = rayOrigin + rayDirection * d;
+	patternX = cos(hitPoint.x * 0.2);
+	patternZ = cos(hitPoint.z * 0.2);
+	if ((patternX > 0.0 && patternX < 0.2) || (patternZ > 0.0 && patternZ < 0.2))
+		d = INFINITY;
+
+	if (d < t)
+	{
+		t = d;
+		hitNormal = n;
+		hitColor = boxes[1].color;
+		hitRoughness = boxes[1].roughness;
+		hitType = boxes[1].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	// MONDRIAN PAINTING
+	d = BoxIntersect( boxes[2].minCorner, boxes[2].maxCorner, rayOrigin, rayDirection, n, isRayExiting );
+	if (d < t)
+	{	
+		t = d;
+		hitNormal = n;
+		hitColor = boxes[2].color;
+		hitRoughness = boxes[2].roughness;
+		hitType = boxes[2].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+
+	// DOOR (TALL BOX)
+	// transform ray into Tall Box's object space
+	rObjOrigin = vec3( uDoorObject3DInvMatrix * vec4(rayOrigin, 1.0) );
+	rObjDirection = vec3( uDoorObject3DInvMatrix * vec4(rayDirection, 0.0) );
+	d = BoxIntersect( boxes[3].minCorner, boxes[3].maxCorner, rObjOrigin, rObjDirection, n, isRayExiting );
+	if (d < t)
+	{	
+		t = d;
+		// transfom normal back into world space
+		hitNormal = transpose(mat3(uDoorObject3DInvMatrix)) * n;
+		hitColor = boxes[3].color;
+		hitRoughness = boxes[3].roughness;
+		hitType = boxes[3].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	// DOOR HANDLE PLATE ATTACHMENT (THIN, FLAT BOX)
+	d = BoxIntersect( boxes[4].minCorner, boxes[4].maxCorner, rObjOrigin, rObjDirection, n, isRayExiting );
+	if (d < t)
+	{	
+		t = d;
+		// transfom normal back into world space
+		hitNormal = transpose(mat3(uDoorObject3DInvMatrix)) * n;
+		hitColor = boxes[4].color;
+		hitRoughness = boxes[4].roughness;
+		hitType = boxes[4].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	// DOOR HANDLE BARREL (SMALL BOX)
+	d = BoxIntersect( boxes[5].minCorner, boxes[5].maxCorner, rObjOrigin, rObjDirection, n, isRayExiting );
+	if (d < t)
+	{	
+		t = d;
+		// transfom normal back into world space
+		hitNormal = transpose(mat3(uDoorObject3DInvMatrix)) * n;
+		hitColor = boxes[5].color;
+		hitRoughness = boxes[5].roughness;
+		hitType = boxes[5].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	// DOOR HANDLE/LEVER ITSELF (SMALL BOX)
+	d = BoxIntersect( boxes[6].minCorner, boxes[6].maxCorner, rObjOrigin, rObjDirection, n, isRayExiting );
+	if (d < t)
+	{	
+		t = d;
+		// transfom normal back into world space
+		hitNormal = transpose(mat3(uDoorObject3DInvMatrix)) * n;
+		hitColor = boxes[6].color;
+		hitRoughness = boxes[6].roughness;
+		hitType = boxes[6].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
+	
+
+	
 	
 	
 	return t;
