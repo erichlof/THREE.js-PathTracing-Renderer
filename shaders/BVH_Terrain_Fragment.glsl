@@ -96,18 +96,6 @@ float SceneIntersect( )
 	int triangleLookupNeeded = FALSE;
 
 
-	d = SphereIntersect( spheres[0].radius, spheres[0].position, rayOrigin, rayDirection );
-	if (d < t)
-	{
-		t = d;
-		hitNormal = (rayOrigin + rayDirection * t) - spheres[0].position;
-		hitEmission = spheres[0].emission;
-		hitColor = spheres[0].color;
-		hitType = spheres[0].type;
-		hitObjectID = 0.0;//float(objectCount);
-	}
-	objectCount++;
-	
 	
 	GetBoxNodeData(stackptr, currentBoxNodeData0, currentBoxNodeData1);
 	currentStackData = vec2(stackptr, BoundingBoxIntersect(currentBoxNodeData0.yzw, currentBoxNodeData1.yzw, rayOrigin, inverseDir));
@@ -201,7 +189,6 @@ float SceneIntersect( )
         } // end while (TRUE)
 
 
-
 	if (triangleLookupNeeded == TRUE)
 	{
 		// IMPORTANT NOTE: value below Must be 4096.0 and not 2048.0!
@@ -238,6 +225,20 @@ float SceneIntersect( )
 		hitType = CHECK;
 		hitObjectID = 1.0;//float(objectCount);
 	}
+	objectCount++;
+
+
+	d = SphereIntersect( spheres[0].radius, spheres[0].position, rayOrigin, rayDirection );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = (rayOrigin + rayDirection * t) - spheres[0].position;
+		hitEmission = spheres[0].emission;
+		hitColor = spheres[0].color;
+		hitType = spheres[0].type;
+		hitObjectID = 0.0;//float(objectCount);
+	}
+	
 
 	return t;
 
