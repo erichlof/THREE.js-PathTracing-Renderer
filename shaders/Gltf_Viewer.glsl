@@ -94,20 +94,6 @@ float SceneIntersect( )
 	int isRayExiting = FALSE;
 
 
-	// GROUND Plane (thin, wide box that acts like ground plane)
-	d = BoxIntersect( box.minCorner, box.maxCorner, rayOrigin, rayDirection, n, isRayExiting );
-	if (d < t)
-	{
-		t = d;
-		hitNormal = n;
-		hitEmission = box.emission;
-		hitColor = box.color;
-		hitType = box.type;
-		hitObjectID = float(objectCount);
-	}
-	objectCount++;
-	
-
 	///////////////////////////////////////////////////////////////////////////////////////////////////////
 	// glTF
 	///////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -238,6 +224,22 @@ float SceneIntersect( )
 		hitAlbedoTextureID = int(vd7.x);
 		hitObjectID = float(objectCount);
 	}
+	objectCount++;
+
+
+	// GROUND Plane (thin, wide box that acts like ground plane)
+	d = BoxIntersect( box.minCorner, box.maxCorner, rayOrigin, rayDirection, n, isRayExiting );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = n;
+		hitEmission = box.emission;
+		hitColor = box.color;
+		hitType = box.type;
+		hitObjectID = float(objectCount);
+	}
+	
+	
 
 	return t;
 
