@@ -69,43 +69,6 @@ float SceneIntersect( )
 	hitObjectID = -INFINITY;
 
 	
-	d = QuadIntersect( quads[0].v0, quads[0].v1, quads[0].v2, quads[0].v3, rayOrigin, rayDirection, FALSE );
-	if (d < t)
-	{
-		t = d;
-		hitNormal = quads[0].normal;
-		hitEmission = quads[0].emission;
-		hitColor = quads[0].color;
-		hitType = quads[0].type;
-		hitObjectID = float(objectCount);
-	}
-	objectCount++;
-	
-	d = BoxInteriorIntersect( boxes[0].minCorner, boxes[0].maxCorner, rayOrigin, rayDirection, n );
-	if (d < t && n != vec3(0,0,-1))
-	{
-		t = d;
-		hitNormal = n;
-		hitEmission = boxes[0].emission;
-		hitColor = vec3(1);
-		hitType = DIFF;
-
-		if (n == vec3(1,0,0)) // left wall
-		{
-			//hitColor = vec3(0.7, 0.05, 0.05);
-			hitColor = vec3(1.0, 1.0, 0.05);
-		}
-		else if (n == vec3(-1,0,0)) // right wall
-		{
-			//hitColor = vec3(0.05, 0.05, 0.7);
-			hitColor = vec3(0.05, 0.05, 0.9);
-		}
-		
-		hitObjectID = float(objectCount);
-	}
-	objectCount++;
-
-
 	// TETRAHEDRON - 4 faces
 	// transform ray into convexPolyhedron's object space
 	rObjOrigin = rayOrigin;
@@ -412,6 +375,45 @@ float SceneIntersect( )
 		hitObjectID = float(objectCount);
 	}
 	objectCount++;
+
+
+
+
+	d = QuadIntersect( quads[0].v0, quads[0].v1, quads[0].v2, quads[0].v3, rayOrigin, rayDirection, FALSE );
+	if (d < t)
+	{
+		t = d;
+		hitNormal = quads[0].normal;
+		hitEmission = quads[0].emission;
+		hitColor = quads[0].color;
+		hitType = quads[0].type;
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+	
+	d = BoxInteriorIntersect( boxes[0].minCorner, boxes[0].maxCorner, rayOrigin, rayDirection, n );
+	if (d < t && n != vec3(0,0,-1))
+	{
+		t = d;
+		hitNormal = n;
+		hitEmission = boxes[0].emission;
+		hitColor = vec3(1);
+		hitType = DIFF;
+
+		if (n == vec3(1,0,0)) // left wall
+		{
+			//hitColor = vec3(0.7, 0.05, 0.05);
+			hitColor = vec3(1.0, 1.0, 0.05);
+		}
+		else if (n == vec3(-1,0,0)) // right wall
+		{
+			//hitColor = vec3(0.05, 0.05, 0.7);
+			hitColor = vec3(0.05, 0.05, 0.9);
+		}
+		
+		hitObjectID = float(objectCount);
+	}
+
 	
 	
 	return t;
