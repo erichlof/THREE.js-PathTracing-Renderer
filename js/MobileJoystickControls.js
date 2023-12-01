@@ -48,8 +48,22 @@ let _pinchWasActive = false;
 let MobileJoystickControls = function(opts)
 {
 	opts = opts || {};
-	_container = document.body;
+	// grab the options passed into this constructor function
+	_showJoystick = opts.showJoystick || false;
+	_showButtons = opts.showButtons || true;
 	_useDarkButtons = opts.useDarkButtons || false;
+
+	_baseX = _stickX = opts.baseX || 100;
+	_baseY = _stickY = opts.baseY || 200;
+
+	_limitStickTravel = opts.limitStickTravel || false;
+	if (_limitStickTravel) _showJoystick = true;
+	_stickRadius = opts.stickRadius || 50;
+	if (_stickRadius > 100) _stickRadius = 100;
+
+
+	_container = document.body;
+
 
 	//create joystick Base
 	baseElement = document.createElement('canvas');
@@ -81,6 +95,7 @@ let MobileJoystickControls = function(opts)
 	_Stick_ctx.arc(stickElement.width / 2, stickElement.width / 2, 30, 0, Math.PI * 2, true);
 	_Stick_ctx.stroke();
 
+	
 	//create button1
 	button1Element = document.createElement('canvas');
 	button1Element.width = _buttonCanvasReducedWidth; // for Triangle Button
@@ -291,18 +306,7 @@ let MobileJoystickControls = function(opts)
 	_Button6_ctx.stroke();
 	*/
 
-	// options
-	_showJoystick = opts.showJoystick || false;
-	_showButtons = opts.showButtons || true;
-
-	_baseX = _stickX = opts.baseX || 100;
-	_baseY = _stickY = opts.baseY || 200;
-
-	_limitStickTravel = opts.limitStickTravel || false;
-	if (_limitStickTravel) _showJoystick = true;
-	_stickRadius = opts.stickRadius || 50;
-	if (_stickRadius > 100) _stickRadius = 100;
-
+	
 	// the following listeners are for 1-finger touch detection to emulate mouse-click and mouse-drag operations
 	_container.addEventListener('pointerdown', _onPointerDown, false);
 	_container.addEventListener('pointermove', _onPointerMove, false);
@@ -659,19 +663,23 @@ function _onPointerDown(event)
 
 	_eventTarget = event.target;
 
-	if (_eventTarget == button1Element)
-		return _onButton1Down();
-	else if (_eventTarget == button2Element)
-		return _onButton2Down();
-	else if (_eventTarget == button3Element)
-		return _onButton3Down();
-	else if (_eventTarget == button4Element)
-		return _onButton4Down();
-	else if (_eventTarget == button5Element)
-		return _onButton5Down();
-	else if (_eventTarget == button6Element)
-		return _onButton6Down();
-	else if (_eventTarget != renderer.domElement) // target was the GUI menu
+	if (_showButtons)
+	{
+		if (_eventTarget == button1Element)
+			return _onButton1Down();
+		if (_eventTarget == button2Element)
+			return _onButton2Down();
+		if (_eventTarget == button3Element)
+			return _onButton3Down();
+		if (_eventTarget == button4Element)
+			return _onButton4Down();
+		if (_eventTarget == button5Element)
+			return _onButton5Down();
+		if (_eventTarget == button6Element)
+			return _onButton6Down();
+	}
+
+	if (_eventTarget != renderer.domElement) // target was the GUI menu
 		return;
 
 	// else target is the joystick area
@@ -747,19 +755,23 @@ function _onPointerUp(event)
 
 	_eventTarget = event.target;
 
-	if (_eventTarget == button1Element)
-		return _onButton1Up();
-	else if (_eventTarget == button2Element)
-		return _onButton2Up();
-	else if (_eventTarget == button3Element)
-		return _onButton3Up();
-	else if (_eventTarget == button4Element)
-		return _onButton4Up();
-	else if (_eventTarget == button5Element)
-		return _onButton5Up();
-	else if (_eventTarget == button6Element)
-		return _onButton6Up();
-	else if (_eventTarget != renderer.domElement) // target was the GUI menu
+	if (_showButtons)
+	{
+		if (_eventTarget == button1Element)
+			return _onButton1Up();
+		if (_eventTarget == button2Element)
+			return _onButton2Up();
+		if (_eventTarget == button3Element)
+			return _onButton3Up();
+		if (_eventTarget == button4Element)
+			return _onButton4Up();
+		if (_eventTarget == button5Element)
+			return _onButton5Up();
+		if (_eventTarget == button6Element)
+			return _onButton6Up();
+	}
+
+	if (_eventTarget != renderer.domElement) // target was the GUI menu
 		return;
 
 	joystickDeltaX = joystickDeltaY = 0;
@@ -778,12 +790,13 @@ function _onTouchMove(event)
 
 	_touches = event.touches;
 
-	if (_touches[0].target != button1Element && _touches[0].target != button2Element &&
+	if ( (!_showButtons) || // if no show buttons, there's no need to do the following checks:   
+	       (_touches[0].target != button1Element && _touches[0].target != button2Element &&
 		_touches[0].target != button3Element && _touches[0].target != button4Element &&
 		_touches[0].target != button5Element && _touches[0].target != button6Element &&
 		_touches[1].target != button1Element && _touches[1].target != button2Element &&
 		_touches[1].target != button3Element && _touches[1].target != button4Element &&
-		_touches[1].target != button5Element && _touches[1].target != button6Element)
+		_touches[1].target != button5Element && _touches[1].target != button6Element) )
 	{
 		pinchWidthX = Math.abs(_touches[1].pageX - _touches[0].pageX);
 		pinchWidthY = Math.abs(_touches[1].pageY - _touches[0].pageY);
