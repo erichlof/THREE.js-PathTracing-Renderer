@@ -45,6 +45,7 @@ let cameraRecentlyMoving = false;
 let isPaused = true;
 let oldYawRotation, oldPitchRotation;
 let mobileJoystickControls = null;
+let mobileUseDarkButtons = false;
 let oldDeltaX = 0;
 let oldDeltaY = 0;
 let newDeltaX = 0;
@@ -251,10 +252,6 @@ function init()
 		isPaused = false;
 
 		ableToEngagePointerLock = true;
-
-		mobileJoystickControls = new MobileJoystickControls({
-			//showJoystick: true
-		});
 	}
 
 	// default GUI elements for all demos
@@ -478,6 +475,15 @@ function initTHREEjs()
 
 	// setup scene/demo-specific objects, variables, GUI elements, and data
 	initSceneData();
+
+
+	if ( !mouseControl ) 
+	{
+		mobileJoystickControls = new MobileJoystickControls({
+			//showJoystick: true,
+			useDarkButtons: mobileUseDarkButtons
+		});
+	}
 
 	pixel_ResolutionController.setValue(pixelRatio);
 	if (!allowOrthographicCamera && !mouseControl)
