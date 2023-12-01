@@ -703,6 +703,9 @@ function initSceneData()
 	infoElement.style.color = 'rgb(0,0,0)';
 	cameraInfoElement.style.color = 'rgb(0,0,0)';
 
+	// mobile devices must use darker buttons so that they show up against the white background
+	mobileUseDarkButtons = true;
+
 	// pixelRatio is resolution - range: 0.5(half resolution) to 1.0(full resolution)
 	pixelRatio = mouseControl ? 1.0 : 1.0;
 
