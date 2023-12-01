@@ -33,6 +33,7 @@ let _smallButtonCanvasReducedWidth = 28;
 let _smallButtonCanvasHalfWidth = _smallButtonCanvasWidth * 0.5;
 let _showJoystick;
 let _showButtons;
+let _useDarkButtons;
 let _limitStickTravel;
 let _stickRadius;
 let _baseX;
@@ -44,10 +45,11 @@ let _pinchWasActive = false;
 
 
 
-let MobileJoystickControls = function (opts)
+let MobileJoystickControls = function(opts)
 {
 	opts = opts || {};
 	_container = document.body;
+	_useDarkButtons = opts.useDarkButtons || false;
 
 	//create joystick Base
 	baseElement = document.createElement('canvas');
@@ -58,7 +60,7 @@ let MobileJoystickControls = function (opts)
 	baseElement.style.display = "none";
 
 	_Base_ctx = baseElement.getContext('2d');
-	_Base_ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+	_Base_ctx.strokeStyle = _useDarkButtons ? 'rgba(55,55,55,0.2)' : 'rgba(255,255,255,0.2)';
 	_Base_ctx.lineWidth = 2;
 	_Base_ctx.beginPath();
 	_Base_ctx.arc(baseElement.width / 2, baseElement.width / 2, 40, 0, Math.PI * 2, true);
@@ -73,7 +75,7 @@ let MobileJoystickControls = function (opts)
 	stickElement.style.display = "none";
 
 	_Stick_ctx = stickElement.getContext('2d');
-	_Stick_ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+	_Stick_ctx.strokeStyle = _useDarkButtons ? 'rgba(55,55,55,0.2)' : 'rgba(255,255,255,0.2)';
 	_Stick_ctx.lineWidth = 3;
 	_Stick_ctx.beginPath();
 	_Stick_ctx.arc(stickElement.width / 2, stickElement.width / 2, 30, 0, Math.PI * 2, true);
@@ -92,7 +94,7 @@ let MobileJoystickControls = function (opts)
 	button1Pressed = false;
 
 	_Button1_ctx = button1Element.getContext('2d');
-	_Button1_ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+	_Button1_ctx.strokeStyle = _useDarkButtons ? 'rgba(55,55,55,0.2)' : 'rgba(255,255,255,0.2)';
 	_Button1_ctx.lineWidth = 3;
 
 	// Triangle Button
@@ -127,7 +129,7 @@ let MobileJoystickControls = function (opts)
 	button2Pressed = false;
 
 	_Button2_ctx = button2Element.getContext('2d');
-	_Button2_ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+	_Button2_ctx.strokeStyle = _useDarkButtons ? 'rgba(55,55,55,0.2)' : 'rgba(255,255,255,0.2)';
 	_Button2_ctx.lineWidth = 3;
 
 	// Triangle Button
@@ -162,7 +164,7 @@ let MobileJoystickControls = function (opts)
 	button3Pressed = false;
 
 	_Button3_ctx = button3Element.getContext('2d');
-	_Button3_ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+	_Button3_ctx.strokeStyle = _useDarkButtons ? 'rgba(55,55,55,0.2)' : 'rgba(255,255,255,0.2)';
 	_Button3_ctx.lineWidth = 3;
 
 	// Triangle Button
@@ -197,7 +199,7 @@ let MobileJoystickControls = function (opts)
 	button4Pressed = false;
 
 	_Button4_ctx = button4Element.getContext('2d');
-	_Button4_ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+	_Button4_ctx.strokeStyle = _useDarkButtons ? 'rgba(55,55,55,0.2)' : 'rgba(255,255,255,0.2)';
 	_Button4_ctx.lineWidth = 3;
 
 	// Triangle Button
@@ -232,7 +234,7 @@ let MobileJoystickControls = function (opts)
 	button5Pressed = false;
 
 	_Button5_ctx = button5Element.getContext('2d');
-	_Button5_ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+	_Button5_ctx.strokeStyle = _useDarkButtons ? 'rgba(55,55,55,0.2)' : 'rgba(255,255,255,0.2)';
 	_Button5_ctx.lineWidth = 3;
 
 	// Triangle Button
@@ -267,7 +269,7 @@ let MobileJoystickControls = function (opts)
 	button6Pressed = false;
 
 	_Button6_ctx = button6Element.getContext('2d');
-	_Button6_ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+	_Button6_ctx.strokeStyle = _useDarkButtons ? 'rgba(55,55,55,0.2)' : 'rgba(255,255,255,0.2)';
 	_Button6_ctx.lineWidth = 3;
 
 	// Triangle Button
@@ -321,7 +323,7 @@ function _onButton1Down()
 {
 	button1Pressed = true;
 
-	_Button1_ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+	_Button1_ctx.strokeStyle = _useDarkButtons ? 'rgba(55,55,55,0.5)' : 'rgba(255,255,255,0.5)';
 	_Button1_ctx.lineWidth = 3;
 
 	// Triangle Button
@@ -350,7 +352,7 @@ function _onButton1Up()
 	button1Pressed = false;
 
 	_Button1_ctx.clearRect(0, 0, _buttonCanvasWidth, _buttonCanvasWidth);
-	_Button1_ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+	_Button1_ctx.strokeStyle = _useDarkButtons ? 'rgba(55,55,55,0.2)' : 'rgba(255,255,255,0.2)';
 	_Button1_ctx.lineWidth = 3;
 
 	// Triangle Button
@@ -377,7 +379,7 @@ function _onButton2Down()
 {
 	button2Pressed = true;
 
-	_Button2_ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+	_Button2_ctx.strokeStyle = _useDarkButtons ? 'rgba(55,55,55,0.5)' : 'rgba(255,255,255,0.5)';
 	_Button2_ctx.lineWidth = 3;
 
 	// Triangle Button
@@ -406,7 +408,7 @@ function _onButton2Up()
 	button2Pressed = false;
 
 	_Button2_ctx.clearRect(0, 0, _buttonCanvasWidth, _buttonCanvasWidth);
-	_Button2_ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+	_Button2_ctx.strokeStyle = _useDarkButtons ? 'rgba(55,55,55,0.2)' : 'rgba(255,255,255,0.2)';
 	_Button2_ctx.lineWidth = 3;
 
 	// Triangle Button
@@ -433,7 +435,7 @@ function _onButton3Down()
 {
 	button3Pressed = true;
 
-	_Button3_ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+	_Button3_ctx.strokeStyle = _useDarkButtons ? 'rgba(55,55,55,0.5)' : 'rgba(255,255,255,0.5)';
 	_Button3_ctx.lineWidth = 3;
 
 	// Triangle Button
@@ -462,7 +464,7 @@ function _onButton3Up()
 	button3Pressed = false;
 
 	_Button3_ctx.clearRect(0, 0, _buttonCanvasWidth, _buttonCanvasWidth);
-	_Button3_ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+	_Button3_ctx.strokeStyle = _useDarkButtons ? 'rgba(55,55,55,0.2)' : 'rgba(255,255,255,0.2)';
 	_Button3_ctx.lineWidth = 3;
 
 	// Triangle Button
@@ -489,7 +491,7 @@ function _onButton4Down()
 {
 	button4Pressed = true;
 
-	_Button4_ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+	_Button4_ctx.strokeStyle = _useDarkButtons ? 'rgba(55,55,55,0.5)' : 'rgba(255,255,255,0.5)';
 	_Button4_ctx.lineWidth = 3;
 
 	// Triangle Button
@@ -518,7 +520,7 @@ function _onButton4Up()
 	button4Pressed = false;
 
 	_Button4_ctx.clearRect(0, 0, _buttonCanvasWidth, _buttonCanvasWidth);
-	_Button4_ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+	_Button4_ctx.strokeStyle = _useDarkButtons ? 'rgba(55,55,55,0.2)' : 'rgba(255,255,255,0.2)';
 	_Button4_ctx.lineWidth = 3;
 
 	// Triangle Button
@@ -545,7 +547,7 @@ function _onButton5Down()
 {
 	button5Pressed = true;
 
-	_Button5_ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+	_Button5_ctx.strokeStyle = _useDarkButtons ? 'rgba(55,55,55,0.5)' : 'rgba(255,255,255,0.5)';
 	_Button5_ctx.lineWidth = 3;
 
 	// Triangle Button
@@ -573,7 +575,7 @@ function _onButton5Up()
 	button5Pressed = false;
 
 	_Button5_ctx.clearRect(0, 0, _smallButtonCanvasWidth, _smallButtonCanvasWidth);
-	_Button5_ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+	_Button5_ctx.strokeStyle = _useDarkButtons ? 'rgba(55,55,55,0.2)' : 'rgba(255,255,255,0.2)';
 	_Button5_ctx.lineWidth = 3;
 
 	// Triangle Button
@@ -600,7 +602,7 @@ function _onButton6Down()
 {
 	button6Pressed = true;
 
-	_Button6_ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+	_Button6_ctx.strokeStyle = _useDarkButtons ? 'rgba(55,55,55,0.5)' : 'rgba(255,255,255,0.5)';
 	_Button6_ctx.lineWidth = 3;
 
 	// Triangle Button
@@ -628,7 +630,7 @@ function _onButton6Up()
 	button6Pressed = false;
 
 	_Button6_ctx.clearRect(0, 0, _smallButtonCanvasWidth, _smallButtonCanvasWidth);
-	_Button6_ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+	_Button6_ctx.strokeStyle = _useDarkButtons ? 'rgba(55,55,55,0.2)' : 'rgba(255,255,255,0.2)';
 	_Button6_ctx.lineWidth = 3;
 
 	// Triangle Button
@@ -654,7 +656,7 @@ function _onButton6Up()
 
 function _onPointerDown(event)
 {
-	
+
 	_eventTarget = event.target;
 
 	if (_eventTarget == button1Element)
@@ -675,18 +677,18 @@ function _onPointerDown(event)
 	// else target is the joystick area
 	_stickX = event.clientX;
 	_stickY = event.clientY;
-	
+
 	_baseX = _stickX;
 	_baseY = _stickY;
-	
+
 	joystickDeltaX = joystickDeltaY = 0;
-	
+
 } // end function _onPointerDown(event)
 
 
 function _onPointerMove(event)
 {
-	
+
 	_eventTarget = event.target;
 
 	if (_eventTarget != renderer.domElement) // target was the GUI menu or Buttons
@@ -697,7 +699,7 @@ function _onPointerMove(event)
 
 	joystickDeltaX = _stickX - _baseX;
 	joystickDeltaY = _stickY - _baseY;
-	
+
 	if (_limitStickTravel)
 	{
 		_stickDistance = Math.sqrt((joystickDeltaX * joystickDeltaX) + (joystickDeltaY * joystickDeltaY));
@@ -721,7 +723,7 @@ function _onPointerMove(event)
 
 		_baseX = event.clientX;
 		_baseY = event.clientY;
-		
+
 		_stickX = _baseX;
 		_stickY = _baseY;
 
@@ -732,7 +734,7 @@ function _onPointerMove(event)
 	{
 		stickElement.style.display = "";
 		_move(baseElement.style, (_baseX - baseElement.width / 2), (_baseY - baseElement.height / 2));
-		
+
 		baseElement.style.display = "";
 		_move(stickElement.style, (_stickX - stickElement.width / 2), (_stickY - stickElement.height / 2));
 	}
@@ -748,7 +750,7 @@ function _onPointerUp(event)
 	if (_eventTarget == button1Element)
 		return _onButton1Up();
 	else if (_eventTarget == button2Element)
-		return _onButton2Up();	
+		return _onButton2Up();
 	else if (_eventTarget == button3Element)
 		return _onButton3Up();
 	else if (_eventTarget == button4Element)
@@ -764,7 +766,7 @@ function _onPointerUp(event)
 
 	baseElement.style.display = "none";
 	stickElement.style.display = "none";
-	
+
 } // end function _onPointerUp(event)
 
 
@@ -775,7 +777,7 @@ function _onTouchMove(event)
 		return;
 
 	_touches = event.touches;
-	
+
 	if (_touches[0].target != button1Element && _touches[0].target != button2Element &&
 		_touches[0].target != button3Element && _touches[0].target != button4Element &&
 		_touches[0].target != button5Element && _touches[0].target != button6Element &&
