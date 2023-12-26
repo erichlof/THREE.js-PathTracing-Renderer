@@ -52,6 +52,7 @@ in vec2 vUv;
 #define METALCOAT 18
 #define TRUE 1
 #define FALSE 0
+#define ONE_OVER_MAX_INT 1.0 / float(0xffffffffU)
 `;
 
 THREE.ShaderChunk[ 'pathtracing_skymodel_defines' ] = `
@@ -1408,9 +1409,7 @@ float ConvexPolyhedronIntersect( vec3 ro, vec3 rd, out vec3 n, int numPlanes, ve
 	for (int i = 0; i < numPlanes; i++)
 	{
 		plane_dot_rayDir = dot(planes[i].xyz, rd);
-		if (plane_dot_rayDir == 0.0)
-			continue;
-
+		
 		t = (-dot(planes[i].xyz, ro) + planes[i].w) / plane_dot_rayDir;
 
 		if (plane_dot_rayDir < 0.0 && t > t0)
@@ -2824,7 +2823,7 @@ float rng()
 	seed += uvec2(1);
     	uvec2 q = 1103515245U * ( (seed >> 1U) ^ (seed.yx) );
     	uint  n = 1103515245U * ( (q.x) ^ (q.y >> 3U) );
-	return float(n) * (1.0 / float(0xffffffffU));
+	return float(n) * ONE_OVER_MAX_INT;// (1.0 / float(0xffffffffU));
 }
 
 vec3 randomSphereDirection()
