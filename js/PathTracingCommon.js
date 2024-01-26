@@ -2365,7 +2365,7 @@ THREE.ShaderChunk[ 'pathtracing_torus_intersect' ] = `
 // Work in Progress:  analytical Quartic(degree 4) solution for a Torus
 // from Kevin Suffern's book, "Ray Tracing From The Ground Up"
 // code originally written in C++
-#define EQN_EPS 1e-6 // in his book, Suffern uses a EPS value of 1e-90 (wow!)- a 'double' precision which is not possible in WebGL shaders
+#define EQN_EPS 1e-12 // in his book, Suffern uses a EPS value of 1e-90 (wow!)- a 'double' precision which is not possible in WebGL shaders
 		     // This lack of double precision in WebGL leads to thin gaps and cracks artifacts in the rendered torus
 bool IsZero(float x)
 {
@@ -2390,19 +2390,19 @@ int SolveQuadric(float c0, float c1, float c2, inout float s0, inout float s1)
 
     D = (p * p) - q;
 
-    /* if (IsZero(D)) 
+    if (IsZero(D)) 
     {
 	s0 = -p;
 	return 1;
     }
-    else */ if (D > 0.0) 
+    else if (D > 0.0) 
     {
 	float sqrt_D = sqrt(D);
 	s0 = sqrt_D - p;
 	s1 = -sqrt_D - p;
 	return 2;
     }
-    else /* if (D < 0) */
+    else if (D < 0.0)
         return 0;
 }
 
@@ -2544,16 +2544,16 @@ int SolveQuartic(float c0, float c1, float c2, float c3, float c4, inout float s
 		u = (z * z) - r;
 		v = (2.0 * z) - p;
 
-		/* if (IsZero(u))
+		if (IsZero(u))
 		    u = 0.0;
-		else */ if (u > 0.0)
+		else if (u > 0.0)
 		    u = sqrt(u);
 		else
 		    return 0;
 
-		/* if (IsZero(v))
+		if (IsZero(v))
 		    v = 0.0;
-		else */ if (v > 0.0)
+		else if (v > 0.0)
 		    v = sqrt(v);
 		else
 		    return 0;
