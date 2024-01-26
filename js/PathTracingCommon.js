@@ -89,10 +89,10 @@ float PlaneIntersect( vec4 pla, vec3 rayOrigin, vec3 rayDirection )
 //-----------------------------------------------------------------------
 {
 	vec3 n = pla.xyz;
-	float denom = dot(n, rayDirection);
+	float denom = 1.0 / dot(n, rayDirection);
 	
         vec3 pOrO = (pla.w * n) - rayOrigin; 
-        float result = dot(pOrO, n) / denom;
+        float result = dot(pOrO, n) * denom;
 	return (result > 0.0) ? result : INFINITY;
 }
 `;
@@ -103,11 +103,11 @@ float SingleSidedPlaneIntersect( vec4 pla, vec3 rayOrigin, vec3 rayDirection )
 //----------------------------------------------------------------------------
 {
 	vec3 n = pla.xyz;
-	float denom = dot(n, rayDirection);
+	float denom = 1.0 / dot(n, rayDirection);
 	if (denom > 0.0) return INFINITY;
 	
         vec3 pOrO = (pla.w * n) - rayOrigin; 
-        float result = dot(pOrO, n) / denom;
+        float result = dot(pOrO, n) * denom;
 	return (result > 0.0) ? result : INFINITY;
 }
 `;
@@ -118,13 +118,13 @@ float DiskIntersect( float radius, vec3 pos, vec3 normal, vec3 rayOrigin, vec3 r
 //-------------------------------------------------------------------------------------------
 {
 	vec3 pOrO = pos - rayOrigin;
-	float denom = dot(-normal, rayDirection);
+	float denom = 1.0 / dot(-normal, rayDirection);
 	// use the following for one-sided disk
 	//if (denom <= 0.0) return INFINITY;
 	
-        float result = dot(pOrO, -normal) / denom;
+        float result = dot(pOrO, -normal) * denom;
 	if (result < 0.0) return INFINITY;
-        vec3 intersectPos = rayOrigin + rayDirection * result;
+        vec3 intersectPos = rayOrigin + (rayDirection * result);
 	vec3 v = intersectPos - pos;
 	float d2 = dot(v,v);
 	float radiusSq = radius * radius;
@@ -147,7 +147,7 @@ float RectangleIntersect( vec3 pos, vec3 normal, float radiusU, float radiusV, v
 	float t = dot(-normal, pos - rayOrigin) / dt;
 	if (t < 0.0) return INFINITY;
 	
-	vec3 hit = rayOrigin + rayDirection * t;
+	vec3 hit = rayOrigin + (rayDirection * t);
 	vec3 vi = hit - pos;
 	vec3 U = normalize( cross( abs(normal.y) < 0.9 ? vec3(0, 1, 0) : vec3(0, 0, 1), normal ) );
 	vec3 V = cross(normal, U);
@@ -162,9 +162,9 @@ float SlabIntersect( float radius, vec3 normal, vec3 rayOrigin, vec3 rayDirectio
 {
 	n = dot(normal, rayDirection) < 0.0 ? normal : -normal;
 	float rad = dot(rayOrigin, n) > radius ? radius : -radius; 
-	float denom = dot(n, rayDirection);
+	float denom = 1.0 / dot(n, rayDirection);
 	vec3 pOrO = (rad * n) - rayOrigin; 
-	float t = dot(pOrO, n) / denom;
+	float t = dot(pOrO, n) * denom;
 	return t > 0.0 ? t : INFINITY;
 }
 `;
@@ -254,15 +254,17 @@ float UnitSphereIntersect( vec3 ro, vec3 rd, out vec3 n )
 	// first, try t0
 	if (t0 > 0.0)
 	{
-		hitPoint = ro + rd * t0;
+		hitPoint = ro + (rd * t0);
 		n = hitPoint;
+		//n = dot(rd, n) < 0.0 ? n : -n;
 		return t0;
 	}
 	// if t0 was invalid, try t1
 	if (t1 > 0.0)
 	{
-		hitPoint = ro + rd * t1;
+		hitPoint = ro + (rd * t1);
 		n = hitPoint;
+		//n = dot(rd, n) < 0.0 ? n : -n;
 		return t1;
 	}
 
@@ -446,10 +448,10 @@ void Sphere_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1, out vec
 	float b = 2.0 * dot(rd, ro);
 	float c = dot(ro, ro) - 1.0;
 	solveQuadratic(a, b, c, t0, t1);
-	hit = ro + rd * t0;
-	n0 = vec3(2.0 * hit.x, 2.0 * hit.y, 2.0 * hit.z);
-	hit = ro + rd * t1;
-	n1 = vec3(2.0 * hit.x, 2.0 * hit.y, 2.0 * hit.z);
+	hit = ro + (rd * t0);
+	n0 = hit;
+	hit = ro + (rd * t1);
+	n1 = hit;
 }
 `;
 
@@ -464,16 +466,16 @@ void Cylinder_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1, out v
 	vec3 dn0, dn1;
 	// implicit equation of a unit (radius of 1) cylinder, extending infinitely in the +Y and -Y directions:
 	// x^2 + z^2 - 1 = 0
-	float a = (rd.x * rd.x + rd.z * rd.z);
-    	float b = 2.0 * (rd.x * ro.x + rd.z * ro.z);
-    	float c = (ro.x * ro.x + ro.z * ro.z) - 1.0;
+	float a = (rd.x * rd.x) + (rd.z * rd.z);
+    	float b = 2.0 * ((rd.x * ro.x) + (rd.z * ro.z));
+    	float c = ((ro.x * ro.x) + (ro.z * ro.z)) - 1.0;
 	solveQuadratic(a, b, c, t0, t1);
-	hit = ro + rd * t0;
+	hit = ro + (rd * t0);
 	t0 = (abs(hit.y) > 1.0) ? 0.0 : t0;
-	n0 = vec3(2.0 * hit.x, 0.0, 2.0 * hit.z);
+	n0 = vec3(hit.x, 0.0, hit.z);
 	hit = ro + rd * t1;
 	t1 = (abs(hit.y) > 1.0) ? 0.0 : t1;
-	n1 = vec3(2.0 * hit.x, 0.0, 2.0 * hit.z);
+	n1 = vec3(hit.x, 0.0, hit.z);
 	// intersect top and bottom unit-radius disk caps
 	if (rd.y < 0.0)
 	{
@@ -490,14 +492,14 @@ void Cylinder_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1, out v
 		dn0 = vec3(0,-1,0);
 	}
 	
-	hit = ro + rd * d0;
-	if (hit.x * hit.x + hit.z * hit.z <= 1.0) // unit radius disk
+	hit = ro + (rd * d0);
+	if ((hit.x * hit.x) + (hit.z * hit.z) <= 1.0) // unit radius disk
 	{
 		t0 = d0;
 		n0 = dn0;
 	}
-	hit = ro + rd * d1;
-	if (hit.x * hit.x + hit.z * hit.z <= 1.0) // unit radius disk
+	hit = ro + (rd * d1);
+	if ((hit.x * hit.x) + (hit.z * hit.z) <= 1.0) // unit radius disk
 	{
 		t1 = d1;
 		n1 = dn1;
@@ -522,19 +524,19 @@ void Cone_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out float t1, 
 	k = clamp(k, 0.01, 1.0);
 	
 	float j = 1.0 / k;
-	float h = j * 2.0 - 1.0;		   // (k * 0.25) makes the normal cone's bottom circular base have a unit radius of 1.0
-	float a = j * rd.x * rd.x + j * rd.z * rd.z - (k * 0.25) * rd.y * rd.y;
-    	float b = 2.0 * (j * rd.x * ro.x + j * rd.z * ro.z - (k * 0.25) * rd.y * (ro.y - h));
-    	float c = j * ro.x * ro.x + j * ro.z * ro.z - (k * 0.25) * (ro.y - h) * (ro.y - h);
+	float h = (j * 2.0) - 1.0;		   // (k * 0.25) makes the normal cone's bottom circular base have a unit radius of 1.0
+	float a = (j * rd.x * rd.x) + (j * rd.z * rd.z) - ((k * 0.25) * rd.y * rd.y);
+    	float b = 2.0 * ((j * rd.x * ro.x) + (j * rd.z * ro.z) - ((k * 0.25) * rd.y * (ro.y - h)));
+    	float c = (j * ro.x * ro.x) + (j * ro.z * ro.z) - ((k * 0.25) * (ro.y - h) * (ro.y - h));
 	solveQuadratic(a, b, c, t0, t1);
 	
-	hit = ro + rd * t0;
+	hit = ro + (rd * t0);
 	t0 = (abs(hit.y) > 1.0) ? 0.0 : t0; // invalidate t0 if it's outside truncated cone's height bounds
-	n0 = vec3(2.0 * hit.x * j, 2.0 * (h - hit.y) * (k * 0.25), 2.0 * hit.z * j);
+	n0 = vec3(hit.x * j, (h - hit.y) * (k * 0.25), hit.z * j);
 	
-	hit = ro + rd * t1;
+	hit = ro + (rd * t1);
 	t1 = (abs(hit.y) > 1.0) ? 0.0 : t1; // invalidate t1 if it's outside truncated cone's height bounds
-	n1 = vec3(2.0 * hit.x * j, 2.0 * (h - hit.y) * (k * 0.25), 2.0 * hit.z * j);
+	n1 = vec3(hit.x * j, (h - hit.y) * (k * 0.25), hit.z * j);
 	// since the infinite double-cone is artificially cut off, if t0 intersection was invalidated, try t1
 	if (t0 == 0.0)
 	{
@@ -560,16 +562,16 @@ void Cone_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out float t1, 
 		dr0 = 1.0; // bottom cap is unit radius
 		dr1 = (1.0 - k) * (1.0 - k);// top cap's size is relative to k
 	}
-	hit = ro + rd * d0;
-	if (hit.x * hit.x + hit.z * hit.z <= dr0)
+	hit = ro + (rd * d0);
+	if ((hit.x * hit.x) + (hit.z * hit.z) <= dr0)
 	{
 		t1 = t0;
 		n1 = n0;
 		t0 = d0;
 		n0 = dn0;
 	}
-	hit = ro + rd * d1;
-	if (hit.x * hit.x + hit.z * hit.z <= dr1)
+	hit = ro + (rd * d1);
+	if ((hit.x * hit.x) + (hit.z * hit.z) <= dr1)
 	{
 		t1 = d1;
 		n1 = dn1;
@@ -596,18 +598,18 @@ void ConicalPrism_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out fl
 	k = clamp(k, 0.01, 1.0);
 	
 	float j = 1.0 / k;
-	float h = j * 2.0 - 1.0;		   // (k * 0.25) makes the normal cone's bottom circular base have a unit radius of 1.0
-	float a = j * rd.x * rd.x - (k * 0.25) * rd.y * rd.y;
-    	float b = 2.0 * (j * rd.x * ro.x - (k * 0.25) * rd.y * (ro.y - h));
-    	float c = j * ro.x * ro.x - (k * 0.25) * (ro.y - h) * (ro.y - h);
+	float h = (j * 2.0) - 1.0;  // (k * 0.25) makes the normal cone's bottom circular base have a unit radius of 1.0
+	float a = (j * rd.x * rd.x) - ((k * 0.25) * rd.y * rd.y);
+    	float b = 2.0 * ((j * rd.x * ro.x) - ((k * 0.25) * rd.y * (ro.y - h)));
+    	float c = (j * ro.x * ro.x) - ((k * 0.25) * (ro.y - h) * (ro.y - h));
 	solveQuadratic(a, b, c, t0, t1);
-	hit = ro + rd * t0;
+	hit = ro + (rd * t0);
 	t0 = (abs(hit.y) > 1.0 || abs(hit.z) > 1.0) ? 0.0 : t0; // invalidate t0 if it's outside unit radius bounds
-	n0 = vec3(2.0 * hit.x * j, 2.0 * (hit.y - h) * -(k * 0.25), 0.0);
+	n0 = vec3(hit.x * j, (hit.y - h) * -(k * 0.25), 0.0);
 	
-	hit = ro + rd * t1;
+	hit = ro + (rd * t1);
 	t1 = (abs(hit.y) > 1.0 || abs(hit.z) > 1.0) ? 0.0 : t1; // invalidate t1 if it's outside unit radius bounds
-	n1 = vec3(2.0 * hit.x * j, 2.0 * (hit.y - h) * -(k * 0.25), 0.0);
+	n1 = vec3(hit.x * j, (hit.y - h) * -(k * 0.25), 0.0);
 	
 	// since the infinite double-cone shape is artificially cut off at the top and bottom,
 	// if t0 intersection was invalidated above, try t1
@@ -635,7 +637,7 @@ void ConicalPrism_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out fl
 		dr0 = 1.0; // bottom cap is unit radius
 		dr1 = 1.0 - (k);// top cap's size is relative to k
 	}
-	hit = ro + rd * d0;
+	hit = ro + (rd * d0);
 	if (abs(hit.x) <= dr0 && abs(hit.z) <= 1.0)
 	{
 		t1 = t0;
@@ -643,7 +645,7 @@ void ConicalPrism_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out fl
 		t0 = d0;
 		n0 = dn0;
 	}
-	hit = ro + rd * d1;
+	hit = ro + (rd * d1);
 	if (abs(hit.x) <= dr1 && abs(hit.z) <= 1.0)
 	{
 		t1 = d1;
@@ -665,8 +667,8 @@ void ConicalPrism_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out fl
 		dn0 = vec3(0,0,-1);
 	}
 	
-	hit = ro + rd * d0;
-	if (abs(hit.x) <= 1.0 && abs(hit.y) <= 1.0 && (j * hit.x * hit.x - k * 0.25 * (hit.y - h) * (hit.y - h)) <= 0.0) // y is a quadratic (conical) function of x
+	hit = ro + (rd * d0);
+	if (abs(hit.x) <= 1.0 && abs(hit.y) <= 1.0 && ((j * hit.x * hit.x) - (k * 0.25 * (hit.y - h) * (hit.y - h))) <= 0.0) // y is a quadratic (conical) function of x
 	{
 		if (t0 != 0.0)
 		{
@@ -677,8 +679,8 @@ void ConicalPrism_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out fl
 		t0 = d0;
 		n0 = dn0;
 	}
-	hit = ro + rd * d1;
-	if (abs(hit.x) <= 1.0 && abs(hit.y) <= 1.0 && (j * hit.x * hit.x - k * 0.25 * (hit.y - h) * (hit.y - h)) <= 0.0) // y is a quadratic (conical) function of x
+	hit = ro + (rd * d1);
+	if (abs(hit.x) <= 1.0 && abs(hit.y) <= 1.0 && ((j * hit.x * hit.x) - (k * 0.25 * (hit.y - h) * (hit.y - h))) <= 0.0) // y is a quadratic (conical) function of x
 	{
 		t1 = d1;
 		n1 = dn1;
@@ -701,14 +703,14 @@ void Paraboloid_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1, out
 	//   its circular base is of unit radius (1) and is located at the bottom (-1.0) where the shape is truncated 
 	
 	float k = 0.5;
-	float a = rd.x * rd.x + rd.z * rd.z;
-    	float b = 2.0 * (rd.x * ro.x + rd.z * ro.z) + k * rd.y;
-    	float c = ro.x * ro.x + ro.z * ro.z + k * (ro.y - 1.0);
+	float a = (rd.x * rd.x) + (rd.z * rd.z);
+    	float b = 2.0 * ((rd.x * ro.x) + (rd.z * ro.z)) + (k * rd.y);
+    	float c = (ro.x * ro.x) + (ro.z * ro.z) + (k * (ro.y - 1.0));
 	solveQuadratic(a, b, c, t0, t1);
-	hit = ro + rd * t0;
+	hit = ro + (rd * t0);
 	t0 = (abs(hit.y) > 1.0) ? 0.0 : t0; // invalidate t0 if it's outside unit radius bounds
 	n0 = vec3(2.0 * hit.x, 1.0 * k, 2.0 * hit.z);
-	hit = ro + rd * t1;
+	hit = ro + (rd * t1);
 	t1 = (abs(hit.y) > 1.0) ? 0.0 : t1; // invalidate t1 if it's outside unit radius bounds
 	n1 = vec3(2.0 * hit.x, 1.0 * k, 2.0 * hit.z);
 	// since the infinite paraboloid is artificially cut off at the bottom,
@@ -721,8 +723,8 @@ void Paraboloid_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1, out
 	
 	// now intersect unit-radius disk located at bottom base opening of unit paraboloid shape
 	d = (ro.y + 1.0) / -rd.y;
-	hit = ro + rd * d;
-	if (hit.x * hit.x + hit.z * hit.z <= 1.0) // disk with unit radius
+	hit = ro + (rd * d);
+	if ((hit.x * hit.x) + (hit.z * hit.z) <= 1.0) // disk with unit radius
 	{
 		if (rd.y < 0.0)
 		{
@@ -758,14 +760,14 @@ void ParabolicPrism_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1,
 	
 	float k = 0.5; // k:0.5 narrows the parabola to ensure that when the lower portion of the parabola reaches the cut-off at the base, it is 1 unit wide
 	float a = rd.x * rd.x;
-    	float b = 2.0 * (rd.x * ro.x) + k * rd.y;
-    	float c = ro.x * ro.x + k * (ro.y - 1.0);
+    	float b = 2.0 * (rd.x * ro.x) + (k * rd.y);
+    	float c = (ro.x * ro.x) + (k * (ro.y - 1.0));
 	solveQuadratic(a, b, c, t0, t1);
-	hit = ro + rd * t0;
+	hit = ro + (rd * t0);
 	t0 = (hit.y < -1.0 || abs(hit.z) > 1.0) ? 0.0 : t0; // invalidate t0 if it's outside unit radius bounds
 	n0 = vec3(2.0 * hit.x, 1.0 * k, 0.0);
 	
-	hit = ro + rd * t1;
+	hit = ro + (rd * t1);
 	t1 = (hit.y < -1.0 || abs(hit.z) > 1.0) ? 0.0 : t1; // invalidate t1 if it's outside unit radius bounds
 	n1 = vec3(2.0 * hit.x, 1.0 * k, 0.0);
 	
@@ -779,7 +781,7 @@ void ParabolicPrism_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1,
 	
 	// intersect unit-radius square located at bottom opening of unit paraboloid shape
 	d = (ro.y + 1.0) / -rd.y;
-	hit = ro + rd * d;
+	hit = ro + (rd * d);
 	if (abs(hit.x) <= 1.0 && abs(hit.z) <= 1.0) // square with unit radius
 	{
 		if (rd.y < 0.0)
@@ -811,14 +813,14 @@ void ParabolicPrism_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1,
 		dn0 = vec3(0,0,-1);
 	}
 	
-	hit = ro + rd * d0;
-	if (hit.y >= -1.0 && (hit.x * hit.x + k * (hit.y - 1.0)) <= 0.0) // y is a parabolic function of x
+	hit = ro + (rd * d0);
+	if (hit.y >= -1.0 && ((hit.x * hit.x) + (k * (hit.y - 1.0))) <= 0.0) // y is a parabolic function of x
 	{
 		t0 = d0;
 		n0 = dn0;
 	}
-	hit = ro + rd * d1;
-	if (hit.y >= -1.0 && (hit.x * hit.x + k * (hit.y - 1.0)) <= 0.0) // y is a parabolic function of x
+	hit = ro + (rd * d1);
+	if (hit.y >= -1.0 && ((hit.x * hit.x) + (k * (hit.y - 1.0))) <= 0.0) // y is a parabolic function of x
 	{
 		t1 = d1;
 		n1 = dn1;
@@ -844,16 +846,16 @@ void Hyperboloid1Sheet_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, o
 	
 	// conservative range of k: 1 to 100
 	float j = k - 1.0;
-	float a = k * rd.x * rd.x + k * rd.z * rd.z - j * rd.y * rd.y;
-	float b = 2.0 * (k * rd.x * ro.x + k * rd.z * ro.z - j * rd.y * ro.y);
-	float c = (k * ro.x * ro.x + k * ro.z * ro.z - j * ro.y * ro.y) - 1.0;
+	float a = (k * rd.x * rd.x) + (k * rd.z * rd.z) - (j * rd.y * rd.y);
+	float b = 2.0 * ((k * rd.x * ro.x) + (k * rd.z * ro.z) - (j * rd.y * ro.y));
+	float c = ((k * ro.x * ro.x) + (k * ro.z * ro.z) - (j * ro.y * ro.y)) - 1.0;
 	solveQuadratic(a, b, c, t0, t1);
-	hit = ro + rd * t0;
+	hit = ro + (rd * t0);
 	t0 = (hit.y > 1.0 || hit.y < 0.0) ? 0.0 : t0; // invalidate t0 if it's outside unit radius bounds of top half
-	n0 = vec3(2.0 * hit.x * k, 2.0 * -hit.y * j, 2.0 * hit.z * k);
-	hit = ro + rd * t1;
+	n0 = vec3(hit.x * k, -hit.y * j, hit.z * k);
+	hit = ro + (rd * t1);
 	t1 = (hit.y > 1.0 || hit.y < 0.0) ? 0.0 : t1; // invalidate t1 if it's outside unit radius bounds of top half
-	n1 = vec3(2.0 * hit.x * k, 2.0 * -hit.y * j, 2.0 * hit.z * k);
+	n1 = vec3(hit.x * k, -hit.y * j, hit.z * k);
 	// since the infinite hyperboloid is artificially cut off at the top and bottom so that it has a unit radius top cap,
 	// if t0 intersection was invalidated, try t1
 	if (t0 == 0.0)
@@ -880,16 +882,16 @@ void Hyperboloid1Sheet_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, o
 		dr1 = 1.0; // top cap is unit radius
 	}
 	
-	hit = ro + rd * d0;
-	if (hit.x * hit.x + hit.z * hit.z <= dr0)
+	hit = ro + (rd * d0);
+	if ((hit.x * hit.x) + (hit.z * hit.z) <= dr0)
 	{
 		t1 = t0;
 		n1 = n0;
 		t0 = d0;
 		n0 = dn0;
 	}
-	hit = ro + rd * d1;
-	if (hit.x * hit.x + hit.z * hit.z <= dr1)
+	hit = ro + (rd * d1);
+	if ((hit.x * hit.x) + (hit.z * hit.z) <= dr1)
 	{
 		t1 = d1;
 		n1 = dn1;
@@ -914,16 +916,16 @@ void Hyperboloid2Sheets_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, 
 	
 	// conservative range of k: 1 to 100
 	float j = k + 1.0;
-	float a = -k * rd.x * rd.x - k * rd.z * rd.z + j * rd.y * rd.y;
-	float b = 2.0 * (-k * rd.x * ro.x - k * rd.z * ro.z + j * rd.y * ro.y);
-	float c = (-k * ro.x * ro.x - k * ro.z * ro.z + j * ro.y * ro.y) - 1.0;
+	float a = (-k * rd.x * rd.x) - (k * rd.z * rd.z) + (j * rd.y * rd.y);
+	float b = 2.0 * ((-k * rd.x * ro.x) - (k * rd.z * ro.z) + (j * rd.y * ro.y));
+	float c = ((-k * ro.x * ro.x) - (k * ro.z * ro.z) + (j * ro.y * ro.y)) - 1.0;
 	solveQuadratic(a, b, c, t0, t1);
-	hit = ro + rd * t0;
+	hit = ro + (rd * t0);
 	t0 = (hit.y > 1.0 || hit.y < 0.0) ? 0.0 : t0; // invalidate t0 if it's outside unit radius bounds of top half
-	n0 = vec3(2.0 * -hit.x * k, 2.0 * hit.y * j, 2.0 * -hit.z * k);
-	hit = ro + rd * t1;
+	n0 = vec3(-hit.x * k, hit.y * j, -hit.z * k);
+	hit = ro + (rd * t1);
 	t1 = (hit.y > 1.0 || hit.y < 0.0) ? 0.0 : t1; // invalidate t1 if it's outside unit radius bounds of top half
-	n1 = vec3(2.0 * -hit.x * k, 2.0 * hit.y * j, 2.0 * -hit.z * k);
+	n1 = vec3(-hit.x * k, hit.y * j, -hit.z * k);
 	// since the infinite hyperboloid is artificially cut off at the top and bottom so that it has a unit radius top cap,
 	// if t0 intersection was invalidated, try t1
 	if (t0 == 0.0)
@@ -933,8 +935,8 @@ void Hyperboloid2Sheets_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, 
 	}
 	// intersect unit-radius disk located at top opening of unit hyperboloid shape
 	d = (ro.y - 1.0) / -rd.y;
-	hit = ro + rd * d;
-	if (hit.x * hit.x + hit.z * hit.z <= 1.0) // disk with unit radius
+	hit = ro + (rd * d);
+	if ((hit.x * hit.x) + (hit.z * hit.z) <= 1.0) // disk with unit radius
 	{
 		if (rd.y > 0.0)
 		{
@@ -973,16 +975,16 @@ void HyperbolicPrism1Sheet_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t
 	
 	// conservative range of k: 1 to 100
 	float j = k - 1.0;
-	float a = k * rd.x * rd.x - j * rd.y * rd.y;
-	float b = 2.0 * (k * rd.x * ro.x - j * rd.y * ro.y);
-	float c = (k * ro.x * ro.x - j * ro.y * ro.y) - 1.0;
+	float a = (k * rd.x * rd.x) - (j * rd.y * rd.y);
+	float b = 2.0 * ((k * rd.x * ro.x) - (j * rd.y * ro.y));
+	float c = ((k * ro.x * ro.x) - (j * ro.y * ro.y)) - 1.0;
 	solveQuadratic(a, b, c, t0, t1);
-	hit = ro + rd * t0;
+	hit = ro + (rd * t0);
 	t0 = (hit.y > 1.0 || hit.y < 0.0 || abs(hit.z) > 1.0) ? 0.0 : t0; // invalidate t0 if it's outside unit radius bounds of top half
-	n0 = vec3(2.0 * hit.x * k, 2.0 * -hit.y * j, 0.0);
-	hit = ro + rd * t1;
+	n0 = vec3(hit.x * k, -hit.y * j, 0.0);
+	hit = ro + (rd * t1);
 	t1 = (hit.y > 1.0 || hit.y < 0.0 || abs(hit.z) > 1.0) ? 0.0 : t1; // invalidate t1 if it's outside unit radius bounds of top half
-	n1 = vec3(2.0 * hit.x * k, 2.0 * -hit.y * j, 0.0);
+	n1 = vec3(hit.x * k, -hit.y * j, 0.0);
 	// since the infinite hyperbolic shape is artificially cut off at the top and bottom so that it has a unit radius top cap,
 	// if t0 intersection was invalidated, try t1
 	if (t0 == 0.0)
@@ -1010,7 +1012,7 @@ void HyperbolicPrism1Sheet_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t
 		dr1 = 1.0; // top cap is unit radius
 	}
 	
-	hit = ro + rd * d0;
+	hit = ro + (rd * d0);
 	if (abs(hit.x) <= dr0 && abs(hit.z) <= 1.0)
 	{
 		if (t0 != 0.0)
@@ -1021,7 +1023,7 @@ void HyperbolicPrism1Sheet_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t
 		t0 = d0;
 		n0 = dn0;
 	}
-	hit = ro + rd * d1;
+	hit = ro + (rd * d1);
 	if (abs(hit.x) <= dr1 && abs(hit.z) <= 1.0)
 	{
 		t1 = d1;
@@ -1043,8 +1045,8 @@ void HyperbolicPrism1Sheet_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t
 		dn0 = vec3(0,0,-1);
 	}
 	
-	hit = ro + rd * d0;
-	if (abs(hit.x) <= 1.0 && hit.y >= 0.0 && hit.y <= 1.0 && (k * hit.x * hit.x - j * hit.y * hit.y - 1.0) <= 0.0) // y is a quadratic (hyperbolic) function of x
+	hit = ro + (rd * d0);
+	if (abs(hit.x) <= 1.0 && hit.y >= 0.0 && hit.y <= 1.0 && ((k * hit.x * hit.x) - (j * hit.y * hit.y) - 1.0) <= 0.0) // y is a quadratic (hyperbolic) function of x
 	{
 		if (t0 != 0.0)
 		{
@@ -1055,8 +1057,8 @@ void HyperbolicPrism1Sheet_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t
 		t0 = d0;
 		n0 = dn0;
 	}
-	hit = ro + rd * d1;
-	if (abs(hit.x) <= 1.0 && hit.y >= 0.0 && hit.y <= 1.0 && (k * hit.x * hit.x - j * hit.y * hit.y - 1.0) <= 0.0) // y is a quadratic (hyperbolic) function of x
+	hit = ro + (rd * d1);
+	if (abs(hit.x) <= 1.0 && hit.y >= 0.0 && hit.y <= 1.0 && ((k * hit.x * hit.x) - (j * hit.y * hit.y) - 1.0) <= 0.0) // y is a quadratic (hyperbolic) function of x
 	{
 		t1 = d1;
 		n1 = dn1;
@@ -1085,16 +1087,16 @@ void HyperbolicPrism2Sheets_CSG_Intersect( float k, vec3 ro, vec3 rd, out float 
 	
 	// conservative range of k: 1 to 100
 	float j = k + 1.0;
-	float a = -k * rd.x * rd.x + j * rd.y * rd.y;
-	float b = 2.0 * (-k * rd.x * ro.x + j * rd.y * ro.y);
-	float c = (-k * ro.x * ro.x + j * ro.y * ro.y) - 1.0;
+	float a = (-k * rd.x * rd.x) + (j * rd.y * rd.y);
+	float b = 2.0 * ((-k * rd.x * ro.x) + (j * rd.y * ro.y));
+	float c = ((-k * ro.x * ro.x) + (j * ro.y * ro.y)) - 1.0;
 	solveQuadratic(a, b, c, t0, t1);
-	hit = ro + rd * t0;
+	hit = ro + (rd * t0);
 	t0 = (hit.y > 1.0 || hit.y < 0.0 || abs(hit.z) > 1.0) ? 0.0 : t0; // invalidate t0 if it's outside unit radius bounds of top half
-	n0 = vec3(2.0 * -hit.x * k, 2.0 * hit.y * j, 0.0);
-	hit = ro + rd * t1;
+	n0 = vec3(-hit.x * k, hit.y * j, 0.0);
+	hit = ro + (rd * t1);
 	t1 = (hit.y > 1.0 || hit.y < 0.0 || abs(hit.z) > 1.0) ? 0.0 : t1; // invalidate t1 if it's outside unit radius bounds of top half
-	n1 = vec3(2.0 * -hit.x * k, 2.0 * hit.y * j, 0.0);
+	n1 = vec3(-hit.x * k, hit.y * j, 0.0);
 	// since the infinite hyperbolic shape is artificially cut off at the top and bottom so that it has a unit radius top cap,
 	// if t0 intersection was invalidated, try t1
 	if (t0 == 0.0)
@@ -1104,7 +1106,7 @@ void HyperbolicPrism2Sheets_CSG_Intersect( float k, vec3 ro, vec3 rd, out float 
 	}
 	// intersect unit-radius square located at top opening of hyperbolic prism shape
 	d = (ro.y - 1.0) / -rd.y;
-	hit = ro + rd * d;
+	hit = ro + (rd * d);
 	if (abs(hit.x) <= 1.0 && abs(hit.z) <= 1.0) // square with unit radius
 	{
 		if (rd.y > 0.0)
@@ -1136,8 +1138,8 @@ void HyperbolicPrism2Sheets_CSG_Intersect( float k, vec3 ro, vec3 rd, out float 
 		dn0 = vec3(0,0,-1);
 	}
 	
-	hit = ro + rd * d0;
-	if (abs(hit.x) <= 1.0 && hit.y >= 0.0 && hit.y <= 1.0 && (-k * hit.x * hit.x + j * hit.y * hit.y - 1.0) >= 0.0) // y is a quadratic (hyperbolic) function of x
+	hit = ro + (rd * d0);
+	if (abs(hit.x) <= 1.0 && hit.y >= 0.0 && hit.y <= 1.0 && ((-k * hit.x * hit.x) + (j * hit.y * hit.y) - 1.0) >= 0.0) // y is a quadratic (hyperbolic) function of x
 	{
 		if (t0 != 0.0)
 		{
@@ -1148,8 +1150,8 @@ void HyperbolicPrism2Sheets_CSG_Intersect( float k, vec3 ro, vec3 rd, out float 
 		t0 = d0;
 		n0 = dn0;
 	}
-	hit = ro + rd * d1;
-	if (abs(hit.x) <= 1.0 && hit.y >= 0.0 && hit.y <= 1.0 && (-k * hit.x * hit.x + j * hit.y * hit.y - 1.0) >= 0.0) // y is a quadratic (hyperbolic) function of x
+	hit = ro + (rd * d1);
+	if (abs(hit.x) <= 1.0 && hit.y >= 0.0 && hit.y <= 1.0 && ((-k * hit.x * hit.x) + (j * hit.y * hit.y) - 1.0) >= 0.0) // y is a quadratic (hyperbolic) function of x
 	{
 		t1 = d1;
 		n1 = dn1;
@@ -1167,16 +1169,16 @@ void Capsule_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out float t
 	s0t0 = s0t1 = s1t0 = s1t1 = 0.0;
 	// implicit equation of a unit (radius of 1) cylinder, extending infinitely in the +Y and -Y directions:
 	// x^2 + z^2 - 1 = 0
-	float a = (rd.x * rd.x + rd.z * rd.z);
-    	float b = 2.0 * (rd.x * ro.x + rd.z * ro.z);
-    	float c = (ro.x * ro.x + ro.z * ro.z) - 1.0;
+	float a = (rd.x * rd.x) + (rd.z * rd.z);
+    	float b = 2.0 * ((rd.x * ro.x) + (rd.z * ro.z));
+    	float c = ((ro.x * ro.x) + (ro.z * ro.z)) - 1.0;
 	solveQuadratic(a, b, c, t0, t1);
-	hit = ro + rd * t0;
+	hit = ro + (rd * t0);
 	t0 = (abs(hit.y) > k) ? 0.0 : t0;
-	n0 = vec3(2.0 * hit.x, 0.0, 2.0 * hit.z);
-	hit = ro + rd * t1;
+	n0 = vec3(hit.x, 0.0, hit.z);
+	hit = ro + (rd * t1);
 	t1 = (abs(hit.y) > k) ? 0.0 : t1;
-	n1 = vec3(2.0 * hit.x, 0.0, 2.0 * hit.z);
+	n1 = vec3(hit.x, 0.0, hit.z);
 	// intersect unit-radius sphere located at top opening of cylinder
 	vec3 s0pos = vec3(0, k, 0);
 	vec3 L = ro - s0pos;
@@ -1184,11 +1186,11 @@ void Capsule_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out float t
 	b = 2.0 * dot(rd, L);
 	c = dot(L, L) - 1.0;
 	solveQuadratic(a, b, c, s0t0, s0t1);
-	hit = ro + rd * s0t0;
-	s0n0 = vec3(2.0 * hit.x, 2.0 * (hit.y - s0pos.y), 2.0 * hit.z);
+	hit = ro + (rd * s0t0);
+	s0n0 = vec3(hit.x, (hit.y - s0pos.y), hit.z);
 	s0t0 = (hit.y < k) ? 0.0 : s0t0;
-	hit = ro + rd * s0t1;
-	s0n1 = vec3(2.0 * hit.x, 2.0 * (hit.y - s0pos.y), 2.0 * hit.z);
+	hit = ro + (rd * s0t1);
+	s0n1 = vec3(hit.x, (hit.y - s0pos.y), hit.z);
 	s0t1 = (hit.y < k) ? 0.0 : s0t1;
 	// now intersect unit-radius sphere located at bottom opening of cylinder
 	vec3 s1pos = vec3(0, -k, 0);
@@ -1197,11 +1199,11 @@ void Capsule_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out float t
 	b = 2.0 * dot(rd, L);
 	c = dot(L, L) - 1.0;
 	solveQuadratic(a, b, c, s1t0, s1t1);
-	hit = ro + rd * s1t0;
-	s1n0 = vec3(2.0 * hit.x, 2.0 * (hit.y - s1pos.y), 2.0 * hit.z);
+	hit = ro + (rd * s1t0);
+	s1n0 = vec3(hit.x, (hit.y - s1pos.y), hit.z);
 	s1t0 = (hit.y > -k) ? 0.0 : s1t0;
-	hit = ro + rd * s1t1;
-	s1n1 = vec3(2.0 * hit.x, 2.0 * (hit.y - s1pos.y), 2.0 * hit.z);
+	hit = ro + (rd * s1t1);
+	s1n1 = vec3(hit.x, (hit.y - s1pos.y), hit.z);
 	s1t1 = (hit.y > -k) ? 0.0 : s1t1;
 	if (s0t0 != 0.0)
 	{
@@ -1267,18 +1269,18 @@ void PyramidFrustum_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out 
 	k = clamp(k, 0.01, 1.0);
 	
 	float j = 1.0 / k;
-	float h = j * 2.0 - 1.0; // (k * 0.25) makes the normal cone's bottom circular base have a unit radius of 1.0
-	float a = j * rd.x * rd.x - (k * 0.25) * rd.y * rd.y;
-    	float b = 2.0 * (j * rd.x * ro.x - (k * 0.25) * rd.y * (ro.y - h));
-    	float c = j * ro.x * ro.x - (k * 0.25) * (ro.y - h) * (ro.y - h);
+	float h = (j * 2.0) - 1.0; // (k * 0.25) makes the normal cone's bottom circular base have a unit radius of 1.0
+	float a = (j * rd.x * rd.x) - ((k * 0.25) * rd.y * rd.y);
+    	float b = 2.0 * ((j * rd.x * ro.x) - ((k * 0.25) * rd.y * (ro.y - h)));
+    	float c = (j * ro.x * ro.x) - ((k * 0.25) * (ro.y - h) * (ro.y - h));
 	solveQuadratic(a, b, c, xt0, xt1);
-	hit = ro + rd * xt0;
-	xt0 = (abs(hit.x) > 1.0 || abs(hit.z) > 1.0 || hit.y > 1.0 || (j * hit.z * hit.z - k * 0.25 * (hit.y - h) * (hit.y - h)) > 0.0) ? 0.0 : xt0;
-	xn0 = vec3(2.0 * hit.x * j, 2.0 * (hit.y - h) * -(k * 0.25), 0.0);
+	hit = ro + (rd * xt0);
+	xt0 = (abs(hit.x) > 1.0 || abs(hit.z) > 1.0 || hit.y > 1.0 || ((j * hit.z * hit.z) - (k * 0.25 * (hit.y - h) * (hit.y - h))) > 0.0) ? 0.0 : xt0;
+	xn0 = vec3(hit.x * j, (hit.y - h) * -(k * 0.25), 0.0);
 	
-	hit = ro + rd * xt1;
-	xt1 = (abs(hit.x) > 1.0 || abs(hit.z) > 1.0 || hit.y > 1.0 || (j * hit.z * hit.z - k * 0.25 * (hit.y - h) * (hit.y - h)) > 0.0) ? 0.0 : xt1;
-	xn1 = vec3(2.0 * hit.x * j, 2.0 * (hit.y - h) * -(k * 0.25), 0.0);
+	hit = ro + (rd * xt1);
+	xt1 = (abs(hit.x) > 1.0 || abs(hit.z) > 1.0 || hit.y > 1.0 || ((j * hit.z * hit.z) - (k * 0.25 * (hit.y - h) * (hit.y - h))) > 0.0) ? 0.0 : xt1;
+	xn1 = vec3(hit.x * j, (hit.y - h) * -(k * 0.25), 0.0);
 	
 	// since the infinite double-cone shape is artificially cut off at the top and bottom,
 	// if xt0 intersection was invalidated above, try xt1
@@ -1293,17 +1295,17 @@ void PyramidFrustum_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out 
 	// x^2 + z^2 - y^2 = 0
 	// To obtain a conical prism along the X axis, the X component is simply removed, leaving:
 	// z^2 - y^2 = 0
-	a = j * rd.z * rd.z - (k * 0.25) * rd.y * rd.y;
-    	b = 2.0 * (j * rd.z * ro.z - (k * 0.25) * rd.y * (ro.y - h));
-    	c = j * ro.z * ro.z - (k * 0.25) * (ro.y - h) * (ro.y - h);
+	a = (j * rd.z * rd.z) - ((k * 0.25) * rd.y * rd.y);
+    	b = 2.0 * ((j * rd.z * ro.z) - ((k * 0.25) * rd.y * (ro.y - h)));
+    	c = (j * ro.z * ro.z) - ((k * 0.25) * (ro.y - h) * (ro.y - h));
 	solveQuadratic(a, b, c, zt0, zt1);
-	hit = ro + rd * zt0;
-	zt0 = (abs(hit.x) > 1.0 || abs(hit.z) > 1.0 || hit.y > 1.0 || (j * hit.x * hit.x - k * 0.25 * (hit.y - h) * (hit.y - h)) > 0.0) ? 0.0 : zt0;
-	zn0 = vec3(0.0, 2.0 * (hit.y - h) * -(k * 0.25), 2.0 * hit.z * j);
+	hit = ro + (rd * zt0);
+	zt0 = (abs(hit.x) > 1.0 || abs(hit.z) > 1.0 || hit.y > 1.0 || ((j * hit.x * hit.x) - (k * 0.25 * (hit.y - h) * (hit.y - h))) > 0.0) ? 0.0 : zt0;
+	zn0 = vec3(0.0, (hit.y - h) * -(k * 0.25), hit.z * j);
 	
-	hit = ro + rd * zt1;
-	zt1 = (abs(hit.x) > 1.0 || abs(hit.z) > 1.0 || hit.y > 1.0 || (j * hit.x * hit.x - k * 0.25 * (hit.y - h) * (hit.y - h)) > 0.0) ? 0.0 : zt1;
-	zn1 = vec3(0.0, 2.0 * (hit.y - h) * -(k * 0.25), 2.0 * hit.z * j);
+	hit = ro + (rd * zt1);
+	zt1 = (abs(hit.x) > 1.0 || abs(hit.z) > 1.0 || hit.y > 1.0 || ((j * hit.x * hit.x) - (k * 0.25 * (hit.y - h) * (hit.y - h))) > 0.0) ? 0.0 : zt1;
+	zn1 = vec3(0.0, (hit.y - h) * -(k * 0.25), hit.z * j);
 	// since the infinite double-cone shape is artificially cut off at the top and bottom,
 	// if zt0 intersection was invalidated above, try zt1
 	if (zt0 == 0.0)
@@ -1374,7 +1376,7 @@ void PyramidFrustum_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out 
 		dr0 = 1.0; // bottom square is unit radius
 		dr1 = 1.0 - k;// top square's size is relative to k
 	}
-	hit = ro + rd * d0;
+	hit = ro + (rd * d0);
 	if (abs(hit.x) <= dr0 && abs(hit.z) <= dr0)
 	{
 		t1 = t0;
@@ -1382,7 +1384,7 @@ void PyramidFrustum_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out 
 		t0 = d0;
 		n0 = dn0;
 	}
-	hit = ro + rd * d1;
+	hit = ro + (rd * d1);
 	if (abs(hit.x) <= dr1 && abs(hit.z) <= dr1)
 	{
 		t1 = d1;
@@ -1707,18 +1709,18 @@ float EllipsoidParamIntersect( float yMinPercent, float yMaxPercent, float phiMa
 	solveQuadratic(a, b, c, t0, t1);
 	if (t1 <= 0.0) return INFINITY;
 	t = t0 > 0.0 ? t0 : INFINITY;
-	pHit = ro + rd * t;
+	pHit = ro + (rd * t);
 	phi = mod(atan(pHit.z, pHit.x), TWO_PI);
 	if (pHit.y > yMaxPercent || pHit.y < yMinPercent || phi > phiMaxRadians)
 	{
 		t = t1;
-		pHit = ro + rd * t;
+		pHit = ro + (rd * t);
 		phi = mod(atan(pHit.z, pHit.x), TWO_PI);
 		if (pHit.y > yMaxPercent || pHit.y < yMinPercent || phi > phiMaxRadians)
 			t = INFINITY;
 	}
 	
-	n = vec3(2.0 * pHit.x, 2.0 * pHit.y, 2.0 * pHit.z);
+	n = pHit;
 	n = dot(rd, n) < 0.0 ? n : -n; // flip normal if it is facing away from us
 	return t;
 }
@@ -1733,25 +1735,25 @@ float CylinderParamIntersect( float yMinPercent, float yMaxPercent, float phiMax
 	float t, t0, t1, phi;
 	// implicit equation of a unit (radius of 1) cylinder, extending infinitely in the +Y and -Y directions:
 	// x^2 + z^2 - 1 = 0
-	float a = (rd.x * rd.x + rd.z * rd.z);
-    	float b = 2.0 * (rd.x * ro.x + rd.z * ro.z);
-    	float c = (ro.x * ro.x + ro.z * ro.z) - 1.0;
+	float a = (rd.x * rd.x) + (rd.z * rd.z);
+    	float b = 2.0 * ((rd.x * ro.x) + (rd.z * ro.z));
+    	float c = ((ro.x * ro.x) + (ro.z * ro.z)) - 1.0;
 	solveQuadratic(a, b, c, t0, t1);
 	if (t1 <= 0.0) return INFINITY;
 		
 	t = t0 > 0.0 ? t0 : INFINITY;
-	pHit = ro + rd * t;
+	pHit = ro + (rd * t);
 	phi = mod(atan(pHit.z, pHit.x), TWO_PI);
 	if (pHit.y > yMaxPercent || pHit.y < yMinPercent || phi > phiMaxRadians)
 	{
 		t = t1;
-		pHit = ro + rd * t;
+		pHit = ro + (rd * t);
 		phi = mod(atan(pHit.z, pHit.x), TWO_PI);
 		if (pHit.y > yMaxPercent || pHit.y < yMinPercent || phi > phiMaxRadians)
 			t = INFINITY;
 	}
 	
-	n = vec3(2.0 * pHit.x, 0.0, 2.0 * pHit.z);
+	n = vec3(pHit.x, 0.0, pHit.z);
 	n = dot(rd, n) < 0.0 ? n : -n; // flip normal if it is facing away from us
 		
 	return t;
@@ -1769,25 +1771,25 @@ float ConeParamIntersect( float yMinPercent, float yMaxPercent, float phiMaxRadi
 	// x^2 + z^2 - y^2 = 0
 	// code below cuts off top cone, leaving bottom cone with apex at the top (+1.0), and circular base (radius of 1) at the bottom (-1.0)
 	float k = 0.25;
-	float a = rd.x * rd.x + rd.z * rd.z - k * rd.y * rd.y;
-    	float b = 2.0 * (rd.x * ro.x + rd.z * ro.z - k * rd.y * (ro.y - 1.0));
-    	float c = ro.x * ro.x + ro.z * ro.z - k * (ro.y - 1.0) * (ro.y - 1.0);
+	float a = (rd.x * rd.x) + (rd.z * rd.z) - (k * rd.y * rd.y);
+    	float b = 2.0 * ((rd.x * ro.x) + (rd.z * ro.z) - (k * rd.y * (ro.y - 1.0)));
+    	float c = ((ro.x * ro.x) + (ro.z * ro.z)) - (k * (ro.y - 1.0) * (ro.y - 1.0));
 	
 	solveQuadratic(a, b, c, t0, t1);
 	if (t1 <= 0.0) return INFINITY;
 		
 	t = t0 > 0.0 ? t0 : INFINITY;
-	pHit = ro + rd * t;
+	pHit = ro + (rd * t);
 	phi = mod(atan(pHit.z, pHit.x), TWO_PI);
 	if (pHit.y > yMaxPercent || pHit.y < yMinPercent || phi > phiMaxRadians)
 	{
 		t = t1;
-		pHit = ro + rd * t;
+		pHit = ro + (rd * t);
 		phi = mod(atan(pHit.z, pHit.x), TWO_PI);
 		if (pHit.y > yMaxPercent || pHit.y < yMinPercent || phi > phiMaxRadians)
 			t = INFINITY;
 	}
-	n = vec3(2.0 * pHit.x, 2.0 * (1.0 - pHit.y) * k, 2.0 * pHit.z);
+	n = vec3(pHit.x, (1.0 - pHit.y) * k, pHit.z);
 	n = dot(rd, n) < 0.0 ? n : -n; // flip normal if it is facing away from us
 	return t;
 }
@@ -1805,9 +1807,9 @@ float ParaboloidParamIntersect( float yMinPercent, float yMaxPercent, float phiM
 	ro.y += 1.0; // this essentially centers the paraboloid so that the bottom is at -1.0 and 
 		     // the open circular top (radius of 1) is at +1.0
 	float k = 0.5;
-	float a = (rd.x * rd.x + rd.z * rd.z);
-    	float b = 2.0 * (rd.x * ro.x + rd.z * ro.z) - k * rd.y;
-    	float c = (ro.x * ro.x + ro.z * ro.z) - k * ro.y;
+	float a = (rd.x * rd.x) + (rd.z * rd.z);
+    	float b = 2.0 * ((rd.x * ro.x) + (rd.z * ro.z)) - (k * rd.y);
+    	float c = ((ro.x * ro.x) + (ro.z * ro.z)) - (k * ro.y);
 	solveQuadratic(a, b, c, t0, t1);
 	if (t1 <= 0.0) return INFINITY;
 	
@@ -1815,12 +1817,12 @@ float ParaboloidParamIntersect( float yMinPercent, float yMaxPercent, float phiM
 	yMaxPercent += 1.0;
 	yMinPercent += 1.0;
 	t = t0 > 0.0 ? t0 : INFINITY;
-	pHit = ro + rd * t;
+	pHit = ro + (rd * t);
 	phi = mod(atan(pHit.z, pHit.x), TWO_PI);
 	if (pHit.y > yMaxPercent || pHit.y < yMinPercent || phi > phiMaxRadians)
 	{
 		t = t1;
-		pHit = ro + rd * t;
+		pHit = ro + (rd * t);
 		phi = mod(atan(pHit.z, pHit.x), TWO_PI);
 		if (pHit.y > yMaxPercent || pHit.y < yMinPercent || phi > phiMaxRadians)
 			t = INFINITY;
@@ -1848,25 +1850,25 @@ float HyperboloidParamIntersect( float k, float yMinPercent, float yMaxPercent, 
 	// if the k argument is negative, a 2-sheet hyperboloid is created
 	float j = k - 1.0;
 	
-	float a = k * rd.x * rd.x + k * rd.z * rd.z - j * rd.y * rd.y;
-	float b = 2.0 * (k * rd.x * ro.x + k * rd.z * ro.z - j * rd.y * ro.y);
-	float c = (k * ro.x * ro.x + k * ro.z * ro.z - j * ro.y * ro.y) - 1.0;
+	float a = (k * rd.x * rd.x) + (k * rd.z * rd.z) - (j * rd.y * rd.y);
+	float b = 2.0 * ((k * rd.x * ro.x) + (k * rd.z * ro.z) - (j * rd.y * ro.y));
+	float c = ((k * ro.x * ro.x) + (k * ro.z * ro.z) - (j * ro.y * ro.y)) - 1.0;
 	solveQuadratic(a, b, c, t0, t1);
 	if (t1 <= 0.0) return INFINITY;
 	
 	t = t0 > 0.0 ? t0 : INFINITY;
-	pHit = ro + rd * t;
+	pHit = ro + (rd * t);
 	phi = mod(atan(pHit.z, pHit.x), TWO_PI);
 	if (pHit.y > yMaxPercent || pHit.y < yMinPercent || phi > phiMaxRadians)
 	{
 		t = t1;
-		pHit = ro + rd * t;
+		pHit = ro + (rd * t);
 		phi = mod(atan(pHit.z, pHit.x), TWO_PI);
 		if (pHit.y > yMaxPercent || pHit.y < yMinPercent || phi > phiMaxRadians)
 			t = INFINITY;
 	}
 	
-	n = vec3(2.0 * pHit.x * k, 2.0 * -pHit.y * j, 2.0 * pHit.z * k);
+	n = vec3(pHit.x * k, -pHit.y * j, pHit.z * k);
 	n = dot(rd, n) < 0.0 ? n : -n; // flip normal if it is facing away from us
 		
 	return t;
@@ -1882,18 +1884,18 @@ float HyperbolicParaboloidParamIntersect( float yMinPercent, float yMaxPercent, 
 	float t, t0, t1, phi;
 	// implicit equation of an infinite hyperbolic paraboloid (saddle shape):
 	// x^2 - z^2 - y = 0
-	float a = rd.x * rd.x - rd.z * rd.z;
-	float b = 2.0 * (rd.x * ro.x - rd.z * ro.z) - rd.y;
-	float c = (ro.x * ro.x - ro.z * ro.z) - ro.y;
+	float a = (rd.x * rd.x) - (rd.z * rd.z);
+	float b = 2.0 * ((rd.x * ro.x) - (rd.z * ro.z)) - rd.y;
+	float c = ((ro.x * ro.x) - (ro.z * ro.z)) - ro.y;
 	solveQuadratic(a, b, c, t0, t1);
 	if (t1 <= 0.0) return INFINITY;
 	t = t0 > 0.0 ? t0 : INFINITY;
-	pHit = ro + rd * t;
+	pHit = ro + (rd * t);
 	phi = mod(atan(pHit.z, pHit.x), TWO_PI);
 	if (abs(pHit.x) > yMaxPercent || abs(pHit.y) > yMaxPercent || abs(pHit.z) > yMaxPercent || phi > phiMaxRadians)
 	{
 		t = t1;
-		pHit = ro + rd * t;
+		pHit = ro + (rd * t);
 		phi = mod(atan(pHit.z, pHit.x), TWO_PI);
 		if (abs(pHit.x) > yMaxPercent || abs(pHit.y) > yMaxPercent || abs(pHit.z) > yMaxPercent || phi > phiMaxRadians)
 			t = INFINITY;
@@ -2026,9 +2028,9 @@ float CappedCylinderIntersect( vec3 p0, vec3 p1, float rad, vec3 rayOrigin, vec3
 	// Cylinder caps
 	// disk0
 	vec3 diskNormal = normalize(dp);
-	float denom = dot(diskNormal, rayDirection);
+	float denom = 1.0 / dot(diskNormal, rayDirection);
 	vec3 pOrO = p0 - rayOrigin;
-	float tDisk0 = dot(pOrO, diskNormal) / denom;
+	float tDisk0 = dot(pOrO, diskNormal) * denom;
 	if (tDisk0 > 0.0)
 	{
 		vec3 intersectPos = rayOrigin + rayDirection * tDisk0;
@@ -2042,9 +2044,9 @@ float CappedCylinderIntersect( vec3 p0, vec3 p1, float rad, vec3 rayOrigin, vec3
 	}
 	
 	// disk1
-	denom = dot(diskNormal, rayDirection);
+	denom = 1.0 / dot(diskNormal, rayDirection);
 	pOrO = p1 - rayOrigin;
-	float tDisk1 = dot(pOrO, diskNormal) / denom;
+	float tDisk1 = dot(pOrO, diskNormal) * denom;
 	if (tDisk1 > 0.0)
 	{
 		vec3 intersectPos = rayOrigin + rayDirection * tDisk1;
@@ -2237,9 +2239,9 @@ float ParaboloidIntersect( float rad, float height, vec3 pos, vec3 rayOrigin, ve
 	float k = height / (rad * rad);
 	
 	// quadratic equation coefficients
-	float a = k * (rd.x * rd.x + rd.z * rd.z);
-	float b = k * 2.0 * (rd.x * ro.x + rd.z * ro.z) - rd.y;
-	float c = k * (ro.x * ro.x + ro.z * ro.z) - ro.y;
+	float a = k * ((rd.x * rd.x) + (rd.z * rd.z));
+	float b = k * 2.0 * ((rd.x * ro.x) + (rd.z * ro.z)) - rd.y;
+	float c = k * ((ro.x * ro.x) + (ro.z * ro.z)) - ro.y;
 	float t0, t1;
 	solveQuadratic(a, b, c, t0, t1);
 	
@@ -2247,10 +2249,10 @@ float ParaboloidIntersect( float rad, float height, vec3 pos, vec3 rayOrigin, ve
 	
 	if (t0 > 0.0)
 	{
-		ip = ro + rd * t0;
+		ip = ro + (rd * t0);
 		n = vec3( 2.0 * ip.x, -1.0 / k, 2.0 * ip.z );
 		// flip normal if it is facing away from us
-		n *= sign(-dot(rd, n)) * 2.0 - 1.0; // sign is 0 or 1, map it to -1 and +1
+		n *= (sign(-dot(rd, n)) * 2.0) - 1.0; // sign is 0 or 1, map it to -1 and +1
 		
 		if (ip.y < height)
 			return t0;
@@ -2258,10 +2260,10 @@ float ParaboloidIntersect( float rad, float height, vec3 pos, vec3 rayOrigin, ve
 	}
 	if (t1 > 0.0)
 	{	
-		ip = ro + rd * t1;
+		ip = ro + (rd * t1);
 		n = vec3( 2.0 * ip.x, -1.0 / k, 2.0 * ip.z );
 		// flip normal if it is facing away from us
-		n *= sign(-dot(rd, n)) * 2.0 - 1.0; // sign is 0 or 1, map it to -1 and +1
+		n *= (sign(-dot(rd, n)) * 2.0) - 1.0; // sign is 0 or 1, map it to -1 and +1
 		
 		if (ip.y < height)
 			return t1;		
@@ -2292,20 +2294,20 @@ float HyperboloidIntersect( float rad, float height, vec3 pos, vec3 rayOrigin, v
 	
 	if (t0 > 0.0)
 	{
-		ip = ro + rd * t0;
-		n = vec3( 2.0 * ip.x, -2.0 * ip.y, 2.0 * ip.z );
+		ip = ro + (rd * t0);
+		n = vec3( ip.x, -ip.y, ip.z );
 		// flip normal if it is facing away from us
-		n *= sign(-dot(rd, n)) * 2.0 - 1.0; // sign is 0 or 1, map it to -1 and +1
+		n *= (sign(-dot(rd, n)) * 2.0) - 1.0; // sign is 0 or 1, map it to -1 and +1
 		
 		if (abs(ip.y) < height)
 			return t0;		
 	}
 	if (t1 > 0.0)
 	{	
-		ip = ro + rd * t1;
-		n = vec3( 2.0 * ip.x, -2.0 * ip.y, 2.0 * ip.z );
+		ip = ro + (rd * t1);
+		n = vec3( ip.x, -ip.y, ip.z );
 		// flip normal if it is facing away from us
-		n *= sign(-dot(rd, n)) * 2.0 - 1.0; // sign is 0 or 1, map it to -1 and +1
+		n *= (sign(-dot(rd, n)) * 2.0) - 1.0; // sign is 0 or 1, map it to -1 and +1
 		
 		if (abs(ip.y) < height)
 			return t1;	
@@ -2325,9 +2327,9 @@ float HyperbolicParaboloidIntersect( float rad, float height, vec3 pos, vec3 ray
 	float k = height / (rad * rad);
 	
 	// quadratic equation coefficients
-	float a = k * (rd.x * rd.x - rd.z * rd.z);
-	float b = k * 2.0 * (rd.x * ro.x - rd.z * ro.z) - rd.y;
-	float c = k * (ro.x * ro.x - ro.z * ro.z) - ro.y;
+	float a = k * ((rd.x * rd.x) - (rd.z * rd.z));
+	float b = k * 2.0 * ((rd.x * ro.x) - (rd.z * ro.z)) - rd.y;
+	float c = k * ((ro.x * ro.x) - (ro.z * ro.z)) - ro.y;
 	
 	float t0, t1;
 	solveQuadratic(a, b, c, t0, t1);
@@ -2335,20 +2337,20 @@ float HyperbolicParaboloidIntersect( float rad, float height, vec3 pos, vec3 ray
 	vec3 ip;
 	if (t0 > 0.0)
 	{
-		ip = ro + rd * t0;
+		ip = ro + (rd * t0);
 		n = vec3( 2.0 * ip.x, -1.0 / k, -2.0 * ip.z );
 		// flip normal if it is facing away from us
-		n *= sign(-dot(rd, n)) * 2.0 - 1.0; // sign is 0 or 1, map it to -1 and +1
+		n *= (sign(-dot(rd, n)) * 2.0) - 1.0; // sign is 0 or 1, map it to -1 and +1
 		
 		if (abs(ip.x) < height && abs(ip.y) < height && abs(ip.z) < height)
 			return t0;		
 	}
 	if (t1 > 0.0)
 	{	
-		ip = ro + rd * t1;
+		ip = ro + (rd * t1);
 		n = vec3( 2.0 * ip.x, -1.0 / k, -2.0 * ip.z );
 		// flip normal if it is facing away from us
-		n *= sign(-dot(rd, n)) * 2.0 - 1.0; // sign is 0 or 1, map it to -1 and +1
+		n *= (sign(-dot(rd, n)) * 2.0) - 1.0; // sign is 0 or 1, map it to -1 and +1
 		
 		if (abs(ip.x) < height && abs(ip.y) < height && abs(ip.z) < height)
 			return t1;		
@@ -2358,6 +2360,290 @@ float HyperbolicParaboloidIntersect( float rad, float height, vec3 pos, vec3 ray
 }
 `;
 
+
+THREE.ShaderChunk[ 'pathtracing_torus_intersect' ] = `
+// Work in Progress:  analytical Quartic(degree 4) solution for a Torus
+// from Kevin Suffern's book, "Ray Tracing From The Ground Up"
+// code originally written in C++
+#define EQN_EPS 1e-6 // in his book, Suffern uses a EPS value of 1e-90 (wow!)- a 'double' precision which is not possible in WebGL shaders
+		     // This lack of double precision in WebGL leads to thin gaps and cracks artifacts in the rendered torus
+bool IsZero(float x)
+{
+	return (x > -EQN_EPS && x < EQN_EPS);
+} 
+
+float cbrt(float x) 
+{
+	if (x >= 0.0)
+		return pow(x, 1.0/3.0);  
+	return -pow(-x, 1.0/3.0);
+}
+
+int SolveQuadric(float c0, float c1, float c2, inout float s0, inout float s1) 
+{
+    float p, q, D;
+
+    /* normal form: x^2 + px + q = 0 */
+
+    p = c1 / (2.0 * c2);
+    q = c0 / c2;
+
+    D = (p * p) - q;
+
+    /* if (IsZero(D)) 
+    {
+	s0 = -p;
+	return 1;
+    }
+    else */ if (D > 0.0) 
+    {
+	float sqrt_D = sqrt(D);
+	s0 = sqrt_D - p;
+	s1 = -sqrt_D - p;
+	return 2;
+    }
+    else /* if (D < 0) */
+        return 0;
+}
+
+
+int SolveCubic(float c0, float c1, float c2, float c3, inout float s0, inout float s1, inout float s2) 
+{
+    int    i, num;
+    float  sub;
+    float  A, B, C;
+    float  sq_A, p, q;
+    float  cb_p, D;
+
+    /* normal form: x^3 + Ax^2 + Bx + C = 0 */
+
+    A = c2 / c3;
+    B = c1 / c3;
+    C = c0 / c3;
+
+    /*  substitute x = y - A/3 to eliminate quadric term:
+	x^3 +px + q = 0 */
+
+    sq_A = A * A;
+    p = (1.0/3.0) * ((-(1.0/3.0) * sq_A) + B);
+    q = (1.0/2.0) * (((2.0/27.0) * A * sq_A) - ((1.0/3.0) * A * B) + C);
+
+    /* use Cardano's formula */
+
+    cb_p = p * p * p;
+    D = (q * q) + cb_p;
+
+    if (IsZero(D)) 
+    {
+	if (IsZero(q)) 
+	{ 
+		s0 = 0.0;
+		num = 1;
+	}
+	else 
+	{ 
+	    float u = cbrt(-q);
+	    s0 = 2.0 * u;
+	    s1 = -u;
+	    num = 2;
+	}
+    }
+    else if (D < 0.0) 
+    { /* Casus irreducibilis: three real solutions */
+		float phi = (1.0/3.0) * acos(-q / sqrt(-cb_p));
+		float t = 2.0 * sqrt(-p);
+
+		s0 =  t * cos(phi);
+		s1 = -t * cos(phi + (PI / 3.0));
+		s2 = -t * cos(phi - (PI / 3.0));
+		num = 3;
+    }
+    else 
+    { /* one real solution */
+		float sqrt_D = sqrt(D);
+		float u = cbrt(sqrt_D - q);
+		float v = -cbrt(sqrt_D + q);
+
+		s0 = u + v;
+		num = 1;
+    }
+
+    /* resubstitute */
+
+    sub = (1.0/3.0) * A;
+
+//     for (int i = 0; i < num; ++i)
+// 	s[ i ] -= sub;
+	s0 -= sub;
+	s1 -= sub;
+	s2 -= sub;
+
+    return num;
+}
+
+
+
+int SolveQuartic(float c0, float c1, float c2, float c3, float c4, inout float s0, inout float s1, inout float s2, inout float s3) 
+{
+    float  coeffs[4];
+    float  z, u, v, sub;
+    float  A, B, C, D;
+    float  sq_A, p, q, r;
+    int    i, num;
+
+    /* normal form: x^4 + Ax^3 + Bx^2 + Cx + D = 0 */
+
+    A = c3 / c4;
+    B = c2 / c4;
+    C = c1 / c4;
+    D = c0 / c4;
+
+    /*  substitute x = y - A/4 to eliminate cubic term:
+	x^4 + px^2 + qx + r = 0 */
+
+    sq_A = A * A;
+    p = ((-3.0/8.0) * sq_A) + B;
+    q = ((1.0/8.0) * sq_A * A) - ((1.0/2.0) * A * B) + C;
+    r = ((-3.0/256.0) * sq_A * sq_A) + ((1.0/16.0) * sq_A * B) - ((1.0/4.0) * A * C) + D;
+
+    if (IsZero(r)) 
+    {
+		
+
+		coeffs[ 0 ] = q;
+		coeffs[ 1 ] = p;
+		coeffs[ 2 ] = 0.0;
+		coeffs[ 3 ] = 1.0;
+
+		num = SolveCubic(coeffs[0], coeffs[1], coeffs[2], coeffs[3], s0, s1, s2);
+
+		//s[ num++ ] = 0.0;
+		if (num == 0) s0 = 0.0;
+		if (num == 1) s1 = 0.0;
+		if (num == 2) s2 = 0.0;
+		if (num == 3) s3 = 0.0;
+		num++;
+    }
+    else 
+    {
+		/* solve the resolvent cubic ... */
+
+		coeffs[ 0 ] = ((1.0/2.0) * r * p) - ((1.0/8.0) * q * q);
+		coeffs[ 1 ] = -r;
+		coeffs[ 2 ] = -(1.0/2.0) * p;
+		coeffs[ 3 ] = 1.0;
+		
+		num = SolveCubic(coeffs[0], coeffs[1], coeffs[2], coeffs[3], s0, s1, s2);
+
+		/* ... and take the one real solution ... */
+
+		z = s0;
+
+		/* ... to build two quadric equations */
+
+		u = (z * z) - r;
+		v = (2.0 * z) - p;
+
+		/* if (IsZero(u))
+		    u = 0.0;
+		else */ if (u > 0.0)
+		    u = sqrt(u);
+		else
+		    return 0;
+
+		/* if (IsZero(v))
+		    v = 0.0;
+		else */ if (v > 0.0)
+		    v = sqrt(v);
+		else
+		    return 0;
+
+		coeffs[ 0 ] = z - u;
+		coeffs[ 1 ] = q < 0.0 ? -v : v;
+		coeffs[ 2 ] = 1.0;
+
+		num = SolveQuadric(coeffs[0], coeffs[1], coeffs[2], s0, s1);
+
+		coeffs[ 0 ] = z + u;
+		coeffs[ 1 ] = q < 0.0 ? v : -v;
+		coeffs[ 2 ] = 1.0;
+
+		if (num == 0)
+			num += SolveQuadric(coeffs[0], coeffs[1], coeffs[2], s0, s1);
+		else if (num == 1)
+			num += SolveQuadric(coeffs[0], coeffs[1], coeffs[2], s1, s2);
+		else if (num == 2)
+			num += SolveQuadric(coeffs[0], coeffs[1], coeffs[2], s2, s3);
+    }
+
+    /* resubstitute */
+
+    sub = (1.0/4.0) * A;
+
+//     for (int i = 0; i < num; ++i)
+// 		s[ i ] -= sub;
+	s0 -= sub;
+	s1 -= sub;
+	s2 -= sub;
+	s3 -= sub;
+
+    return num;
+}
+
+
+float TorusIntersect(vec3 ro, vec3 rd, float ka, float kb) 
+{
+	// if (!bbox.hit(ray))
+	// 	return (false);
+	float kEpsilon = 0.0001;
+		
+	float x1 = ro.x; float y1 = ro.y; float z1 = ro.z;
+	float d1 = rd.x; float d2 = rd.y; float d3 = rd.z;	
+	
+	float coeffs[5];// coefficient array for the quartic equation
+	float roots[4];	// solution array for the quartic equation
+	
+	// define the coefficients of the quartic equation
+	
+	float sum_d_sqrd = d1 * d1 + d2 * d2 + d3 * d3;
+	float e	= x1 * x1 + y1 * y1 + z1 * z1 - ka * ka - kb * kb;
+	float f	= x1 * d1 + y1 * d2 + z1 * d3;
+	float four_a_sqrd = 4.0 * ka * ka;
+	
+	coeffs[0] = e * e - four_a_sqrd * (kb * kb - y1 * y1); 	// constant term
+	coeffs[1] = 4.0 * f * e + 2.0 * four_a_sqrd * y1 * d2;
+	coeffs[2] = 2.0 * sum_d_sqrd * e + 4.0 * f * f + four_a_sqrd * d2 * d2;
+	coeffs[3] = 4.0 * sum_d_sqrd * f;
+	coeffs[4] = sum_d_sqrd * sum_d_sqrd;  					// coefficient of t^4
+	
+	// find roots of the quartic equation
+	
+	int num_real_roots = SolveQuartic(coeffs[0], coeffs[1], coeffs[2], coeffs[3], coeffs[4],
+				 roots[0], roots[1], roots[2], roots[3]);
+	
+	bool intersected = false;
+	float t = INFINITY;
+	
+	if (num_real_roots == 0)  // ray misses the torus
+		return INFINITY;
+	
+	// find the smallest root greater than kEpsilon, if any
+	// the roots array is not sorted
+			
+	for (int j = 0; j < num_real_roots; j++)  
+		if (roots[j] > kEpsilon) {
+			intersected = true;
+			if (roots[j] < t)
+				t = roots[j];
+		}
+		
+	if (!intersected)
+		return INFINITY;
+	
+	return t;
+}
+
+`
 
 THREE.ShaderChunk[ 'pathtracing_unit_torus_intersect' ] = `
 
@@ -2590,7 +2876,7 @@ float TriangleIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 rayOrigin, vec3 rayDire
 	vec3 qvec = cross(tvec, edge1);
 	float v = dot(rayDirection, qvec) * det;
 	float t = dot(edge2, qvec) * det;
-	return (u < 0.0 || u > 1.0 || v < 0.0 || u + v > 1.0 || t <= 0.0) ? INFINITY : t;
+	return (t <= 0.0 || u < 0.0 || u > 1.0 || v < 0.0 || u + v > 1.0) ? INFINITY : t;
 }
 //--------------------------------------------------------------------------------------------------------------
 float QuadIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 v3, vec3 rayOrigin, vec3 rayDirection, int isDoubleSided )
@@ -2702,8 +2988,44 @@ float BVH_TriangleIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 rayOrigin, vec3 ray
 	vec3 qvec = cross(tvec, edge1);
 	v = dot(rayDirection, qvec) * det;
 	float t = dot(edge2, qvec) * det;
-	return (det < 0.0 || u < 0.0 || u > 1.0 || v < 0.0 || u + v > 1.0 || t <= 0.0) ? INFINITY : t;
+	return (det < 0.0 || t <= 0.0 || u < 0.0 || u > 1.0 || v < 0.0 || u + v > 1.0) ? INFINITY : t;
 }
+
+/* //-------------------------------------------------------------------------------------------------------------------
+float BVH_TriangleIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 rayOrigin, vec3 rayDirection, out float u, out float v )
+//-------------------------------------------------------------------------------------------------------------------
+{
+	//Inside-Outside Test	
+	vec3 n = cross(v1 - v0, v2 - v0);
+	float nDotDir = 1.0 / dot(n, rayDirection);
+	if (nDotDir > 0.0) return INFINITY;
+
+	float denom = 1.0 / dot(n, n);
+	float D = -dot(n, v0);
+	
+        float t = -(dot(n, rayOrigin) + D) * nDotDir;
+	if (t < 0.0) return INFINITY;
+
+	vec3 ip = rayOrigin + (t * rayDirection);
+	vec3 C;
+	vec3 edge0 = v1 - v0;
+	C = cross(edge0, ip - v0);
+	if (dot(n, C) < 0.0) return INFINITY;
+
+	vec3 edge1 = v2 - v1;
+	C = cross(edge1, ip - v1);
+	u = dot(n, C);
+	if (u < 0.0) return INFINITY;
+
+	vec3 edge2 = v0 - v2;
+	C = cross(edge2, ip - v2);
+	v = dot(n, C);
+	if (v < 0.0) return INFINITY;
+	
+	u *= denom;
+	v *= denom;
+	return t;
+} */
 `;
 
 THREE.ShaderChunk[ 'pathtracing_bvhDoubleSidedTriangle_intersect' ] = `
@@ -2720,7 +3042,7 @@ float BVH_DoubleSidedTriangleIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 rayOrigi
 	vec3 qvec = cross(tvec, edge1);
 	v = dot(rayDirection, qvec) * det; 
 	float t = dot(edge2, qvec) * det;
-	return (u < 0.0 || u > 1.0 || v < 0.0 || u + v > 1.0 || t <= 0.0) ? INFINITY : t;
+	return (t <= 0.0 || u < 0.0 || u > 1.0 || v < 0.0 || u + v > 1.0) ? INFINITY : t;
 }
 `;
 
@@ -2733,8 +3055,8 @@ float RayleighPhase(float cosTheta)
 float hgPhase(float cosTheta, float g)
 {
         float g2 = g * g;
-        float inverse = 1.0 / pow(max(0.0, 1.0 - 2.0 * g * cosTheta + g2), 1.5);
-	return ONE_OVER_FOURPI * ((1.0 - g2) * inverse);
+        float inv = 1.0 / pow(max(0.0, 1.0 - (2.0 * g * cosTheta) + g2), 1.5);
+	return ONE_OVER_FOURPI * ((1.0 - g2) * inv);
 }
 
 vec3 totalMie()
@@ -2771,17 +3093,17 @@ vec3 Get_Sky_Color(vec3 rayDir)
     
 	// optical length
 	float zenithAngle = acos( max( 0.0, dot( UP_VECTOR, viewDirection ) ) );
-	float inverse = 1.0 / ( cos( zenithAngle ) + 0.15 * pow( 93.885 - ( ( zenithAngle * 180.0 ) / PI ), -1.253 ) );
-	float rayleighOpticalLength = RAYLEIGH_ZENITH_LENGTH * inverse;
-	float mieOpticalLength = MIE_ZENITH_LENGTH * inverse;
+	float inv = 1.0 / ( cos( zenithAngle ) + 0.15 * pow( 93.885 - ( ( zenithAngle * 180.0 ) / PI ), -1.253 ) );
+	float rayleighOpticalLength = RAYLEIGH_ZENITH_LENGTH * inv;
+	float mieOpticalLength = MIE_ZENITH_LENGTH * inv;
 	// combined extinction factor	
-	vec3 Fex = exp(-(rayleighAtX * rayleighOpticalLength + mieAtX * mieOpticalLength));
+	vec3 Fex = exp(-((rayleighAtX * rayleighOpticalLength) + (mieAtX * mieOpticalLength)));
 	// in scattering
-	vec3 betaRTheta = rayleighAtX * RayleighPhase(cosViewSunAngle * 0.5 + 0.5);
+	vec3 betaRTheta = rayleighAtX * RayleighPhase((cosViewSunAngle * 0.5) + 0.5);
 	vec3 betaMTheta = mieAtX * hgPhase(cosViewSunAngle, MIE_DIRECTIONAL_G);
 	
 	vec3 Lin = pow( sunE * ( ( betaRTheta + betaMTheta ) / ( rayleighAtX + mieAtX ) ) * ( 1.0 - Fex ), vec3( 1.5 ) );
-	Lin *= mix( vec3( 1.0 ), pow( sunE * ( ( betaRTheta + betaMTheta ) / ( rayleighAtX + mieAtX ) ) * Fex, vec3( 1.0 / 2.0 ) ), clamp( pow( 1.0 - cosSunUpAngle, 5.0 ), 0.0, 1.0 ) );
+	Lin *= mix( vec3( 1.0 ), pow( sunE * ( ( betaRTheta + betaMTheta ) / ( rayleighAtX + mieAtX ) ) * Fex, vec3( 0.5 ) ), clamp( pow( 1.0 - cosSunUpAngle, 5.0 ), 0.0, 1.0 ) );
 	// nightsky
 	float theta = acos( viewDirection.y ); // elevation --> y-axis, [-pi/2, pi/2]
 	float phi = atan( viewDirection.z, viewDirection.x ); // azimuth --> x-axis [-pi/2, pi/2]
@@ -2790,7 +3112,7 @@ vec3 Get_Sky_Color(vec3 rayDir)
 	// composition + solar disc
 	float sundisk = smoothstep( SUN_ANGULAR_DIAMETER_COS, SUN_ANGULAR_DIAMETER_COS + 0.00002, cosViewSunAngle );
 	L0 += ( sunE * 19000.0 * Fex ) * sundisk;
-	vec3 texColor = ( Lin + L0 ) * 0.04 + vec3( 0.0, 0.0003, 0.00075 );
+	vec3 texColor = (( Lin + L0 ) * 0.04) + vec3( 0.0, 0.0003, 0.00075 );
 	float sunfade = 1.0 - clamp( 1.0 - exp( ( uSunDirection.y / 450000.0 ) ), 0.0, 1.0 );
 	vec3 retColor = pow( texColor, vec3( 1.0 / ( 1.2 + ( 1.2 * sunfade ) ) ) );
 	return retColor;
@@ -2828,8 +3150,8 @@ float rng()
 
 vec3 randomSphereDirection()
 {
-    	float up = rng() * 2.0 - 1.0; // range: -1 to +1
-	float over = sqrt( max(0.0, 1.0 - up * up) );
+    	float up = (rng() * 2.0) - 1.0; // range: -1 to +1
+	float over = sqrt( max(0.0, 1.0 - (up * up)) );
 	float around = rng() * TWO_PI;
 	return normalize(vec3(cos(around) * over, up, sin(around) * over));	
 }
@@ -2849,17 +3171,17 @@ vec3 randomSphereDirection()
 //the following alternative skips the creation of tangent and bi-tangent vectors T and B
 vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 {
-	float z = rng() * 2.0 - 1.0;
+	float z = (rng() * 2.0) - 1.0;
 	float phi = rng() * TWO_PI;
-	float r = sqrt(1.0 - z * z);
+	float r = sqrt(1.0 - (z * z));
     	return normalize(nl + vec3(r * cos(phi), r * sin(phi), z));
 }
 
 vec3 randomDirectionInSpecularLobe(vec3 reflectionDir, float roughness)
 {
-	float z = rng() * 2.0 - 1.0;
+	float z = (rng() * 2.0) - 1.0;
 	float phi = rng() * TWO_PI;
-	float r = sqrt(1.0 - z * z);
+	float r = sqrt(1.0 - (z * z));
     	vec3 cosDiffuseDir = normalize(reflectionDir + vec3(r * cos(phi), r * sin(phi), z));
 	return normalize( mix(reflectionDir, cosDiffuseDir, roughness * roughness) );
 }
@@ -2913,16 +3235,16 @@ vec3 sampleSphereLight(vec3 x, vec3 nl, Sphere light, out float weight)
 	vec3 dirToLight = (light.position - x); // no normalize (for distance calc below)
 	float cos_alpha_max = sqrt(1.0 - clamp((light.radius * light.radius) / dot(dirToLight, dirToLight), 0.0, 1.0));
 	float r0 = rng();
-	float cos_alpha = 1.0 - r0 + r0 * cos_alpha_max;//mix( cos_alpha_max, 1.0, rng() );
+	float cos_alpha = (1.0 - r0) + (r0 * cos_alpha_max);//mix( cos_alpha_max, 1.0, rng() );
 	// * 0.75 below ensures shadow rays don't miss smaller sphere lights, due to shader float precision
-	float sin_alpha = sqrt(max(0.0, 1.0 - cos_alpha * cos_alpha)) * 0.75; 
+	float sin_alpha = sqrt(max(0.0, 1.0 - (cos_alpha * cos_alpha))) * 0.75; 
 	float phi = rng() * TWO_PI;
 	dirToLight = normalize(dirToLight);
 	
 	vec3 U = normalize( cross( abs(dirToLight.y) < 0.9 ? vec3(0, 1, 0) : vec3(0, 0, 1), dirToLight ) );
 	vec3 V = cross(dirToLight, U);
 	
-	vec3 sampleDir = normalize(U * cos(phi) * sin_alpha + V * sin(phi) * sin_alpha + dirToLight * cos_alpha);
+	vec3 sampleDir = normalize((U * cos(phi) * sin_alpha) + (V * sin(phi) * sin_alpha) + (dirToLight * cos_alpha));
 	weight = clamp(2.0 * (1.0 - cos_alpha_max) * max(0.0, dot(nl, sampleDir)), 0.0, 1.0);
 	
 	return sampleDir;
@@ -2938,8 +3260,8 @@ vec3 sampleQuadLight(vec3 x, vec3 nl, Quad light, out float weight)
 	randPointOnLight.z = mix(light.v0.z, light.v2.z, clamp(rng(), 0.1, 0.9));
 	vec3 dirToLight = randPointOnLight - x;
 	float r2 = distance(light.v0, light.v1) * distance(light.v0, light.v3);
-	float d2 = dot(dirToLight, dirToLight);
-	float cos_a_max = sqrt(1.0 - clamp( r2 / d2, 0.0, 1.0));
+	float d2 = 1.0 / dot(dirToLight, dirToLight);
+	float cos_a_max = sqrt(1.0 - clamp( r2 * d2, 0.0, 1.0));
 	dirToLight = normalize(dirToLight);
 	float dotNlRayDir = max(0.0, dot(nl, dirToLight)); 
 	weight =  2.0 * (1.0 - cos_a_max) * max(0.0, -dot(dirToLight, light.normal)) * dotNlRayDir; 
@@ -2949,7 +3271,7 @@ vec3 sampleQuadLight(vec3 x, vec3 nl, Quad light, out float weight)
 `;
 
 THREE.ShaderChunk[ 'pathtracing_calc_fresnel_reflectance' ] = `
-float calcFresnelReflectance(vec3 rayDirection, vec3 n, float etai, float etat, out float ratioIoR)
+float calcFresnelReflectance(vec3 rayDirection, vec3 n, float etai, float etat, out float IoR_ratio)
 {
 	float temp = etai;
 	float cosi = clamp(dot(rayDirection, n), -1.0, 1.0);
@@ -2959,15 +3281,19 @@ float calcFresnelReflectance(vec3 rayDirection, vec3 n, float etai, float etat, 
 		etat = temp;
 	}
 	
-	ratioIoR = etai / etat;
-	float sint2 = ratioIoR * ratioIoR * (1.0 - (cosi * cosi));
+	IoR_ratio = etai / etat;
+	float sint2 = IoR_ratio * IoR_ratio * (1.0 - (cosi * cosi));
 	if (sint2 >= 1.0) 
 		return 1.0; // total internal reflection
 	float cost = sqrt(1.0 - sint2);
 	cosi = abs(cosi);
-	float Rs = ((etat * cosi) - (etai * cost)) / ((etat * cosi) + (etai * cost));
-	float Rp = ((etai * cosi) - (etat * cost)) / ((etai * cosi) + (etat * cost));
-	return clamp( ((Rs * Rs) + (Rp * Rp)) * 0.5, 0.0, 1.0 );
+	float etatxcosi = etat * cosi;
+	float etaixcost = etai * cost;
+	float etaixcosi = etai * cosi;
+	float etatxcost = etat * cost;
+	float Rs = (etatxcosi - etaixcost) / (etatxcosi + etaixcost);
+	float Rp = (etaixcosi - etatxcost) / (etaixcosi + etatxcost);
+	return clamp( 0.5 * ((Rs * Rs) + (Rp * Rp)), 0.0, 1.0 );
 }
 `;
 
@@ -3007,13 +3333,13 @@ void main( void )
 	vec2 pixelPos = ((gl_FragCoord.xy + vec2(0.5) + pixelOffset) / uResolution) * 2.0 - 1.0;
 
 	vec3 rayDir = uUseOrthographicCamera ? camForward :
-		      normalize( pixelPos.x * camRight * uULen + pixelPos.y * camUp * uVLen + camForward ); 
+		      normalize( (camRight * pixelPos.x * uULen) + (camUp * pixelPos.y * uVLen) + camForward );
 					       
 	// depth of field
 	vec3 focalPoint = uFocusDistance * rayDir;
 	float randomAngle = rng() * TWO_PI; // pick random point on aperture
 	float randomRadius = rng() * uApertureSize;
-	vec3  randomAperturePos = ( cos(randomAngle) * camRight + sin(randomAngle) * camUp ) * sqrt(randomRadius);
+	vec3  randomAperturePos = ((camRight * cos(randomAngle)) + (camUp * sin(randomAngle))) * sqrt(randomRadius);
 	// point on aperture to focal point
 	vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
 
