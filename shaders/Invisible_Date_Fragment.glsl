@@ -394,7 +394,7 @@ float SceneIntersect( out int isRayExiting )
 		else if (sd4.x == 4.0)
 			d = UnitParaboloidIntersect(rObjOrigin, rObjDirection, n);
 		
-		if (d > 0.0 && d < t)
+		if (d < t)
 		{
 			t = d;
 			hitNormal = n;
