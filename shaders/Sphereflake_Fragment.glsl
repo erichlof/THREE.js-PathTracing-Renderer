@@ -198,7 +198,7 @@ float SceneIntersect( out int isRayExiting )
 		rObjDirection = vec3( invTransformMatrix * vec4(rayDirection, 0.0) );
 		d = UnitSphereIntersect(rObjOrigin, rObjDirection, n);
 		
-		if (d > 0.0 && d < t)
+		if (d < t)
 		{
 			t = d;
 			hitNormal = n;
