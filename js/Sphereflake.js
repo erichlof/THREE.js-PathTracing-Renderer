@@ -467,7 +467,7 @@ function initSceneData()
 	// In addition to the default GUI on all demos, add any special GUI elements that this particular demo requires
 
 	material_TypeObject = {
-		Sphereflake_Material: 'ClearCoat Diffuse'
+		Sphereflake_Material: 'Diffuse'
 	};
 	
 	function handleMaterialTypeChange() 
@@ -483,7 +483,7 @@ function initSceneData()
 	// scene/demo-specific uniforms go here
 	pathTracingUniforms.tShape_DataTexture = { value: shapeDataTexture };
 	pathTracingUniforms.tAABB_DataTexture = { value: aabbDataTexture };
-	pathTracingUniforms.uMaterialType = { value: 4 };
+	pathTracingUniforms.uMaterialType = { value: 1 };
 
 
 } // end function initSceneData()
