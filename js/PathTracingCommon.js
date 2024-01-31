@@ -26,6 +26,8 @@ in vec2 vUv;
 #define ONE_OVER_FOUR_PI 0.07957747154594767
 #define PI_OVER_TWO      1.57079632679489662
 #define ONE_OVER_THREE   0.33333333333333333
+#define ONE_OVER_NINE    0.11111111111111111
+#define ONE_OVER_54      0.01851851851851851
 #define E                2.71828182845904524
 #define INFINITY         1000000.0
 #define QUADRIC_EPSILON  0.00001
@@ -268,7 +270,7 @@ float UnitSphereIntersect( vec3 ro, vec3 rd, out vec3 n )
 		return t1;
 	}
 
-	return 0.0;
+	return INFINITY;
 }
 `;
 
@@ -298,7 +300,7 @@ float UnitCylinderIntersect( vec3 ro, vec3 rd, out vec3 n )
 		return t1;
 	}
 
-	return 0.0;
+	return INFINITY;
 }
 `;
 
@@ -330,7 +332,7 @@ float UnitConeIntersect( vec3 ro, vec3 rd, out vec3 n )
 		return t1;
 	}
 
-	return 0.0;
+	return INFINITY;
 }
 `;
 
@@ -361,7 +363,7 @@ float UnitParaboloidIntersect( vec3 ro, vec3 rd, out vec3 n )
 		return t1;
 	}
 
-	return 0.0;
+	return INFINITY;
 }
 `;
 
@@ -379,7 +381,7 @@ float UnitBoxIntersect( vec3 ro, vec3 rd, out vec3 n )
 	float t1 = min( min(tmax.x, tmax.y), tmax.z);
 
 	if (t0 > t1) // test for invalid intersection
-		return 0.0;
+		return INFINITY;
 
 	if (t0 > 0.0)
 	{
@@ -392,7 +394,7 @@ float UnitBoxIntersect( vec3 ro, vec3 rd, out vec3 n )
 		return t1;
 	}
 	
-	return 0.0;
+	return INFINITY;
 }
 `;
 
@@ -2508,8 +2510,6 @@ int SolveQuartic(float c0, float c1, float c2, float c3, float c4, inout float s
 
     if (IsZero(r)) 
     {
-		
-
 		coeffs[ 0 ] = q;
 		coeffs[ 1 ] = p;
 		coeffs[ 2 ] = 0.0;
@@ -2656,21 +2656,21 @@ float sgn(float x)
 
 float evalquadratic(float x, float A, float B, float C) 
 {
-  	return (A * x + B) * x + C;
+  	return ((A * x) + B) * x + C;
 }
 
 float evalcubic(float x, float A, float B, float C, float D) 
 {
-  	return ((A * x + B) * x + C) * x + D;
+  	return (((A * x) + B) * x + C) * x + D;
 }
 
 // Quadratic solver from Kahan
 int quadratic(float A, float B, float C, out vec2 res) 
 {
   	float b = -0.5 * B, b2 = b * b;
-  	float q = b2 - A * C;
+  	float q = b2 - (A * C);
   	if (q < 0.0) return 0;
-  	float r = b + sgn(b) * sqrt(q);
+  	float r = b + (sgn(b) * sqrt(q));
   	if (r == 0.0) 
 	{
   		res[0] = C / A;
@@ -2697,26 +2697,26 @@ int cubic(float a, float b, float c, float d, out vec3 res)
     		res.x = 0.0;
     		return 1 + quadratic(a, b, c, res.yz);
   	}
-  	float tmp = a; a = b / tmp; b = c / tmp; c = d / tmp;
+  	float tmp = 1.0 / a; a = b * tmp; b = c * tmp; c = d * tmp;
   	// solve x^3 + ax^2 + bx + c = 0
-  	float Q = (a * a - 3.0 * b) / 9.0;
-  	float R = (2.0 * a * a * a - 9.0 * a * b + 27.0 * c) / 54.0;
+  	float Q = ((a * a) - (3.0 * b)) * ONE_OVER_NINE;
+  	float R = ((2.0 * a * a * a) - (9.0 * a * b) + (27.0 * c)) * ONE_OVER_54;
   	float R2 = R * R, Q3 = Q * Q * Q;
   	if (R2 < Q3) 
   	{
     		float X = clamp(R / sqrt(Q3), -1.0, 1.0);
     		float theta = acos(X);
     		float S = sqrt(Q); // Q must be positive since 0 <= R2 < Q3
-    		res[0] = -2.0 *S *cos(theta / 3.0) - a / 3.0;
-    		res[1] = -2.0 *S *cos((theta + 2.0 * PI) / 3.0) - a / 3.0;
-    		res[2] = -2.0 *S *cos((theta + 4.0 * PI) / 3.0) - a / 3.0;
+    		res[0] = -2.0 * S * cos(theta * ONE_OVER_THREE) - (a * ONE_OVER_THREE);
+    		res[1] = -2.0 * S * cos((theta + (2.0 * PI)) * ONE_OVER_THREE) - (a * ONE_OVER_THREE);
+    		res[2] = -2.0 * S * cos((theta + (4.0 * PI)) * ONE_OVER_THREE) - (a * ONE_OVER_THREE);
     		return 3;
   	} 
   	else 
   	{
-    		float alpha = -sgn(R) * pow(abs(R) + sqrt(R2 - Q3), 0.3333);
+    		float alpha = -sgn(R) * pow(abs(R) + sqrt(R2 - Q3), ONE_OVER_THREE);
     		float beta = alpha == 0.0 ? 0.0 : Q / alpha;
-    		res[0] = alpha + beta - a / 3.0;
+    		res[0] = alpha + beta - (a * ONE_OVER_THREE);
     		return 1;
   	}
 }
@@ -2767,7 +2767,7 @@ int lquartic(float c1, float c2, float c3, float c4, out vec4 res)
   	float A = c2 - alpha * alpha;
   	float B = c3 - alpha * A;
   	float a, b, beta, psi;
-  	psi = qcubic(2.0 * A - alpha * alpha, A * A + 2.0 * B * alpha - 4.0 * c4, -B * B);
+  	psi = qcubic((2.0 * A) - (alpha * alpha), (A * A) + (2.0 * B * alpha) - (4.0 * c4), -B * B);
   	// There _should_ be a root >= 0, but sometimes the cubic
   	// solver misses it (probably a double root around zero).
   	psi = max(0.0, psi);
@@ -2775,11 +2775,11 @@ int lquartic(float c1, float c2, float c3, float c4, out vec4 res)
   	beta = 0.5 * (A + psi);
   	if (psi <= 0.0) 
   	{
-    		b = sqrt(max(beta * beta - c4, 0.0));
+    		b = sqrt(max((beta * beta) - c4, 0.0));
   	} 
   	else 
   	{
-    		b = 0.5 * a * (alpha - B / psi);
+    		b = 0.5 * a * (alpha - (B / psi));
   	}
 
   	int resn = quadratic(1.0, alpha + a, beta + b, res.xy);
@@ -2819,10 +2819,10 @@ float UnitTorusIntersect(vec3 ro, vec3 rd, float k, out vec3 n)
 	// A*t^4 + B*t^3 + C*t^2 + D*t + _E = 0
 	float A = U * U;
 	float B = 2.0 * U * V;
-	float C = V * V + 2.0 * U * W + 4.0 * torusR2 * rd.z * rd.z;
-	float D = 2.0 * V * W + 8.0 * torusR2 * ro.z * rd.z;
+	float C = (V * V) + (2.0 * U * W) + (4.0 * torusR2 * rd.z * rd.z);
+	float D = (2.0 * V * W) + (8.0 * torusR2 * ro.z * rd.z);
 // Note: the float below is renamed '_E', because Euler's number 'E' is already defined in 'pathtracing_defines_and_uniforms'
-	float _E = W * W + 4.0 * torusR2 * (ro.z * ro.z - torusr2);
+	float _E = (W * W) + (4.0 * torusR2 * ((ro.z * ro.z) - torusr2));
 	
 
 	vec4 res = vec4(0);
@@ -2849,8 +2849,8 @@ float UnitTorusIntersect(vec3 ro, vec3 rd, float k, out vec3 n)
 	t = (res.y > 0.0) ? res.y : t;	
 	t = (res.x > 0.0) ? res.x : t;
 		
-	vec3 pos = ro + t * rd;
-	n = pos * (dot(pos, pos) - torusr2 - torusR2 * vec3(1, 1,-1));
+	vec3 pos = ro + (t * rd);
+	n = pos * (dot(pos, pos) - torusr2 - (torusR2 * vec3(1, 1,-1)));
 
 	// float kn = sqrt(torusR2 / dot(pos.xy, pos.xy));
 	// pos.xy -= kn * pos.xy;
