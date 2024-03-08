@@ -2362,288 +2362,78 @@ float HyperbolicParaboloidIntersect( float rad, float height, vec3 pos, vec3 ray
 }
 `;
 
-
-THREE.ShaderChunk[ 'pathtracing_torus_intersect' ] = `
-// Work in Progress:  analytical Quartic(degree 4) solution for a Torus
-// from Kevin Suffern's book, "Ray Tracing From The Ground Up"
-// code originally written in C++
-#define EQN_EPS 1e-12 // in his book, Suffern uses a EPS value of 1e-90 (wow!)- a 'double' precision which is not possible in WebGL shaders
-		     // This lack of double precision in WebGL leads to thin gaps and cracks artifacts in the rendered torus
-bool IsZero(float x)
+THREE.ShaderChunk[ 'pathtracing_cheap_torus_intersect' ] = `
+//------------------------------------------------------------------------------------------------------------
+float CheapTorusIntersect( vec3 rayOrigin, vec3 rayDirection, float torusHoleSize, out vec3 n )
+//------------------------------------------------------------------------------------------------------------
 {
-	return (x > -EQN_EPS && x < EQN_EPS);
-} 
-
-float cbrt(float x) 
-{
-	if (x >= 0.0)
-		return pow(x, 1.0/3.0);  
-	return -pow(-x, 1.0/3.0);
-}
-
-int SolveQuadric(float c0, float c1, float c2, inout float s0, inout float s1) 
-{
-    float p, q, D;
-
-    /* normal form: x^2 + px + q = 0 */
-
-    p = c1 / (2.0 * c2);
-    q = c0 / c2;
-
-    D = (p * p) - q;
-
-    if (IsZero(D)) 
-    {
-	s0 = -p;
-	return 1;
-    }
-    else if (D > 0.0) 
-    {
-	float sqrt_D = sqrt(D);
-	s0 = sqrt_D - p;
-	s1 = -sqrt_D - p;
-	return 2;
-    }
-    else if (D < 0.0)
-        return 0;
-}
-
-
-int SolveCubic(float c0, float c1, float c2, float c3, inout float s0, inout float s1, inout float s2) 
-{
-    int    i, num;
-    float  sub;
-    float  A, B, C;
-    float  sq_A, p, q;
-    float  cb_p, D;
-
-    /* normal form: x^3 + Ax^2 + Bx + C = 0 */
-
-    A = c2 / c3;
-    B = c1 / c3;
-    C = c0 / c3;
-
-    /*  substitute x = y - A/3 to eliminate quadric term:
-	x^3 +px + q = 0 */
-
-    sq_A = A * A;
-    p = (1.0/3.0) * ((-(1.0/3.0) * sq_A) + B);
-    q = (1.0/2.0) * (((2.0/27.0) * A * sq_A) - ((1.0/3.0) * A * B) + C);
-
-    /* use Cardano's formula */
-
-    cb_p = p * p * p;
-    D = (q * q) + cb_p;
-
-    if (IsZero(D)) 
-    {
-	if (IsZero(q)) 
-	{ 
-		s0 = 0.0;
-		num = 1;
-	}
-	else 
-	{ 
-	    float u = cbrt(-q);
-	    s0 = 2.0 * u;
-	    s1 = -u;
-	    num = 2;
-	}
-    }
-    else if (D < 0.0) 
-    { /* Casus irreducibilis: three real solutions */
-		float phi = (1.0/3.0) * acos(-q / sqrt(-cb_p));
-		float t = 2.0 * sqrt(-p);
-
-		s0 =  t * cos(phi);
-		s1 = -t * cos(phi + (PI / 3.0));
-		s2 = -t * cos(phi - (PI / 3.0));
-		num = 3;
-    }
-    else 
-    { /* one real solution */
-		float sqrt_D = sqrt(D);
-		float u = cbrt(sqrt_D - q);
-		float v = -cbrt(sqrt_D + q);
-
-		s0 = u + v;
-		num = 1;
-    }
-
-    /* resubstitute */
-
-    sub = (1.0/3.0) * A;
-
-//     for (int i = 0; i < num; ++i)
-// 	s[ i ] -= sub;
-	s0 -= sub;
-	s1 -= sub;
-	s2 -= sub;
-
-    return num;
-}
-
-
-
-int SolveQuartic(float c0, float c1, float c2, float c3, float c4, inout float s0, inout float s1, inout float s2, inout float s3) 
-{
-    float  coeffs[4];
-    float  z, u, v, sub;
-    float  A, B, C, D;
-    float  sq_A, p, q, r;
-    int    i, num;
-
-    /* normal form: x^4 + Ax^3 + Bx^2 + Cx + D = 0 */
-
-    A = c3 / c4;
-    B = c2 / c4;
-    C = c1 / c4;
-    D = c0 / c4;
-
-    /*  substitute x = y - A/4 to eliminate cubic term:
-	x^4 + px^2 + qx + r = 0 */
-
-    sq_A = A * A;
-    p = ((-3.0/8.0) * sq_A) + B;
-    q = ((1.0/8.0) * sq_A * A) - ((1.0/2.0) * A * B) + C;
-    r = ((-3.0/256.0) * sq_A * sq_A) + ((1.0/16.0) * sq_A * B) - ((1.0/4.0) * A * C) + D;
-
-    if (IsZero(r)) 
-    {
-		coeffs[ 0 ] = q;
-		coeffs[ 1 ] = p;
-		coeffs[ 2 ] = 0.0;
-		coeffs[ 3 ] = 1.0;
-
-		num = SolveCubic(coeffs[0], coeffs[1], coeffs[2], coeffs[3], s0, s1, s2);
-
-		//s[ num++ ] = 0.0;
-		if (num == 0) s0 = 0.0;
-		if (num == 1) s1 = 0.0;
-		if (num == 2) s2 = 0.0;
-		if (num == 3) s3 = 0.0;
-		num++;
-    }
-    else 
-    {
-		/* solve the resolvent cubic ... */
-
-		coeffs[ 0 ] = ((1.0/2.0) * r * p) - ((1.0/8.0) * q * q);
-		coeffs[ 1 ] = -r;
-		coeffs[ 2 ] = -(1.0/2.0) * p;
-		coeffs[ 3 ] = 1.0;
-		
-		num = SolveCubic(coeffs[0], coeffs[1], coeffs[2], coeffs[3], s0, s1, s2);
-
-		/* ... and take the one real solution ... */
-
-		z = s0;
-
-		/* ... to build two quadric equations */
-
-		u = (z * z) - r;
-		v = (2.0 * z) - p;
-
-		if (IsZero(u))
-		    u = 0.0;
-		else if (u > 0.0)
-		    u = sqrt(u);
-		else
-		    return 0;
-
-		if (IsZero(v))
-		    v = 0.0;
-		else if (v > 0.0)
-		    v = sqrt(v);
-		else
-		    return 0;
-
-		coeffs[ 0 ] = z - u;
-		coeffs[ 1 ] = q < 0.0 ? -v : v;
-		coeffs[ 2 ] = 1.0;
-
-		num = SolveQuadric(coeffs[0], coeffs[1], coeffs[2], s0, s1);
-
-		coeffs[ 0 ] = z + u;
-		coeffs[ 1 ] = q < 0.0 ? v : -v;
-		coeffs[ 2 ] = 1.0;
-
-		if (num == 0)
-			num += SolveQuadric(coeffs[0], coeffs[1], coeffs[2], s0, s1);
-		else if (num == 1)
-			num += SolveQuadric(coeffs[0], coeffs[1], coeffs[2], s1, s2);
-		else if (num == 2)
-			num += SolveQuadric(coeffs[0], coeffs[1], coeffs[2], s2, s3);
-    }
-
-    /* resubstitute */
-
-    sub = (1.0/4.0) * A;
-
-//     for (int i = 0; i < num; ++i)
-// 		s[ i ] -= sub;
-	s0 -= sub;
-	s1 -= sub;
-	s2 -= sub;
-	s3 -= sub;
-
-    return num;
-}
-
-
-float TorusIntersect(vec3 ro, vec3 rd, float ka, float kb) 
-{
-	// if (!bbox.hit(ray))
-	// 	return (false);
-	float kEpsilon = 0.0001;
-		
-	float x1 = ro.x; float y1 = ro.y; float z1 = ro.z;
-	float d1 = rd.x; float d2 = rd.y; float d3 = rd.z;	
-	
-	float coeffs[5];// coefficient array for the quartic equation
-	float roots[4];	// solution array for the quartic equation
-	
-	// define the coefficients of the quartic equation
-	
-	float sum_d_sqrd = d1 * d1 + d2 * d2 + d3 * d3;
-	float e	= x1 * x1 + y1 * y1 + z1 * z1 - ka * ka - kb * kb;
-	float f	= x1 * d1 + y1 * d2 + z1 * d3;
-	float four_a_sqrd = 4.0 * ka * ka;
-	
-	coeffs[0] = e * e - four_a_sqrd * (kb * kb - y1 * y1); 	// constant term
-	coeffs[1] = 4.0 * f * e + 2.0 * four_a_sqrd * y1 * d2;
-	coeffs[2] = 2.0 * sum_d_sqrd * e + 4.0 * f * f + four_a_sqrd * d2 * d2;
-	coeffs[3] = 4.0 * sum_d_sqrd * f;
-	coeffs[4] = sum_d_sqrd * sum_d_sqrd;  					// coefficient of t^4
-	
-	// find roots of the quartic equation
-	
-	int num_real_roots = SolveQuartic(coeffs[0], coeffs[1], coeffs[2], coeffs[3], coeffs[4],
-				 roots[0], roots[1], roots[2], roots[3]);
-	
-	bool intersected = false;
+	vec3 rd = rayDirection;
+	vec3 ro = rayOrigin;
+	vec3 ip;
+	float t0, t1;
 	float t = INFINITY;
-	
-	if (num_real_roots == 0)  // ray misses the torus
-		return INFINITY;
-	
-	// find the smallest root greater than kEpsilon, if any
-	// the roots array is not sorted
-			
-	for (int j = 0; j < num_real_roots; j++)  
-		if (roots[j] > kEpsilon) {
-			intersected = true;
-			if (roots[j] < t)
-				t = roots[j];
-		}
-		
-	if (!intersected)
-		return INFINITY;
-	
-	return t;
-}
 
-`
+	// Torus Inside (Hyperboloid)
+	// quadratic equation coefficients
+	float a = (rd.x * rd.x) + (rd.z * rd.z) - (rd.y * rd.y);
+	float b = 2.0 * ((rd.x * ro.x) + (rd.z * ro.z) - (rd.y * ro.y));
+	float c = (ro.x * ro.x) + (ro.z * ro.z) - (ro.y * ro.y) - torusHoleSize;
+
+	solveQuadratic(a, b, c, t0, t1);
+	
+	if (t1 > 0.0)
+	{	
+		ip = ro + (rd * t1);
+		if (abs(ip.y) < 1.0)
+		{
+			n = vec3( ip.x, -ip.y, ip.z );
+			n = dot(rd, n) < 0.0 ? n : -n;
+			t = t1;
+		}	
+	}
+
+	if (t0 > 0.0)
+	{
+		ip = ro + (rd * t0);
+		if (abs(ip.y) < 1.0)
+		{
+			n = vec3( ip.x, -ip.y, ip.z );
+			n = dot(rd, n) < 0.0 ? n : -n;
+			t = t0;
+		}		
+	}
+
+	// Torus Outside (partial Sphere, with top and bottom portions removed)
+	// quadratic equation coefficients
+	a = dot(rd, rd);
+	b = 2.0 * dot(rd, ro);
+	c = dot(ro, ro) - (torusHoleSize + 2.0);
+	
+	solveQuadratic(a, b, c, t0, t1);
+
+	if (t1 > 0.0 && t1 < t)
+	{	
+		ip = ro + (rd * t1);
+		if (abs(ip.y) < 1.0)
+		{
+			n = ip;
+			t = t1;
+		}	
+	}
+
+	if (t0 > 0.0 && t0 < t)
+	{
+		ip = ro + (rd * t0);
+		if (abs(ip.y) < 1.0)
+		{
+			n = ip;
+			t = t0;
+		}		
+	}
+
+	return t;	
+}
+`;
 
 THREE.ShaderChunk[ 'pathtracing_unit_torus_intersect' ] = `
 
