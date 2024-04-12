@@ -5,6 +5,8 @@
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1">
 		<link href="css/default.css" rel="stylesheet">
+		<link rel="stylesheet" href="all_examples_styles.css">
+		<script src="https://cdn.tailwindcss.com"></script>
 
 		<script async src="js/es-module-shims.js"></script>
 		<script type="importmap">
@@ -30,7 +32,14 @@
 		<div id="container"> </div>
 		<div id="info">three.js PathTracing Renderer - Transforming Quadric Geometry Showcase</div>
 		
-		<div id="cameraInfo" style="position:fixed; left:3%; bottom:2%; font-family:arial; color:rgb(255,255,255);"></div>
+<!--		<div id="cameraInfo" style="position:fixed; left:3%; bottom:2%; font-family:arial; color:rgb(255,255,255);"></div>-->
+
+		<footer class="text-center bg-transparent">
+			<div class="pb-12 text-[#fff]" id="cameraInfo" ></div>
+			<div class="back-button">
+				<a href="all_examples.html"><img src="imgs/back-icon.png" class="size-12 invert" alt="Back"></a>
+			</div>
+		</footer>
 		
 		<script defer src="js/FirstPersonCameraControls.js"> </script>
 		<script defer src="js/MobileJoystickControls.js"> </script>

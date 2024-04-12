@@ -34,11 +34,11 @@ html, body {
 }
 
 #cameraInfo {
-	position: fixed;
-	left: 3%;
-	bottom: 2%;
-	font-family: Arial;
-	color: #ffffff;
+	/*position: fixed;*/
+	/*left: 3%;*/
+	/*bottom: 2%;*/
+	/*font-family: Arial;*/
+	/*color: #ffffff;*/
 	cursor: default;
 	user-select: none;
 }
@@ -63,3 +63,14 @@ html, body {
 #timePauseButton {
 	top: 50px;
 }
+
+/*footer {*/
+/*	!*position: absolute;*!*/
+/*	bottom: 0;*/
+/*	left: 0;*/
+/*	width: 100%;*/
+/*	!*background-color: #f0f0f0;*!*/
+/*	!*padding: 10px 20px;*!*/
+/*	text-align: center;*/
+/*	z-index: 1000;*/
+/*}*/
