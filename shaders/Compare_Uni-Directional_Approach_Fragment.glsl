@@ -153,7 +153,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 	//int bounceIsSpecular = TRUE;
 
-	pixelSharpness = 1.0; // can't really use de-noiser on this demo
+	pixelSharpness = 1.01; // can't really use de-noiser on this demo
 
 	// hope that we get lucky enough to find the blocked light source
 	for (int bounces = 0; bounces < 5; bounces++)
