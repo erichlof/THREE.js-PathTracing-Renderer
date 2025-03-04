@@ -12,6 +12,8 @@ uniform bool uCameraIsMoving;
 uniform bool uSceneIsDynamic;
 uniform bool uUseToneMapping;
 
+#define TRUE 1
+#define FALSE 0
 
 void main()
 {
@@ -74,6 +76,7 @@ void main()
 	vec3 filteredPixelColor, edgePixelColor;
 	float threshold = 1.0;
 	int count = 1;
+	int nextToAnEdgePixel = FALSE;
 
 	// start with center pixel rgb color
 	filteredPixelColor = centerPixel.rgb;
@@ -104,6 +107,10 @@ void main()
 			}
 		}		
 	}
+	else
+	{
+		nextToAnEdgePixel = TRUE;
+	}
 
 	
 
@@ -133,6 +140,10 @@ void main()
 			}
 		}	
 	}
+	else
+	{
+		nextToAnEdgePixel = TRUE;
+	}
 
 	// search right
 	if (m37[19].a < threshold)
@@ -160,6 +171,10 @@ void main()
 			}
 		}		
 	}
+	else
+	{
+		nextToAnEdgePixel = TRUE;
+	}
 
 	// search below
 	if (m37[25].a < threshold)
@@ -186,6 +201,10 @@ void main()
 				}
 			}
 		}		
+	}
+	else
+	{
+		nextToAnEdgePixel = TRUE;
 	}
 
 	// search upper-left diagonal
@@ -276,45 +295,49 @@ void main()
 		}		
 	}
 	
-	
 
 	// divide by total count to get the average
 	filteredPixelColor *= (1.0 / float(count));
-
-
-
-	// next, use a smaller blur kernel (3x3), to help blend the noisy, sharp edge pixels
-	// 3x3 kernel
-	vec3 m9[9];
-	m9[0] = m37[10].rgb;
-	m9[1] = m37[11].rgb;
-	m9[2] = m37[12].rgb;
-
-	m9[3] = m37[17].rgb;
-	m9[4] = m37[18].rgb; // center pixel
-	m9[5] = m37[19].rgb;
-
-	m9[6] = m37[24].rgb;
-	m9[7] = m37[25].rgb;
-	m9[8] = m37[26].rgb;
-
-	edgePixelColor = m9[0] + m9[1] + m9[2] + 
-			 m9[3] + m9[4] + m9[5] + 
-			 m9[6] + m9[7] + m9[8]; // produces white outlines along edges
-
-	edgePixelColor *= 0.1111111111; // same as dividing by 9 pixels (1 / 9), to get the average
-
+	
 	
 
-	if (centerPixel.a == 1.0) // is this an edge pixel?  centerPixel.a == 1.0
+	// next, use a smaller blur kernel (13 pixels in roughly circular shape), to help blend the noisy, sharp edge pixels
+
+				    // m37[18] is the center pixel
+	edgePixelColor = 	       m37[ 5].rgb +
+			 m37[10].rgb + m37[11].rgb + m37[12].rgb + 
+	   m37[16].rgb + m37[17].rgb + m37[18].rgb + m37[19].rgb + m37[20].rgb +
+			 m37[24].rgb + m37[25].rgb + m37[26].rgb +
+				       m37[31].rgb;
+
+	// if not averaged, the above additions produce white outlines along edges
+	edgePixelColor *= 0.0769230769; // same as dividing by 13 pixels (1 / 13), to get the average
+
+	if (uSceneIsDynamic) // dynamic scene with moving objects and camera (i.e. a game)
 	{
-		if (uSceneIsDynamic)
-			filteredPixelColor = mix(edgePixelColor, centerPixel.rgb, 0.5);//uPixelEdgeSharpness);
-		else // static scene
-			filteredPixelColor = mix(edgePixelColor, centerPixel.rgb, clamp(uSampleCounter * uEdgeSharpenSpeed, 0.0, 1.0));	
+		if (uCameraIsMoving)
+		{
+			if (nextToAnEdgePixel == TRUE)
+				filteredPixelColor = edgePixelColor;
+		}
+		else
+		{
+			if (centerPixel.a == 1.0 || nextToAnEdgePixel == TRUE)
+				filteredPixelColor = mix(edgePixelColor, centerPixel.rgb, 0.5);
+		}
+	}
+	if (!uSceneIsDynamic) // static scene (only camera can move)
+	{
+		if (centerPixel.a == 1.0 || nextToAnEdgePixel == TRUE)
+		{
+			if (uCameraIsMoving)
+				filteredPixelColor = edgePixelColor;
+			else
+				filteredPixelColor = mix(edgePixelColor, centerPixel.rgb, clamp(uSampleCounter * uEdgeSharpenSpeed, 0.0, 1.0));
+		}
 	}
 
-	// centerPixel.a == 1.01 means this pixel is a light source, and light sources must be sharpest
+	// if the .a value comes into this shader as 1.01, this is an outdoor raymarching demo, and no denoising/blended is needed 
 	if (centerPixel.a == 1.01) 
 		filteredPixelColor = centerPixel.rgb; // no blending, maximum sharpness
 	
