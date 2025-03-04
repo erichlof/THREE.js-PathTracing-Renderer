@@ -929,13 +929,13 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		}
 		if (isReflectionTime == FALSE && diffuseCount == 0 && hitObjectID != previousObjectID)
 		{
-			objectNormal = nl;
-			objectColor = hitColor;
+			objectNormal += nl;
+			objectColor += hitColor;
 		}
 		if (reflectionNeedsToBeSharp == TRUE && reflectionBounces == 0)
 		{
-			objectNormal = nl;
-			objectColor = hitColor;
+			objectNormal += nl;
+			objectColor += hitColor;
 		}
 
 
@@ -947,9 +947,9 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			if (isReflectionTime == TRUE && reflectionBounces == 0)
 			{
-				objectNormal = nl;
+				objectNormal += nl;
 				//objectColor = hitColor;
-				objectID = hitObjectID;
+				objectID += hitObjectID;
 			}
 
 			if (bounceIsSpecular == TRUE || sampleLight == TRUE)
