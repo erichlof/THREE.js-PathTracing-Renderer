@@ -592,13 +592,13 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		}
 		if (isReflectionTime == FALSE && diffuseCount == 0 && hitObjectID != previousObjectID)
 		{
-			objectNormal = nl;
-			objectColor = hitColor;
+			objectNormal += nl;
+			objectColor += hitColor;
 		}
 		if (reflectionNeedsToBeSharp == TRUE && reflectionBounces == 0)
 		{
-			objectNormal = nl;
-			objectColor = hitColor;
+			objectNormal += nl;
+			objectColor += hitColor;
 		}
 		
 		
@@ -606,14 +606,14 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		{	
 			if (diffuseCount == 0 && isReflectionTime == FALSE)
 			{
-				pixelSharpness = 1.01; // maximum sharpness for dynamic scenes
+				pixelSharpness = 1.0;
 			}
 
 			if (isReflectionTime == TRUE && bounceIsSpecular == TRUE)
 			{
-				objectNormal = nl;
+				objectNormal += nl;
 				//objectColor = hitColor;
-				objectID = hitObjectID;
+				objectID += hitObjectID;
 			}
 			
 			if (bounceIsSpecular == TRUE || sampleLight == TRUE)
@@ -926,8 +926,8 @@ void main( void )
 		currentPixel.a = pixelSharpness = 1.0;
 
 	// makes light source edges (shape boundaries) more stable
-	if (previousPixel.a == 1.01)
-		currentPixel.a = 1.01;
+	// if (previousPixel.a == 1.01)
+	// 	currentPixel.a = 1.01;
 
 	// makes sharp edges more stable
 	if (previousPixel.a == 1.0)
