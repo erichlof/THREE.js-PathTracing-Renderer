@@ -569,7 +569,7 @@ vec3 CalculateRadiance(out vec3 objectNormal, out vec3 objectColor, out float ob
 		{
 			// keeps edges of objects against background sky sharp
 			if (bounceIsSpecular == TRUE && isReflectionTime == FALSE)
-				pixelSharpness = 1.01;
+				pixelSharpness = 1.0;
 
 			vec3 skyColor = Get_Sky_Color(rayDirection);
 
@@ -591,7 +591,7 @@ vec3 CalculateRadiance(out vec3 objectNormal, out vec3 objectColor, out float ob
 			}
 			else if (diffuseCount == 0 && bounceIsSpecular == TRUE) // ray reflects off of the ocean
 			{
-				pixelSharpness = 1.01;
+				pixelSharpness = 1.0;
 				//skyHit = TRUE;
 				firstX = skyPos;
 				initialSkyColor = mask * skyColor;
@@ -689,7 +689,7 @@ vec3 CalculateRadiance(out vec3 objectNormal, out vec3 objectColor, out float ob
 		}
 		if (bounces == 1 && previousIntersecType == SPEC)
 		{
-			objectNormal = nl;
+			objectNormal += nl;
 		}
 
 		
@@ -976,12 +976,8 @@ void main( void )
 		currentPixel.a = pixelSharpness = 1.0;
 
 	// makes light source edges (shape boundaries) more stable
-	if (previousPixel.a == 1.01)
-	{
-		if (pixelSharpness > 0.0)
-			currentPixel.a = 1.01;
-		else currentPixel.a = 1.0;
-	}
+	// if (previousPixel.a == 1.01)
+	// 	currentPixel.a = 1.01;
 
 	// makes sharp edges more stable
 	if (previousPixel.a == 1.0)
