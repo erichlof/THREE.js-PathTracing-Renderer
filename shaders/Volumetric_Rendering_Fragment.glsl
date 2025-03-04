@@ -219,7 +219,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 		if (diffuseCount == 0)
 		{
-			objectNormal = nl;
+			objectNormal += nl;
 			//objectColor = eHitColor; // handled above
 			//objectID = eHitObjectID; // handled above
 		}
