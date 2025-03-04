@@ -160,7 +160,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		{
 			// this makes the mirror box edges sharp and Cornell box edges sharp against the black background
 			if (bounces == 0 || (bounces == 1 && previousIntersecType == SPEC))
-				pixelSharpness = 1.01;
+				pixelSharpness = 1.0;
 
 			break;
 		}
@@ -179,7 +179,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		}
 		if (bounces == 1 && previousIntersecType == SPEC)
 		{
-			objectNormal = nl;
+			objectNormal += nl;
 		}
 		
 		
