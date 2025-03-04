@@ -368,16 +368,16 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			{
 				// this makes the object edges sharp against the background
 				if (bounces == 0 || (bounces == 1 && previousIntersecType == SPEC))
-					pixelSharpness = 1.01;
+					pixelSharpness = 1.0;
 			}
 			if (hitEmission == vec3(1, 0, 1) && diffuseCount == 0)
 				pixelSharpness = 1.0;
 
 			if (hitEmission == vec3(1, 0, 1) && reflectionBounces == 0 && reflectionNeedsToBeSharp == TRUE)
 			{
-				objectNormal = nl;
+				objectNormal += nl;
 				//objectColor = hitColor;
-				objectID = hitObjectID;
+				objectID += hitObjectID;
 			}
 			
 			accumCol += mask * hitEmission;
@@ -409,13 +409,13 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		}
 		if (isReflectionTime == FALSE && diffuseCount == 0 && hitObjectID != previousObjectID)
 		{
-			objectNormal = nl;
-			objectColor = hitColor;
+			objectNormal += nl;
+			objectColor += hitColor;
 		}
 		if (isReflectionTime == TRUE && reflectionNeedsToBeSharp == TRUE)
 		{
-			objectNormal = nl;
-			objectColor = hitColor;
+			objectNormal += nl;
+			objectColor += hitColor;
 		}
 
 		
