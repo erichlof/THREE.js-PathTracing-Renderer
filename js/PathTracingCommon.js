@@ -207,7 +207,7 @@ void solveQuadratic(float A, float B, float C, out float t0, out float t1)
 //-----------------------------------------------------------------------------
 float SphereIntersect( float rad, vec3 pos, vec3 rayOrigin, vec3 rayDirection )
 //-----------------------------------------------------------------------------
-{
+{	
 	float t0, t1;
 	vec3 L = rayOrigin - pos;
 	float a = dot( rayDirection, rayDirection );
@@ -2763,8 +2763,6 @@ float BoundingBoxIntersect( vec3 minCorner, vec3 maxCorner, vec3 rayOrigin, vec3
 }
 `;
 
-
-
 THREE.ShaderChunk[ 'pathtracing_bvhTriangle_intersect' ] = `
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -2851,9 +2849,9 @@ float BVH_DoubleSidedTriangleIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 rayOrigi
 `;
 
 THREE.ShaderChunk[ 'pathtracing_bilinear_patch_intersect' ] = `
-//----------------------------------------------------------------------------------------------------------------------------------------------
-float BilinearPatchIntersect( vec3 p0, vec3 p1, vec3 p2, vec3 p3, vec3 rayOrigin, vec3 rayDirection, out vec3 normal, out float u, out float v )
-//----------------------------------------------------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+float BilinearPatchIntersect( vec3 p0, vec3 p1, vec3 p2, vec3 p3, vec3 rayOrigin, vec3 rayDirection, int isDoubleSided, out vec3 normal, out float u, out float v )
+//-----------------------------------------------------------------------------------------------------------------------------------------------------------------
 { // algorithm/code by Alexander Reshetov (NVIDIA), from the book "Ray Tracing Gems", pg 95-109 
 	// 4 corners + "normal" qn
 	vec3 q00 = p0, q10 = p1, q11 = p2, q01 = p3;
@@ -2880,7 +2878,7 @@ float BilinearPatchIntersect( vec3 p0, vec3 p1, vec3 p2, vec3 p3, vec3 rayOrigin
 	u0 = (-b - det) * 0.5; // numerically "stable" root
 	u1 = a / u0; // Viete's formula for u0*u1
 	u0 /= c;
-	
+
 	if (u0 >= 0.0 && u0 <= 1.0) // is it inside the patch?
 	{ 
 		pa = mix(q00, q10, u0); // point on edge e10
@@ -2892,8 +2890,8 @@ float BilinearPatchIntersect( vec3 p0, vec3 p1, vec3 p2, vec3 p3, vec3 rayOrigin
 		v0 = dot(n, rayDirection);
 		if (t0 > 0.0 && t0 < t && v0 >= 0.0 && v0 <= det)
 		{
-			t = t0 / det; 
-			u = u0; 
+			t = t0 / det;
+			u = u0;
 			v = v0 / det;
 		} 
 	}
@@ -2909,16 +2907,20 @@ float BilinearPatchIntersect( vec3 p0, vec3 p1, vec3 p2, vec3 p3, vec3 rayOrigin
 		v1 = dot(n, rayDirection);
 		if (t1 > 0.0 && t1 < t && v1 >= 0.0 && v1 <= det) 
 		{
-			t = t1; 
-			u = u1; 
+			t = t1;
+			u = u1;
 			v = v1 / det;
 		}
 	}
 
-	 // geometric normal = cross(du, dv)
-	normal = cross(mix(e10, q11 - q01, v), mix(e00, e11, u)); // geometric normal
+	//optional: geometric normal 
+	normal = cross(mix(e10, q11 - q01, v), mix(e00, e11, u)); // geometric normal = cross(du, dv)
+	// use the following for back-face culling
+	if (isDoubleSided == FALSE && dot(rayDirection, normal) > 0.0)
+	 	t = INFINITY;
 
-	//optional: use model's supplied vertex normals to interpolate smoothly, resulting in "shading normal"
+	//optional: shading normal
+	//back in BVH tree traversal function, use model's supplied vertex normals to interpolate smoothly, resulting in "shading normal"
 	//vec3 vn0 = patch.vertex_normals[0], vn1 = patch.vertex_normals[1], vn2 = patch.vertex_normals[2], vn3 = patch.vertex_normals[3];
 	//normal = mix(mix(vn0, vn1, u), mix(vn3, vn2, u), v); // shading normal
 
@@ -3272,7 +3274,7 @@ void main( void )
 		currentPixel.rgb *= 0.5; // brightness of new image (noisy)
 	}
 
-	if (colorDifference > 0.0 || normalDifference >= 1.0 || objectDifference >= 1.0)
+	if (colorDifference > 0.0 || normalDifference >= 0.5 || objectDifference >= 1.0)
 		pixelSharpness = 1.0; // 1.0 means an edge pixel
 
 	currentPixel.a = pixelSharpness;
