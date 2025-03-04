@@ -69,11 +69,10 @@ float SceneIntersect( )
 	hitObjectID = -INFINITY;
 
 	// must first initialize all planes to 0, otherwise garbage values might be loaded and used (especially on mobile)
-	planes[0] = vec4(0); planes[1] = vec4(0); planes[2] = vec4(0); planes[3] = vec4(0);
-	planes[4] = vec4(0); planes[5] = vec4(0); planes[6] = vec4(0); planes[7] = vec4(0);
-	planes[8] = vec4(0); planes[9] = vec4(0); planes[10] = vec4(0); planes[11] = vec4(0);
-	planes[12] = vec4(0); planes[13] = vec4(0); planes[14] = vec4(0); planes[15] = vec4(0);
-	planes[16] = vec4(0); planes[17] = vec4(0); planes[18] = vec4(0); planes[19] = vec4(0);
+	planes[0] = planes[1] = planes[2] = planes[3] = planes[4] = 
+	planes[5] = planes[6] = planes[7] = planes[8] = planes[9] = 
+	planes[10] = planes[11] = planes[12] = planes[13] = planes[14] = 
+	planes[15] = planes[16] = planes[17] = planes[18] = planes[19] = vec4(0);
 	
 	// TETRAHEDRON - 4 faces
 	// transform ray into convexPolyhedron's object space
@@ -480,7 +479,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		{
 			// this makes the object edges sharp against the black background
 			if (bounces == 0 || (bounces == 1 && previousIntersecType == SPEC))
-				pixelSharpness = 1.01;
+				pixelSharpness = 1.0;
 
 			if (willNeedReflectionRay == TRUE)
 			{
@@ -511,15 +510,15 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 		if (isReflectionTime == FALSE && diffuseCount == 0 && hitObjectID != previousObjectID)
 		{
-			objectNormal = nl;
-			objectColor = hitColor;
-			//objectID = hitObjectID;
+			objectNormal += nl;
+			objectColor += hitColor;
+			//objectID += hitObjectID;
 		}
 		if (reflectionNeedsToBeSharp == TRUE && reflectionBounces == 0)
 		{
-			objectNormal = nl;
-			//objectColor = hitColor;
-			//objectID = hitObjectID;
+			objectNormal += nl;
+			//objectColor += hitColor;
+			objectID += hitObjectID;
 		}
 
 		
@@ -531,9 +530,9 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			if (isReflectionTime == TRUE && bounceIsSpecular == TRUE)
 			{
-				objectNormal = nl;
+				objectNormal += nl;
 				//objectColor = hitColor;
-				objectID = hitObjectID;
+				objectID += hitObjectID;
 			}
 			
 			if (bounceIsSpecular == TRUE || sampleLight == TRUE)
@@ -705,7 +704,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				reflectionRayDirection = randomDirectionInSpecularLobe(reflectionRayDirection, hitRoughness * 0.5);
 				reflectionRayOrigin = x + nl * uEPS_intersect;
 				willNeedReflectionRay = TRUE;
-				if (bounces == 0 && hitRoughness == 0.0)
+				if (hitRoughness == 0.0)
 					reflectionNeedsToBeSharp = TRUE;
 			}
 			//else 
