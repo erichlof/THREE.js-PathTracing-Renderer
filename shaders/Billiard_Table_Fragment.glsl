@@ -490,7 +490,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		{
 			// this makes the object edges sharp against the black background
 			if (bounces == 0 || (bounces == 1 && previousIntersecType == SPEC))
-				pixelSharpness = 1.01;
+				pixelSharpness = 1.0;
 
 			if (willNeedReflectionRay == TRUE)
 			{
@@ -524,8 +524,8 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		}
 		if (reflectionNeedsToBeSharp == TRUE && reflectionBounces == 0)
 		{
-			objectNormal = nl;
-			objectColor = hitColor;
+			objectNormal += nl;
+			objectColor += hitColor;
 		}
 
 
@@ -536,9 +536,9 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			if (isReflectionTime == TRUE && bounceIsSpecular == TRUE)
 			{
-				objectNormal = nl;
+				objectNormal += nl;
 				//objectColor = hitColor;
-				objectID = hitObjectID;
+				objectID += hitObjectID;
 			}
 			
 			if (bounceIsSpecular == TRUE || sampleLight == TRUE)
