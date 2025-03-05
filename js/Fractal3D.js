@@ -187,7 +187,7 @@ function initSceneData()
 	// scene/demo-specific three.js objects setup goes here
 	sceneIsDynamic = false;
 
-	edgeSharpenSpeed = 0.01;
+	edgeSharpenSpeed = 0.02;
 
 	cameraFlightSpeed = 200;
 
