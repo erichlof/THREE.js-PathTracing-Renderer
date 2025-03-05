@@ -318,23 +318,23 @@ void main()
 		if (uCameraIsMoving)
 		{
 			if (nextToAnEdgePixel == TRUE)
-				filteredPixelColor = edgePixelColor;
+				filteredPixelColor = mix(edgePixelColor, centerPixel.rgb, 0.25);
 		}
-		else
-		{
-			if (centerPixel.a == 1.0 || nextToAnEdgePixel == TRUE)
-				filteredPixelColor = mix(edgePixelColor, centerPixel.rgb, 0.5);
-		}
+		else if (centerPixel.a == 1.0 || nextToAnEdgePixel == TRUE)
+			filteredPixelColor = mix(edgePixelColor, centerPixel.rgb, 0.5);
+		
 	}
 	if (!uSceneIsDynamic) // static scene (only camera can move)
 	{
-		if (centerPixel.a == 1.0 || nextToAnEdgePixel == TRUE)
+		if (uCameraIsMoving)
 		{
-			if (uCameraIsMoving)
-				filteredPixelColor = edgePixelColor;
-			else
-				filteredPixelColor = mix(edgePixelColor, centerPixel.rgb, clamp(uSampleCounter * uEdgeSharpenSpeed, 0.0, 1.0));
+			if (nextToAnEdgePixel == TRUE)
+				filteredPixelColor = mix(edgePixelColor, centerPixel.rgb, 0.25);
 		}
+		else if (nextToAnEdgePixel == TRUE)
+			filteredPixelColor = mix(edgePixelColor, centerPixel.rgb, clamp(uSampleCounter * uEdgeSharpenSpeed, 0.0, 1.0));
+		else if (centerPixel.a == 1.0)
+			filteredPixelColor = mix(filteredPixelColor, centerPixel.rgb, clamp(uSampleCounter * uEdgeSharpenSpeed, 0.0, 1.0));
 	}
 
 	// if the .a value comes into this shader as 1.01, this is an outdoor raymarching demo, and no denoising/blended is needed 
