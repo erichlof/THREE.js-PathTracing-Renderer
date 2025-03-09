@@ -177,7 +177,7 @@ function FirstPersonCameraControls(camera)
 
 	let yawObject = new THREE.Object3D();
 	yawObject.add(pitchObject); 
-
+	
 	function onMouseMove(event)
 	{
 		if (isPaused)
@@ -960,7 +960,7 @@ function animate()
 		apertureSize += (0.1 * apertureChangeSpeed);
 		if (apertureSize > 10000.0)
 			apertureSize = 10000.0;
-		pathTracingUniforms.uApertureSize.value = apertureSize;
+		
 		cameraIsMoving = true;
 		increaseAperture = false;
 	}
@@ -969,7 +969,7 @@ function animate()
 		apertureSize -= (0.1 * apertureChangeSpeed);
 		if (apertureSize < 0.0)
 			apertureSize = 0.0;
-		pathTracingUniforms.uApertureSize.value = apertureSize;
+		
 		cameraIsMoving = true;
 		decreaseAperture = false;
 	}
@@ -1035,6 +1035,7 @@ function animate()
 	cameraControlsObject.updateMatrixWorld(true);
 	worldCamera.updateMatrixWorld(true);
 	pathTracingUniforms.uCameraMatrix.value.copy(worldCamera.matrixWorld);
+	pathTracingUniforms.uApertureSize.value = apertureSize;
 
 	screenOutputUniforms.uCameraIsMoving.value = cameraIsMoving;
 	screenOutputUniforms.uSampleCounter.value = sampleCounter;
