@@ -565,7 +565,7 @@ function initSceneData()
 	}
 
 	function handleViewpointPresetChange() 
-	{ 
+	{
 		needChangeViewpointPreset = true; 
 	}
 
@@ -594,6 +594,11 @@ function updateVariablesAndUniforms()
 
 	if (needChangeViewpointPreset)
 	{
+		cameraControlsPitchObject.rotation.set(0,0,0);
+		cameraControlsPitchObject.updateMatrixWorld();
+		cameraControlsYawObject.rotation.set(0,0,0);
+		cameraControlsYawObject.updateMatrixWorld();
+		
 		if (viewpoint_PresetController.getValue() == 'Viewpoint 1')
 		{
 			sunDirTransform_RotateXController.setValue(305);
@@ -606,7 +611,7 @@ function updateVariablesAndUniforms()
 		{
 			sunDirTransform_RotateXController.setValue(216);
 			sunDirTransform_RotateYController.setValue(205);
-			cameraControlsObject.position.set(476, 1072.9, 527.3);
+			cameraControlsObject.position.set(476, 1072.9, 527.3);		    
 			cameraControlsPitchObject.rotation.x = -0.741;
 			cameraControlsYawObject.rotation.y = -5.466;
 		}
@@ -710,8 +715,7 @@ function updateVariablesAndUniforms()
 	// INFO (debug)
 	/* cameraInfoElement.innerHTML = cameraControlsObject.position.x.toFixed(1) + ", " + cameraControlsObject.position.y.toFixed(1) + ", " + cameraControlsObject.position.z.toFixed(1) + "<br>" +
 		"rotX: " + cameraControlsPitchObject.rotation.x.toFixed(3) + " rotY: " + cameraControlsYawObject.rotation.y.toFixed(3) + "<br>" +
-		"FOV: " + worldCamera.fov + " / Aperture: " + apertureSize.toFixed(2) + " / FocusDistance: " + focusDistance + "<br>" + "Samples: " + sampleCounter; 
-	*/
+		"FOV: " + worldCamera.fov + " / Aperture: " + apertureSize.toFixed(2) + " / FocusDistance: " + focusDistance + "<br>" + "Samples: " + sampleCounter; */ 
 	
 	// INFO
 	cameraInfoElement.innerHTML = "FOV: " + worldCamera.fov + " / Aperture: " + apertureSize.toFixed(2) + " / FocusDistance: " + focusDistance + "<br>" + 
