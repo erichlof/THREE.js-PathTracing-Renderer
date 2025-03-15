@@ -516,6 +516,7 @@ function initTHREEjs()
 	// constantly updated inside the 3d scene.  Its view will ultimately get passed back to the 
 	// stationary quadCamera, which renders the scene to a fullscreen quad (made up of 2 large triangles).
 	worldCamera = new THREE.PerspectiveCamera(60, document.body.clientWidth / document.body.clientHeight, 1, 1000);
+	storedFOV = worldCamera.fov;
 	pathTracingScene.add(worldCamera);
 
 	controls = new FirstPersonCameraControls(worldCamera);
@@ -761,7 +762,8 @@ function animate()
 		if (newDeltaX)
 		{
 			cameraIsMoving = true;
-			inputMovementHorizontal = (oldDeltaX - newDeltaX) * 0.01;
+			// the ' || 0 ' prevents NaNs from creeping into inputRotationHorizontal calc below
+			inputMovementHorizontal = ((oldDeltaX - newDeltaX) * 0.01) || 0;
 			// mobileJoystick X movement (left and right) affects camera rotation around the Y axis	
 			inputRotationHorizontal += inputMovementHorizontal;
 		}
@@ -771,7 +773,8 @@ function animate()
 		if (newDeltaY)
 		{
 			cameraIsMoving = true;
-			inputMovementVertical = (oldDeltaY - newDeltaY) * 0.01;
+			// the ' || 0 ' prevents NaNs from creeping into inputRotationVertical calc below
+			inputMovementVertical = ((oldDeltaY - newDeltaY) * 0.01) || 0;
 			// mobileJoystick Y movement (up and down) affects camera rotation around the X axis	
 			inputRotationVertical += inputMovementVertical;
 		}
@@ -1032,6 +1035,7 @@ function animate()
 	pathTracingUniforms.uRandomVec2.value.set(Math.random(), Math.random());
 
 	// CAMERA
+
 	cameraControlsObject.updateMatrixWorld(true);
 	worldCamera.updateMatrixWorld(true);
 	pathTracingUniforms.uCameraMatrix.value.copy(worldCamera.matrixWorld);
