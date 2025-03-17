@@ -467,7 +467,7 @@ void main( void )
 	randNumber = 0.0; // the final randomly-generated number (range: 0.0 to 1.0)
 	blueNoise = texelFetch(tBlueNoiseTexture, ivec2(mod(floor(gl_FragCoord.xy), 128.0)), 0).r;
 
-	vec2 pixelOffset = vec2( tentFilter(rand()), tentFilter(rand()) ) * 0.5;
+	vec2 pixelOffset = vec2( tentFilter(rand()), tentFilter(rand()) ) * 0.75;
 	// we must map pixelPos into the range -1.0 to +1.0
 	vec2 pixelPos = ((gl_FragCoord.xy + vec2(0.5) + pixelOffset) / uResolution) * 2.0 - 1.0;
 
@@ -509,5 +509,5 @@ void main( void )
         }
 	
         
-        pc_fragColor = vec4( pixelColor + previousColor, 1.0);		
+        pc_fragColor = vec4( pixelColor + previousColor, 1.01);		
 }
