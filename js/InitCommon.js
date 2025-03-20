@@ -188,8 +188,10 @@ function FirstPersonCameraControls(camera)
 		inputMovementHorizontal = -inputMovementHorizontal * 0.0012 * cameraRotationSpeed;
 		inputMovementVertical = -inputMovementVertical * 0.001 * cameraRotationSpeed;
 
-		inputRotationHorizontal += inputMovementHorizontal;
-		inputRotationVertical += inputMovementVertical;
+		if (inputMovementHorizontal) // prevent NaNs due to invalid mousemove data from browser
+			inputRotationHorizontal += inputMovementHorizontal;
+		if (inputMovementVertical) // prevent NaNs due to invalid mousemove data from browser
+			inputRotationVertical += inputMovementVertical;
 		// clamp the camera's vertical movement (around the x-axis) to the scene's 'ceiling' and 'floor'
 		inputRotationVertical = Math.max(- PI_2, Math.min(PI_2, inputRotationVertical));
 	}
