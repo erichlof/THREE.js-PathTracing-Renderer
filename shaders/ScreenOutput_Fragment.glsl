@@ -331,10 +331,12 @@ void main()
 			if (nextToAnEdgePixel == TRUE)
 				filteredPixelColor = mix(edgePixelColor, centerPixel.rgb, 0.25);
 		}
-		else if (nextToAnEdgePixel == TRUE)
-			filteredPixelColor = mix(edgePixelColor, centerPixel.rgb, clamp(uSampleCounter * uEdgeSharpenSpeed, 0.0, 1.0));
 		else if (centerPixel.a == 1.0)
 			filteredPixelColor = mix(filteredPixelColor, centerPixel.rgb, clamp(uSampleCounter * uEdgeSharpenSpeed, 0.0, 1.0));
+		// the following statement helps smooth out jagged stairstepping where the blurred filteredPixelColor pixels meet the sharp edges
+		else if (uSampleCounter > 1000.0 && nextToAnEdgePixel == TRUE)
+		 	filteredPixelColor = centerPixel.rgb;
+		
 	}
 
 	// if the .a value comes into this shader as 1.01, this is an outdoor raymarching demo, and no denoising/blended is needed 
