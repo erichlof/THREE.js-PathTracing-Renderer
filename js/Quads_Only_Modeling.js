@@ -7,6 +7,8 @@ let rearMiddle_VertexMoveController, rearMiddle_VertexMoveObject;
 let rearRight_VertexMoveController, rearRight_VertexMoveObject;
 let needChangePatchVertex = false;
 
+let DuckMesh;
+let FinalObject;
 
 // called automatically from within initTHREEjs() function (located in InitCommon.js file)
 function initSceneData() 
@@ -34,15 +36,31 @@ function initSceneData()
 	// look slightly upward
 	//cameraControlsPitchObject.rotation.x = 0.005;
 
+	new MTLLoader()
+		.setPath('models/')
+		.load('Duck_toQuads.mtl', function (materials)
+		{
+			materials.preload();
+
+			new OBJLoader_QuadsOnly()
+				.setMaterials(materials)
+				.setPath('models/')
+				.load('Duck_toQuads.obj', function (object)
+				{
+					FinalObject = object;
+					//DuckMesh = object.children[0];
+				});
+		});
+
 
 	// In addition to the default GUI on all demos, add any special GUI elements that this particular demo requires
-	frontLeft_VertexMoveObject = { FrontLeftVertexHeight : -5 };
-	frontMiddle_VertexMoveObject = { FrontMiddleVertexHeight : -10 };
-	frontRight_VertexMoveObject = { FrontRightVertexHeight : 0 };
+	frontLeft_VertexMoveObject = { FrontLeftVertexHeight: -5 };
+	frontMiddle_VertexMoveObject = { FrontMiddleVertexHeight: -10 };
+	frontRight_VertexMoveObject = { FrontRightVertexHeight: 0 };
 
-	rearLeft_VertexMoveObject = { RearLeftVertexHeight : -13 };
-	rearMiddle_VertexMoveObject = { RearMiddleVertexHeight : 10 };
-	rearRight_VertexMoveObject = { RearRightVertexHeight : -8 };
+	rearLeft_VertexMoveObject = { RearLeftVertexHeight: -13 };
+	rearMiddle_VertexMoveObject = { RearMiddleVertexHeight: 10 };
+	rearRight_VertexMoveObject = { RearRightVertexHeight: -8 };
 
 	function handlePatchVertexChange() 
 	{
