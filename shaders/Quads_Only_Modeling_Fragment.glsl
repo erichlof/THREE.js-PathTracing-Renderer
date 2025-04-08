@@ -4,6 +4,10 @@ precision highp sampler2D;
 
 #include <pathtracing_uniforms_and_defines>
 
+uniform sampler2D tQuadTexture;
+uniform sampler2D tAABBTexture;
+//uniform sampler2D tAlbedoTexture;
+
 uniform float uFrontLeftVertexHeight;
 uniform float uFrontMiddleVertexHeight;
 uniform float uFrontRightVertexHeight;
@@ -11,6 +15,9 @@ uniform float uRearLeftVertexHeight;
 uniform float uRearMiddleVertexHeight;
 uniform float uRearRightVertexHeight;
 
+//float InvTextureWidth = 0.00048828125;  // (1 / 2048 texture width)
+//float InvTextureWidth = 0.000244140625; // (1 / 4096 texture width)
+#define INV_TEXTURE_WIDTH 0.000244140625
 
 #define N_QUADS 1
 #define N_BOXES 1
@@ -45,21 +52,180 @@ BiLinearPatch bilinearPatches[N_BILINEAR_PATCHES];
 
 #include <pathtracing_box_interior_intersect>
 
+#include <pathtracing_boundingbox_intersect>
+
 #include <pathtracing_sample_quad_light>
+
+
+vec2 stackLevels[28];
+
+//vec4 boxNodeData0 corresponds to .x = idQuad,  .y = aabbMin.x, .z = aabbMin.y, .w = aabbMin.z
+//vec4 boxNodeData1 corresponds to .x = idRightChild .y = aabbMax.x, .z = aabbMax.y, .w = aabbMax.z
+
+void GetBoxNodeData(const in float i, inout vec4 boxNodeData0, inout vec4 boxNodeData1)
+{
+	// each bounding box's data is encoded in 2 rgba(or xyzw) texture slots 
+	float ix2 = i * 2.0;
+	// (ix2 + 0.0) corresponds to .x = idQuad,  .y = aabbMin.x, .z = aabbMin.y, .w = aabbMin.z 
+	// (ix2 + 1.0) corresponds to .x = idRightChild .y = aabbMax.x, .z = aabbMax.y, .w = aabbMax.z 
+
+	ivec2 uv0 = ivec2( mod(ix2 + 0.0, 4096.0), (ix2 + 0.0) * INV_TEXTURE_WIDTH ); // data0
+	ivec2 uv1 = ivec2( mod(ix2 + 1.0, 4096.0), (ix2 + 1.0) * INV_TEXTURE_WIDTH ); // data1
+	
+	boxNodeData0 = texelFetch(tAABBTexture, uv0, 0);
+	boxNodeData1 = texelFetch(tAABBTexture, uv1, 0);
+}
 
 
 //---------------------------------------------------------------------------------------
 float SceneIntersect( )
 //---------------------------------------------------------------------------------------
 {
+	vec4 currentBoxNodeData0, nodeAData0, nodeBData0, tmpNodeData0;
+	vec4 currentBoxNodeData1, nodeAData1, nodeBData1, tmpNodeData1;
+	vec4 vd0, vd1, vd2, vd3, vd4, vd5, vd6, vd7;
+	vec3 inverseDir = 1.0 / rayDirection;
 	vec3 rObjOrigin, rObjDirection;
 	vec3 normal, hitPoint;
+	vec2 currentStackData, stackDataA, stackDataB, tmpStackData;
+	ivec2 uv0, uv1, uv2, uv3, uv4, uv5, uv6, uv7;
+	float stackptr = 0.0;
+	float id = 0.0;
 	float d;
+	float quadID = 0.0;
+	float quadU, quadV;
 	float t = INFINITY;
 	float u, v;
 	int objectCount = 0;
-	
+	int skip = FALSE;
+	int quadLookupNeeded = FALSE;
+
 	hitObjectID = -INFINITY;
+
+
+	GetBoxNodeData(stackptr, currentBoxNodeData0, currentBoxNodeData1);
+	currentStackData = vec2(stackptr, BoundingBoxIntersect(currentBoxNodeData0.yzw, currentBoxNodeData1.yzw, rayOrigin, inverseDir));
+	stackLevels[0] = currentStackData;
+	skip = (currentStackData.y < t) ? TRUE : FALSE;
+
+	while (true)
+        {
+		if (skip == FALSE) 
+                {
+                        // decrease pointer by 1 (0.0 is root level, 27.0 is maximum depth)
+                        if (--stackptr < 0.0) // went past the root level, terminate loop
+                                break;
+
+                        currentStackData = stackLevels[int(stackptr)];
+			
+			if (currentStackData.y >= t)
+				continue;
+			
+			GetBoxNodeData(currentStackData.x, currentBoxNodeData0, currentBoxNodeData1);
+                }
+		skip = FALSE; // reset skip
+		
+
+		if (currentBoxNodeData0.x < 0.0) // < 0.0 signifies an inner node
+		{
+			GetBoxNodeData(currentStackData.x + 1.0, nodeAData0, nodeAData1);
+			GetBoxNodeData(currentBoxNodeData1.x, nodeBData0, nodeBData1);
+			stackDataA = vec2(currentStackData.x + 1.0, BoundingBoxIntersect(nodeAData0.yzw, nodeAData1.yzw, rayOrigin, inverseDir));
+			stackDataB = vec2(currentBoxNodeData1.x, BoundingBoxIntersect(nodeBData0.yzw, nodeBData1.yzw, rayOrigin, inverseDir));
+			
+			// first sort the branch node data so that 'a' is the smallest
+			if (stackDataB.y < stackDataA.y)
+			{
+				tmpStackData = stackDataB;
+				stackDataB = stackDataA;
+				stackDataA = tmpStackData;
+
+				tmpNodeData0 = nodeBData0;   tmpNodeData1 = nodeBData1;
+				nodeBData0   = nodeAData0;   nodeBData1   = nodeAData1;
+				nodeAData0   = tmpNodeData0; nodeAData1   = tmpNodeData1;
+			} // branch 'b' now has the larger rayT value of 'a' and 'b'
+
+			if (stackDataB.y < t) // see if branch 'b' (the larger rayT) needs to be processed
+			{
+				currentStackData = stackDataB;
+				currentBoxNodeData0 = nodeBData0;
+				currentBoxNodeData1 = nodeBData1;
+				skip = TRUE; // this will prevent the stackptr from decreasing by 1
+			}
+			if (stackDataA.y < t) // see if branch 'a' (the smaller rayT) needs to be processed 
+			{
+				if (skip == TRUE) // if larger branch 'b' needed to be processed also,
+					stackLevels[int(stackptr++)] = stackDataB; // cue larger branch 'b' for future round
+							// also, increase pointer by 1
+				
+				currentStackData = stackDataA;
+				currentBoxNodeData0 = nodeAData0; 
+				currentBoxNodeData1 = nodeAData1;
+				skip = TRUE; // this will prevent the stackptr from decreasing by 1
+			}
+
+			continue;
+		} // end if (currentBoxNodeData0.x < 0.0) // inner node
+
+
+		// else this is a leaf
+
+		// each quad's data is encoded in 16 rgba(or xyzw) texels
+		id = 16.0 * currentBoxNodeData0.x;
+
+		uv0 = ivec2( mod(id + 0.0, 4096.0), (id + 0.0) * INV_TEXTURE_WIDTH );
+		uv1 = ivec2( mod(id + 1.0, 4096.0), (id + 1.0) * INV_TEXTURE_WIDTH );
+		uv2 = ivec2( mod(id + 2.0, 4096.0), (id + 2.0) * INV_TEXTURE_WIDTH );
+		
+		vd0 = texelFetch(tQuadTexture, uv0, 0);
+		vd1 = texelFetch(tQuadTexture, uv1, 0);
+		vd2 = texelFetch(tQuadTexture, uv2, 0);
+
+		d = BilinearPatchIntersect( vec3(vd0.xyz), vec3(vd0.w,vd1.xy), vec3(vd1.zw,vd2.x), vec3(vd2.yzw), rayOrigin, rayDirection, FALSE, normal, u, v );
+		if (d < t)
+		{
+			t = d;
+			hitNormal = normal;
+			quadID = id;
+			quadU = u;
+			quadV = v;
+			quadLookupNeeded = TRUE;
+		}
+	      
+        } // end while (TRUE)
+
+
+
+	if (quadLookupNeeded == TRUE)
+	{
+		//uv0 = ivec2( mod(quadID + 0.0, 4096.0), (quadID + 0.0) * INV_TEXTURE_WIDTH ); // quad vertex positions data
+		//uv1 = ivec2( mod(quadID + 1.0, 4096.0), (quadID + 1.0) * INV_TEXTURE_WIDTH ); // quad vertex positions data
+		//uv2 = ivec2( mod(quadID + 2.0, 4096.0), (quadID + 2.0) * INV_TEXTURE_WIDTH ); // quad vertex positions data
+		uv3 = ivec2( mod(quadID + 3.0, 4096.0), (quadID + 3.0) * INV_TEXTURE_WIDTH ); // quad vertex normals data
+		uv4 = ivec2( mod(quadID + 4.0, 4096.0), (quadID + 4.0) * INV_TEXTURE_WIDTH ); // quad vertex normals data
+		uv5 = ivec2( mod(quadID + 5.0, 4096.0), (quadID + 5.0) * INV_TEXTURE_WIDTH ); // quad vertex normals data
+		uv6 = ivec2( mod(quadID + 6.0, 4096.0), (quadID + 6.0) * INV_TEXTURE_WIDTH ); // quad vertex uv texture coords data
+		uv7 = ivec2( mod(quadID + 7.0, 4096.0), (quadID + 7.0) * INV_TEXTURE_WIDTH ); // quad vertex uv texture coords data
+		
+		//vd0 = texelFetch(tQuadTexture, uv0, 0); // quad vertex positions data
+		//vd1 = texelFetch(tQuadTexture, uv1, 0); // quad vertex positions data
+		//vd2 = texelFetch(tQuadTexture, uv2, 0); // quad vertex positions data
+		vd3 = texelFetch(tQuadTexture, uv3, 0); // quad vertex normals data
+		vd4 = texelFetch(tQuadTexture, uv4, 0); // quad vertex normals data
+		vd5 = texelFetch(tQuadTexture, uv5, 0); // quad vertex normals data
+		vd6 = texelFetch(tQuadTexture, uv6, 0); // quad vertex uv texture coords data
+		vd7 = texelFetch(tQuadTexture, uv7, 0); // quad vertex uv texture coords data
+
+		//hitNormal = vec3(vd3.xyz) vec3(vd3.w,vd4.xy) vec3(vd4.zw,vd5.x) vec3(vd5.yzw)
+		hitEmission = vec3(1, 0, 1); // use this if hitType will be LIGHT
+		hitColor = vec3(1, 1, 1);
+		//hitUV = vec2(vd6.xy) vec2(vd6.zw) vec2(vd7.xy) vec2(vd7.zw)
+		hitType = COAT;
+		//hitAlbedoTextureID = int(vd7.x);
+		hitObjectID = float(objectCount);
+	}
+	objectCount++;
+
 
 	
 	d = QuadIntersect( quads[0].v0, quads[0].v1, quads[0].v2, quads[0].v3, rayOrigin, rayDirection, FALSE );
