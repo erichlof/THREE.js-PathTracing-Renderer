@@ -85,12 +85,12 @@ float SceneIntersect( )
 	vec4 currentBoxNodeData0, nodeAData0, nodeBData0, tmpNodeData0;
 	vec4 currentBoxNodeData1, nodeAData1, nodeBData1, tmpNodeData1;
 	vec4 vd0, vd1, vd2, vd3, vd4, vd5, vd6, vd7;
-	vec3 vn0, vn1, vn2, vn3;
+	//vec3 vn0, vn1, vn2, vn3;
 	vec3 inverseDir = 1.0 / rayDirection;
 	vec3 rObjOrigin, rObjDirection;
 	vec3 normal, hitPoint;
 	vec2 currentStackData, stackDataA, stackDataB, tmpStackData;
-	vec2 vtc0, vtc1, vtc2, vtc3;
+	//vec2 vtc0, vtc1, vtc2, vtc3;
 	ivec2 uv0, uv1, uv2, uv3, uv4, uv5, uv6, uv7;
 	float stackptr = 0.0;
 	float id = 0.0;
@@ -226,17 +226,19 @@ float SceneIntersect( )
 		vd6 = texelFetch(tQuadTexture, uv6, 0); // quad vertex uv texture coords data
 		vd7 = texelFetch(tQuadTexture, uv7, 0); // quad vertex uv texture coords data
 
-		vn0 = vec3(vd3.xyz);
-		vn1 = vec3(vd3.w, vd4.xy);
-		vn2 = vec3(vd4.zw, vd5.x);
-		vn3 = vec3(vd5.yzw);
-		hitNormal = mix(mix(vn0, vn1, quadU), mix(vn3, vn2, quadU), quadV); // shading normal
+		if (uModelUsesVertexNormals)
+		{
+			//vn0 = vec3(vd3.xyz); vn1 = vec3(vd3.w, vd4.xy); vn2 = vec3(vd4.zw, vd5.x); vn3 = vec3(vd5.yzw);
+			//hitNormal = mix(mix(vn0, vn1, quadU), mix(vn3, vn2, quadU), quadV); // shading normal
+			hitNormal = mix(mix(vec3(vd3.xyz), vec3(vd3.w, vd4.xy), quadU), mix(vec3(vd5.yzw), vec3(vd4.zw, vd5.x), quadU), quadV); // shading normal
+			
+		}
 		hitNormal = transpose(mat3(uQuadModel_InvMatrix)) * hitNormal; // transform normal back into world space
-		vtc0 = vec2(vd6.xy);
-		vtc1 = vec2(vd6.zw);
-		vtc2 = vec2(vd7.xy);
-		vtc3 = vec2(vd7.zw);
-		hitUV = mix(mix(vtc0, vtc1, quadU), mix(vtc3, vtc2, quadU), quadV);   
+		
+		//vtc0 = vec2(vd6.xy); vtc1 = vec2(vd6.zw); vtc2 = vec2(vd7.xy); vtc3 = vec2(vd7.zw);
+		//hitUV = mix(mix(vtc0, vtc1, quadU), mix(vtc3, vtc2, quadU), quadV);
+		hitUV = mix(mix(vec2(vd6.xy), vec2(vd6.zw), quadU), mix(vec2(vd7.zw), vec2(vd7.xy), quadU), quadV);   
+		
 		hitEmission = vec3(0, 0, 0); // use this if hitType will be LIGHT
 		hitColor = vec3(1, 1, 1);
 		
@@ -569,7 +571,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			diffuseCount++;
 
-			if (modelWasIntersected == TRUE)
+			if (uModelUsesVertexNormals && modelWasIntersected == TRUE)
 			{
 				textureColor = texture(tAlbedoTexture, hitUV);
 				hitColor *= (textureColor.rgb * textureColor.rgb);
