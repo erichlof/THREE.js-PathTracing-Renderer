@@ -47,8 +47,7 @@ function loadQuadsOnlyOBJModel()
 				.load('Duck_toQuads.obj', function(object)
 				{
 					QuadsOnlyOBJModel = object;
-					//modelScale = 10.0;
-					//modelPositionOffset.set(10, 0, 0);
+					
 					// now that the model has loaded, we can init app and start animating
 					init();
 				});
@@ -363,8 +362,11 @@ function initSceneData()
 
 	useVertexNormals_ToggleController = gui.add(useVertexNormals_ToggleObject, 'ModelUsesVertexNormals', true).onChange(handleUseVertexNormalsChange);
 
+
 	// jumpstart all the gui change controller handlers so that the pathtracing fragment shader uniforms are correct and up-to-date
 	handlePatchVertexChange();
+	handleUseVertexNormalsChange();
+
 
 	// scene/demo-specific uniforms go here
 	pathTracingUniforms.tQuadTexture = { value: quadDataTexture };
@@ -401,7 +403,17 @@ function updateVariablesAndUniforms()
 		needChangePatchVertex = false;
 	}
 
+	if (needChangeUseVertexNormals)
+	{
+		pathTracingUniforms.uModelUsesVertexNormals.value = useVertexNormals_ToggleController.getValue();
+
+		cameraIsMoving = true;
+		needChangeUseVertexNormals = false;
+	}
+
 	QuadModelTransform.scale.set(10, 10, 10);
+	QuadModelTransform.rotation.y = Math.PI;
+	QuadModelTransform.position.x = 10;
 	QuadModelTransform.updateMatrixWorld();
 	pathTracingUniforms.uQuadModel_InvMatrix.value.copy(QuadModelTransform.matrixWorld).invert();
 
