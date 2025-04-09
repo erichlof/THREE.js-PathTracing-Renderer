@@ -6,10 +6,13 @@ let rearLeft_VertexMoveController, rearLeft_VertexMoveObject;
 let rearMiddle_VertexMoveController, rearMiddle_VertexMoveObject;
 let rearRight_VertexMoveController, rearRight_VertexMoveObject;
 let needChangePatchVertex = false;
+let useVertexNormals_ToggleController, useVertexNormals_ToggleObject;
+let needChangeUseVertexNormals = false;
 
 let QuadsOnlyOBJModel;
 let modelScale = 1.0;
 let modelPositionOffset = new THREE.Vector3();
+let QuadModelTransform = new THREE.Object3D();
 let albedoTexture;
 let total_number_of_quads = 0;
 let quad_array;
@@ -44,8 +47,8 @@ function loadQuadsOnlyOBJModel()
 				.load('Duck_toQuads.obj', function(object)
 				{
 					QuadsOnlyOBJModel = object;
-					modelScale = 10.0;
-					modelPositionOffset.set(10, 0, 0);
+					//modelScale = 10.0;
+					//modelPositionOffset.set(10, 0, 0);
 					// now that the model has loaded, we can init app and start animating
 					init();
 				});
@@ -64,7 +67,7 @@ function initSceneData()
 	cameraFlightSpeed = 100;
 
 	// pixelRatio is resolution - range: 0.5(half resolution) to 1.0(full resolution)
-	pixelRatio = mouseControl ? 1.0 : 1.0; // mobile devices can also handle full resolution for this demo 
+	pixelRatio = mouseControl ? 1.0 : 0.75; 
 
 	EPS_intersect = 0.01;
 
@@ -335,23 +338,30 @@ function initSceneData()
 	frontLeft_VertexMoveObject = { FrontLeftVertexHeight: -5 };
 	frontMiddle_VertexMoveObject = { FrontMiddleVertexHeight: -10 };
 	frontRight_VertexMoveObject = { FrontRightVertexHeight: 0 };
-
 	rearLeft_VertexMoveObject = { RearLeftVertexHeight: -13 };
 	rearMiddle_VertexMoveObject = { RearMiddleVertexHeight: 10 };
 	rearRight_VertexMoveObject = { RearRightVertexHeight: -8 };
+
+	useVertexNormals_ToggleObject = { ModelUsesVertexNormals: true };
 
 	function handlePatchVertexChange() 
 	{
 		needChangePatchVertex = true;
 	}
 
+	function handleUseVertexNormalsChange()
+	{
+		needChangeUseVertexNormals = true;
+	}
+
 	frontLeft_VertexMoveController = gui.add(frontLeft_VertexMoveObject, 'FrontLeftVertexHeight', -25, 25, 0.01).onChange(handlePatchVertexChange);
 	frontMiddle_VertexMoveController = gui.add(frontMiddle_VertexMoveObject, 'FrontMiddleVertexHeight', -25, 25, 0.01).onChange(handlePatchVertexChange);
 	frontRight_VertexMoveController = gui.add(frontRight_VertexMoveObject, 'FrontRightVertexHeight', -25, 25, 0.01).onChange(handlePatchVertexChange);
-
 	rearLeft_VertexMoveController = gui.add(rearLeft_VertexMoveObject, 'RearLeftVertexHeight', -25, 25, 0.01).onChange(handlePatchVertexChange);
 	rearMiddle_VertexMoveController = gui.add(rearMiddle_VertexMoveObject, 'RearMiddleVertexHeight', -25, 25, 0.01).onChange(handlePatchVertexChange);
 	rearRight_VertexMoveController = gui.add(rearRight_VertexMoveObject, 'RearRightVertexHeight', -25, 25, 0.01).onChange(handlePatchVertexChange);
+
+	useVertexNormals_ToggleController = gui.add(useVertexNormals_ToggleObject, 'ModelUsesVertexNormals', true).onChange(handleUseVertexNormalsChange);
 
 	// jumpstart all the gui change controller handlers so that the pathtracing fragment shader uniforms are correct and up-to-date
 	handlePatchVertexChange();
@@ -360,12 +370,14 @@ function initSceneData()
 	pathTracingUniforms.tQuadTexture = { value: quadDataTexture };
 	pathTracingUniforms.tAABBTexture = { value: aabbDataTexture };
 	pathTracingUniforms.tAlbedoTexture = { value: albedoTexture };
+	pathTracingUniforms.uQuadModel_InvMatrix = { value: new THREE.Matrix4() };
 	pathTracingUniforms.uFrontLeftVertexHeight = { value: 0.0 };
 	pathTracingUniforms.uFrontMiddleVertexHeight = { value: 0.0 };
 	pathTracingUniforms.uFrontRightVertexHeight = { value: 0.0 };
 	pathTracingUniforms.uRearLeftVertexHeight = { value: 0.0 };
 	pathTracingUniforms.uRearMiddleVertexHeight = { value: 0.0 };
 	pathTracingUniforms.uRearRightVertexHeight = { value: 0.0 };
+	pathTracingUniforms.uModelUsesVertexNormals = { type: "b1", value: true };
 
 } // end function initSceneData()
 
@@ -388,6 +400,10 @@ function updateVariablesAndUniforms()
 		cameraIsMoving = true;
 		needChangePatchVertex = false;
 	}
+
+	QuadModelTransform.scale.set(10, 10, 10);
+	QuadModelTransform.updateMatrixWorld();
+	pathTracingUniforms.uQuadModel_InvMatrix.value.copy(QuadModelTransform.matrixWorld).invert();
 
 	// INFO
 	cameraInfoElement.innerHTML = "FOV: " + worldCamera.fov + " / Aperture: " + apertureSize.toFixed(2) + " / FocusDistance: " + focusDistance + "<br>" + "Samples: " + sampleCounter;
