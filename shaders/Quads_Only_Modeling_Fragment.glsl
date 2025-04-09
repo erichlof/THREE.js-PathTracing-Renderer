@@ -7,13 +7,14 @@ precision highp sampler2D;
 uniform sampler2D tQuadTexture;
 uniform sampler2D tAABBTexture;
 uniform sampler2D tAlbedoTexture;
-
+uniform mat4 uQuadModel_InvMatrix;
 uniform float uFrontLeftVertexHeight;
 uniform float uFrontMiddleVertexHeight;
 uniform float uFrontRightVertexHeight;
 uniform float uRearLeftVertexHeight;
 uniform float uRearMiddleVertexHeight;
 uniform float uRearRightVertexHeight;
+uniform bool uModelUsesVertexNormals;
 
 //float InvTextureWidth = 0.00048828125;  // (1 / 2048 texture width)
 //float InvTextureWidth = 0.000244140625; // (1 / 4096 texture width)
@@ -105,8 +106,13 @@ float SceneIntersect( )
 	hitObjectID = -INFINITY;
 	modelWasIntersected = FALSE;
 
+	// transform ray into GLTF_Model's object space
+	rObjOrigin = vec3( uQuadModel_InvMatrix * vec4(rayOrigin, 1.0) );
+	rObjDirection = vec3( uQuadModel_InvMatrix * vec4(rayDirection, 0.0) );
+	inverseDir = 1.0 / rObjDirection;
+
 	GetBoxNodeData(stackptr, currentBoxNodeData0, currentBoxNodeData1);
-	currentStackData = vec2(stackptr, BoundingBoxIntersect(currentBoxNodeData0.yzw, currentBoxNodeData1.yzw, rayOrigin, inverseDir));
+	currentStackData = vec2(stackptr, BoundingBoxIntersect(currentBoxNodeData0.yzw, currentBoxNodeData1.yzw, rObjOrigin, inverseDir));
 	stackLevels[0] = currentStackData;
 	skip = (currentStackData.y < t) ? TRUE : FALSE;
 
@@ -132,8 +138,8 @@ float SceneIntersect( )
 		{
 			GetBoxNodeData(currentStackData.x + 1.0, nodeAData0, nodeAData1);
 			GetBoxNodeData(currentBoxNodeData1.x, nodeBData0, nodeBData1);
-			stackDataA = vec2(currentStackData.x + 1.0, BoundingBoxIntersect(nodeAData0.yzw, nodeAData1.yzw, rayOrigin, inverseDir));
-			stackDataB = vec2(currentBoxNodeData1.x, BoundingBoxIntersect(nodeBData0.yzw, nodeBData1.yzw, rayOrigin, inverseDir));
+			stackDataA = vec2(currentStackData.x + 1.0, BoundingBoxIntersect(nodeAData0.yzw, nodeAData1.yzw, rObjOrigin, inverseDir));
+			stackDataB = vec2(currentBoxNodeData1.x, BoundingBoxIntersect(nodeBData0.yzw, nodeBData1.yzw, rObjOrigin, inverseDir));
 			
 			// first sort the branch node data so that 'a' is the smallest
 			if (stackDataB.y < stackDataA.y)
@@ -183,11 +189,12 @@ float SceneIntersect( )
 		vd1 = texelFetch(tQuadTexture, uv1, 0);
 		vd2 = texelFetch(tQuadTexture, uv2, 0);
 
-		d = BilinearPatchIntersect( vec3(vd0.xyz), vec3(vd0.w,vd1.xy), vec3(vd1.zw,vd2.x), vec3(vd2.yzw), rayOrigin, rayDirection, FALSE, normal, u, v );
+		d = BilinearPatchIntersect( vec3(vd0.xyz), vec3(vd0.w,vd1.xy), vec3(vd1.zw,vd2.x), vec3(vd2.yzw), rObjOrigin, rObjDirection, FALSE, normal, u, v );
 		if (d < t)
 		{
 			t = d;
 			hitNormal = normal;
+			//hitNormal = transpose(mat3(uQuadModel_InvMatrix)) * hitNormal; // transform normal back into world space
 			quadID = id;
 			quadU = u;
 			quadV = v;
@@ -224,12 +231,13 @@ float SceneIntersect( )
 		vn2 = vec3(vd4.zw, vd5.x);
 		vn3 = vec3(vd5.yzw);
 		hitNormal = mix(mix(vn0, vn1, quadU), mix(vn3, vn2, quadU), quadV); // shading normal
+		hitNormal = transpose(mat3(uQuadModel_InvMatrix)) * hitNormal; // transform normal back into world space
 		vtc0 = vec2(vd6.xy);
 		vtc1 = vec2(vd6.zw);
 		vtc2 = vec2(vd7.xy);
 		vtc3 = vec2(vd7.zw);
 		hitUV = mix(mix(vtc0, vtc1, quadU), mix(vtc3, vtc2, quadU), quadV);   
-		hitEmission = vec3(1, 0, 1); // use this if hitType will be LIGHT
+		hitEmission = vec3(0, 0, 0); // use this if hitType will be LIGHT
 		hitColor = vec3(1, 1, 1);
 		
 		hitType = COAT;
