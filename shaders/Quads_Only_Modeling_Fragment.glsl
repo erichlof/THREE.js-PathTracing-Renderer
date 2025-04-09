@@ -6,7 +6,7 @@ precision highp sampler2D;
 
 uniform sampler2D tQuadTexture;
 uniform sampler2D tAABBTexture;
-//uniform sampler2D tAlbedoTexture;
+uniform sampler2D tAlbedoTexture;
 
 uniform float uFrontLeftVertexHeight;
 uniform float uFrontMiddleVertexHeight;
@@ -29,7 +29,7 @@ vec3 hitNormal, hitEmission, hitColor;
 vec2 hitUV;
 float hitObjectID = -INFINITY;
 int hitType = -100;
-
+int modelWasIntersected = FALSE;
 
 struct Quad { vec3 normal; vec3 v0; vec3 v1; vec3 v2; vec3 v3; vec3 emission; vec3 color; int type; };
 struct Box { vec3 minCorner; vec3 maxCorner; vec3 emission; vec3 color; int type; };
@@ -84,10 +84,12 @@ float SceneIntersect( )
 	vec4 currentBoxNodeData0, nodeAData0, nodeBData0, tmpNodeData0;
 	vec4 currentBoxNodeData1, nodeAData1, nodeBData1, tmpNodeData1;
 	vec4 vd0, vd1, vd2, vd3, vd4, vd5, vd6, vd7;
+	vec3 vn0, vn1, vn2, vn3;
 	vec3 inverseDir = 1.0 / rayDirection;
 	vec3 rObjOrigin, rObjDirection;
 	vec3 normal, hitPoint;
 	vec2 currentStackData, stackDataA, stackDataB, tmpStackData;
+	vec2 vtc0, vtc1, vtc2, vtc3;
 	ivec2 uv0, uv1, uv2, uv3, uv4, uv5, uv6, uv7;
 	float stackptr = 0.0;
 	float id = 0.0;
@@ -101,7 +103,7 @@ float SceneIntersect( )
 	int quadLookupNeeded = FALSE;
 
 	hitObjectID = -INFINITY;
-
+	modelWasIntersected = FALSE;
 
 	GetBoxNodeData(stackptr, currentBoxNodeData0, currentBoxNodeData1);
 	currentStackData = vec2(stackptr, BoundingBoxIntersect(currentBoxNodeData0.yzw, currentBoxNodeData1.yzw, rayOrigin, inverseDir));
@@ -190,6 +192,7 @@ float SceneIntersect( )
 			quadU = u;
 			quadV = v;
 			quadLookupNeeded = TRUE;
+			modelWasIntersected = TRUE;
 		}
 	      
         } // end while (TRUE)
@@ -216,10 +219,19 @@ float SceneIntersect( )
 		vd6 = texelFetch(tQuadTexture, uv6, 0); // quad vertex uv texture coords data
 		vd7 = texelFetch(tQuadTexture, uv7, 0); // quad vertex uv texture coords data
 
-		//hitNormal = vec3(vd3.xyz) vec3(vd3.w,vd4.xy) vec3(vd4.zw,vd5.x) vec3(vd5.yzw)
+		vn0 = vec3(vd3.xyz);
+		vn1 = vec3(vd3.w, vd4.xy);
+		vn2 = vec3(vd4.zw, vd5.x);
+		vn3 = vec3(vd5.yzw);
+		hitNormal = mix(mix(vn0, vn1, quadU), mix(vn3, vn2, quadU), quadV); // shading normal
+		vtc0 = vec2(vd6.xy);
+		vtc1 = vec2(vd6.zw);
+		vtc2 = vec2(vd7.xy);
+		vtc3 = vec2(vd7.zw);
+		hitUV = mix(mix(vtc0, vtc1, quadU), mix(vtc3, vtc2, quadU), quadV);   
 		hitEmission = vec3(1, 0, 1); // use this if hitType will be LIGHT
 		hitColor = vec3(1, 1, 1);
-		//hitUV = vec2(vd6.xy) vec2(vd6.zw) vec2(vd7.xy) vec2(vd7.zw)
+		
 		hitType = COAT;
 		//hitAlbedoTextureID = int(vd7.x);
 		hitObjectID = float(objectCount);
@@ -237,6 +249,7 @@ float SceneIntersect( )
 		hitColor = quads[0].color;
 		hitType = quads[0].type;
 		hitObjectID = float(objectCount);
+		modelWasIntersected = FALSE;
 	}
 	objectCount++;
 	
@@ -259,6 +272,7 @@ float SceneIntersect( )
 		}
 		
 		hitObjectID = float(objectCount);
+		modelWasIntersected = FALSE;
 	}
 	objectCount++;
 	
@@ -272,6 +286,7 @@ float SceneIntersect( )
 		hitColor = bilinearPatches[0].color;
 		hitType = bilinearPatches[0].type;
 		hitObjectID = float(objectCount);
+		modelWasIntersected = FALSE;
 	}
 	objectCount++;
 
@@ -284,6 +299,7 @@ float SceneIntersect( )
 		hitColor = bilinearPatches[1].color;
 		hitType = bilinearPatches[1].type;
 		hitObjectID = float(objectCount);
+		modelWasIntersected = FALSE;
 	}
 	objectCount++;
 
@@ -298,6 +314,8 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 //-----------------------------------------------------------------------------------------------------------------------------
 {
 	Quad light = quads[0];
+
+	vec4 textureColor;
 
 	vec3 accumCol = vec3(0);
 	vec3 mask = vec3(1);
@@ -538,11 +556,17 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				reflectionRayDirection = reflect(rayDirection, nl); // reflect ray from surface
 				reflectionRayOrigin = x + nl * uEPS_intersect;
 				willNeedReflectionRay = TRUE;
-				reflectionNeedsToBeSharp = TRUE;
+				//reflectionNeedsToBeSharp = TRUE;
 			}
 
 			diffuseCount++;
 
+			if (modelWasIntersected == TRUE)
+			{
+				textureColor = texture(tAlbedoTexture, hitUV);
+				hitColor *= (textureColor.rgb * textureColor.rgb);
+			}
+			
 			mask *= Tr;
 			mask *= hitColor;
 
