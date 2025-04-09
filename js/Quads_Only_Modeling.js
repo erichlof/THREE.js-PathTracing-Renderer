@@ -359,6 +359,7 @@ function initSceneData()
 	// scene/demo-specific uniforms go here
 	pathTracingUniforms.tQuadTexture = { value: quadDataTexture };
 	pathTracingUniforms.tAABBTexture = { value: aabbDataTexture };
+	pathTracingUniforms.tAlbedoTexture = { value: albedoTexture };
 	pathTracingUniforms.uFrontLeftVertexHeight = { value: 0.0 };
 	pathTracingUniforms.uFrontMiddleVertexHeight = { value: 0.0 };
 	pathTracingUniforms.uFrontRightVertexHeight = { value: 0.0 };
@@ -394,5 +395,21 @@ function updateVariablesAndUniforms()
 } // end function updateVariablesAndUniforms()
 
 
-// load model first, then when it has completed loading, init app and start animating
-loadQuadsOnlyOBJModel(); 
+// load a resource
+albedoTexture = textureLoader.load(
+	// resource URL
+	'models/DuckCM.png',
+
+	// onLoad callback
+	function (texture)
+	{
+		texture.wrapS = THREE.RepeatWrapping;
+		texture.wrapT = THREE.RepeatWrapping;
+		texture.minFilter = THREE.NearestFilter;
+		texture.magFilter = THREE.NearestFilter;
+		texture.generateMipmaps = false;
+		
+		// now that the texture has been loaded, we can load the model
+		loadQuadsOnlyOBJModel(); // load model, init app, and start animating
+	}
+);
