@@ -9,9 +9,36 @@ let needChangePatchVertex = false;
 let useVertexNormals_ToggleController, useVertexNormals_ToggleObject;
 let needChangeUseVertexNormals = false;
 
+let skewMatrix = new THREE.Matrix4();
+let uniformScale = 1;
+let transform_Folder, position_Folder, scale_Folder, skew_Folder, rotation_Folder;
+let transform_PositionXController, transform_PositionXObject;
+let transform_PositionYController, transform_PositionYObject;
+let transform_PositionZController, transform_PositionZObject;
+let transform_ScaleUniformController, transform_ScaleUniformObject;
+let transform_ScaleXController, transform_ScaleXObject;
+let transform_ScaleYController, transform_ScaleYObject;
+let transform_ScaleZController, transform_ScaleZObject;
+let transform_SkewX_YController, transform_SkewX_YObject;
+let transform_SkewX_ZController, transform_SkewX_ZObject;
+let transform_SkewY_XController, transform_SkewY_XObject;
+let transform_SkewY_ZController, transform_SkewY_ZObject;
+let transform_SkewZ_XController, transform_SkewZ_XObject;
+let transform_SkewZ_YController, transform_SkewZ_YObject;
+let transform_RotationXController, transform_RotationXObject;
+let transform_RotationYController, transform_RotationYObject;
+let transform_RotationZController, transform_RotationZObject;
+let needChangePosition = false;
+let needChangeScaleUniform = false;
+let needChangeScale = false;
+let needChangeSkew = false;
+let needChangeRotation = false;
+
 let QuadsOnlyOBJModel;
-let modelScale = 1.0;
-let modelPositionOffset = new THREE.Vector3();
+let modelGeometryScale = 1.0;
+let modelGeometryPositionOffset = new THREE.Vector3(0, -0.5, 0);
+let YAxis = new THREE.Vector3(0, 1, 0);
+let modelGeometryRotationY = Math.PI;
 let QuadModelTransform = new THREE.Object3D();
 let albedoTexture;
 let total_number_of_quads = 0;
@@ -132,21 +159,33 @@ function initSceneData()
 		vp2.set(vpa[ix12 + 6], vpa[ix12 + 7], vpa[ix12 + 8]);
 		vp3.set(vpa[ix12 + 9], vpa[ix12 + 10], vpa[ix12 + 11]);
 
-		vp0.multiplyScalar(modelScale);
-		vp1.multiplyScalar(modelScale);
-		vp2.multiplyScalar(modelScale);
-		vp3.multiplyScalar(modelScale);
+		// change loaded vertex position geometry (object's vertex positions, rotation, and scaling)
+		// for this demo, I wanted the initial loaded Duck model to be facing to the left instead of right, 
+		// so rotate it on the Y axis by 180 degrees, or PI
+		vp0.applyAxisAngle(YAxis, modelGeometryRotationY); // modelGeometryRotationY = 180 (or PI)
+		vp1.applyAxisAngle(YAxis, modelGeometryRotationY);
+		vp2.applyAxisAngle(YAxis, modelGeometryRotationY);
+		vp3.applyAxisAngle(YAxis, modelGeometryRotationY);
 
-		vp0.add(modelPositionOffset);
-		vp1.add(modelPositionOffset);
-		vp2.add(modelPositionOffset);
-		vp3.add(modelPositionOffset);
+		// the initial Duck vertex positions are all 5 units above center, so lower all loaded vertices by 5 units in Y direction
+		vp0.add(modelGeometryPositionOffset); // modelGeometryPositionOffset = Vector3(0, -5, 0)
+		vp1.add(modelGeometryPositionOffset);
+		vp2.add(modelGeometryPositionOffset);
+		vp3.add(modelGeometryPositionOffset);
+
+		// Duck's scale is left at 1.0 here, because this demo's GUI sliders will update the transform later
+		vp0.multiplyScalar(modelGeometryScale); // modelGeometryScale = 1.0, so essentially this does nothing
+		vp1.multiplyScalar(modelGeometryScale);
+		vp2.multiplyScalar(modelGeometryScale);
+		vp3.multiplyScalar(modelGeometryScale);
+
+		
 
 		// record vertex normals
-		vn0.set(vna[ix12 + 0], vna[ix12 + 1], vna[ix12 + 2]).normalize();
-		vn1.set(vna[ix12 + 3], vna[ix12 + 4], vna[ix12 + 5]).normalize();
-		vn2.set(vna[ix12 + 6], vna[ix12 + 7], vna[ix12 + 8]).normalize();
-		vn3.set(vna[ix12 + 9], vna[ix12 + 10], vna[ix12 + 11]).normalize();
+		vn0.set(vna[ix12 + 0], vna[ix12 + 1], vna[ix12 + 2]).normalize().applyAxisAngle(YAxis, modelGeometryRotationY);
+		vn1.set(vna[ix12 + 3], vna[ix12 + 4], vna[ix12 + 5]).normalize().applyAxisAngle(YAxis, modelGeometryRotationY);
+		vn2.set(vna[ix12 + 6], vna[ix12 + 7], vna[ix12 + 8]).normalize().applyAxisAngle(YAxis, modelGeometryRotationY);
+		vn3.set(vna[ix12 + 9], vna[ix12 + 10], vna[ix12 + 11]).normalize().applyAxisAngle(YAxis, modelGeometryRotationY);
 
 		// record vertex texture coordinates (UVs)
 		if (modelHasUVs) 
@@ -343,15 +382,30 @@ function initSceneData()
 
 	useVertexNormals_ToggleObject = { ModelUsesVertexNormals: true };
 
-	function handlePatchVertexChange() 
-	{
-		needChangePatchVertex = true;
-	}
+	transform_PositionXObject = { positionX: 10 };
+	transform_PositionYObject = { positionY: 0 };
+	transform_PositionZObject = { positionZ: 0 };
+	transform_ScaleUniformObject = { uniformScale: 10 };
+	transform_ScaleXObject = { scaleX: 10 };
+	transform_ScaleYObject = { scaleY: 10 };
+	transform_ScaleZObject = { scaleZ: 10 };
+	transform_SkewX_YObject = { skewX_Y: 0 };
+	transform_SkewX_ZObject = { skewX_Z: 0 };
+	transform_SkewY_XObject = { skewY_X: 0 };
+	transform_SkewY_ZObject = { skewY_Z: 0 };
+	transform_SkewZ_XObject = { skewZ_X: 0 };
+	transform_SkewZ_YObject = { skewZ_Y: 0 };
+	transform_RotationXObject = { rotationX: 0 };
+	transform_RotationYObject = { rotationY: 0 };
+	transform_RotationZObject = { rotationZ: 0 };
 
-	function handleUseVertexNormalsChange()
-	{
-		needChangeUseVertexNormals = true;
-	}
+	function handlePatchVertexChange() { needChangePatchVertex = true; }
+	function handleUseVertexNormalsChange(){ needChangeUseVertexNormals = true; }
+	function handlePositionChange() { needChangePosition = true; }
+	function handleScaleUniformChange() { needChangeScaleUniform = true; }
+	function handleScaleChange() { needChangeScale = true; }
+	function handleSkewChange() { needChangeSkew = true; }
+	function handleRotationChange() { needChangeRotation = true; }
 
 	frontLeft_VertexMoveController = gui.add(frontLeft_VertexMoveObject, 'FrontLeftVertexHeight', -25, 25, 0.01).onChange(handlePatchVertexChange);
 	frontMiddle_VertexMoveController = gui.add(frontMiddle_VertexMoveObject, 'FrontMiddleVertexHeight', -25, 25, 0.01).onChange(handlePatchVertexChange);
@@ -362,10 +416,45 @@ function initSceneData()
 
 	useVertexNormals_ToggleController = gui.add(useVertexNormals_ToggleObject, 'ModelUsesVertexNormals', true).onChange(handleUseVertexNormalsChange);
 
+	transform_Folder = gui.addFolder('Transform');
+
+	position_Folder = transform_Folder.addFolder('Position');
+	transform_PositionXController = position_Folder.add(transform_PositionXObject, 'positionX', -50, 50, 1).onChange(handlePositionChange);
+	transform_PositionYController = position_Folder.add(transform_PositionYObject, 'positionY', -50, 50, 1).onChange(handlePositionChange);
+	transform_PositionZController = position_Folder.add(transform_PositionZObject, 'positionZ', -50, 50, 1).onChange(handlePositionChange);
+
+	scale_Folder = transform_Folder.addFolder('Scale');
+	transform_ScaleUniformController = scale_Folder.add(transform_ScaleUniformObject, 'uniformScale', 1, 40, 1).onChange(handleScaleUniformChange);
+	transform_ScaleXController = scale_Folder.add(transform_ScaleXObject, 'scaleX', 1, 40, 1).onChange(handleScaleChange);
+	transform_ScaleYController = scale_Folder.add(transform_ScaleYObject, 'scaleY', 1, 40, 1).onChange(handleScaleChange);
+	transform_ScaleZController = scale_Folder.add(transform_ScaleZObject, 'scaleZ', 1, 40, 1).onChange(handleScaleChange);
+
+	skew_Folder = transform_Folder.addFolder('Skew');
+	transform_SkewX_YController = skew_Folder.add(transform_SkewX_YObject, 'skewX_Y', -0.9, 0.9, 0.1).onChange(handleSkewChange);
+	transform_SkewX_ZController = skew_Folder.add(transform_SkewX_ZObject, 'skewX_Z', -0.9, 0.9, 0.1).onChange(handleSkewChange);
+	transform_SkewY_XController = skew_Folder.add(transform_SkewY_XObject, 'skewY_X', -0.9, 0.9, 0.1).onChange(handleSkewChange);
+	transform_SkewY_ZController = skew_Folder.add(transform_SkewY_ZObject, 'skewY_Z', -0.9, 0.9, 0.1).onChange(handleSkewChange);
+	transform_SkewZ_XController = skew_Folder.add(transform_SkewZ_XObject, 'skewZ_X', -0.9, 0.9, 0.1).onChange(handleSkewChange);
+	transform_SkewZ_YController = skew_Folder.add(transform_SkewZ_YObject, 'skewZ_Y', -0.9, 0.9, 0.1).onChange(handleSkewChange);
+
+	rotation_Folder = transform_Folder.addFolder('Rotation');
+	transform_RotationXController = rotation_Folder.add(transform_RotationXObject, 'rotationX', 0, 359, 1).onChange(handleRotationChange);
+	transform_RotationYController = rotation_Folder.add(transform_RotationYObject, 'rotationY', 0, 359, 1).onChange(handleRotationChange);
+	transform_RotationZController = rotation_Folder.add(transform_RotationZObject, 'rotationZ', 0, 359, 1).onChange(handleRotationChange);
+
+	position_Folder.close();
+	scale_Folder.close();
+	skew_Folder.close();
+	rotation_Folder.close();
 
 	// jumpstart all the gui change controller handlers so that the pathtracing fragment shader uniforms are correct and up-to-date
 	handlePatchVertexChange();
 	handleUseVertexNormalsChange();
+	handlePositionChange();
+	handleScaleUniformChange();
+	handleScaleChange();
+	handleSkewChange();
+	handleRotationChange();
 
 
 	// scene/demo-specific uniforms go here
@@ -411,10 +500,65 @@ function updateVariablesAndUniforms()
 		needChangeUseVertexNormals = false;
 	}
 
-	QuadModelTransform.scale.set(10, 10, 10);
-	QuadModelTransform.rotation.y = Math.PI;
-	QuadModelTransform.position.x = 10;
+	if (needChangePosition)
+	{
+		QuadModelTransform.position.set(transform_PositionXController.getValue(),
+			transform_PositionYController.getValue(),
+			transform_PositionZController.getValue());
+
+		cameraIsMoving = true;
+		needChangePosition = false;
+	}
+
+	if (needChangeScaleUniform)
+	{
+		uniformScale = transform_ScaleUniformController.getValue();
+		QuadModelTransform.scale.set(uniformScale, uniformScale, uniformScale);
+
+		transform_ScaleXController.setValue(uniformScale);
+		transform_ScaleYController.setValue(uniformScale);
+		transform_ScaleZController.setValue(uniformScale);
+
+		cameraIsMoving = true;
+		needChangeScaleUniform = false;
+	}
+
+	if (needChangeScale)
+	{
+		QuadModelTransform.scale.set(transform_ScaleXController.getValue(),
+			transform_ScaleYController.getValue(),
+			transform_ScaleZController.getValue());
+
+		cameraIsMoving = true;
+		needChangeScale = false;
+	}
+
+	if (needChangeSkew)
+	{
+		skewMatrix.set(
+			1, transform_SkewX_YController.getValue(), transform_SkewX_ZController.getValue(), 0,
+			transform_SkewY_XController.getValue(), 1, transform_SkewY_ZController.getValue(), 0,
+			transform_SkewZ_XController.getValue(), transform_SkewZ_YController.getValue(), 1, 0,
+			0, 0, 0, 1
+		);
+
+		cameraIsMoving = true;
+		needChangeSkew = false;
+	}
+
+	if (needChangeRotation)
+	{
+		QuadModelTransform.rotation.set(THREE.MathUtils.degToRad(transform_RotationXController.getValue()),
+			THREE.MathUtils.degToRad(transform_RotationYController.getValue()),
+			THREE.MathUtils.degToRad(transform_RotationZController.getValue()));
+
+		cameraIsMoving = true;
+		needChangeRotation = false;
+	}
+
 	QuadModelTransform.updateMatrixWorld();
+	QuadModelTransform.matrixWorld.multiply(skewMatrix);
+	
 	pathTracingUniforms.uQuadModel_InvMatrix.value.copy(QuadModelTransform.matrixWorld).invert();
 
 	// INFO
