@@ -84,14 +84,14 @@ float SceneIntersect( )
 {
 	vec4 currentBoxNodeData0, nodeAData0, nodeBData0, tmpNodeData0;
 	vec4 currentBoxNodeData1, nodeAData1, nodeBData1, tmpNodeData1;
-	vec4 vd0, vd1, vd2, vd3, vd4, vd5, vd6, vd7;
+	vec4 vd0, vd1, vd2, vd3, vd4, vd5, vd6, vd7, vd8;
 	//vec3 vn0, vn1, vn2, vn3;
 	vec3 inverseDir = 1.0 / rayDirection;
 	vec3 rObjOrigin, rObjDirection;
 	vec3 normal, hitPoint;
 	vec2 currentStackData, stackDataA, stackDataB, tmpStackData;
 	//vec2 vtc0, vtc1, vtc2, vtc3;
-	ivec2 uv0, uv1, uv2, uv3, uv4, uv5, uv6, uv7;
+	ivec2 uv0, uv1, uv2, uv3, uv4, uv5, uv6, uv7, uv8;
 	float stackptr = 0.0;
 	float id = 0.0;
 	float d;
@@ -216,7 +216,7 @@ float SceneIntersect( )
 		uv5 = ivec2( mod(quadID + 5.0, 4096.0), (quadID + 5.0) * INV_TEXTURE_WIDTH ); // quad vertex normals data
 		uv6 = ivec2( mod(quadID + 6.0, 4096.0), (quadID + 6.0) * INV_TEXTURE_WIDTH ); // quad vertex uv texture coords data
 		uv7 = ivec2( mod(quadID + 7.0, 4096.0), (quadID + 7.0) * INV_TEXTURE_WIDTH ); // quad vertex uv texture coords data
-		
+		uv8 = ivec2( mod(quadID + 8.0, 4096.0), (quadID + 8.0) * INV_TEXTURE_WIDTH ); // quad face color rgba data
 		//vd0 = texelFetch(tQuadTexture, uv0, 0); // quad vertex positions data
 		//vd1 = texelFetch(tQuadTexture, uv1, 0); // quad vertex positions data
 		//vd2 = texelFetch(tQuadTexture, uv2, 0); // quad vertex positions data
@@ -225,14 +225,20 @@ float SceneIntersect( )
 		vd5 = texelFetch(tQuadTexture, uv5, 0); // quad vertex normals data
 		vd6 = texelFetch(tQuadTexture, uv6, 0); // quad vertex uv texture coords data
 		vd7 = texelFetch(tQuadTexture, uv7, 0); // quad vertex uv texture coords data
+		vd8 = texelFetch(tQuadTexture, uv8, 0); // quad face color rgba data
 
 		if (uModelUsesVertexNormals)
 		{
 			//vn0 = vec3(vd3.xyz); vn1 = vec3(vd3.w, vd4.xy); vn2 = vec3(vd4.zw, vd5.x); vn3 = vec3(vd5.yzw);
 			//hitNormal = mix(mix(vn0, vn1, quadU), mix(vn3, vn2, quadU), quadV); // shading normal
 			hitNormal = mix(mix(vec3(vd3.xyz), vec3(vd3.w, vd4.xy), quadU), mix(vec3(vd5.yzw), vec3(vd4.zw, vd5.x), quadU), quadV); // shading normal
-			
+			hitColor = vec3(1, 1, 1); // model's albedo color texture map will be applied later
 		}
+		else
+		{
+			hitColor = vd8.rgb; // use the random color for this quad face that was assigned at startup
+		}
+
 		hitNormal = transpose(mat3(uQuadModel_InvMatrix)) * hitNormal; // transform normal back into world space
 		
 		//vtc0 = vec2(vd6.xy); vtc1 = vec2(vd6.zw); vtc2 = vec2(vd7.xy); vtc3 = vec2(vd7.zw);
@@ -240,7 +246,7 @@ float SceneIntersect( )
 		hitUV = mix(mix(vec2(vd6.xy), vec2(vd6.zw), quadU), mix(vec2(vd7.zw), vec2(vd7.xy), quadU), quadV);   
 		
 		hitEmission = vec3(0, 0, 0); // use this if hitType will be LIGHT
-		hitColor = vec3(1, 1, 1);
+		
 		
 		hitType = COAT;
 		//hitAlbedoTextureID = int(vd7.x);
