@@ -249,9 +249,9 @@ function initSceneData()
 		// the remaining texels are used for PBR material properties
 
 		//texel 8
-		quad_array[ix64 + 32] = 0; // r or x
-		quad_array[ix64 + 33] = 0; // g or y 
-		quad_array[ix64 + 34] = 0; // b or z
+		quad_array[ix64 + 32] = Math.random(); // r or x // pick random face color r component
+		quad_array[ix64 + 33] = Math.random(); // g or y // pick random face color g component
+		quad_array[ix64 + 34] = Math.random(); // b or z // pick random face color b component
 		quad_array[ix64 + 35] = 0; // a or w
 
 		//texel 9
