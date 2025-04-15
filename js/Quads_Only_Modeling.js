@@ -308,8 +308,8 @@ function initSceneData()
 		quad_b_box_min.copy(quad_b_box_min.min(vp3));
 		quad_b_box_max.copy(quad_b_box_max.max(vp3));
 
-		quad_b_box_centroid.copy(quad_b_box_min).add(quad_b_box_max).multiplyScalar(0.5);
-		//quad_b_box_centroid.copy(vp0).add(vp1).add(vp2).add(vp3).multiplyScalar(0.25);
+		//quad_b_box_centroid.copy(quad_b_box_min).add(quad_b_box_max).multiplyScalar(0.5);
+		quad_b_box_centroid.copy(vp0).add(vp1).add(vp2).add(vp3).multiplyScalar(0.25);
 
 		aabb_array[ix9 + 0] = quad_b_box_min.x;
 		aabb_array[ix9 + 1] = quad_b_box_min.y;
