@@ -945,7 +945,7 @@ function updateVariablesAndUniforms()
 			parameterD_kController.setValue(1);
 			transformD_PositionXController.setValue(-60); transformD_PositionYController.setValue(-20); transformD_PositionZController.setValue(72);
 			transformD_ScaleUniformController.setValue(20); // default - will be overwritten by the following statements
-			transformD_ScaleXController.setValue(10); transformD_ScaleYController.setValue(30); transformD_ScaleZController.setValue(20);
+			transformD_ScaleXController.setValue(20); transformD_ScaleYController.setValue(30); transformD_ScaleZController.setValue(20);
 			transformD_RotationXController.setValue(0); transformD_RotationYController.setValue(0); transformD_RotationZController.setValue(0);
 			transformD_SkewX_YController.setValue(0); transformD_SkewX_ZController.setValue(0);
 			transformD_SkewY_XController.setValue(0); transformD_SkewY_ZController.setValue(0);
@@ -959,7 +959,7 @@ function updateVariablesAndUniforms()
 			parameterE_kController.setValue(1);
 			transformE_PositionXController.setValue(-60); transformE_PositionYController.setValue(-20); transformE_PositionZController.setValue(-72);
 			transformE_ScaleUniformController.setValue(20); // default - will be overwritten by the following statements
-			transformE_ScaleXController.setValue(10); transformE_ScaleYController.setValue(30); transformE_ScaleZController.setValue(20);
+			transformE_ScaleXController.setValue(20); transformE_ScaleYController.setValue(30); transformE_ScaleZController.setValue(20);
 			transformE_RotationXController.setValue(0); transformE_RotationYController.setValue(0); transformE_RotationZController.setValue(0);
 			transformE_SkewX_YController.setValue(0); transformE_SkewX_ZController.setValue(0);
 			transformE_SkewY_XController.setValue(0); transformE_SkewY_ZController.setValue(0);
