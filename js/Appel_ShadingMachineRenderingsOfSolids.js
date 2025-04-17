@@ -774,6 +774,11 @@ function updateVariablesAndUniforms()
 	// Scene preset
 	if (needChangeScenePreset)
 	{
+		cameraControlsPitchObject.rotation.set(0,0,0);
+		cameraControlsPitchObject.updateMatrixWorld();
+		cameraControlsYawObject.rotation.set(0,0,0);
+		cameraControlsYawObject.updateMatrixWorld();
+		
 		if (sceneFrom1968Paper_PresetController.getValue() == 'Scene 1')
 		{
 			infoElement.innerHTML = 'three.js PathTracing Renderer - Classic Scene: Shading Machine Renderings of Solids, Appel 1968 (Scene #1)';
