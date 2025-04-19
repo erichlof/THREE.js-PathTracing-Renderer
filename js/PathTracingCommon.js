@@ -1509,29 +1509,21 @@ void CSG_Union_Operation( float A_t0, vec3 A_n0, int A_type0, vec3 A_color0, int
 		B_type1 = temp_type1;
 		B_objectID1 = temp_objectID1;
 	}
-	// shape A is always considered to be first
+	// shape A is now considered to be in front
+	// Initialize first intersection (t0) to the front of shape A
 	t0 = A_t0;
 	n0 = A_n0;
 	type0 = A_type0;
 	color0 = A_color0;
 	objectID0 = A_objectID0;
-
+	// Also initialize the second intersection (t1) to the back of shape A - will get overwritten below if necessary
 	t1 = A_t1;
 	n1 = A_n1;
 	type1 = A_type1;
 	color1 = A_color1;
 	objectID1 = A_objectID1;
 	
-	// except for when the outside of shape B matches the outside of shape A
-	if (B_t0 == A_t0)
-	{
-		t0 = B_t0;
-		n0 = B_n0;
-		type0 = B_type0;
-		color0 = B_color0;
-		objectID0 = B_objectID0;
-	}
-	// A is behind us and completely in front of B
+	// all of shape A is behind us, but is still ordered in front of B
 	if (A_t1 <= 0.0 && A_t1 < B_t0)
 	{
 		t0 = B_t0;
@@ -1546,6 +1538,7 @@ void CSG_Union_Operation( float A_t0, vec3 A_n0, int A_type0, vec3 A_color0, int
 		color1 = B_color1;
 		objectID1 = B_objectID1;
 	}
+	// this is the usual case, we choose the front of shape A and the back of shape B
 	else if (B_t0 <= A_t1 && B_t1 > A_t1)
 	{
 		t1 = B_t1;
@@ -1553,14 +1546,6 @@ void CSG_Union_Operation( float A_t0, vec3 A_n0, int A_type0, vec3 A_color0, int
 		type1 = B_type1;
 		color1 = B_color1;
 		objectID1 = B_objectID1;
-	}
-	else if (B_t0 <= A_t1 && B_t1 <= A_t1)
-	{
-		t1 = A_t1;
-		n1 = A_n1;
-		type1 = A_type1;
-		color1 = A_color1;
-		objectID1 = A_objectID1;
 	}
 }
 //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1570,8 +1555,10 @@ void CSG_Difference_Operation( float A_t0, vec3 A_n0, int A_type0, vec3 A_color0
 //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 {
 	// CSG DIFFERENCE OPERATION [A - B] (shape A is carved out with shape B where the two shapes overlap)
+	// cannot swap in this operation: shape A must stay as the base shape, while shape B must stay as the negative space or carving shape
 	
-	if ((B_t0 < A_t0 && B_t1 < A_t0) || (B_t0 > A_t1 && B_t1 > A_t1))
+	// this is a rare case, where shape B doesn't even touch shape A (it's completely outside), so there's nothing to carve out of shape A
+	if ((B_t1 < A_t0) || (B_t0 > A_t1))
 	{
 		t0 = A_t0;
 		n0 = A_n0;
@@ -1585,7 +1572,8 @@ void CSG_Difference_Operation( float A_t0, vec3 A_n0, int A_type0, vec3 A_color0
 		color1 = A_color1;
 		objectID1 = A_objectID1;
 	}
-	else if (B_t0 > 0.0 && B_t0 < A_t1 && B_t0 > A_t0)
+	// if shape A is first
+	else if (B_t0 > 0.0 && B_t0 > A_t0 && B_t0 < A_t1)
 	{
 		t0 = A_t0;
 		n0 = A_n0;
@@ -1599,6 +1587,7 @@ void CSG_Difference_Operation( float A_t0, vec3 A_n0, int A_type0, vec3 A_color0
 		color1 = B_color0;
 		objectID1 = B_objectID0;
 	}
+	// if shape B is first
 	else if (B_t1 > A_t0 && B_t1 < A_t1)
 	{
 		t0 = B_t1;
@@ -1613,6 +1602,8 @@ void CSG_Difference_Operation( float A_t0, vec3 A_n0, int A_type0, vec3 A_color0
 		color1 = A_color1;
 		objectID1 = A_objectID1;
 	}
+	
+	
 }
 //-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 void CSG_Intersection_Operation( float A_t0, vec3 A_n0, int A_type0, vec3 A_color0, int A_objectID0, float A_t1, vec3 A_n1, int A_type1, vec3 A_color1, int A_objectID1, 
@@ -1620,7 +1611,7 @@ void CSG_Intersection_Operation( float A_t0, vec3 A_n0, int A_type0, vec3 A_colo
 			  	 out float t0, out vec3 n0, out int type0, out vec3 color0, out int objectID0, out float t1, out vec3 n1, out int type1, out vec3 color1, out int objectID1 )
 //-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 {
-	// CSG INTERSECTION OPERATION [A ^ B] (Only valid where shape A overlaps shape B)
+	// CSG INTERSECTION OPERATION [A & B] (Only valid where shape A overlaps shape B)
 	// (ray must intersect both shape A and shape B)
 	vec3 temp_n0, temp_n1, temp_col0, temp_col1;
 	float temp_t0, temp_t1;
@@ -1666,32 +1657,30 @@ void CSG_Intersection_Operation( float A_t0, vec3 A_n0, int A_type0, vec3 A_colo
 		B_type1 = temp_type1;
 		B_objectID1 = temp_objectID1;
 	}
-	if (B_t0 < A_t1)
+	// shape A is now considered to be in front
+	// this is the usual case, we first choose the front of shape B
+	if (B_t0 < A_t1) // in all valid cases, the front of shape B must be closer than the back of shape A (shapes have overlap)
 	{
 		t0 = B_t0;
 		n0 = B_n0;
-		// in surfaceA's space, so must use surfaceA's material
-		type0 = A_type0; 
-		color0 = A_color0;
-		objectID0 = A_objectID0;
-	}
-	if (A_t1 > B_t0 && A_t1 < B_t1)
-	{
+		type0 = B_type0;
+		color0 = B_color0;
+		objectID0 = B_objectID0;
+		// this is continuing the usual case, we then choose the back of shape A
 		t1 = A_t1;
 		n1 = A_n1;
-		// in surfaceB's space, so must use surfaceB's material
-		type1 = B_type0;
-		color1 = B_color0;
-		objectID1 = B_objectID0;
-	}
-	else if (B_t1 > A_t0 && B_t1 <= A_t1)
-	{
-		t1 = B_t1;
-		n1 = B_n1;
-		// in surfaceA's space, so must use surfaceA's material
-		type1 = A_type0;
-		color1 = A_color0;
-		objectID1 = A_objectID0;
+		type1 = A_type1;
+		color1 = A_color1;
+		objectID1 = A_objectID1;
+		// if shape B is inside shape A (fully enclosed by shape A), then we choose the back of shape B
+		if (B_t1 < A_t1)
+		{
+			t1 = B_t1;
+			n1 = B_n1;
+			type1 = B_type1;
+			color1 = B_color1;
+			objectID1 = B_objectID1;
+		}
 	}
 }
 `;
