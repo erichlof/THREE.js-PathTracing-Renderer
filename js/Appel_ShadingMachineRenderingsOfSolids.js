@@ -935,9 +935,9 @@ function updateVariablesAndUniforms()
 			// box in lower-left section of model
 			shapeC_TypeController.setValue('Box');
 			parameterC_kController.setValue(1);
-			transformC_PositionXController.setValue(-60); transformC_PositionYController.setValue(-20); transformC_PositionZController.setValue(0);
+			transformC_PositionXController.setValue(-59); transformC_PositionYController.setValue(-20); transformC_PositionZController.setValue(0);
 			transformC_ScaleUniformController.setValue(20); // default - will be overwritten by the following statements
-			transformC_ScaleXController.setValue(10); transformC_ScaleYController.setValue(20); transformC_ScaleZController.setValue(52);
+			transformC_ScaleXController.setValue(10); transformC_ScaleYController.setValue(19); transformC_ScaleZController.setValue(51);
 			transformC_RotationXController.setValue(0); transformC_RotationYController.setValue(0); transformC_RotationZController.setValue(0);
 			transformC_SkewX_YController.setValue(0); transformC_SkewX_ZController.setValue(0);
 			transformC_SkewY_XController.setValue(0); transformC_SkewY_ZController.setValue(0);
