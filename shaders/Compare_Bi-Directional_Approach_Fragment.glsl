@@ -244,13 +244,13 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 		if (bounces == 0)
 		{
-			objectNormal = nl;
+			objectNormal = n;
 			objectColor = hitColor;
 			objectID = hitObjectID;
 		}
 		if (bounces == 1 && previousIntersecType == SPEC)
 		{
-			objectNormal += nl;
+			objectNormal += n;
 		}
 		
 		
