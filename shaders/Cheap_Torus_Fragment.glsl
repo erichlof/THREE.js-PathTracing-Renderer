@@ -226,7 +226,8 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		n = normalize(hitNormal);
                 nl = dot(n, rayDirection) < 0.0 ? n : -n;
 		shadingNormal = normalize(shadingNormal);
-        	shadingNormal = dot(shadingNormal, rayDirection) < 0.0 ? shadingNormal : -shadingNormal;
+		// the following line is moved further down past the edge detection updates
+        	//shadingNormal = dot(shadingNormal, rayDirection) < 0.0 ? shadingNormal : -shadingNormal;
 		x = rayOrigin + rayDirection * t;
 
 		if (bounces == 0)
@@ -242,7 +243,9 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		// {
 		// 	objectNormal += shadingNormal;
 		// }
-
+		// next line is moved from above to here so it doesn't interfere with the edge detection updates above
+		shadingNormal = dot(shadingNormal, rayDirection) < 0.0 ? shadingNormal : -shadingNormal;
+		
 
 		if (hitType == LIGHT)
 		{	
