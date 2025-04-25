@@ -315,13 +315,13 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 		if (bounces == 0)
 		{
-			//objectNormal = nl;
+			//objectNormal = n;
 			objectColor = eHitColor;
 			objectID = eHitObjectID;
 		}
 		if (diffuseCount == 0) // handles reflections of light sources
 		{
-			objectNormal += nl; 
+			objectNormal += n; 
 		}
 
 		// now do the normal path tracing routine with the camera ray
