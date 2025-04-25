@@ -346,7 +346,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		if (bounces == 0)
 		{
 			objectID = hitObjectID;
-			objectNormal = nl;
+			objectNormal = n;
 			objectColor = hitColor;
 		}
 			
