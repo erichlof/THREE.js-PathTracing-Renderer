@@ -35,7 +35,7 @@ let apertureChangeSpeed = 1;
 let focusDistance = 132.0;
 let increaseFocusDist = false;
 let decreaseFocusDist = false;
-let pixelRatio = 0.5;
+let pixelRatio = 1.0;
 let windowIsBeingResized = false;
 let TWO_PI = Math.PI * 2;
 let sampleCounter = 0.0; // will get increased by 1 in animation loop before rendering
@@ -368,16 +368,13 @@ function init()
 
 	gui = new GUI();
 
-	pixel_ResolutionController = gui.add(pixel_ResolutionObject, 'pixel_Resolution', 0.5, 1.0, 0.05).onChange(handlePixelResolutionChange);
-	if (!mouseControl)
-		orthographicCamera_ToggleController = gui.add(orthographicCamera_ToggleObject, 'Orthographic_Camera', false).onChange(handleCameraProjectionChange);
-
 	gui.domElement.style.userSelect = "none";
 	gui.domElement.style.MozUserSelect = "none";
 
 
-	if (mouseControl) 
+	if (mouseControl) // on desktop
 	{
+		pixel_ResolutionController = gui.add(pixel_ResolutionObject, 'pixel_Resolution', 0.5, 2.0, 0.1).onChange(handlePixelResolutionChange);
 
 		gui.domElement.addEventListener("mouseenter", function (event) 
 		{
@@ -431,6 +428,12 @@ function init()
 		document.addEventListener('webkitpointerlockchange', pointerlockChange, false);
 
 	} // end if (mouseControl)
+
+	if (!mouseControl) // on mobile
+	{
+		pixel_ResolutionController = gui.add(pixel_ResolutionObject, 'pixel_Resolution', 0.5, 1.0, 0.05).onChange(handlePixelResolutionChange);
+		orthographicCamera_ToggleController = gui.add(orthographicCamera_ToggleObject, 'Orthographic_Camera', false).onChange(handleCameraProjectionChange);
+	}
 
 
 	/* // Fullscreen API (optional)
