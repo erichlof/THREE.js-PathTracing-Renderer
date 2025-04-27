@@ -922,7 +922,7 @@ void main( void )
 	currentPixel.a = pixelSharpness;
 
 	// check for all edges that are not light sources
-	if (pixelSharpness < 1.01 && (colorDifference >= 1.0 || normalDifference >= 1.0 || objectDifference >= 1.0)) // all other edges
+	if (pixelSharpness < 1.01 && (colorDifference >= 1.0 || normalDifference >= 0.9 || objectDifference >= 1.0)) // all other edges
 		currentPixel.a = pixelSharpness = 1.0;
 
 	// makes light source edges (shape boundaries) more stable
