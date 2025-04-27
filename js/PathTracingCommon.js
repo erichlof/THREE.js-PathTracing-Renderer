@@ -1538,8 +1538,8 @@ void CSG_Union_Operation( float A_t0, vec3 A_n0, int A_type0, vec3 A_color0, int
 		color1 = B_color1;
 		objectID1 = B_objectID1;
 	}
-	// this is the usual case, we choose the front of shape A and the back of shape B
-	else if (B_t0 <= A_t1 && B_t1 > A_t1)
+	// this is the usual case - we have chosen the front of shape A, and now choose the back of shape B
+	else if (B_t0 < A_t1 && B_t1 > A_t1)
 	{
 		t1 = B_t1;
 		n1 = B_n1;
@@ -3263,7 +3263,7 @@ void main( void )
 		currentPixel.rgb *= 0.5; // brightness of new image (noisy)
 	}
 
-	if (colorDifference > 0.0 || normalDifference >= 0.5 || objectDifference >= 1.0)
+	if (colorDifference > 0.0 || normalDifference >= 0.9 || objectDifference >= 1.0)
 		pixelSharpness = 1.0; // 1.0 means an edge pixel
 
 	currentPixel.a = pixelSharpness;
