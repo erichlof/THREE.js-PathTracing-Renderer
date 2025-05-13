@@ -1012,20 +1012,19 @@ float SceneIntersect( )
 vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
 //-----------------------------------------------------------------------------------------------------------------------------
 {
-	Quad lightChoice;
-
+	
 	vec3 accumCol = vec3(0);
 	vec3 mask = vec3(1);
 	vec3 reflectionMask = vec3(1);
 	vec3 reflectionRayOrigin = vec3(0);
 	vec3 reflectionRayDirection = vec3(0);
-	vec3 randPointOnLight, dirToLight;
 	vec3 x, n, nl;
         
 	float t;
 	float weight;
 	float nc, nt, ratioIoR, Re, Tr;
 	float previousObjectID;
+	float newRandom = rand();
 
 	int reflectionBounces = -1;
 	int diffuseCount = 0;
@@ -1036,9 +1035,6 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	int willNeedReflectionRay = FALSE;
 	int isReflectionTime = FALSE;
 	int reflectionNeedsToBeSharp = FALSE;
-
-
-	lightChoice = quads[int(rand() * 2.0)];
 
 
 
@@ -1152,11 +1148,14 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				continue;
 			}
                         
-			dirToLight = sampleQuadLight(x, nl, lightChoice, weight);
+			if (newRandom < 0.5)
+				rayDirection = sampleQuadLight(x, nl, quads[0], weight);
+			else
+				rayDirection = sampleQuadLight(x, nl, quads[1], weight);
+				
 			mask *= diffuseCount == 1 ? 2.0 : 1.0;
 			mask *= weight * N_LIGHTS;
 
-			rayDirection = dirToLight;
 			rayOrigin = x + nl * uEPS_intersect;
 
 			sampleLight = TRUE;
@@ -1265,11 +1264,14 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				continue;
 			}
 
-			dirToLight = sampleQuadLight(x, nl, lightChoice, weight);
+			if (newRandom < 0.5)
+				rayDirection = sampleQuadLight(x, nl, quads[0], weight);
+			else
+				rayDirection = sampleQuadLight(x, nl, quads[1], weight);
+				
 			mask *= diffuseCount == 1 ? 2.0 : 1.0;
 			mask *= weight * N_LIGHTS;
-			
-			rayDirection = dirToLight;
+
 			rayOrigin = x + nl * uEPS_intersect;
 
 			sampleLight = TRUE;
