@@ -328,14 +328,12 @@ float SceneIntersect( out int finalIsRayExiting )
 vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
 //-----------------------------------------------------------------------------------------------------------------------------
 {
-	Sphere lightChoice;
 
 	vec3 accumCol = vec3(0);
         vec3 mask = vec3(1);
 	vec3 reflectionMask = vec3(1);
 	vec3 reflectionRayOrigin = vec3(0);
 	vec3 reflectionRayDirection = vec3(0);
-	vec3 dirToLight;
 	vec3 x, n, nl;
         
 	float t;
@@ -343,6 +341,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	float weight;
 	float thickness = 0.1;
 	float previousObjectID;
+	float newRandom = rand();
 
 	int reflectionBounces = -1;
 	int diffuseCount = 0;
@@ -355,8 +354,6 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	int isReflectionTime = FALSE;
 	int reflectionNeedsToBeSharp = FALSE;
 
-
-	lightChoice = spheres[int(rand() * N_LIGHTS)];
 
 	
 	for (int bounces = 0; bounces < 8; bounces++)
@@ -472,11 +469,16 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				continue;
 			}
 
-			dirToLight = sampleSphereLight(x, nl, lightChoice, weight);
+			if (newRandom < 0.3333)
+				rayDirection = sampleSphereLight(x, nl, spheres[0], weight);
+			else if (newRandom < 0.6666)
+				rayDirection = sampleSphereLight(x, nl, spheres[1], weight);
+			else
+				rayDirection = sampleSphereLight(x, nl, spheres[2], weight);
+			
 			mask *= diffuseCount == 1 ? 2.0 : 1.0;
 			mask *= weight * N_LIGHTS;
 
-			rayDirection = dirToLight;
 			rayOrigin = x + nl * uEPS_intersect;
 
 			sampleLight = TRUE;
@@ -577,15 +579,18 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				continue;
 			}
 			
-			if (hitColor.r == 1.0 && rand() < 0.9) // this makes white capsule more 'white'
-				dirToLight = sampleSphereLight(x, nl, spheres[0], weight);
+			if (hitColor.r == 1.01 && rand() < 0.9) // this makes white capsule more 'white'
+			 	rayDirection = sampleSphereLight(x, nl, spheres[0], weight);
+			else if (newRandom < 0.3333)
+				rayDirection = sampleSphereLight(x, nl, spheres[0], weight);
+			else if (newRandom < 0.6666)
+				rayDirection = sampleSphereLight(x, nl, spheres[1], weight);
 			else
-				dirToLight = sampleSphereLight(x, nl, lightChoice, weight);
+				rayDirection = sampleSphereLight(x, nl, spheres[2], weight);
 			
 			mask *= diffuseCount == 1 ? 2.0 : 1.0;
 			mask *= weight * N_LIGHTS;
-			
-			rayDirection = dirToLight;
+
 			rayOrigin = x + nl * uEPS_intersect;
 
 			sampleLight = TRUE;
@@ -636,7 +641,7 @@ void SetupScene(void)
 	
 	cones[0] = Cone( vec3(1, 20, -12), 15.0, vec3(1, 0, -12), 0.0, z, vec3(0.01, 0.1, 0.5), REFR);//blue Cone
 	
-	capsules[0] = Capsule( vec3(80, 13, 15), 10.0, vec3(110, 15.8, 15), 10.0, z, vec3(1.0,1.0,1.0), COAT);//white Capsule
+	capsules[0] = Capsule( vec3(80, 13, 15), 10.0, vec3(110, 15.8, 15), 10.0, z, vec3(1.01,1.0,1.0), COAT);//white Capsule
 	
 	torii[0] = UnitTorus( 0.75, z, vec3(0.955008, 0.637427, 0.538163), SPEC);//copper Torus
 		
