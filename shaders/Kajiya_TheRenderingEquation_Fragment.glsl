@@ -369,14 +369,12 @@ vec3 sampleRectangleLight(vec3 x, vec3 nl, Rectangle light, out float weight)
 vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
 //----------------------------------------------------------------------------------------------------------------------------------------------------
 {
-	Rectangle lightChoice;
-
+	
 	vec3 accumCol = vec3(0);
         vec3 mask = vec3(1);
 	vec3 reflectionMask = vec3(1);
 	vec3 reflectionRayOrigin = vec3(0);
 	vec3 reflectionRayDirection = vec3(0);
-	vec3 randPointOnLight, dirToLight;
 	vec3 skyColor;
 	vec3 x, n, nl;
         
@@ -385,6 +383,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	float nc, nt, ratioIoR, Re, Tr;
 	float thickness = 0.1;
 	float previousObjectID;
+	float newRandom = rand();
 
 	int reflectionBounces = -1;
 	int diffuseCount = 0;
@@ -397,8 +396,6 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	int isReflectionTime = FALSE;
 	int reflectionNeedsToBeSharp = FALSE;
 
-
-	lightChoice = rectangles[int(rand() * N_LIGHTS)];
 
 
 	// a higher number of bounces is needed in order to get through the tower of glass spheres
@@ -535,11 +532,16 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				continue;
 			}
                         
-			dirToLight = sampleRectangleLight(x, nl, lightChoice, weight);
+			if (newRandom < 0.3333)
+				rayDirection = sampleRectangleLight(x, nl, rectangles[0], weight);
+			else if (newRandom < 0.6666)
+				rayDirection = sampleRectangleLight(x, nl, rectangles[1], weight);
+			else
+				rayDirection = sampleRectangleLight(x, nl, rectangles[2], weight);
+				
 			mask *= diffuseCount == 1 ? 2.0 : 1.0;
 			mask *= weight * N_LIGHTS;
 
-			rayDirection = dirToLight;
 			rayOrigin = x + nl * uEPS_intersect;
 
 			sampleLight = TRUE;
