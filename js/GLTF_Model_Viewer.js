@@ -7,7 +7,7 @@ let triangleDataTexture, aabbDataTexture;
 let hdrTexture, hdrLoader, hdrExposure = 1.0;
 
 // Environment variables
-let skyLightIntensity = 2.0, sunLightIntensity = 2.0, sunColor = [1.0, 0.98, 0.92];
+let skyLightIntensity = 1.0, sunLightIntensity = 2.0, sunColor = [1.0, 0.98, 0.92];
 let sunAngle = Math.PI / 2.5;
 
 // Geometry variables
@@ -60,7 +60,7 @@ function init_GUI()
 		hdrExposure: 1.0
 	}
 	skyLight_IntensityObject = {
-		skyLightIntensity: 2.0
+		skyLightIntensity: 0.6
 	}
 	sun_AngleObject = {
 		sunAngle: Math.PI / 2.5
@@ -475,7 +475,7 @@ function prepareGeometryForPT(meshList, pathTracingMaterialList, triangleMateria
 // called automatically from within initTHREEjs() function (located in InitCommon.js file)
 function initSceneData() 
 {
-	demoFragmentShaderFileName = 'Gltf_Viewer.glsl';
+	demoFragmentShaderFileName = 'Gltf_Viewer_Fragment.glsl';
 
 	// scene/demo-specific three.js objects setup goes here
 	sceneIsDynamic = false;
@@ -485,7 +485,7 @@ function initSceneData()
 	cameraFlightSpeed = 60;
 
 	// pixelRatio is resolution - range: 0.5(half resolution) to 1.0(full resolution)
-	pixelRatio = mouseControl ? 0.7 : 0.5; // less demanding on battery-powered mobile devices
+	pixelRatio = mouseControl ? 0.8 : 0.7; // less demanding on battery-powered mobile devices
 
 	EPS_intersect = 0.001;
 
