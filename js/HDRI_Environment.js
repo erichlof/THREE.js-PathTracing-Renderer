@@ -211,7 +211,9 @@ function load_GLTF_Model()
 // called automatically from within initTHREEjs() function (located in InitCommon.js file)
 function initSceneData() 
 {
-	demoFragmentShaderFileName = 'HDRI_Environment_Fragment.glsl';
+	if (!mouseControl)
+		demoFragmentShaderFileName = 'HDRI_Environment_Fragment_Mobile.glsl';
+	else demoFragmentShaderFileName = 'HDRI_Environment_Fragment.glsl';
 
 	// scene/demo-specific three.js objects setup goes here
 	sceneIsDynamic = false;
