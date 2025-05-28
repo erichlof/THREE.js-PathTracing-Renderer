@@ -180,7 +180,9 @@ function load_GLTF_Model()
 // called automatically from within initTHREEjs() function (located in InitCommon.js file)
 function initSceneData() 
 {
-	demoFragmentShaderFileName = 'Invisible_Date_Fragment.glsl';
+	if (!mouseControl)
+		demoFragmentShaderFileName = 'Invisible_Date_Fragment_Mobile.glsl';
+	else demoFragmentShaderFileName = 'Invisible_Date_Fragment.glsl';
 
 	// scene/demo-specific three.js objects setup goes here
 	sceneIsDynamic = false;
@@ -190,7 +192,7 @@ function initSceneData()
 	cameraFlightSpeed = 100;
 
 	// pixelRatio is resolution - range: 0.5(half resolution) to 1.0(full resolution)
-	pixelRatio = mouseControl ? 0.8 : 0.75;
+	pixelRatio = mouseControl ? 1.0 : 0.75;
 
 	EPS_intersect = 0.01;
 
