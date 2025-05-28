@@ -85,7 +85,9 @@ function loadQuadsOnlyOBJModel()
 // called automatically from within initTHREEjs() function (located in InitCommon.js file)
 function initSceneData() 
 {
-	demoFragmentShaderFileName = 'Quads_Only_Modeling_Fragment.glsl';
+	if (!mouseControl)
+		demoFragmentShaderFileName = 'Quads_Only_Modeling_Fragment_Mobile.glsl';
+	else demoFragmentShaderFileName = 'Quads_Only_Modeling_Fragment.glsl';
 
 	// scene/demo-specific three.js objects setup goes here
 	sceneIsDynamic = false;
