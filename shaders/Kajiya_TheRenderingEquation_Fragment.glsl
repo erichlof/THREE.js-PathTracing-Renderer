@@ -375,6 +375,9 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	vec3 reflectionMask = vec3(1);
 	vec3 reflectionRayOrigin = vec3(0);
 	vec3 reflectionRayDirection = vec3(0);
+	vec3 diffuseBounceMask = vec3(1);
+	vec3 diffuseBounceRayOrigin = vec3(0);
+	vec3 diffuseBounceRayDirection = vec3(0);
 	vec3 skyColor;
 	vec3 x, n, nl;
         
@@ -386,6 +389,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	float newRandom = rand();
 
 	int reflectionBounces = -1;
+	int diffuseBounces = -1;
 	int diffuseCount = 0;
 	int previousIntersecType = -100;
 	hitType = -100;
@@ -395,12 +399,16 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	int willNeedReflectionRay = FALSE;
 	int isReflectionTime = FALSE;
 	int reflectionNeedsToBeSharp = FALSE;
+	int willNeedDiffuseBounceRay = FALSE;
+	int isDiffuseBounceTime = FALSE;
 
 
 
 	// a higher number of bounces is needed in order to get through the tower of glass spheres
         for (int bounces = 0; bounces < 12; bounces++)
 	{
+		if (isDiffuseBounceTime == TRUE)
+			diffuseBounces++;
 		// if (isReflectionTime == TRUE)
 		// 	reflectionBounces++;
 
@@ -421,6 +429,21 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			if (bounceIsSpecular == TRUE || sampleLight == TRUE)
 				accumCol += mask * skyColor;
 			
+			if (willNeedDiffuseBounceRay == TRUE)
+			{
+				mask = diffuseBounceMask;
+				rayOrigin = diffuseBounceRayOrigin;
+				rayDirection = diffuseBounceRayDirection;
+
+				willNeedDiffuseBounceRay = FALSE;
+				bounceIsSpecular = FALSE;
+				sampleLight = FALSE;
+				isDiffuseBounceTime = TRUE;
+				isReflectionTime = FALSE;
+				diffuseCount = 1;
+				continue;
+			}
+			
 			if (willNeedReflectionRay == TRUE)
 			{
 				mask = reflectionMask;
@@ -431,7 +454,8 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				bounceIsSpecular = TRUE;
 				sampleLight = FALSE;
 				isReflectionTime = TRUE;
-				diffuseCount = 0; // allows more accurate diffuse objects when seen in glass reflections 
+				isDiffuseBounceTime = FALSE;
+				//diffuseCount = 0; // allows more accurate diffuse objects when seen in glass reflections 
 				continue;
 			}
 			// reached a sky light, so we can exit
@@ -474,6 +498,21 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			if (bounceIsSpecular == TRUE || sampleLight == TRUE)
 				accumCol = mask * hitEmission; // looking at light through a reflection
 			
+			if (willNeedDiffuseBounceRay == TRUE)
+			{
+				mask = diffuseBounceMask;
+				rayOrigin = diffuseBounceRayOrigin;
+				rayDirection = diffuseBounceRayDirection;
+
+				willNeedDiffuseBounceRay = FALSE;
+				bounceIsSpecular = FALSE;
+				sampleLight = FALSE;
+				isDiffuseBounceTime = TRUE;
+				isReflectionTime = FALSE;
+				diffuseCount = 1;
+				continue;
+			}
+
 			if (willNeedReflectionRay == TRUE)
 			{
 				mask = reflectionMask;
@@ -484,7 +523,8 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				bounceIsSpecular = TRUE;
 				sampleLight = FALSE;
 				isReflectionTime = TRUE;
-				diffuseCount = 0; // allows more accurate diffuse objects when seen in glass reflections
+				isDiffuseBounceTime = FALSE;
+				//diffuseCount = 0; // allows more accurate diffuse objects when seen in glass reflections
 				continue;
 			}
 			// reached a light, so we can exit
@@ -495,6 +535,21 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		// the ray hit an occluding object along its way to the light
 		if (sampleLight == TRUE)
 		{
+			if (willNeedDiffuseBounceRay == TRUE)
+			{
+				mask = diffuseBounceMask;
+				rayOrigin = diffuseBounceRayOrigin;
+				rayDirection = diffuseBounceRayDirection;
+
+				willNeedDiffuseBounceRay = FALSE;
+				bounceIsSpecular = FALSE;
+				sampleLight = FALSE;
+				isDiffuseBounceTime = TRUE;
+				isReflectionTime = FALSE;
+				diffuseCount = 1;
+				continue;
+			}
+
 			if (willNeedReflectionRay == TRUE)
 			{
 				mask = reflectionMask;
@@ -505,7 +560,8 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				bounceIsSpecular = TRUE;
 				sampleLight = FALSE;
 				isReflectionTime = TRUE;
-				diffuseCount = 0; // allows more accurate diffuse objects when seen in glass reflections
+				isDiffuseBounceTime = FALSE;
+				//diffuseCount = 0; // allows more accurate diffuse objects when seen in glass reflections
 				continue;
 			}
 
@@ -523,13 +579,14 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			bounceIsSpecular = FALSE;
 
-			if (diffuseCount == 1 && rand() < 0.5)
+			rayOrigin = x + nl * uEPS_intersect;
+
+			if (diffuseCount == 1)
 			{
-				mask *= 2.0;
-				// choose random Diffuse sample vector
-				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
-				rayOrigin = x + nl * uEPS_intersect;
-				continue;
+				diffuseBounceMask = mask;
+				diffuseBounceRayOrigin = rayOrigin;
+				diffuseBounceRayDirection = randomCosWeightedDirectionInHemisphere(nl);
+				willNeedDiffuseBounceRay = TRUE;
 			}
                         
 			if (newRandom < 0.3333)
@@ -539,11 +596,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			else
 				rayDirection = sampleRectangleLight(x, nl, rectangles[2], weight);
 				
-			mask *= diffuseCount == 1 ? 2.0 : 1.0;
 			mask *= weight * N_LIGHTS;
-
-			rayOrigin = x + nl * uEPS_intersect;
-
 			sampleLight = TRUE;
 			continue;
 		}
@@ -586,14 +639,14 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			rayOrigin = x - nl * uEPS_intersect;
 
 			// turn on refracting caustics
-			if (bounces == 1 && t < 10.0)
+			if (diffuseBounces == 0 && t < 10.0)
 				bounceIsSpecular = TRUE;
 			
 			continue;
 			
 		} // end if (hitType == REFR)
 		
-	} // end for (int bounces = 0; bounces < 15; bounces++)
+	} // end for (int bounces = 0; bounces < 12; bounces++)
 	
 	
 	return max(vec3(0), accumCol);
