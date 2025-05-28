@@ -182,7 +182,9 @@ function createBoxFrameFractal(parentPositionX, parentPositionY, parentPositionZ
 // called automatically from within initTHREEjs() function (located in InitCommon.js file)
 function initSceneData() 
 {
-	demoFragmentShaderFileName = 'Fractal3D_Fragment.glsl';
+	if (!mouseControl)
+		demoFragmentShaderFileName = 'Fractal3D_Fragment_Mobile.glsl';
+	else demoFragmentShaderFileName = 'Fractal3D_Fragment.glsl';
 
 	// scene/demo-specific three.js objects setup goes here
 	sceneIsDynamic = false;
