@@ -35,14 +35,14 @@ let needChangeRotation = false;
 
 function init_GUI()
 {
-	torus_ScaleObject = { torusScale: 7 };
+	torus_ScaleObject = { torusScale: 12 };
 	torus_HeightObject = { torusHeight: 0.5 };
 	torus_HoleSizeFineObject = { torusHoleSizeFine: 0.01 };
 	torus_HoleSizeObject = { torusHoleSize: 0.01 };
-	material_TypeObject = { torus_Material: 'Diffuse' };
+	material_TypeObject = { torus_Material: 'ClearCoat Diffuse' };
 	material_ColorObject = { torus_Color: [1, 1, 1] };
 	showTorusAABB_ToggleObject = { show_torusAABB: false }
-	transform_RotationXObject = { rotationX: 0 };
+	transform_RotationXObject = { rotationX: 68 };
 	transform_RotationYObject = { rotationY: 0 };
 	transform_RotationZObject = { rotationZ: 0 };
 	
@@ -104,10 +104,10 @@ function initSceneData()
 	apertureChangeSpeed = 10;
 
 	// position and orient camera
-	cameraControlsObject.position.set(0, 20, 30);
+	cameraControlsObject.position.set(0, 20, 120);
 	///cameraControlsYawObject.rotation.y = 0.0;
 	// look slightly up or down
-	cameraControlsPitchObject.rotation.x = -0.58;
+	cameraControlsPitchObject.rotation.x = -0.2;
 
 
 	torus = new THREE.Object3D();
