@@ -532,6 +532,9 @@ vec3 CalculateRadiance(out vec3 objectNormal, out vec3 objectColor, out float ob
 	vec3 reflectionMask = vec3(1);
 	vec3 reflectionRayOrigin = vec3(0);
 	vec3 reflectionRayDirection = vec3(0);
+	vec3 diffuseBounceMask = vec3(1);
+	vec3 diffuseBounceRayOrigin = vec3(0);
+	vec3 diffuseBounceRayDirection = vec3(0);
 	vec3 n, nl, x;
 	vec3 firstX = vec3(0);
 	
@@ -552,9 +555,11 @@ vec3 CalculateRadiance(out vec3 objectNormal, out vec3 objectColor, out float ob
 	int willNeedReflectionRay = FALSE;
 	int isReflectionTime = FALSE;
 	int reflectionNeedsToBeSharp = FALSE;
+	int willNeedDiffuseBounceRay = FALSE;
+	int isDiffuseBounceTime = FALSE;
 	
 	
-        for (int bounces = 0; bounces < 8; bounces++)
+        for (int bounces = 0; bounces < 10; bounces++)
 	{
 		if (isReflectionTime == TRUE)
 			reflectionBounces++;
@@ -610,6 +615,21 @@ vec3 CalculateRadiance(out vec3 objectNormal, out vec3 objectColor, out float ob
 				//break;
 			}
 
+			if (willNeedDiffuseBounceRay == TRUE)
+			{
+				mask = diffuseBounceMask;
+				rayOrigin = diffuseBounceRayOrigin;
+				rayDirection = diffuseBounceRayDirection;
+
+				willNeedDiffuseBounceRay = FALSE;
+				bounceIsSpecular = FALSE;
+				sampleLight = FALSE;
+				isDiffuseBounceTime = TRUE;
+				isReflectionTime = FALSE;
+				diffuseCount = 1;
+				continue;
+			}
+
 			if (willNeedReflectionRay == TRUE)
 			{
 				mask = reflectionMask;
@@ -620,6 +640,8 @@ vec3 CalculateRadiance(out vec3 objectNormal, out vec3 objectColor, out float ob
 				bounceIsSpecular = TRUE;
 				sampleLight = FALSE;
 				isReflectionTime = TRUE;
+				isDiffuseBounceTime = FALSE;
+				diffuseCount = 0;
 				continue;
 			}
 			// reached the sky light, so we can exit
@@ -635,6 +657,21 @@ vec3 CalculateRadiance(out vec3 objectNormal, out vec3 objectColor, out float ob
 
 			accumCol += mask * hitColor * waterDotSun * waterDotCamera;
 
+			if (willNeedDiffuseBounceRay == TRUE)
+			{
+				mask = diffuseBounceMask;
+				rayOrigin = diffuseBounceRayOrigin;
+				rayDirection = diffuseBounceRayDirection;
+
+				willNeedDiffuseBounceRay = FALSE;
+				bounceIsSpecular = FALSE;
+				sampleLight = FALSE;
+				isDiffuseBounceTime = TRUE;
+				isReflectionTime = FALSE;
+				diffuseCount = 1;
+				continue;
+			}
+
 			if (willNeedReflectionRay == TRUE)
 			{
 				mask = reflectionMask;
@@ -645,6 +682,8 @@ vec3 CalculateRadiance(out vec3 objectNormal, out vec3 objectColor, out float ob
 				bounceIsSpecular = TRUE;
 				sampleLight = FALSE;
 				isReflectionTime = TRUE;
+				isDiffuseBounceTime = FALSE;
+				diffuseCount = 0;
 				continue;
 			}
 
@@ -656,6 +695,21 @@ vec3 CalculateRadiance(out vec3 objectNormal, out vec3 objectColor, out float ob
 		// the ray hit an occluding object along its way to the light
 		if (sampleLight == TRUE)
 		{
+			if (willNeedDiffuseBounceRay == TRUE)
+			{
+				mask = diffuseBounceMask;
+				rayOrigin = diffuseBounceRayOrigin;
+				rayDirection = diffuseBounceRayDirection;
+
+				willNeedDiffuseBounceRay = FALSE;
+				bounceIsSpecular = FALSE;
+				sampleLight = FALSE;
+				isDiffuseBounceTime = TRUE;
+				isReflectionTime = FALSE;
+				diffuseCount = 1;
+				continue;
+			}
+
 			if (willNeedReflectionRay == TRUE)
 			{
 				mask = reflectionMask;
@@ -666,6 +720,8 @@ vec3 CalculateRadiance(out vec3 objectNormal, out vec3 objectColor, out float ob
 				bounceIsSpecular = TRUE;
 				sampleLight = FALSE;
 				isReflectionTime = TRUE;
+				isDiffuseBounceTime = FALSE;
+				diffuseCount = 0;
 				continue;
 			}
 
@@ -701,20 +757,18 @@ vec3 CalculateRadiance(out vec3 objectNormal, out vec3 objectColor, out float ob
 
 			bounceIsSpecular = FALSE;
 
-			if (diffuseCount == 1 && rand() < 0.5)
+			rayOrigin = x + nl * uEPS_intersect;
+                        
+			if (diffuseCount == 1)
 			{
-				mask *= 2.0;
-				// choose random Diffuse sample vector
-				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
-				rayOrigin = x + nl * uEPS_intersect;
-				continue;
+				diffuseBounceMask = mask;
+				diffuseBounceRayOrigin = rayOrigin;
+				diffuseBounceRayDirection = randomCosWeightedDirectionInHemisphere(nl);
+				willNeedDiffuseBounceRay = TRUE;
 			}
                         
 			rayDirection = randomDirectionInSpecularLobe(uSunDirection, 0.1); // create shadow ray pointed towards light
-			rayOrigin = x + nl * uEPS_intersect;
-			
 			weight = max(0.0, dot(rayDirection, nl)) * 0.05; // down-weight directSunLight contribution
-			mask *= diffuseCount == 1 ? 2.0 : 1.0;
 			mask *= weight * cloudShadowFactor;
 			
 			sampleLight = TRUE;
@@ -786,8 +840,7 @@ vec3 CalculateRadiance(out vec3 objectNormal, out vec3 objectColor, out float ob
 
 			diffuseCount++;
 
-			if (bounces == 0)
-				mask *= Tr;
+			mask *= Tr;
 			
 			float pattern = noise( vec2( x.x * 0.5 * x.z * 0.5 + sin(x.y*0.005) ) );
 			float woodPattern = 1.0 / max(1.0, pattern * 100.0);
@@ -798,22 +851,19 @@ vec3 CalculateRadiance(out vec3 objectNormal, out vec3 objectColor, out float ob
 			
 			mask *= hitColor;
 
-
 			bounceIsSpecular = FALSE;
 
-			if (diffuseCount == 1 && rand() < 0.5)
+			rayOrigin = x + nl * uEPS_intersect;
+
+			if (diffuseCount == 1)
 			{
-				mask *= 2.0;
-				// choose random Diffuse sample vector
-				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
-				rayOrigin = x + nl * uEPS_intersect;
-				continue;
+				diffuseBounceMask = mask;
+				diffuseBounceRayOrigin = rayOrigin;
+				diffuseBounceRayDirection = randomCosWeightedDirectionInHemisphere(nl);
+				willNeedDiffuseBounceRay = TRUE;
 			}
 			
 			rayDirection = randomDirectionInSpecularLobe(uSunDirection, 0.1); // create shadow ray pointed towards light
-			mask *= diffuseCount == 1 ? 2.0 : 1.0;
-			rayOrigin = x + nl * uEPS_intersect;
-
 			weight = max(0.0, dot(rayDirection, nl)) * 0.05; // down-weight directSunLight contribution
 			mask *= weight;
 			
@@ -822,7 +872,7 @@ vec3 CalculateRadiance(out vec3 objectNormal, out vec3 objectColor, out float ob
 			
 		} //end if (hitType == WOOD)
 		
-	} // end for (int bounces = 0; bounces < 8; bounces++)
+	} // end for (int bounces = 0; bounces < 10; bounces++)
 	
 
 	// atmospheric haze effect (aerial perspective)
