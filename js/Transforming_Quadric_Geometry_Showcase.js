@@ -19,7 +19,9 @@ let posXOffset = 25;
 // called automatically from within initTHREEjs() function (located in InitCommon.js file)
 function initSceneData()
 {
-	demoFragmentShaderFileName = 'Transforming_Quadric_Geometry_Showcase_Fragment.glsl';
+	if (!mouseControl)
+		demoFragmentShaderFileName = 'Transforming_Quadric_Geometry_Showcase_Fragment_Mobile.glsl';
+	else demoFragmentShaderFileName = 'Transforming_Quadric_Geometry_Showcase_Fragment.glsl';
 
 	// scene/demo-specific three.js objects setup goes here
 	sceneIsDynamic = true;
