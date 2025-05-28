@@ -819,7 +819,7 @@ void SetupScene(void)
 //-----------------------------------------------------------------------
 {
 	vec3 z  = vec3(0);
-	vec3 L1 = vec3(0.5, 0.7, 1.0) * 0.01;// Blueish sky light
+	vec3 L1 = vec3(0.5, 0.7, 1.0) * 0.1;// Blueish sky light
 	vec3 L2 = vec3(1.0, 0.9, 0.8) * 1000.0;// Bright white light bulb
 	
 	spheres[0] = Sphere( 10000.0, vec3(0, 0, 0), L1, z, LIGHT);//large spherical sky light
