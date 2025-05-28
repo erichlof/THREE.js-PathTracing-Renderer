@@ -311,8 +311,11 @@ float SceneIntersect()
 vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float objectID, out float pixelSharpness )
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------
 {
-	float randChoose = rand() * 2.0; // 2 lights to choose from
-	Sphere lightChoice = spheres[int(randChoose)]; 
+	float randChoose = rand();
+
+	Sphere lightChoice;
+	if (randChoose < 0.5) lightChoice = spheres[0]; 
+	else lightChoice = spheres[1];
 	
 	vec3 originalRayOrigin = rayOrigin;
 	vec3 originalRayDirection = rayDirection;
@@ -321,13 +324,15 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	vec3 reflectionMask = vec3(1);
 	vec3 reflectionRayOrigin = vec3(0);
 	vec3 reflectionRayDirection = vec3(0);
-	vec3 dirToLight;
+	vec3 diffuseBounceMask = vec3(1);
+	vec3 diffuseBounceRayOrigin = vec3(0);
+	vec3 diffuseBounceRayDirection = vec3(0);
 	vec3 spotlightPos1 = vec3(380.0, 290.0, -470.0);
 	vec3 spotlightPos2 = vec3(430.0, 315.0, -485.0);
 	vec3 spotlightDir = normalize(spotlightPos1 - spotlightPos2);
 	
 	vec3 lightNormal = vec3(0,1,0);
-	if (randChoose >= 1.0)
+	if (randChoose >= 0.5)
 		lightNormal = spotlightDir;
 	
 	vec3 lightDir = randomCosWeightedDirectionInHemisphere(lightNormal);
@@ -354,6 +359,8 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	int willNeedReflectionRay = FALSE;
 	int isReflectionTime = FALSE;
 	int reflectionNeedsToBeSharp = FALSE;
+	int willNeedDiffuseBounceRay = FALSE;
+	int isDiffuseBounceTime = FALSE;
 
 
 	// light trace
@@ -376,7 +383,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	hitObjectID = -100.0;
 
 
-	for (int bounces = 0; bounces < 7; bounces++)
+	for (int bounces = 0; bounces < 10; bounces++)
 	{
 		if (isReflectionTime == TRUE)
 			reflectionBounces++;
@@ -392,6 +399,21 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			if (bounces == 0 || (bounces == 1 && previousIntersecType == SPEC))
 				pixelSharpness = 1.0;
 
+			if (willNeedDiffuseBounceRay == TRUE)
+			{
+				mask = diffuseBounceMask;
+				rayOrigin = diffuseBounceRayOrigin;
+				rayDirection = diffuseBounceRayDirection;
+
+				willNeedDiffuseBounceRay = FALSE;
+				bounceIsSpecular = FALSE;
+				sampleLight = FALSE;
+				isDiffuseBounceTime = TRUE;
+				isReflectionTime = FALSE;
+				diffuseCount = 1;
+				continue;
+			}
+
 			if (willNeedReflectionRay == TRUE)
 			{
 				mask = reflectionMask;
@@ -402,6 +424,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				bounceIsSpecular = TRUE;
 				sampleLight = FALSE;
 				isReflectionTime = TRUE;
+				isDiffuseBounceTime = FALSE;
 				continue;
 			}
 
@@ -449,6 +472,21 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			else if (bounceIsSpecular == TRUE || sampleLight == TRUE)
 				accumCol += mask * hitEmission;
 
+			if (willNeedDiffuseBounceRay == TRUE)
+			{
+				mask = diffuseBounceMask;
+				rayOrigin = diffuseBounceRayOrigin;
+				rayDirection = diffuseBounceRayDirection;
+
+				willNeedDiffuseBounceRay = FALSE;
+				bounceIsSpecular = FALSE;
+				sampleLight = FALSE;
+				isDiffuseBounceTime = TRUE;
+				isReflectionTime = FALSE;
+				diffuseCount = 1;
+				continue;
+			}
+
 			if (willNeedReflectionRay == TRUE)
 			{
 				mask = reflectionMask;
@@ -459,6 +497,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				bounceIsSpecular = TRUE;
 				sampleLight = FALSE;
 				isReflectionTime = TRUE;
+				isDiffuseBounceTime = FALSE;
 				continue;
 			}
 			// reached a light, so we can exit
@@ -476,6 +515,21 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				accumCol += mask * lightHitEmission * weight;
 			}
 
+			if (willNeedDiffuseBounceRay == TRUE)
+			{
+				mask = diffuseBounceMask;
+				rayOrigin = diffuseBounceRayOrigin;
+				rayDirection = diffuseBounceRayDirection;
+
+				willNeedDiffuseBounceRay = FALSE;
+				bounceIsSpecular = FALSE;
+				sampleLight = FALSE;
+				isDiffuseBounceTime = TRUE;
+				isReflectionTime = FALSE;
+				diffuseCount = 1;
+				continue;
+			}
+
 			if (willNeedReflectionRay == TRUE)
 			{
 				mask = reflectionMask;
@@ -486,6 +540,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				bounceIsSpecular = TRUE;
 				sampleLight = FALSE;
 				isReflectionTime = TRUE;
+				isDiffuseBounceTime = FALSE;
 				continue;
 			}
 			// reached a light, so we can exit
@@ -496,6 +551,21 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		// the ray hit an occluding object along its way to the light
 		if (sampleLight == TRUE)
 		{
+			if (willNeedDiffuseBounceRay == TRUE)
+			{
+				mask = diffuseBounceMask;
+				rayOrigin = diffuseBounceRayOrigin;
+				rayDirection = diffuseBounceRayDirection;
+
+				willNeedDiffuseBounceRay = FALSE;
+				bounceIsSpecular = FALSE;
+				sampleLight = FALSE;
+				isDiffuseBounceTime = TRUE;
+				isReflectionTime = FALSE;
+				diffuseCount = 1;
+				continue;
+			}
+
 			if (willNeedReflectionRay == TRUE)
 			{
 				mask = reflectionMask;
@@ -506,6 +576,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				bounceIsSpecular = TRUE;
 				sampleLight = FALSE;
 				isReflectionTime = TRUE;
+				isDiffuseBounceTime = FALSE;
 				continue;
 			}
 
@@ -526,24 +597,20 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				firstTypeWasDIFF = TRUE;	
 			}
 				
-			if (diffuseCount == 1 && rand() < 0.5)
+			rayOrigin = x + nl * uEPS_intersect;
+
+			if (diffuseCount == 1)
 			{
-				//mask *= 2.0;
-				// choose random Diffuse sample vector
-				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
-				rayOrigin = x + nl * uEPS_intersect;
-				continue;
+				diffuseBounceMask = mask;
+				diffuseBounceRayOrigin = rayOrigin;
+				diffuseBounceRayDirection = randomCosWeightedDirectionInHemisphere(nl);
+				willNeedDiffuseBounceRay = TRUE;
 			}
 			
-			dirToLight = normalize(lightHitPos - x);
-			weight = max(0.0, dot(nl, dirToLight));
-			mask *= diffuseCount == 1 ? 2.0 : 1.0;
+			rayDirection = normalize(lightHitPos - x);
+			weight = max(0.0, dot(nl, rayDirection));
 			mask *= weight;
-			
-			rayDirection = dirToLight;
-			rayOrigin = x + nl * uEPS_intersect;
 			lightHitDistance = distance(rayOrigin, lightHitPos);
-
 			sampleLight = TRUE;
 			continue;
 			
@@ -592,7 +659,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			rayDirection = refract(rayDirection, nl, ratioIoR);
 			rayOrigin = x - nl * uEPS_intersect;
 
-			if (previousIntersecType == DIFF && t < 50.0)
+			if (isDiffuseBounceTime == TRUE && diffuseCount == 1 && t < 50.0)
 				bounceIsSpecular = TRUE; // turn on refracting caustics
 
 			continue;
@@ -600,7 +667,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		} // end if (hitType == REFR)
 		
 		
-	} // end for (int bounces = 0; bounces < 7; bounces++)
+	} // end for (int bounces = 0; bounces < 10; bounces++)
 	
 
 	return max(vec3(0), accumCol);
