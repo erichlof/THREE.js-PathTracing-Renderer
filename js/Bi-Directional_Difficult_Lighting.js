@@ -110,7 +110,9 @@ function load_GLTF_Models()
 // called automatically from within initTHREEjs() function (located in InitCommon.js file)
 function initSceneData() 
 {
-	demoFragmentShaderFileName = 'Bi-Directional_Difficult_Lighting_Fragment.glsl';
+	if (!mouseControl)
+		demoFragmentShaderFileName = 'Bi-Directional_Difficult_Lighting_Fragment_Mobile.glsl';
+	else demoFragmentShaderFileName = 'Bi-Directional_Difficult_Lighting_Fragment.glsl';
 
 	// scene/demo-specific three.js objects setup goes here
 	sceneIsDynamic = false;
@@ -120,7 +122,7 @@ function initSceneData()
 	cameraFlightSpeed = 200;
 
 	// pixelRatio is resolution - range: 0.5(half resolution) to 1.0(full resolution)
-	pixelRatio = mouseControl ? 0.8 : 0.7;
+	pixelRatio = mouseControl ? 0.8 : 0.8;
 
 	EPS_intersect = 0.01;
 
