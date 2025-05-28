@@ -143,7 +143,9 @@ function load_GLTF_Model()
 // called automatically from within initTHREEjs() function (located in InitCommon.js file)
 function initSceneData() 
 {
-	demoFragmentShaderFileName = 'BVH_Point_Light_Source_Fragment.glsl';
+	if (!mouseControl)
+		demoFragmentShaderFileName = 'BVH_Point_Light_Source_Fragment_Mobile.glsl';
+	else demoFragmentShaderFileName = 'BVH_Point_Light_Source_Fragment.glsl';
 
 	// scene/demo-specific three.js objects setup goes here
 	sceneIsDynamic = false;
