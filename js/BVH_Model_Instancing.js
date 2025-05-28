@@ -334,7 +334,9 @@ function Prepare_Model_For_PathTracing()
 // called automatically from within initTHREEjs() function (located in InitCommon.js file)
 function initSceneData() 
 {
-	demoFragmentShaderFileName = 'BVH_Model_Instancing_Fragment.glsl';
+	if (!mouseControl)
+		demoFragmentShaderFileName = 'BVH_Model_Instancing_Fragment_Mobile.glsl';
+	else demoFragmentShaderFileName = 'BVH_Model_Instancing_Fragment.glsl';
 
 	// scene/demo-specific three.js objects setup goes here
 	sceneIsDynamic = true;
