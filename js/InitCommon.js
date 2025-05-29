@@ -12,11 +12,13 @@ let pathTracingVertexShader, pathTracingFragmentShader;
 let demoFragmentShaderFileName;
 let screenCopyVertexShader, screenCopyFragmentShader;
 let screenOutputVertexShader, screenOutputFragmentShader;
-let pathTracingGeometry, pathTracingMaterial, pathTracingMesh;
-let screenCopyGeometry, screenCopyMaterial, screenCopyMesh;
-let screenOutputGeometry, screenOutputMaterial, screenOutputMesh;
+let triangleGeometry = new THREE.BufferGeometry();
+let trianglePositions = [];
+let pathTracingMaterial, pathTracingMesh;
+let screenCopyMaterial, screenCopyMesh;
+let screenOutputMaterial, screenOutputMesh;
 let pathTracingRenderTarget, screenCopyRenderTarget;
-let quadCamera, worldCamera;
+let orthoCamera, worldCamera;
 let renderer, clock;
 let frameTime, elapsedTime;
 let sceneIsDynamic = false;
@@ -510,16 +512,16 @@ function initTHREEjs()
 	screenCopyScene = new THREE.Scene();
 	screenOutputScene = new THREE.Scene();
 
-	// quadCamera is simply the camera to help render the full screen quad (2 triangles),
-	// hence the name.  It is an Orthographic camera that sits facing the view plane, which serves as
-	// the window into our 3d world. This camera will not move or rotate for the duration of the app.
-	quadCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-	screenCopyScene.add(quadCamera);
-	screenOutputScene.add(quadCamera);
+	// orthoCamera is the camera to help render the oversized full-screen triangle, which is stretched across the
+	// screen (and a little outside the viewport).  orthoCamera is an orthographic camera that sits facing the view plane, 
+	// which serves as the window into our 3d world. This camera will not move or rotate for the duration of the app.
+	orthoCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+	screenCopyScene.add(orthoCamera);
+	screenOutputScene.add(orthoCamera);
 
-	// worldCamera is the dynamic camera 3d object that will be positioned, oriented and 
-	// constantly updated inside the 3d scene.  Its view will ultimately get passed back to the 
-	// stationary quadCamera, which renders the scene to a fullscreen quad (made up of 2 large triangles).
+	// worldCamera is the dynamic camera 3d object that will be positioned, oriented and constantly updated inside 
+	// the 3d scene.  Its view will ultimately get passed back to the stationary orthoCamera that renders 
+	// the scene to a full-screen triangle, which is stretched across the viewport.
 	worldCamera = new THREE.PerspectiveCamera(60, document.body.clientWidth / document.body.clientHeight, 1, 1000);
 	storedFOV = worldCamera.fov;
 	pathTracingScene.add(worldCamera);
@@ -554,16 +556,7 @@ function initTHREEjs()
 	});
 	screenCopyRenderTarget.texture.generateMipmaps = false;
 
-	// blueNoise texture used in all demos
-	/* blueNoiseTexture = new THREE.TextureLoader().load('textures/BlueNoise_RGBA256.png');
-	blueNoiseTexture.wrapS = THREE.RepeatWrapping;
-	blueNoiseTexture.wrapT = THREE.RepeatWrapping;
-	blueNoiseTexture.flipY = false;
-	blueNoiseTexture.minFilter = THREE.NearestFilter;
-	blueNoiseTexture.magFilter = THREE.NearestFilter;
-	blueNoiseTexture.generateMipmaps = false; */
-
-
+	
 
 	// setup scene/demo-specific objects, variables, GUI elements, and data
 	initSceneData();
@@ -586,11 +579,15 @@ function initTHREEjs()
 	}
 
 
+	// setup oversized full-screen triangle geometry and shaders....
 
-	// setup screen-size quad geometry and shaders....
+	// this full-screen single triangle mesh will perform the path tracing operations, producing a screen-sized image
 
-	// this full-screen quad mesh performs the path tracing operations and produces a screen-sized image
-	pathTracingGeometry = new THREE.PlaneGeometry(2, 2);
+	trianglePositions.push(-1,-1, 0 ); // start in lower left corner of viewport
+	trianglePositions.push( 3,-1, 0 ); // go beyond right side of viewport, in order to have full-screen coverage
+	trianglePositions.push(-1, 3, 0 ); // go beyond top of viewport, in order to have full-screen coverage
+	triangleGeometry.setAttribute( 'position', new THREE.Float32BufferAttribute( trianglePositions, 3 ));
+	
 
 	pathTracingUniforms.tPreviousTexture = { type: "t", value: screenCopyRenderTarget.texture };
 	pathTracingUniforms.tBlueNoiseTexture = { type: "t", value: blueNoiseTexture };
@@ -637,21 +634,20 @@ function initTHREEjs()
 				depthWrite: false
 			});
 
-			pathTracingMesh = new THREE.Mesh(pathTracingGeometry, pathTracingMaterial);
+			pathTracingMesh = new THREE.Mesh(triangleGeometry, pathTracingMaterial);
 			pathTracingScene.add(pathTracingMesh);
 
-			// the following keeps the large scene ShaderMaterial quad right in front 
-			//   of the camera at all times. This is necessary because without it, the scene 
-			//   quad will fall out of view and get clipped when the camera rotates past 180 degrees.
+			// the following keeps the oversized full-screen triangle right in front 
+			//   of the camera at all times. This is necessary because without it, the full-screen 
+			//   triangle will fall out of view and get clipped when the camera rotates past 180 degrees.
 			worldCamera.add(pathTracingMesh);
 
 		});
 	});
 
 
-	// this full-screen quad mesh copies the image output of the pathtracing shader and feeds it back in to that shader as a 'previousTexture'
-	screenCopyGeometry = new THREE.PlaneGeometry(2, 2);
-
+	// this oversized full-screen triangle mesh copies the image output of the pathtracing shader and feeds it back in to that shader as a 'previousTexture'
+	
 	screenCopyUniforms = {
 		tPathTracedImageTexture: { type: "t", value: pathTracingRenderTarget.texture }
 	};
@@ -669,14 +665,13 @@ function initTHREEjs()
 			depthTest: false
 		});
 
-		screenCopyMesh = new THREE.Mesh(screenCopyGeometry, screenCopyMaterial);
+		screenCopyMesh = new THREE.Mesh(triangleGeometry, screenCopyMaterial);
 		screenCopyScene.add(screenCopyMesh);
 	});
 
 
-	// this full-screen quad mesh takes the image output of the path tracing shader (which is a continuous blend of the previous frame and current frame),
+	// this oversized full-screen triangle mesh takes the image output of the path tracing shader (which is a continuous blend of the previous frame and current frame),
 	// and applies gamma correction (which brightens the entire image), and then displays the final accumulated rendering to the screen
-	screenOutputGeometry = new THREE.PlaneGeometry(2, 2);
 
 	screenOutputUniforms = {
 		tPathTracedImageTexture: { type: "t", value: pathTracingRenderTarget.texture },
@@ -703,7 +698,7 @@ function initTHREEjs()
 			depthTest: false
 		});
 
-		screenOutputMesh = new THREE.Mesh(screenOutputGeometry, screenOutputMaterial);
+		screenOutputMesh = new THREE.Mesh(triangleGeometry, screenOutputMaterial);
 		screenOutputScene.add(screenOutputMesh);
 	});
 
@@ -1055,7 +1050,7 @@ function animate()
 	// RENDERING in 3 steps
 
 	// STEP 1
-	// Perform PathTracing and Render(save) into pathTracingRenderTarget, a full-screen texture.
+	// Perform PathTracing and Render(save) into pathTracingRenderTarget, a full-screen texture (on the oversized triangle).
 	// Read previous screenCopyRenderTarget(via texelFetch inside fragment shader) to use as a new starting point to blend with
 	renderer.setRenderTarget(pathTracingRenderTarget);
 	renderer.render(pathTracingScene, worldCamera);
@@ -1064,13 +1059,13 @@ function animate()
 	// Render(copy) the pathTracingScene output(pathTracingRenderTarget above) into screenCopyRenderTarget.
 	// This will be used as a new starting point for Step 1 above (essentially creating ping-pong buffers)
 	renderer.setRenderTarget(screenCopyRenderTarget);
-	renderer.render(screenCopyScene, quadCamera);
+	renderer.render(screenCopyScene, orthoCamera);
 
 	// STEP 3
-	// Render full screen quad with generated pathTracingRenderTarget in STEP 1 above.
+	// Render to the oversized full-screen triangle with generated pathTracingRenderTarget in STEP 1 above.
 	// After applying tonemapping and gamma-correction to the image, it will be shown on the screen as the final accumulated output
 	renderer.setRenderTarget(null);
-	renderer.render(screenOutputScene, quadCamera);
+	renderer.render(screenOutputScene, orthoCamera);
 
 	stats.update();
 
