@@ -318,7 +318,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			rayOrigin = x + nl * uEPS_intersect;
 
-			// create caustic ray
+			// create both caustic and diffuse bounce rays for later
                         if (diffuseCount == 1)
                         {
 				vec3 randVec = vec3(rng() * 2.0 - 1.0, rng() * 2.0 - 1.0, rng() * 2.0 - 1.0);
@@ -327,21 +327,18 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				
 				causticRayOrigin = rayOrigin;
 				causticRayDirection = normalize(target - x);
-				causticMask = mask;
+				causticMask = mask * 0.8;
 				causticMask *= max(0.0, dot(nl, causticRayDirection));
 				willNeedCausticRay = TRUE;
-			}
 
-			if (diffuseCount == 1)
-			{
-				diffuseBounceMask = mask;
+				diffuseBounceMask = mask * 0.8;
 				diffuseBounceRayOrigin = rayOrigin;
 				diffuseBounceRayDirection = randomCosWeightedDirectionInHemisphere(nl);
 				willNeedDiffuseBounceRay = TRUE;
 			}
 			
 			rayDirection = sampleQuadLight(x, nl, light, weight);
-			mask *= weight;
+			mask *= weight * 1.5;
 			sampleLight = TRUE;
 			continue;
                         
