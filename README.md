@@ -212,7 +212,18 @@ I only had the above images to go on - there are no scene dimensions specificati
 For more intuition and a direct comparison between regular path tracing and bi-directional path tracing, here is the old Cornell Box scene again but this time there is a blocker panel that blocks almost all of the light source in the ceiling.  The naive approach is just to path trace normally and hope that the camera rays will be lucky enough to find the light source:
 * [Naive Approach to Blocked Light Source](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Compare_Uni-Directional_Approach.html) As we can painfully see, we will have to wait a long time to get a decent image!
 Enter Bi-Directional path tracing to the rescue!:
-* [Bi-Directional Approach to Blocked Light Source](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Compare_Bi-Directional_Approach.html) Like magic, the difficult scene comes into focus - in real-time! <br> <br> <br>
+* [Bi-Directional Approach to Blocked Light Source](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Compare_Bi-Directional_Approach.html) Like magic, the difficult scene comes into focus - in real-time! <br> <br>
+
+<h4>Global Illumination on Wikipedia</h4>
+
+<img src="https://github.com/user-attachments/assets/0d7921ef-60e5-4886-acf3-cfda001b9829" width=30% height=30%>
+<img src="https://github.com/user-attachments/assets/ea71983b-6003-453e-a75d-e99b4091ffd9" width=40% height=40%>
+<img src="https://github.com/user-attachments/assets/4ceec5a0-fec4-40c0-b1ad-9eebd7754bd3" width=25% height=25%> <br>
+
+I've always been inspired by the community rendering examples found when searching for 'global illumination' or 'ray tracing' on Wikipedia.  I selected 3 examples that I feel are the best representations of these terms/subjects on their Wikipedia articles.  Using only the original Wikipedia images, I tried to recreate each scene as closely as possible in terms of scene objects, color, lighting, camera angle, and depth of field (out-of-focus effect).  This demo lets you select any of the 3 scenes from the drop-down menu on the right.  According to the authors of these Wikipedia renderings, the originals took several minutes to get a clean image, when using typical off-the-shelf rendering software.  However, now that we have these same scenes rendered with the Three.js PathTracing Renderer, we can adjust the camera settings and fly our camera through these environments, all while the beautiful scenes render at 60+ fps - even on mobile! <br>
+
+* [Global Illumination on Wikipedia Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Global_Illumination_Wikipedia.html) <br>
+<br>
 
 
 <h3>Game Engine path tracer for Desktop and Mobile</h3>
