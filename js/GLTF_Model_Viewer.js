@@ -574,7 +574,7 @@ function updateVariablesAndUniforms()
 } // end function updateVariablesAndUniforms()
 
 
-hdrLoader = new RGBELoader();
+hdrLoader = new HDRLoader();
 hdrLoader.type = THREE.FloatType; // override THREE's default of HalfFloatType
 
 hdrTexture = hdrLoader.load(
