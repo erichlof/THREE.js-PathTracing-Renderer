@@ -495,7 +495,7 @@ function updateVariablesAndUniforms()
 
 
 
-hdrLoader = new RGBELoader();
+hdrLoader = new HDRLoader();
 // override THREE's default of HalfFloatType (full float precision needed in brightest pixel calculations below)
 hdrLoader.type = THREE.FloatType;
 
