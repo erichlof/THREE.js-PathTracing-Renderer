@@ -37,6 +37,7 @@ let apertureChangeSpeed = 1;
 let focusDistance = 132.0;
 let increaseFocusDist = false;
 let decreaseFocusDist = false;
+let focusDistanceChangeSpeed = 1;
 let pixelRatio = 1.0;
 let windowIsBeingResized = false;
 let TWO_PI = Math.PI * 2;
@@ -943,14 +944,14 @@ function animate()
 
 	if (increaseFocusDist)
 	{
-		focusDistance += 1;
+		focusDistance += (1 * focusDistanceChangeSpeed);
 		pathTracingUniforms.uFocusDistance.value = focusDistance;
 		cameraIsMoving = true;
 		increaseFocusDist = false;
 	}
 	if (decreaseFocusDist)
 	{
-		focusDistance -= 1;
+		focusDistance -= (1 * focusDistanceChangeSpeed);
 		if (focusDistance < 1)
 			focusDistance = 1;
 		pathTracingUniforms.uFocusDistance.value = focusDistance;
