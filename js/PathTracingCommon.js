@@ -15,6 +15,7 @@ uniform float uFocusDistance;
 uniform float uPreviousSampleCount;
 uniform bool uCameraIsMoving;
 uniform bool uUseOrthographicCamera;
+uniform bool uSceneIsDynamic;
 
 in vec2 vUv;
 
@@ -1462,7 +1463,7 @@ void CSG_Union_Operation( float A_t0, vec3 A_n0, int A_type0, vec3 A_color0, int
 			  out float t0, out vec3 n0, out int type0, out vec3 color0, out int objectID0, out float t1, out vec3 n1, out int type1, out vec3 color1, out int objectID1 )
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 {
-	// CSG UNION OPERATION [A + B] (outside of shape A and outside of shape B are fused together into a single, new shape)
+	// CSG UNION OPERATION [A | B] (A 'or' B) : the outside of shape A and the outside of shape B are fused together into a single, new shape
 	// (hypothetically, the interior volume of the newly created union could be completely filled with water in one pass)
 	
 	vec3 temp_n0, temp_n1, temp_col0, temp_col1;
@@ -1554,7 +1555,8 @@ void CSG_Difference_Operation( float A_t0, vec3 A_n0, int A_type0, vec3 A_color0
 			       out float t0, out vec3 n0, out int type0, out vec3 color0, out int objectID0, out float t1, out vec3 n1, out int type1, out vec3 color1, out int objectID1 )
 //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 {
-	// CSG DIFFERENCE OPERATION [A - B] (shape A is carved out with shape B where the two shapes overlap)
+	// CSG DIFFERENCE OPERATION [A - B] (A 'minus' B) : shape A is carved out with shape B where the two shapes overlap
+	
 	// cannot swap in this operation: shape A must stay as the base shape, while shape B must stay as the negative space or carving shape
 	
 	// this is a rare case, where shape B doesn't even touch shape A (it's completely outside), so there's nothing to carve out of shape A
@@ -1611,7 +1613,7 @@ void CSG_Intersection_Operation( float A_t0, vec3 A_n0, int A_type0, vec3 A_colo
 			  	 out float t0, out vec3 n0, out int type0, out vec3 color0, out int objectID0, out float t1, out vec3 n1, out int type1, out vec3 color1, out int objectID1 )
 //-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 {
-	// CSG INTERSECTION OPERATION [A & B] (Only valid where shape A overlaps shape B)
+	// CSG INTERSECTION OPERATION [A & B] (A 'and' B) : Only valid where shape A overlaps shape B
 	// (ray must intersect both shape A and shape B)
 	vec3 temp_n0, temp_n1, temp_col0, temp_col1;
 	float temp_t0, temp_t1;
