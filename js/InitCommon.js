@@ -610,6 +610,7 @@ function initTHREEjs()
 
 	pathTracingUniforms.uCameraIsMoving = { type: "b1", value: false };
 	pathTracingUniforms.uUseOrthographicCamera = { type: "b1", value: false };
+	pathTracingUniforms.uSceneIsDynamic = { type: "b1", value: false };
 
 	pathTracingDefines = {
 		//NUMBER_OF_TRIANGLES: total_number_of_triangles
