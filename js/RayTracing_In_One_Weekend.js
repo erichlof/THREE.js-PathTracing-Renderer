@@ -21,6 +21,14 @@ let aabb_array;
 let aabbDataTexture;
 let totalWorklist;
 
+let animation_TypeObject;
+let animation_TypeController;
+let changeAnimationType = false;
+let animationType;
+
+let noAnimation = true;
+let runAnimation1 = false;
+
 
 
 // called automatically from within initTHREEjs() function (located in InitCommon.js file)
@@ -165,7 +173,7 @@ function initSceneData()
 
 		// if this shape is a Box, use THREE.BoxGeometry as starting point for this shape's AABB
 		//if (shape_array[ix32 + 16] == 0) 
-			boxGeometries[i] = new THREE.BoxGeometry(2, 2, 2);
+			boxGeometries[i] = new THREE.BoxGeometry(2, 6, 2);
 		//else // else use THREE.SphereGeometry, as it produces a tighter-fitting AABB when shape is rotated
 		//	boxGeometries[i] = new THREE.SphereGeometry(1.4);
 
@@ -240,7 +248,16 @@ function initSceneData()
 
 
 	// In addition to the default GUI on all demos, add any special GUI elements that this particular demo requires
+	animation_TypeObject = {
+		Play_Animation: 'None'
+	};
 
+	function handleAnimationTypeChange() 
+	{
+		changeAnimationType = true;
+	}
+
+	animation_TypeController = gui.add(animation_TypeObject, 'Play_Animation', ['None', 'Animation #1']).onChange(handleAnimationTypeChange);
 
 	// scene/demo-specific uniforms go here
 	pathTracingUniforms.tShape_DataTexture = { value: shapeDataTexture };
@@ -254,6 +271,27 @@ function initSceneData()
 // called automatically from within the animate() function (located in InitCommon.js file)
 function updateVariablesAndUniforms() 
 {
+	if (changeAnimationType) 
+	{
+		animationType = animation_TypeController.getValue();
+
+		if (animationType == 'None') 
+		{
+			sceneIsDynamic = false;
+		}
+		else if (animationType == 'Animation #1') 
+		{
+			sceneIsDynamic = true;
+		}
+
+		pathTracingUniforms.uSceneIsDynamic.value = sceneIsDynamic;
+		screenOutputUniforms.uSceneIsDynamic.value = sceneIsDynamic;
+
+		cameraIsMoving = true;
+		changeAnimationType = false;
+
+	} // end if (changeAnimationType)
+
 	pathTracingUniforms.uFocusDistance.value = focusDistance;
 
 	// INFO
