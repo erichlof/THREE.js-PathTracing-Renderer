@@ -4,6 +4,8 @@ let boxMeshes = [];
 let boxGeometries = [];
 
 let totalNumberOfShapes = 0;
+let ix32 = 0; // used in loop
+let ix9 = 0; // used in loop
 let sphereTestPosition = new THREE.Vector3();
 let testPoint = new THREE.Vector3(4, 0.2, 0);
 let spherePositions = [];
@@ -17,18 +19,16 @@ let shapeBoundingBox_maxCorner = new THREE.Vector3();
 let shapeBoundingBox_centroid = new THREE.Vector3();
 let shape_array;
 let shapeDataTexture;
-let aabb_array;
+let shape_aabb_array;
 let aabbDataTexture;
 let totalWorklist;
 
-let animation_TypeObject;
-let animation_TypeController;
+let animation_TypeObject, shape_TypeObject;
+let animation_TypeController, shape_TypeController;
 let changeAnimationType = false;
-let animationType;
-
-let noAnimation = true;
-let runAnimation1 = false;
-
+let changeShapeType = false;
+let animationType, shapeType;
+let shapeNumberCode = 1;
 
 
 // called automatically from within initTHREEjs() function (located in InitCommon.js file)
@@ -66,7 +66,7 @@ function initSceneData()
 	shape_array = new Float32Array(2048 * 2048 * 4);
 	// 2048 = width of texture, 2048 = height of texture, 4 = r,g,b, and a components
 
-	aabb_array = new Float32Array(2048 * 2048 * 4);
+	shape_aabb_array = new Float32Array(2048 * 2048 * 4);
 	// 2048 = width of texture, 2048 = height of texture, 4 = r,g,b, and a components
 
 	
@@ -88,8 +88,6 @@ function initSceneData()
 	totalWorklist = new Uint32Array(totalNumberOfShapes);
 
 	boxMaterial = new THREE.MeshBasicMaterial();
-	let ix32 = 0;
-	let ix9 = 0;
 
 	for (let i = 0; i < totalNumberOfShapes; i++) 
 	{
@@ -173,7 +171,7 @@ function initSceneData()
 
 		// if this shape is a Box, use THREE.BoxGeometry as starting point for this shape's AABB
 		//if (shape_array[ix32 + 16] == 0) 
-			boxGeometries[i] = new THREE.BoxGeometry(2, 6, 2);
+			boxGeometries[i] = new THREE.BoxGeometry(2, 2, 2); // 2,6,2
 		//else // else use THREE.SphereGeometry, as it produces a tighter-fitting AABB when shape is rotated
 		//	boxGeometries[i] = new THREE.SphereGeometry(1.4);
 
@@ -187,15 +185,15 @@ function initSceneData()
 		boxMeshes[i].geometry.boundingBox.getCenter(shapeBoundingBox_centroid);
 
 
-		aabb_array[ix9 + 0] = shapeBoundingBox_minCorner.x;
-		aabb_array[ix9 + 1] = shapeBoundingBox_minCorner.y;
-		aabb_array[ix9 + 2] = shapeBoundingBox_minCorner.z;
-		aabb_array[ix9 + 3] = shapeBoundingBox_maxCorner.x;
-		aabb_array[ix9 + 4] = shapeBoundingBox_maxCorner.y;
-		aabb_array[ix9 + 5] = shapeBoundingBox_maxCorner.z;
-		aabb_array[ix9 + 6] = shapeBoundingBox_centroid.x;
-		aabb_array[ix9 + 7] = shapeBoundingBox_centroid.y;
-		aabb_array[ix9 + 8] = shapeBoundingBox_centroid.z;
+		shape_aabb_array[ix9 + 0] = shapeBoundingBox_minCorner.x;
+		shape_aabb_array[ix9 + 1] = shapeBoundingBox_minCorner.y;
+		shape_aabb_array[ix9 + 2] = shapeBoundingBox_minCorner.z;
+		shape_aabb_array[ix9 + 3] = shapeBoundingBox_maxCorner.x;
+		shape_aabb_array[ix9 + 4] = shapeBoundingBox_maxCorner.y;
+		shape_aabb_array[ix9 + 5] = shapeBoundingBox_maxCorner.z;
+		shape_aabb_array[ix9 + 6] = shapeBoundingBox_centroid.x;
+		shape_aabb_array[ix9 + 7] = shapeBoundingBox_centroid.y;
+		shape_aabb_array[ix9 + 8] = shapeBoundingBox_centroid.z;
 
 		totalWorklist[i] = i;
 	} // end for (let i = 0; i < totalNumberOfShapes; i++)
@@ -207,7 +205,7 @@ function initSceneData()
 	console.log("BvhGeneration...");
 	console.time("BvhGeneration");
 	
-	BVH_QuickBuild(totalWorklist, aabb_array);
+	BVH_QuickBuild(totalWorklist, shape_aabb_array);
 	
 	console.timeEnd("BvhGeneration");
 
@@ -229,7 +227,7 @@ function initSceneData()
 	shapeDataTexture.generateMipmaps = false;
 	shapeDataTexture.needsUpdate = true;
 
-	aabbDataTexture = new THREE.DataTexture(aabb_array,
+	aabbDataTexture = new THREE.DataTexture(shape_aabb_array,
 		2048,
 		2048,
 		THREE.RGBAFormat,
@@ -251,13 +249,21 @@ function initSceneData()
 	animation_TypeObject = {
 		Play_Animation: 'None'
 	};
+	shape_TypeObject = {
+		Select_Shapes: 'Spheres'
+	};
 
 	function handleAnimationTypeChange() 
 	{
 		changeAnimationType = true;
 	}
+	function handleShapeTypeChange() 
+	{
+		changeShapeType = true;
+	}
 
 	animation_TypeController = gui.add(animation_TypeObject, 'Play_Animation', ['None', 'Animation #1']).onChange(handleAnimationTypeChange);
+	shape_TypeController = gui.add(shape_TypeObject, 'Select_Shapes', ['Spheres', 'Boxes', 'Cylinders', 'Cones', 'Paraboloids']).onChange(handleShapeTypeChange);
 
 	// scene/demo-specific uniforms go here
 	pathTracingUniforms.tShape_DataTexture = { value: shapeDataTexture };
@@ -277,12 +283,114 @@ function updateVariablesAndUniforms()
 
 		if (animationType == 'None') 
 		{
+			boxGeometries = [];
+			boxMeshes = [];
+
+			for (let i = 0; i < totalNumberOfShapes; i++) 
+			{
+				ix32 = i * 32;
+				ix9 = i * 9;
+
+				shape.position.copy(spherePositions[i]);
+				shape.rotation.set(0, 0, 0);
+				shape.scale.set(0.2, 0.2, 0.2);
+				shape.updateMatrixWorld(true); // 'true' forces immediate matrix update
+				// if this shape is a Box, use THREE.BoxGeometry as starting point for this shape's AABB
+				//if (shape_array[ix32 + 16] == 0) 
+					boxGeometries[i] = new THREE.BoxGeometry(2, 2, 2);
+				//else // else use THREE.SphereGeometry, as it produces a tighter-fitting AABB when shape is rotated
+				//	boxGeometries[i] = new THREE.SphereGeometry(1.4);
+
+				boxMeshes[i] = new THREE.Mesh( boxGeometries[i], boxMaterial );
+				
+				boxMeshes[i].geometry.applyMatrix4(shape.matrixWorld);
+				boxMeshes[i].geometry.computeBoundingBox();
+				
+				shapeBoundingBox_minCorner.copy(boxMeshes[i].geometry.boundingBox.min);
+				shapeBoundingBox_maxCorner.copy(boxMeshes[i].geometry.boundingBox.max);
+				boxMeshes[i].geometry.boundingBox.getCenter(shapeBoundingBox_centroid);
+
+				shape_aabb_array[ix9 + 0] = shapeBoundingBox_minCorner.x;
+				shape_aabb_array[ix9 + 1] = shapeBoundingBox_minCorner.y;
+				shape_aabb_array[ix9 + 2] = shapeBoundingBox_minCorner.z;
+				shape_aabb_array[ix9 + 3] = shapeBoundingBox_maxCorner.x;
+				shape_aabb_array[ix9 + 4] = shapeBoundingBox_maxCorner.y;
+				shape_aabb_array[ix9 + 5] = shapeBoundingBox_maxCorner.z;
+				shape_aabb_array[ix9 + 6] = shapeBoundingBox_centroid.x;
+				shape_aabb_array[ix9 + 7] = shapeBoundingBox_centroid.y;
+				shape_aabb_array[ix9 + 8] = shapeBoundingBox_centroid.z;
+
+				totalWorklist[i] = i;
+			} // end for (let i = 0; i < totalNumberOfShapes; i++)
+
+			// for the recursive Quick Builder, must set nodesUsed back to 1
+			nodesUsed = 1;
+
+			console.log("BvhGeneration...");
+			console.time("BvhGeneration");
+			
+			BVH_QuickBuild(totalWorklist, shape_aabb_array);
+			
+			console.timeEnd("BvhGeneration");
+			
+			aabbDataTexture.needsUpdate = true;
 			sceneIsDynamic = false;
-		}
+		} // end if (animationType == 'None')
 		else if (animationType == 'Animation #1') 
 		{
+			boxGeometries = [];
+			boxMeshes = [];
+
+			for (let i = 0; i < totalNumberOfShapes; i++) 
+			{
+				ix32 = i * 32;
+				ix9 = i * 9;
+
+				shape.position.copy(spherePositions[i]);
+				shape.rotation.set(0, 0, 0);
+				shape.scale.set(0.2, 0.2, 0.2);
+				shape.updateMatrixWorld(true); // 'true' forces immediate matrix update
+				// if this shape is a Box, use THREE.BoxGeometry as starting point for this shape's AABB
+				//if (shape_array[ix32 + 16] == 0) 
+					boxGeometries[i] = new THREE.BoxGeometry(2, 6, 2);
+				//else // else use THREE.SphereGeometry, as it produces a tighter-fitting AABB when shape is rotated
+				//	boxGeometries[i] = new THREE.SphereGeometry(1.4);
+
+				boxMeshes[i] = new THREE.Mesh( boxGeometries[i], boxMaterial );
+				
+				boxMeshes[i].geometry.applyMatrix4(shape.matrixWorld);
+				boxMeshes[i].geometry.computeBoundingBox();
+				
+				shapeBoundingBox_minCorner.copy(boxMeshes[i].geometry.boundingBox.min);
+				shapeBoundingBox_maxCorner.copy(boxMeshes[i].geometry.boundingBox.max);
+				boxMeshes[i].geometry.boundingBox.getCenter(shapeBoundingBox_centroid);
+
+				shape_aabb_array[ix9 + 0] = shapeBoundingBox_minCorner.x;
+				shape_aabb_array[ix9 + 1] = shapeBoundingBox_minCorner.y;
+				shape_aabb_array[ix9 + 2] = shapeBoundingBox_minCorner.z;
+				shape_aabb_array[ix9 + 3] = shapeBoundingBox_maxCorner.x;
+				shape_aabb_array[ix9 + 4] = shapeBoundingBox_maxCorner.y;
+				shape_aabb_array[ix9 + 5] = shapeBoundingBox_maxCorner.z;
+				shape_aabb_array[ix9 + 6] = shapeBoundingBox_centroid.x;
+				shape_aabb_array[ix9 + 7] = shapeBoundingBox_centroid.y;
+				shape_aabb_array[ix9 + 8] = shapeBoundingBox_centroid.z;
+
+				totalWorklist[i] = i;
+			} // end for (let i = 0; i < totalNumberOfShapes; i++)
+
+			// for the recursive Quick Builder, must set nodesUsed back to 1
+			nodesUsed = 1;
+
+			console.log("BvhGeneration...");
+			console.time("BvhGeneration");
+			
+			BVH_QuickBuild(totalWorklist, shape_aabb_array);
+			
+			console.timeEnd("BvhGeneration");
+
+			aabbDataTexture.needsUpdate = true;
 			sceneIsDynamic = true;
-		}
+		} // end else if (animationType == 'Animation #1')
 
 		pathTracingUniforms.uSceneIsDynamic.value = sceneIsDynamic;
 		screenOutputUniforms.uSceneIsDynamic.value = sceneIsDynamic;
@@ -292,7 +400,32 @@ function updateVariablesAndUniforms()
 
 	} // end if (changeAnimationType)
 
-	pathTracingUniforms.uFocusDistance.value = focusDistance;
+	if (changeShapeType) 
+	{
+		shapeType = shape_TypeController.getValue();
+		if (shapeType == 'Boxes') 
+			shapeNumberCode = 0;
+		else if (shapeType == 'Spheres') 
+			shapeNumberCode = 1;
+		else if (shapeType == 'Cylinders') 
+			shapeNumberCode = 2;
+		else if (shapeType == 'Cones') 
+			shapeNumberCode = 3;
+		else if (shapeType == 'Paraboloids') 
+			shapeNumberCode = 4;
+
+		for (let i = 0; i < totalNumberOfShapes; i++) 
+		{
+			ix32 = i * 32;
+			shape_array[ix32 + 16] = shapeNumberCode;
+		}
+		shapeDataTexture.needsUpdate = true;
+
+		cameraIsMoving = true;
+		changeShapeType = false;
+
+	} // end if (changeShapeType)
+
 
 	// INFO
 	cameraInfoElement.innerHTML = "FOV: " + worldCamera.fov + " / Aperture: " + apertureSize.toFixed(3) + " / FocusDistance: " + focusDistance.toFixed(1) + "<br>" + "Samples: " + sampleCounter;
