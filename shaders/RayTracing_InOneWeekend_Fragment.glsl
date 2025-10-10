@@ -187,14 +187,14 @@ float SceneIntersect( )
 		uv1 = ivec2( mod(id + 1.0, 2048.0), (id + 1.0) * INV_TEXTURE_WIDTH );
 		uv2 = ivec2( mod(id + 2.0, 2048.0), (id + 2.0) * INV_TEXTURE_WIDTH );
 		uv3 = ivec2( mod(id + 3.0, 2048.0), (id + 3.0) * INV_TEXTURE_WIDTH );
-		//uv4 = ivec2( mod(id + 4.0, 2048.0), (id + 4.0) * INV_TEXTURE_WIDTH );
+		uv4 = ivec2( mod(id + 4.0, 2048.0), (id + 4.0) * INV_TEXTURE_WIDTH );
 		
 		invTransformMatrix = mat4( texelFetch(tShape_DataTexture, uv0, 0),
 		 			   texelFetch(tShape_DataTexture, uv1, 0), 
 		 			   texelFetch(tShape_DataTexture, uv2, 0), 
 		 			   texelFetch(tShape_DataTexture, uv3, 0) );
 
-		//sd4 = texelFetch(tShape_DataTexture, uv4, 0);
+		sd4 = texelFetch(tShape_DataTexture, uv4, 0);
 		if (uSceneIsDynamic)
 			invTransformMatrix[3][1] -= sin(uTime + currentBoxNodeData1.w) * 2.0;
 
@@ -202,17 +202,16 @@ float SceneIntersect( )
 		rObjOrigin = vec3( invTransformMatrix * vec4(rayOrigin, 1.0) );
 		rObjDirection = vec3( invTransformMatrix * vec4(rayDirection, 0.0) );
 
-		// this demo contains spheres only
-		// if (sd4.x == 0.0)
-		// 	d = UnitBoxIntersect(rObjOrigin, rObjDirection, n);
-		// else if (sd4.x == 1.0)
+		if (sd4.x == 0.0)
+		 	d = UnitBoxIntersect(rObjOrigin, rObjDirection, n);
+		else if (sd4.x == 1.0)
 			d = UnitSphereIntersect(rObjOrigin, rObjDirection, n);
-		// else if (sd4.x == 2.0)
-		// 	d = UnitCylinderIntersect(rObjOrigin, rObjDirection, n);
-		// else if (sd4.x == 3.0)
-		// 	d = UnitConeIntersect(rObjOrigin, rObjDirection, n);
-		// else if (sd4.x == 4.0)
-		// 	d = UnitParaboloidIntersect(rObjOrigin, rObjDirection, n);
+		else if (sd4.x == 2.0)
+		 	d = UnitCylinderIntersect(rObjOrigin, rObjDirection, n);
+		else if (sd4.x == 3.0)
+		 	d = UnitConeIntersect(rObjOrigin, rObjDirection, n);
+		else if (sd4.x == 4.0)
+		 	d = UnitParaboloidIntersect(rObjOrigin, rObjDirection, n);
 		
 		if (d > 0.0 && d < t)
 		{
