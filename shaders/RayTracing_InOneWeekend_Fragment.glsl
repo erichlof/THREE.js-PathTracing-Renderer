@@ -69,6 +69,68 @@ void GetBoxNodeData(const in float i, inout vec4 boxNodeData0, inout vec4 boxNod
 	boxNodeData1 = texelFetch(tAABB_DataTexture, uv1, 0);
 }
 
+mat4 makeRotateX(float rot)
+{
+	float s = sin(rot);
+	float c = cos(rot);
+	return mat4(
+		1, 0,  0, 0,
+		0, c, -s, 0,
+		0, s,  c, 0,
+		0, 0,  0, 1
+	);
+}
+mat4 makeRotateY(float rot)
+{
+	float s = sin(rot);
+	float c = cos(rot);
+	return mat4(
+	 	c, 0, s, 0,
+	 	0, 1, 0, 0,
+	       -s, 0, c, 0,
+	 	0, 0, 0, 1 
+	);
+}
+mat4 makeRotateZ(float rot)
+{
+	float s = sin(rot);
+	float c = cos(rot);
+	return mat4(
+		c, -s, 0, 0,
+		s,  c, 0, 0,
+		0,  0, 1, 0,
+		0,  0, 0, 1
+	);
+}
+
+mat4 makeScaleX(float s)
+{
+	return mat4(
+	 	s, 0, 0, 0,
+	 	0, 1, 0, 0,
+	        0, 0, 1, 0,
+	 	0, 0, 0, 1 
+	);
+}
+mat4 makeScaleY(float s)
+{
+	return mat4(
+	 	1, 0, 0, 0,
+	 	0, s, 0, 0,
+	        0, 0, 1, 0,
+	 	0, 0, 0, 1 
+	);
+}
+mat4 makeScaleZ(float s)
+{
+	return mat4(
+	 	1, 0, 0, 0,
+	 	0, 1, 0, 0,
+	        0, 0, s, 0,
+	 	0, 0, 0, 1 
+	);
+}
+
 
 //---------------------------------------------------------------------------------------
 float SceneIntersect( )
@@ -196,7 +258,34 @@ float SceneIntersect( )
 
 		sd4 = texelFetch(tShape_DataTexture, uv4, 0);
 		if (uSceneIsDynamic)
-			invTransformMatrix[3][1] -= sin(uTime + currentBoxNodeData1.w) * 2.0;
+		{
+			// animate Translation
+			invTransformMatrix[3][1] = -1.0 + (sin(uTime + currentBoxNodeData1.w) * 1.5);
+
+			// animate Rotation
+			/* mat4 mx = makeRotateX(uTime + currentBoxNodeData1.w);
+			mat4 my = makeRotateY(uTime + currentBoxNodeData1.w);
+			invTransformMatrix = mx * my * invTransformMatrix; */
+
+			// animate Scaling
+			/* mat4 m;
+			float mod3 = floor(mod(currentBoxNodeData1.w, 3.0));
+			if (mod3 == 0.0)
+			{
+				m = makeScaleX(10.0 - abs(sin(uTime + currentBoxNodeData1.w) * 9.5));
+			}
+			else if (mod3 == 1.0)
+			{
+				m = makeScaleY(10.0 - abs(sin(uTime + currentBoxNodeData1.w) * 9.5));
+			}
+			else //mod3 == 2.0
+			{
+				m = makeScaleZ(10.0 - abs(sin(uTime + currentBoxNodeData1.w) * 9.5));
+			}
+			invTransformMatrix = m * invTransformMatrix; */
+			
+		}
+			
 
 		// transform ray into shape's object space
 		rObjOrigin = vec3( invTransformMatrix * vec4(rayOrigin, 1.0) );
