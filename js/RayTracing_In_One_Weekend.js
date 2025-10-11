@@ -352,7 +352,7 @@ function updateVariablesAndUniforms()
 				shape.updateMatrixWorld(true); // 'true' forces immediate matrix update
 				// if this shape is a Box, use THREE.BoxGeometry as starting point for this shape's AABB
 				//if (shape_array[ix32 + 16] == 0) 
-					boxGeometries[i] = new THREE.BoxGeometry(2, 6, 2);
+					boxGeometries[i] = new THREE.BoxGeometry(4, 5, 4);
 				//else // else use THREE.SphereGeometry, as it produces a tighter-fitting AABB when shape is rotated
 				//	boxGeometries[i] = new THREE.SphereGeometry(1.4);
 
