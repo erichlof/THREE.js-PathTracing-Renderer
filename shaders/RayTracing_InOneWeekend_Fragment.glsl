@@ -6,6 +6,8 @@ precision highp sampler2D;
 
 uniform sampler2D tShape_DataTexture;
 uniform sampler2D tAABB_DataTexture;
+uniform float uAnimationType;
+uniform bool uShowBVH_Leaves;
 
 //float InvTextureWidth = 0.000244140625; // (1 / 4096 texture width)
 //float InvTextureWidth = 0.00048828125;  // (1 / 2048 texture width)
@@ -228,18 +230,20 @@ float SceneIntersect( )
 
 			continue;
 		} // end if (currentBoxNodeData1.z == 0.0) // inner node
-		/* 
-		// debug leaf AABB visualization
-		d = BoxIntersect(currentBoxNodeData0.xyz, vec3(currentBoxNodeData0.w, currentBoxNodeData1.xy), rayOrigin, rayDirection, n, isRayExiting);
-		if (d > 0.0 && d < t)
+		
+		if (uShowBVH_Leaves)
 		{
-			t = d;
-			hitNormal = n;
-			hitColor = vec3(1,1,0);
-			hitType = REFR;
-			hitObjectID = float(objectCount);
-		} */
-
+			// debug leaf AABB visualization
+			d = BoxIntersect(currentBoxNodeData0.xyz, vec3(currentBoxNodeData0.w, currentBoxNodeData1.xy), rayOrigin, rayDirection, n, isRayExiting);
+			if (d > 0.0 && d < t)
+			{
+				t = d;
+				hitNormal = n;
+				hitColor = vec3(1,1,0);
+				hitType = REFR;
+				hitObjectID = float(objectCount);
+			}
+		}
 		// else this is a leaf
 
 		// each shape's data is encoded in 8 rgba(or xyzw) texture slots
@@ -257,18 +261,42 @@ float SceneIntersect( )
 		 			   texelFetch(tShape_DataTexture, uv3, 0) );
 
 		sd4 = texelFetch(tShape_DataTexture, uv4, 0);
-		if (uSceneIsDynamic)
+		
+		if (uAnimationType == 1.0)
 		{
 			// animate Translation
 			invTransformMatrix[3][1] = -1.0 + (sin(uTime + currentBoxNodeData1.w) * 1.5);
-
+		}
+		if (uAnimationType == 2.0)
+		{
 			// animate Rotation
-			/* mat4 mx = makeRotateX(uTime + currentBoxNodeData1.w);
+			mat4 mx = makeRotateX(uTime + currentBoxNodeData1.w);
 			mat4 my = makeRotateY(uTime + currentBoxNodeData1.w);
-			invTransformMatrix = mx * my * invTransformMatrix; */
+			invTransformMatrix = mx * my * invTransformMatrix;
 
+			if (sd4.x == 1.0)
+			{
+				mat4 m;
+				float mod3 = floor(mod(currentBoxNodeData1.w, 3.0));
+				if (mod3 == 0.0)
+				{
+					m = makeScaleX(2.0);
+				}
+				else if (mod3 == 1.0)
+				{
+					m = makeScaleY(2.0);
+				}
+				else //mod3 == 2.0
+				{
+					m = makeScaleZ(2.0);
+				}
+				invTransformMatrix = m * invTransformMatrix;
+			}
+		}
+		if (uAnimationType == 3.0)
+		{
 			// animate Scaling
-			/* mat4 m;
+			mat4 m;
 			float mod3 = floor(mod(currentBoxNodeData1.w, 3.0));
 			if (mod3 == 0.0)
 			{
@@ -282,8 +310,7 @@ float SceneIntersect( )
 			{
 				m = makeScaleZ(10.0 - abs(sin(uTime + currentBoxNodeData1.w) * 9.5));
 			}
-			invTransformMatrix = m * invTransformMatrix; */
-			
+			invTransformMatrix = m * invTransformMatrix;
 		}
 			
 
@@ -508,7 +535,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		if (hitType == REFR)  // Ideal dielectric REFRACTION
 		{
 			nc = 1.0; // IOR of Air
-			nt = 1.5; // IOR of common Glass
+			nt = hitColor == vec3(1,1,0) ? 1.1 : 1.5; // IOR of common Glass
 			Re = calcFresnelReflectance(rayDirection, n, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 
