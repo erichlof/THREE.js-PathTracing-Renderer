@@ -123,7 +123,7 @@ For a while now, I have been wanting to recreate the scene below from the cover 
 
 ![RTIOWbook1-final](https://github.com/user-attachments/assets/1121b7dd-1a56-43e1-b2c2-9439f9a42672)
 
-* [Ray Tracing In One Weekend Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Ray_Tracing_In_One_Weekend.html) <br>
+* [Ray Tracing In One Weekend Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/RayTracing_In_One_Weekend.html) <br>
 
 I think that this system might help us get closer to the dream of having most graphics ray traced in real-time with the browser, especially when it comes to under-powered devices like cell phones, tablets, and mobile VR headsets. I don't believe that we can just throw the standard 'triangle BVH' system at phones and tablets and expect them to perform like a desktop with an NVIDIA RTX ray tracing card.  I think that for the time being, until small mobile devices get way faster and more energy efficient, that we will have to rely on more 'outside-the-box' thinking and techniques, if we are to have any hope of having high quality ray-traced graphics available everywhere around us, on any device. I'm really excited to see what the future of graphics on the web has in store for us.
 <br>
