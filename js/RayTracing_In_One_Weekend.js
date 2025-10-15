@@ -23,10 +23,11 @@ let shape_aabb_array;
 let aabbDataTexture;
 let totalWorklist;
 
-let animation_TypeObject, shape_TypeObject;
-let animation_TypeController, shape_TypeController;
+let animation_TypeObject, shape_TypeObject, showBVH_ToggleObject;
+let animation_TypeController, shape_TypeController, showBVH_ToggleController;
 let changeAnimationType = false;
 let changeShapeType = false;
+let toggleShowBVH = false;
 let animationType, shapeType;
 let shapeNumberCode = 1;
 
@@ -252,6 +253,9 @@ function initSceneData()
 	shape_TypeObject = {
 		Select_Shapes: 'Spheres'
 	};
+	showBVH_ToggleObject = {
+		Show_BVH_Leaves: false
+	};
 
 	function handleAnimationTypeChange() 
 	{
@@ -261,13 +265,20 @@ function initSceneData()
 	{
 		changeShapeType = true;
 	}
+	function handleToggleShowBVH()
+	{
+		toggleShowBVH = true;
+	}
 
-	animation_TypeController = gui.add(animation_TypeObject, 'Play_Animation', ['None', 'Animation #1']).onChange(handleAnimationTypeChange);
-	shape_TypeController = gui.add(shape_TypeObject, 'Select_Shapes', ['Spheres', 'Boxes', 'Cylinders', 'Cones', 'Paraboloids']).onChange(handleShapeTypeChange);
+	animation_TypeController = gui.add(animation_TypeObject, 'Play_Animation', ['None', 'Translation Animation', 'Rotation Animation', 'Scaling Animation']).onChange(handleAnimationTypeChange);
+	shape_TypeController = gui.add(shape_TypeObject, 'Select_Shapes', ['Spheres', 'Boxes', 'Cylinders', 'Cones', 'Paraboloids', 'Random']).onChange(handleShapeTypeChange);
+	showBVH_ToggleController = gui.add(showBVH_ToggleObject, 'Show_BVH_Leaves', false).onChange(handleToggleShowBVH);
 
 	// scene/demo-specific uniforms go here
 	pathTracingUniforms.tShape_DataTexture = { value: shapeDataTexture };
 	pathTracingUniforms.tAABB_DataTexture = { value: aabbDataTexture };
+	pathTracingUniforms.uAnimationType = { value: 0.0 };
+	pathTracingUniforms.uShowBVH_Leaves = { value: false };
 
 
 } // end function initSceneData()
@@ -277,6 +288,36 @@ function initSceneData()
 // called automatically from within the animate() function (located in InitCommon.js file)
 function updateVariablesAndUniforms() 
 {
+
+	if (changeShapeType) 
+	{
+		shapeType = shape_TypeController.getValue();
+		if (shapeType == 'Boxes') 
+			shapeNumberCode = 0;
+		else if (shapeType == 'Spheres') 
+			shapeNumberCode = 1;
+		else if (shapeType == 'Cylinders') 
+			shapeNumberCode = 2;
+		else if (shapeType == 'Cones') 
+			shapeNumberCode = 3;
+		else if (shapeType == 'Paraboloids') 
+			shapeNumberCode = 4;
+
+		for (let i = 0; i < totalNumberOfShapes; i++) 
+		{
+			ix32 = i * 32;
+			if (shapeType == 'Random') 
+				shapeNumberCode = Math.floor(Math.random() * 5);
+			shape_array[ix32 + 16] = shapeNumberCode;
+		}
+		shapeDataTexture.needsUpdate = true;
+
+		cameraIsMoving = true;
+		changeShapeType = false;
+
+		changeAnimationType = true;
+	} // end if (changeShapeType)
+
 	if (changeAnimationType) 
 	{
 		animationType = animation_TypeController.getValue();
@@ -333,10 +374,11 @@ function updateVariablesAndUniforms()
 			
 			console.timeEnd("BvhGeneration");
 			
+			pathTracingUniforms.uAnimationType.value = 0.0;
 			aabbDataTexture.needsUpdate = true;
 			sceneIsDynamic = false;
 		} // end if (animationType == 'None')
-		else if (animationType == 'Animation #1') 
+		else if (animationType == 'Translation Animation') 
 		{
 			boxGeometries = [];
 			boxMeshes = [];
@@ -352,7 +394,7 @@ function updateVariablesAndUniforms()
 				shape.updateMatrixWorld(true); // 'true' forces immediate matrix update
 				// if this shape is a Box, use THREE.BoxGeometry as starting point for this shape's AABB
 				//if (shape_array[ix32 + 16] == 0) 
-					boxGeometries[i] = new THREE.BoxGeometry(4, 5, 4);
+					boxGeometries[i] = new THREE.BoxGeometry(2, 5, 2);
 				//else // else use THREE.SphereGeometry, as it produces a tighter-fitting AABB when shape is rotated
 				//	boxGeometries[i] = new THREE.SphereGeometry(1.4);
 
@@ -388,9 +430,122 @@ function updateVariablesAndUniforms()
 			
 			console.timeEnd("BvhGeneration");
 
+			pathTracingUniforms.uAnimationType.value = 1.0;
 			aabbDataTexture.needsUpdate = true;
 			sceneIsDynamic = true;
-		} // end else if (animationType == 'Animation #1')
+		} // end else if (animationType == 'Translation Animation')
+		else if (animationType == 'Rotation Animation') 
+		{
+			boxGeometries = [];
+			boxMeshes = [];
+
+			for (let i = 0; i < totalNumberOfShapes; i++) 
+			{
+				ix32 = i * 32;
+				ix9 = i * 9;
+
+				shape.position.copy(spherePositions[i]);
+				shape.rotation.set(0, 0, 0);
+				shape.scale.set(0.2, 0.2, 0.2);
+				shape.updateMatrixWorld(true); // 'true' forces immediate matrix update
+				// if this shape is a Box, use THREE.BoxGeometry as starting point for this shape's AABB
+				if (shape_array[ix32 + 16] == 0) 
+					boxGeometries[i] = new THREE.SphereGeometry(1.6);
+				else // else use THREE.SphereGeometry, as it produces a tighter-fitting AABB when shape is rotated
+					boxGeometries[i] = new THREE.SphereGeometry(1.3);
+
+				boxMeshes[i] = new THREE.Mesh( boxGeometries[i], boxMaterial );
+				
+				boxMeshes[i].geometry.applyMatrix4(shape.matrixWorld);
+				boxMeshes[i].geometry.computeBoundingBox();
+				
+				shapeBoundingBox_minCorner.copy(boxMeshes[i].geometry.boundingBox.min);
+				shapeBoundingBox_maxCorner.copy(boxMeshes[i].geometry.boundingBox.max);
+				boxMeshes[i].geometry.boundingBox.getCenter(shapeBoundingBox_centroid);
+
+				shape_aabb_array[ix9 + 0] = shapeBoundingBox_minCorner.x;
+				shape_aabb_array[ix9 + 1] = shapeBoundingBox_minCorner.y;
+				shape_aabb_array[ix9 + 2] = shapeBoundingBox_minCorner.z;
+				shape_aabb_array[ix9 + 3] = shapeBoundingBox_maxCorner.x;
+				shape_aabb_array[ix9 + 4] = shapeBoundingBox_maxCorner.y;
+				shape_aabb_array[ix9 + 5] = shapeBoundingBox_maxCorner.z;
+				shape_aabb_array[ix9 + 6] = shapeBoundingBox_centroid.x;
+				shape_aabb_array[ix9 + 7] = shapeBoundingBox_centroid.y;
+				shape_aabb_array[ix9 + 8] = shapeBoundingBox_centroid.z;
+
+				totalWorklist[i] = i;
+			} // end for (let i = 0; i < totalNumberOfShapes; i++)
+
+			// for the recursive Quick Builder, must set nodesUsed back to 1
+			nodesUsed = 1;
+
+			console.log("BvhGeneration...");
+			console.time("BvhGeneration");
+			
+			BVH_QuickBuild(totalWorklist, shape_aabb_array);
+			
+			console.timeEnd("BvhGeneration");
+
+			pathTracingUniforms.uAnimationType.value = 2.0;
+			aabbDataTexture.needsUpdate = true;
+			sceneIsDynamic = true;
+		} // end else if (animationType == 'Rotation Animation')
+		else if (animationType == 'Scaling Animation') 
+		{
+			boxGeometries = [];
+			boxMeshes = [];
+
+			for (let i = 0; i < totalNumberOfShapes; i++) 
+			{
+				ix32 = i * 32;
+				ix9 = i * 9;
+
+				shape.position.copy(spherePositions[i]);
+				shape.rotation.set(0, 0, 0);
+				shape.scale.set(0.2, 0.2, 0.2);
+				shape.updateMatrixWorld(true); // 'true' forces immediate matrix update
+				// if this shape is a Box, use THREE.BoxGeometry as starting point for this shape's AABB
+				//if (shape_array[ix32 + 16] == 0) 
+					boxGeometries[i] = new THREE.BoxGeometry(4, 4, 4);
+				//else // else use THREE.SphereGeometry, as it produces a tighter-fitting AABB when shape is rotated
+				//	boxGeometries[i] = new THREE.SphereGeometry(1.4);
+
+				boxMeshes[i] = new THREE.Mesh( boxGeometries[i], boxMaterial );
+				
+				boxMeshes[i].geometry.applyMatrix4(shape.matrixWorld);
+				boxMeshes[i].geometry.computeBoundingBox();
+				
+				shapeBoundingBox_minCorner.copy(boxMeshes[i].geometry.boundingBox.min);
+				shapeBoundingBox_maxCorner.copy(boxMeshes[i].geometry.boundingBox.max);
+				boxMeshes[i].geometry.boundingBox.getCenter(shapeBoundingBox_centroid);
+
+				shape_aabb_array[ix9 + 0] = shapeBoundingBox_minCorner.x;
+				shape_aabb_array[ix9 + 1] = shapeBoundingBox_minCorner.y;
+				shape_aabb_array[ix9 + 2] = shapeBoundingBox_minCorner.z;
+				shape_aabb_array[ix9 + 3] = shapeBoundingBox_maxCorner.x;
+				shape_aabb_array[ix9 + 4] = shapeBoundingBox_maxCorner.y;
+				shape_aabb_array[ix9 + 5] = shapeBoundingBox_maxCorner.z;
+				shape_aabb_array[ix9 + 6] = shapeBoundingBox_centroid.x;
+				shape_aabb_array[ix9 + 7] = shapeBoundingBox_centroid.y;
+				shape_aabb_array[ix9 + 8] = shapeBoundingBox_centroid.z;
+
+				totalWorklist[i] = i;
+			} // end for (let i = 0; i < totalNumberOfShapes; i++)
+
+			// for the recursive Quick Builder, must set nodesUsed back to 1
+			nodesUsed = 1;
+
+			console.log("BvhGeneration...");
+			console.time("BvhGeneration");
+			
+			BVH_QuickBuild(totalWorklist, shape_aabb_array);
+			
+			console.timeEnd("BvhGeneration");
+
+			pathTracingUniforms.uAnimationType.value = 3.0;
+			aabbDataTexture.needsUpdate = true;
+			sceneIsDynamic = true;
+		} // end else if (animationType == 'Scaling Animation')
 
 		pathTracingUniforms.uSceneIsDynamic.value = sceneIsDynamic;
 		screenOutputUniforms.uSceneIsDynamic.value = sceneIsDynamic;
@@ -400,32 +555,13 @@ function updateVariablesAndUniforms()
 
 	} // end if (changeAnimationType)
 
-	if (changeShapeType) 
+	if (toggleShowBVH)
 	{
-		shapeType = shape_TypeController.getValue();
-		if (shapeType == 'Boxes') 
-			shapeNumberCode = 0;
-		else if (shapeType == 'Spheres') 
-			shapeNumberCode = 1;
-		else if (shapeType == 'Cylinders') 
-			shapeNumberCode = 2;
-		else if (shapeType == 'Cones') 
-			shapeNumberCode = 3;
-		else if (shapeType == 'Paraboloids') 
-			shapeNumberCode = 4;
-
-		for (let i = 0; i < totalNumberOfShapes; i++) 
-		{
-			ix32 = i * 32;
-			shape_array[ix32 + 16] = shapeNumberCode;
-		}
-		shapeDataTexture.needsUpdate = true;
-
+		pathTracingUniforms.uShowBVH_Leaves.value = showBVH_ToggleController.getValue();
 		cameraIsMoving = true;
-		changeShapeType = false;
-
-	} // end if (changeShapeType)
-
+		toggleShowBVH = false;
+	}
+	
 
 	// INFO
 	cameraInfoElement.innerHTML = "FOV: " + worldCamera.fov + " / Aperture: " + apertureSize.toFixed(3) + " / FocusDistance: " + focusDistance.toFixed(1) + "<br>" + "Samples: " + sampleCounter;
