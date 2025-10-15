@@ -118,7 +118,14 @@ The above image of the classic scene entitled "Invisible Date" (by Christa Marx,
 
 * ['Invisible Date' scene / Shapes BVH Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Invisible_Date.html) <br>
 
-I think that this system might help us get closer to the dream of having most graphics ray traced in real-time with the browser, especially when it comes to under-powered devices like cell phones, tablets, and mobile VR headsets. I don't believe that we can just throw the standard 'triangle BVH' system at phones and tablets and expect them to perform like a desktop with an NVIDIA RTX ray tracing card.  I think that for the time being, until small mobile devices get way faster and more energy efficient, that we will have to rely on more 'outside-the-box' thinking and techniques, if we are to have any hope of having high quality ray-traced graphics available everywhere around us, on any device. I'm really excited to see what the future of graphics on the web has in store for us.  Imagine visiting a website or playing a game in a photorealistic real-time path traced environment...in VR...on the go!
+<br> <br>
+For a while now, I have been wanting to recreate the scene below from the cover of Peter Shirley's awesome [Ray Tracing In One Weekend book](https://raytracing.github.io/books/RayTracingInOneWeekend.html). The original scene contains over 480 spheres placed randomly on the ground, each having a different color and different material (and roughness on metals).  At the end of the book, this static scene is progressively rendered over several minutes to produce the final image.  <br>
+
+![RTIOWbook1-final](https://github.com/user-attachments/assets/1121b7dd-1a56-43e1-b2c2-9439f9a42672)
+
+* [Ray Tracing In One Weekend Demo](https://erichlof.github.io/THREE.js-PathTracing-Renderer/Ray_Tracing_In_One_Weekend.html) <br>
+
+I think that this system might help us get closer to the dream of having most graphics ray traced in real-time with the browser, especially when it comes to under-powered devices like cell phones, tablets, and mobile VR headsets. I don't believe that we can just throw the standard 'triangle BVH' system at phones and tablets and expect them to perform like a desktop with an NVIDIA RTX ray tracing card.  I think that for the time being, until small mobile devices get way faster and more energy efficient, that we will have to rely on more 'outside-the-box' thinking and techniques, if we are to have any hope of having high quality ray-traced graphics available everywhere around us, on any device. I'm really excited to see what the future of graphics on the web has in store for us.
 <br>
 <br>
 
