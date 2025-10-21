@@ -71,39 +71,6 @@ void GetBoxNodeData(const in float i, inout vec4 boxNodeData0, inout vec4 boxNod
 	boxNodeData1 = texelFetch(tAABB_DataTexture, uv1, 0);
 }
 
-mat4 makeRotateX(float rot)
-{
-	float s = sin(rot);
-	float c = cos(rot);
-	return mat4(
-		1, 0,  0, 0,
-		0, c, -s, 0,
-		0, s,  c, 0,
-		0, 0,  0, 1
-	);
-}
-mat4 makeRotateY(float rot)
-{
-	float s = sin(rot);
-	float c = cos(rot);
-	return mat4(
-	 	c, 0, s, 0,
-	 	0, 1, 0, 0,
-	       -s, 0, c, 0,
-	 	0, 0, 0, 1 
-	);
-}
-mat4 makeRotateZ(float rot)
-{
-	float s = sin(rot);
-	float c = cos(rot);
-	return mat4(
-		c, -s, 0, 0,
-		s,  c, 0, 0,
-		0,  0, 1, 0,
-		0,  0, 0, 1
-	);
-}
 
 mat4 makeScaleX(float s)
 {
@@ -254,13 +221,14 @@ float SceneIntersect( )
 		uv2 = ivec2( mod(id + 2.0, 2048.0), (id + 2.0) * INV_TEXTURE_WIDTH );
 		uv3 = ivec2( mod(id + 3.0, 2048.0), (id + 3.0) * INV_TEXTURE_WIDTH );
 		uv4 = ivec2( mod(id + 4.0, 2048.0), (id + 4.0) * INV_TEXTURE_WIDTH );
-		
+		uv7 = ivec2( mod(id + 7.0, 2048.0), (id + 7.0) * INV_TEXTURE_WIDTH );
 		invTransformMatrix = mat4( texelFetch(tShape_DataTexture, uv0, 0),
 		 			   texelFetch(tShape_DataTexture, uv1, 0), 
 		 			   texelFetch(tShape_DataTexture, uv2, 0), 
 		 			   texelFetch(tShape_DataTexture, uv3, 0) );
 
-		sd4 = texelFetch(tShape_DataTexture, uv4, 0);
+		sd4 = texelFetch(tShape_DataTexture, uv4, 0); // contains shape type and some material info
+		sd7 = texelFetch(tShape_DataTexture, uv7, 0); // contains rotation Axis/Angle info
 		
 		if (uAnimationType == 1.0)
 		{
@@ -270,9 +238,29 @@ float SceneIntersect( )
 		if (uAnimationType == 2.0)
 		{
 			// animate Rotation
-			mat4 mx = makeRotateX(uTime + currentBoxNodeData1.w);
-			mat4 my = makeRotateY(uTime + currentBoxNodeData1.w);
-			invTransformMatrix = mx * my * invTransformMatrix;
+
+			// first, create ortho basis vectors
+			vec3 xAxis = vec3(1,0,0);
+			vec3 yAxis = vec3(0,1,0);
+			vec3 zAxis = vec3(0,0,1);
+			// each object has a unique axis of rotation, which was stored on the tShape_DataTexture
+			vec3 rotAxis = vec3(sd7.x, sd7.y, sd7.z);
+			// rotation angle increases with time. Offset the phase with a stored offset angle from the tShape_DataTexture
+			float cosAngle = cos(uTime + sd7.w);
+			float sinAngle = sin(uTime + sd7.w);
+			// perform axis-angle rotation on each axis of the original ortho basis (GLSL algo by Fabrice Neyret on ShaderToy)
+			xAxis = mix(dot(xAxis, rotAxis) * rotAxis, xAxis, cosAngle) + sinAngle * cross(xAxis, rotAxis);
+			yAxis = mix(dot(yAxis, rotAxis) * rotAxis, yAxis, cosAngle) + sinAngle * cross(yAxis, rotAxis);
+			zAxis = mix(dot(zAxis, rotAxis) * rotAxis, zAxis, cosAngle) + sinAngle * cross(zAxis, rotAxis);
+			// place the rotated basis vectors into the columns of a new 4x4 matrix - in this case, we have created a Rotation matrix
+			mat4 R = mat4(
+				xAxis.x, yAxis.x, zAxis.x, 0,
+				xAxis.y, yAxis.y, zAxis.y, 0,
+				xAxis.z, yAxis.z, zAxis.z, 0,
+				0,       0,       0,       1 
+			);
+			// apply this Rotation matrix 'R' to this object's original inverse transform matrix (stored on the tShape_DataTexture)
+			invTransformMatrix = R * invTransformMatrix;
 
 			if (sd4.x == 1.0)
 			{
