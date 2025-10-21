@@ -11,6 +11,7 @@ let testPoint = new THREE.Vector3(4, 0.2, 0);
 let spherePositions = [];
 let choose_mat = 0;
 let tempColor = new THREE.Color();
+let tempVector = new THREE.Vector3();
 let shape = new THREE.Object3D();
 let invMatrix = new THREE.Matrix4();
 let el; // elements of the invMatrix
@@ -164,11 +165,12 @@ function initSceneData()
 		shape_array[ix32 + 26] = 1.5; // b or z // material ClearCoat IoR - default: 1.5(thick ClearCoat)
 		shape_array[ix32 + 27] = 0; // a or w // material data
 
+		tempVector.set(Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1).normalize();
 		//slot 7
-		shape_array[ix32 + 28] = 0; // r or x // material data
-		shape_array[ix32 + 29] = 0; // g or y // material data
-		shape_array[ix32 + 30] = 0; // b or z // material data
-		shape_array[ix32 + 31] = 0; // a or w // material data
+		shape_array[ix32 + 28] = tempVector.x; // r or x // material data
+		shape_array[ix32 + 29] = tempVector.y; // g or y // material data
+		shape_array[ix32 + 30] = tempVector.z; // b or z // material data
+		shape_array[ix32 + 31] = Math.random() * Math.PI * 2; // a or w // material data
 
 		// if this shape is a Box, use THREE.BoxGeometry as starting point for this shape's AABB
 		//if (shape_array[ix32 + 16] == 0) 
@@ -571,4 +573,3 @@ function updateVariablesAndUniforms()
 
 
 init(); // init app and start animating
-
