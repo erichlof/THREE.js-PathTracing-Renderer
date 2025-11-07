@@ -31,7 +31,8 @@ function initSceneData()
 
 	torusObject.rotation.set((Math.PI * 0.5) - 0.05, -0.05, 0);
 	torusObject.position.set(-60, 6, 50);
-	torusObject.scale.set(11.5, 11.5, 11.5);
+	torusObject.scale.set(10, 10, 10);
+	torusObject.updateMatrixWorld(true); // 'true' forces immediate matrix update
 
 	// set camera's field of view
 	worldCamera.fov = 60;
@@ -79,7 +80,10 @@ function initSceneData()
 
 	// scene/demo-specific uniforms go here
 	pathTracingUniforms.uTorusInvMatrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uTorusPosition = { value: torusObject.position };
 	pathTracingUniforms.uSamplesPerFrame = { value: 4 };
+
+	pathTracingUniforms.uTorusInvMatrix.value.copy(torusObject.matrixWorld).invert();
 
 } // end function initSceneData()
 
@@ -110,9 +114,6 @@ function updateVariablesAndUniforms()
 	}
 
 
-	// TORUS
-	torusObject.updateMatrixWorld(true); // 'true' forces immediate matrix update
-	pathTracingUniforms.uTorusInvMatrix.value.copy(torusObject.matrixWorld).invert();
 
 	// INFO
 	cameraInfoElement.innerHTML = "FOV: " + worldCamera.fov + " / Aperture: " + apertureSize.toFixed(2) + " / FocusDistance: " + focusDistance + "<br>" + "Samples: " + sampleCounter;
