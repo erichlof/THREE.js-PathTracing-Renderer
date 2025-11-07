@@ -24,7 +24,7 @@ function initSceneData()
 	pathTracingScene.add(torusObject);
 	
 	torusObject.position.set(-60, 18, 50);
-	torusObject.scale.set(11.5, 11.5, 11.5);
+	torusObject.scale.set(10, 10, 10);
 
 	// set camera's field of view
 	worldCamera.fov = 60;
@@ -40,6 +40,7 @@ function initSceneData()
 
 	// scene/demo-specific uniforms go here
 	pathTracingUniforms.uTorusInvMatrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uTorusPosition = { value: torusObject.position };
 
 } // end function initSceneData()
 
