@@ -5,6 +5,7 @@ precision highp sampler2D;
 #include <pathtracing_uniforms_and_defines>
 
 uniform mat4 uTorusInvMatrix;
+uniform vec3 uTorusPosition;
 
 #define N_LIGHTS 3.0
 #define N_SPHERES 6
@@ -38,7 +39,7 @@ struct OpenCylinder { float radius; float height; vec3 position; vec3 emission; 
 struct CappedCylinder { float radius; vec3 cap1pos; vec3 cap2pos; vec3 emission; vec3 color; int type; };
 struct Cone { vec3 pos0; float radius0; vec3 pos1; float radius1; vec3 emission; vec3 color; int type; };
 struct Capsule { vec3 pos0; float radius0; vec3 pos1; float radius1; vec3 emission; vec3 color; int type; };
-struct UnitTorus { float parameterK; vec3 emission; vec3 color; int type; };
+struct UnitTorus { float tubeRadius; vec3 emission; vec3 color; int type; };
 struct Box { vec3 minCorner; vec3 maxCorner; vec3 emission; vec3 color; int type; };
 
 Sphere spheres[N_SPHERES];
@@ -58,8 +59,6 @@ Box boxes[N_BOXES];
 
 #include <pathtracing_sphere_intersect>
 
-#include <pathtracing_unit_bounding_sphere_intersect>
-
 #include <pathtracing_ellipsoid_intersect>
 
 #include <pathtracing_opencylinder_intersect>
@@ -75,6 +74,8 @@ Box boxes[N_BOXES];
 #include <pathtracing_unit_torus_intersect>
 
 #include <pathtracing_box_intersect>
+
+#include <pathtracing_boundingbox_intersect>
 
 #include <pathtracing_sample_sphere_light>
 
@@ -269,29 +270,55 @@ float SceneIntersect( out int finalIsRayExiting )
 		hitObjectID = float(objectCount);
 	}
 	objectCount++;
-        
-	// transform ray into Torus's object space
-	rObjOrigin = vec3( uTorusInvMatrix * vec4(rayOrigin, 1.0) );
-	rObjDirection = vec3( uTorusInvMatrix * vec4(rayDirection, 0.0) );
-	// first check that the ray hits the bounding sphere around the torus
-	d = UnitBoundingSphereIntersect( rObjOrigin, rObjDirection, insideSphere );
-	if (d < INFINITY)
-	{	// if outside the sphere, move the ray up close to the Torus, for numerical stability
-		d = insideSphere == TRUE ? 0.0 : d;
-		rObjOrigin += rObjDirection * d;
 
-		dt = d + UnitTorusIntersect( rObjOrigin, rObjDirection, torii[0].parameterK, n );
-		if (dt < t)
-		{
-			t = dt;
-			hitNormal = transpose(mat3(uTorusInvMatrix)) * n;
-			hitEmission = torii[0].emission;
-			hitColor = torii[0].color;
-			hitType = torii[0].type;
-			hitObjectID = float(objectCount);
-		}
-	}
         
+	// UNIT TORUS
+
+	vec3 torusAABBmin = vec3(-1,-1,-1) * 10.0 * (1.0 + torii[0].tubeRadius); // 10.0 is torus' scale
+	vec3 torusAABBmax = vec3( 1, 1, 1) * 10.0 * (1.0 + torii[0].tubeRadius); // 10.0 is torus' scale
+	//vec3 torusPosition = vec3( inverse(uTorusInvMatrix) * vec4(vec3(0), 1) );
+	torusAABBmin += uTorusPosition;
+	torusAABBmax += uTorusPosition;
+	
+	d = BoundingBoxIntersect( torusAABBmin, torusAABBmax, rayOrigin, 1.0/rayDirection );
+	if (d == INFINITY)
+		return t;
+
+	float distToTorusAABB = 0.0;
+	// in the torus' case, its AABB is always a perfect cube (to allow for arbitrary rotations and scaling), so we can just pick one extent
+	float BoxMinBoxMax_ext = (torusAABBmax.x - torusAABBmin.x) * 1.5; // pick 'x' extent as representative of all AABB extents, since it's always a cube
+
+	// first check if rayOrigin is outside the torus' bounding box volume
+	if (any(lessThan(rayOrigin, torusAABBmin)) || any(greaterThan(rayOrigin, torusAABBmax)))
+	{
+		// move rayOrigin up to the outside of torus' bounding box
+		// when starting the ray closer to the torus, intersection calculations will remain precise, even if camera is very far away 
+		vec3 torusRayOrigin = rayOrigin + (d * rayDirection);
+		distToTorusAABB = d; // record the distance that we had to move the rayOrigin to be closer to the torus
+		// transform ray into unit torus' object space, using a rayOrigin that is moved up closer to torus 
+		rObjOrigin = vec3( uTorusInvMatrix * vec4(torusRayOrigin, 1.0) ); // modified rayOrigin
+		rObjDirection = vec3( uTorusInvMatrix * vec4(rayDirection, 0.0) );
+	}
+	else// the rayOrigin is already close to the torus (within its bounding box volume), so continue normally
+	{
+		// transform ray into unit torus' object space, using the normal unmodified rayOrigin
+		rObjOrigin = vec3( uTorusInvMatrix * vec4(rayOrigin, 1.0) ); // unmodified rayOrigin
+		rObjDirection = vec3( uTorusInvMatrix * vec4(rayDirection, 0.0) );
+	}
+
+	d = UnitTorusIntersect( rObjOrigin, rObjDirection, torii[0].tubeRadius, BoxMinBoxMax_ext, 0.0, 1.0, 
+				0.0, 1.0, vec3(-1), vec3(1), n );
+	d += distToTorusAABB; // if the rayOrigin was moved up closer to torus, now it will be added back into the total distance to intersection
+	if (d < t)
+	{
+		t = d;
+		hitNormal = transpose(mat3(uTorusInvMatrix)) * n;
+		hitEmission = torii[0].emission;
+		hitColor = torii[0].color;
+		hitType = torii[0].type;
+		hitObjectID = float(objectCount);
+	}
+
 	
 	return t;
 	
@@ -641,7 +668,7 @@ void SetupScene(void)
 	
 	capsules[0] = Capsule( vec3(80,13,15), 10.0, vec3(110,15.8,15), 10.0, z, vec3(1.01,1.0,1.0), COAT);//white Capsule
 	
-	torii[0] = UnitTorus( 0.75, z, vec3(0.955008, 0.637427, 0.538163), SPEC);//copper Torus
+	torii[0] = UnitTorus( 0.15, z, vec3(0.955008, 0.637427, 0.538163), SPEC);//copper Torus
 	
 	boxes[0] = Box( vec3(50.0,21.0,-60.0), vec3(100.0,28.0,-130.0), z, vec3(0.2,0.9,0.7), REFR);//Glass Box
 	boxes[1] = Box( vec3(56.0,23.0,-66.0), vec3(94.0,26.0,-124.0), z, vec3(0.0,0.0,0.0), DIFF);//Diffuse Box
