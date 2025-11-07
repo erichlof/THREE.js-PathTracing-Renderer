@@ -831,6 +831,116 @@ void ParabolicPrism_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1,
 }
 `;
 
+THREE.ShaderChunk[ 'pathtracing_hyperboloid_csg_intersect' ] = `
+//------------------------------------------------------------------------------------------------------------
+void Hyperboloid_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out float t1, out vec3 n0, out vec3 n1 )
+//------------------------------------------------------------------------------------------------------------
+{
+	vec3 hit;
+	vec3 hn0, hn1, cn0, cn1, dn0, dn1;
+	float h0, h1, c0, c1, d0, d1, dr0, dr1;
+	t0 = t1 = h0 = h1 = c0 = c1 = d0 = d1 = dr0 = dr1 = 0.0;
+	// implicit equation of a hyperboloid of 1 sheet (hourglass shape extending infinitely in the +Y and -Y directions):
+	// x^2 + z^2 - y^2 - 1 = 0
+	// conservative range of k: 1 to 100
+	float j = k - 1.0;
+	float a = (k * rd.x * rd.x) + (k * rd.z * rd.z) - (j * rd.y * rd.y);
+	float b = 2.0 * ((k * rd.x * ro.x) + (k * rd.z * ro.z) - (j * rd.y * ro.y));
+	float c = ((k * ro.x * ro.x) + (k * ro.z * ro.z) - (j * ro.y * ro.y)) - 1.0;
+	solveQuadratic(a, b, c, d0, d1);
+	if (d0 != 0.0)
+	{
+		hit = ro + (rd * d0);
+		if (abs(hit.y) <= 1.0) // validate h0
+		{
+			h0 = d0;
+			hn0 = vec3(hit.x * k, -hit.y * j, hit.z * k);
+		}
+	}
+	if (d1 != 0.0)
+	{
+		hit = ro + (rd * d1);
+		if (abs(hit.y) <= 1.0) // validate h1
+		{
+			h1 = d1;
+			hn1 = vec3(hit.x * k, -hit.y * j, hit.z * k);
+		}
+	}
+
+	// now intersect top and bottom unit-radius disk caps
+	if (rd.y < 0.0)
+	{
+		d0 = (ro.y - 1.0) / -rd.y;
+		dn0 = vec3(0,1,0);
+		d1 = (ro.y + 1.0) / -rd.y;
+		dn1 = vec3(0,-1,0);
+	}
+	else
+	{
+		d1 = (ro.y - 1.0) / -rd.y;
+		dn1 = vec3(0,1,0);
+		d0 = (ro.y + 1.0) / -rd.y;
+		dn0 = vec3(0,-1,0);
+	}
+	hit = ro + (rd * d0);
+	if ((hit.x * hit.x) + (hit.z * hit.z) <= 1.0) // unit radius disk
+	{
+		c0 = d0;
+		cn0 = dn0;
+	}
+	hit = ro + (rd * d1);
+	if ((hit.x * hit.x) + (hit.z * hit.z) <= 1.0) // unit radius disk
+	{
+		c1 = d1;
+		cn1 = dn1;
+	}
+
+	if (h0 == 0.0 && h1 == 0.0) // caps only intersection
+	{
+		t0 = c0;
+		n0 = cn0;
+		t1 = c1;
+		n1 = cn1;
+	}
+	else if (c0 == 0.0 && c1 == 0.0) // hyperboloid only intersection
+	{
+		t0 = h0;
+		n0 = hn0;
+		t1 = h1;
+		n1 = hn1;
+	}
+	else if (c0 != 0.0 && h0 > 0.0)
+	{
+		t0 = c0;
+		n0 = cn0;
+		t1 = h0;
+		n1 = hn0;
+	}
+	else if (h0 <= 0.0 && h1 != 0.0 && c1 > 0.0)
+	{
+		t0 = h1;
+		n0 = hn1;
+		t1 = c1;
+		n1 = cn1;
+	}
+	else if (c0 != 0.0 && h1 > 0.0)
+	{
+		t0 = c0;
+		n0 = cn0;
+		t1 = h1;
+		n1 = hn1;
+	}
+	else if (h0 != 0.0 && c1 > 0.0)
+	{
+		t0 = h0;
+		n0 = hn0;
+		t1 = c1;
+		n1 = cn1;
+	}
+	
+}
+`;
+
 THREE.ShaderChunk[ 'pathtracing_hyperboloid1sheet_csg_intersect' ] = `
 //------------------------------------------------------------------------------------------------------------
 void Hyperboloid1Sheet_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out float t1, out vec3 n0, out vec3 n1 )
@@ -2428,214 +2538,141 @@ float CheapTorusIntersect( vec3 rayOrigin, vec3 rayDirection, float torusHoleSiz
 
 THREE.ShaderChunk[ 'pathtracing_unit_torus_intersect' ] = `
 
-// The following Torus quartic solver algo/code is from https://www.shadertoy.com/view/ssc3Dn by Shadertoy user 'mla'
+// The following code and algorithms for finding roots of polynomial equations were taken and adapted for Torus
+// interesection from this blog post: https://blog.pkh.me/p/46-fast-calculation-of-the-distance-to-cubic-bezier-curves-on-the-gpu.html
+// The blog post deals with solving Quintic equations (degree 5), but the Torus has a Quartic equation to solve (degree 4),
+// so I followed the algorithm (which btw is using a modern state-of-the-art technique from Cem Yuksel https://www.youtube.com/watch?v=ok0EZ0fBCMA)
+// and changed it from solving a degree 5 equation to a degree 4 equation to match the Torus definition.
 
-float sgn(float x) 
+// standard modern quadratic solver (degree 2)
+int root_find2(out float r[4], float a, float b, float c) 
 {
-	return x < 0.0 ? -1.0 : 1.0; // Return 1.0 for x == 0.0
+	int count = 0;
+	float d = b*b - 4.*a*c;
+	if (d < 0.)
+		return count;
+	float h = sqrt(d);
+	float q = -.5 * (b + (b > 0. ? h : -h));
+	vec2 v = vec2(q/a, c/q);
+	if (v.x > v.y) v.xy = v.yx; // keep them ordered
+	if (v.x >= 0.) r[count++] = v.x;
+	if (v.y >= 0.) r[count++] = v.y;
+	return count;
 }
 
-float evalquadratic(float x, float A, float B, float C) 
+float poly4(float a, float b, float c, float d, float e, float t) 
 {
-  	return ((A * x) + B) * x + C;
+	return (((a * t + b) * t + c) * t + d) * t + e;
 }
 
-float evalcubic(float x, float A, float B, float C, float D) 
-{
-  	return (((A * x) + B) * x + C) * x + D;
+// Newton bisection
+//
+// a,b,c,d,e: 4th degree polynomial parameters
+// t: x-axis boundaries
+// v: respectively f(t.x) and f(t.y)
+float bisect4(float a, float b, float c, float d, float e, vec2 t, vec2 v) {
+    float x = (t.x+t.y) * .5; // mid point
+    float s = v.x < v.y ? 1. : -1.; // sign flip
+    for (int i = 0; i < 32; i++) {
+        // Evaluate polynomial (y) and its derivative (q) using Horner's method in one pass
+        float y = a*x + b, q = a*x + y;
+              y = y*x + c; q = q*x + y;
+              y = y*x + d; q = q*x + y;
+              y = y*x + e;
+
+        t = s*y < 0. ? vec2(x, t.y) : vec2(t.x, x);
+        float next = x - y/q; // Newton iteration
+        next = next >= t.x && next <= t.y ? next : (t.x+t.y) * .5;
+        if (abs(next - x) < 1e-4) // eps
+            return next;
+        x = next;
+    }
+    return x;
 }
 
-// Quadratic solver from Kahan
-int quadratic(float A, float B, float C, out vec2 res) 
+// Quartic: solve ax⁴+bx³+cx²+dx+e=0
+int cy_find4(out float r[4], float r4[4], int n, float a, float b, float c, float d, float e, float upper_bound) 
 {
-  	float b = -0.5 * B, b2 = b * b;
-  	float q = b2 - (A * C);
-  	if (q < 0.0) return 0;
-  	float r = b + (sgn(b) * sqrt(q));
-  	if (r == 0.0) 
+	int count = 0;
+	vec2 p = vec2(0, poly4(a,b,c,d,e, 0.));
+	for (int i = 0; i <= n; i++) 
 	{
-  		res[0] = C / A;
-    		res[1] = -res[0];
-  	} 
-	else 
-	{
-    		res[0] = C / r;
-    		res[1] = r / A;
-  	}
-
-  	return 2;
+		float x = i == n ? upper_bound : r4[i],
+		y = poly4(a,b,c,d,e, x);
+		if (p.y * y > 0.)
+			continue;
+		float v = bisect4(a,b,c,d,e, vec2(p.x,x), vec2(p.y,y));
+		r[count++] = v;
+		p = vec2(x, y);
+	}
+	return count;
 }
 
-// Numerical Recipes algorithm for solving cubic equation
-int cubic(float a, float b, float c, float d, out vec3 res) 
+// f4(x) =   ax^4 +  bx^3 +  cx^2 + dx + e;
+// f3(x) =  4ax^3 + 3bx^2 + 2cx   + d;
+// f2(x) = 12ax^2 + 6bx   + 2c; can be simplified by dividing all coefficients by 2
+//         /2      /2      /2  now becomes...
+// f2(x) =  6ax^2 + 3bx   +  c;
+int root_find4_cy(out float r[4], float a, float b, float c, float d, float e, float upper_bound) 
 {
-  	if (a == 0.0) 
-  	{
-    		return quadratic(b, c, d, res.xy);
-  	}
-  	if (d == 0.0) 
-  	{
-    		res.x = 0.0;
-    		return 1 + quadratic(a, b, c, res.yz);
-  	}
-  	float tmp = 1.0 / a; a = b * tmp; b = c * tmp; c = d * tmp;
-  	// solve x^3 + ax^2 + bx + c = 0
-  	float Q = ((a * a) - (3.0 * b)) * ONE_OVER_NINE;
-  	float R = ((2.0 * a * a * a) - (9.0 * a * b) + (27.0 * c)) * ONE_OVER_54;
-  	float R2 = R * R, Q3 = Q * Q * Q;
-  	if (R2 < Q3) 
-  	{
-    		float X = clamp(R / sqrt(Q3), -1.0, 1.0);
-    		float theta = acos(X);
-    		float S = sqrt(Q); // Q must be positive since 0 <= R2 < Q3
-    		res[0] = -2.0 * S * cos(theta * ONE_OVER_THREE) - (a * ONE_OVER_THREE);
-    		res[1] = -2.0 * S * cos((theta + (2.0 * PI)) * ONE_OVER_THREE) - (a * ONE_OVER_THREE);
-    		res[2] = -2.0 * S * cos((theta + (4.0 * PI)) * ONE_OVER_THREE) - (a * ONE_OVER_THREE);
-    		return 3;
-  	} 
-  	else 
-  	{
-    		float alpha = -sgn(R) * pow(abs(R) + sqrt(R2 - Q3), ONE_OVER_THREE);
-    		float beta = alpha == 0.0 ? 0.0 : Q / alpha;
-    		res[0] = alpha + beta - (a * ONE_OVER_THREE);
-    		return 1;
-  	}
+	float r2[4], r3[4];
+	int n = root_find2(r2,      6.*a, 3.*b,    c);                   // degree 2
+	n = cy_find4(r3, r2, n, 0., 4.*a, 3.*b, 2.*c, d,    upper_bound);// degree 3
+	n = cy_find4(r,  r3, n,        a,    b,    c, d, e, upper_bound);// degree 4
+	return n;
 }
 
-/* float qcubic(float B, float C, float D) {
-  vec3 roots;
-  int nroots = cubic(1.0,B,C,D,roots);
-  // Sort into descending order
-  if (nroots > 1 && roots.x < roots.y) roots.xy = roots.yx;
-  if (nroots > 2) {
-    if (roots.y < roots.z) roots.yz = roots.zy;
-    if (roots.x < roots.y) roots.xy = roots.yx;
-  }
-  // And select the largest
-  float psi = roots[0];
-  psi = max(1e-6,psi);
-  // and give a quick polish with Newton-Raphson
-  for (int i = 0; i < 3; i++) {
-    float delta = evalcubic(psi,1.0,B,C,D)/evalquadratic(psi,3.0,2.0*B,C);
-    psi -= delta;
-  }
-  return psi;
-} */
-
-float qcubic(float B, float C, float D) 
+float UnitTorusIntersect(vec3 ro, vec3 rd, float torus_r, float upper_bound, float minAngle, float maxAngle, 
+			 float minRadius, float maxRadius, vec3 minXYZ, vec3 maxXYZ, out vec3 n) 
 {
-  	vec3 roots;
-  	int nroots = cubic(1.0, B, C, D, roots);
-  	// Select the largest
-  	float psi = roots[0];
-  	if (nroots > 1) psi = max(psi, roots[1]);
-  	if (nroots > 2) psi = max(psi, roots[2]);
-  
-  	// Give a quick polish with Newton-Raphson
-  	float delta;
-	delta = evalcubic(psi, 1.0, B, C, D) / evalquadratic(psi, 3.0, 2.0 * B, C);
-	psi -= delta;
-	delta = evalcubic(psi, 1.0, B, C, D) / evalquadratic(psi, 3.0, 2.0 * B, C);
-    	psi -= delta;
-  
-  	return psi;
-}
-
-// The Lanczos quartic method
-int lquartic(float c1, float c2, float c3, float c4, out vec4 res) 
-{
-  	float alpha = 0.5 * c1;
-  	float A = c2 - alpha * alpha;
-  	float B = c3 - alpha * A;
-  	float a, b, beta, psi;
-  	psi = qcubic((2.0 * A) - (alpha * alpha), (A * A) + (2.0 * B * alpha) - (4.0 * c4), -B * B);
-  	// There _should_ be a root >= 0, but sometimes the cubic
-  	// solver misses it (probably a double root around zero).
-  	psi = max(0.0, psi);
-  	a = sqrt(psi);
-  	beta = 0.5 * (A + psi);
-  	if (psi <= 0.0) 
-  	{
-    		b = sqrt(max((beta * beta) - c4, 0.0));
-  	} 
-  	else 
-  	{
-    		b = 0.5 * a * (alpha - (B / psi));
-  	}
-
-  	int resn = quadratic(1.0, alpha + a, beta + b, res.xy);
-  	vec2 tmp;
-  	if (quadratic(1.0, alpha - a, beta - b, tmp) != 0) 
-  	{ 
-    		res.zw = res.xy;
-    		res.xy = tmp;
-    		resn += 2;
-  	}
-
-  	return resn;
-}
-
-// Note: the parameter below is renamed '_E', because Euler's number 'E' is already defined in 'pathtracing_defines_and_uniforms'
-int quartic(float A, float B, float C, float D, float _E, out vec4 roots) 
-{
-    	int nroots = lquartic(B / A, C / A, D / A, _E / A, roots);
-  
-  	return nroots;
-}
-
-
-float UnitTorusIntersect(vec3 ro, vec3 rd, float k, out vec3 n) 
-{
+	//torus_R is the distance (Major-Radius) from the torus center to the middle of the surrounding tubing
+	//  in this implementation, torus_R is set to unit radius of 1.0, which makes instancing easier
+	//torus_r is the user-defined thickness (minor-radius) of circular tubing part of torus/ring, range: 0.01 to 1.0
+	float torusR2 = 1.0; // Unit torus with torus_R (Major-Radius) of 1.0, torus_R * torus_R = 1.0 * 1.0
+	float torusr2 = torus_r * torus_r; // user-defined minor-radius, range: 0.01 to 1.0
 	// Note: the vec3 'rd' might not be normalized to unit length of 1, 
 	//  in order to allow for inverse transform of intersecting rays into Torus' object space
-	k = mix(0.5, 1.0, k);
-	float torus_R = max(0.0, k); // outer extent of the entire torus/ring
-	float torus_r = max(0.01, 1.0 - k); // thickness of circular 'tubing' part of torus/ring
-	float torusR2 = torus_R * torus_R;
-	float torusr2 = torus_r * torus_r;
-	
-	float U = dot(rd, rd);
-	float V = 2.0 * dot(ro, rd);
-	float W = dot(ro, ro) - (torusR2 + torusr2);
-	// A*t^4 + B*t^3 + C*t^2 + D*t + _E = 0
-	float A = U * U;
-	float B = 2.0 * U * V;
-	float C = (V * V) + (2.0 * U * W) + (4.0 * torusR2 * rd.z * rd.z);
-	float D = (2.0 * V * W) + (8.0 * torusR2 * ro.z * rd.z);
-// Note: the float below is renamed '_E', because Euler's number 'E' is already defined in 'pathtracing_defines_and_uniforms'
-	float _E = (W * W) + (4.0 * torusR2 * ((ro.z * ro.z) - torusr2));
-	
+	float u = dot(rd, rd);
+	float v = 2.0 * dot(ro, rd);
+	float w = dot(ro, ro) - (torusR2 + torusr2);
+	// at^4 + bt^3 + ct^2 + dt + e = 0
+	float a = u * u;
+	float b = 2.0 * u * v;
+	float c = (v * v) + (2.0 * u * w) + (4.0 * torusR2 * rd.z * rd.z);
+	float d = (2.0 * v * w) + (8.0 * torusR2 * ro.z * rd.z);
+	float e = (w * w) + (4.0 * torusR2 * ((ro.z * ro.z) - torusr2));
 
-	vec4 res = vec4(0);
-	int nr = quartic(A, B, C, D, _E, res);
-	if (nr == 0) return INFINITY;
-  	// Sort the roots.
-  	if (res.x > res.y) res.xy = res.yx; 
-  	if (nr > 2) 
-	{
-    		if (res.y > res.z) res.yz = res.zy; 
-    		if (res.x > res.y) res.xy = res.yx;
-  	}
-	if (nr > 3) 
-	{
-		if (res.z > res.w) res.zw = res.wz; 
-		if (res.y > res.z) res.yz = res.zy; 
-		if (res.x > res.y) res.xy = res.yx; 
-	}
-  
 	float t = INFINITY;
-	
-	t = (res.w > 0.0) ? res.w : t;	
-	t = (res.z > 0.0) ? res.z : t;
-	t = (res.y > 0.0) ? res.y : t;	
-	t = (res.x > 0.0) ? res.x : t;
-		
-	vec3 pos = ro + (t * rd);
-	n = pos * (dot(pos, pos) - torusr2 - (torusR2 * vec3(1, 1,-1)));
+	float roots[4];
+	int numRoots = root_find4_cy(roots, a, b, c, d, e, upper_bound);
 
-	// float kn = sqrt(torusR2 / dot(pos.xy, pos.xy));
-	// pos.xy -= kn * pos.xy;
-	// n = pos;
+	minAngle *= TWO_PI; maxAngle *= TWO_PI;
+	minRadius *= (1.01 + torus_r); maxRadius *= (1.01 + torus_r);
+	minXYZ.xy *= (1.01 + torus_r); maxXYZ.xy *= (1.01 + torus_r);
+	minXYZ.z *= (torus_r * 1.01); maxXYZ.z *= (torus_r * 1.01);
+	
+	vec3 hit = ro + (roots[0] * rd); float hitAngle = PI - atan(hit.y,-hit.x); float hitRadDist = length(hit);
+	if ( roots[0] < t && roots[0] > 0.0 && hitAngle > minAngle && hitAngle < maxAngle && hitRadDist > minRadius && hitRadDist < maxRadius && 
+		all(greaterThanEqual(hit, minXYZ)) && all(lessThanEqual(hit, maxXYZ)) )
+		t = roots[0];
+
+	hit = ro + (roots[1] * rd); hitAngle = PI - atan(hit.y,-hit.x); hitRadDist = length(hit);
+	if ( roots[1] < t && roots[1] > 0.0 && hitAngle > minAngle && hitAngle < maxAngle && hitRadDist > minRadius && hitRadDist < maxRadius && 
+		all(greaterThanEqual(hit, minXYZ)) && all(lessThanEqual(hit, maxXYZ)) )
+		t = roots[1];
+
+	hit = ro + (roots[2] * rd); hitAngle = PI - atan(hit.y,-hit.x); hitRadDist = length(hit);
+	if ( roots[2] < t && roots[2] > 0.0 && hitAngle > minAngle && hitAngle < maxAngle && hitRadDist > minRadius && hitRadDist < maxRadius && 
+		all(greaterThanEqual(hit, minXYZ)) && all(lessThanEqual(hit, maxXYZ)) )
+		t = roots[2];
+
+	hit = ro + (roots[3] * rd); hitAngle = PI - atan(hit.y,-hit.x); hitRadDist = length(hit);
+	if ( roots[3] < t && roots[3] > 0.0 && hitAngle > minAngle && hitAngle < maxAngle && hitRadDist > minRadius && hitRadDist < maxRadius && 
+		all(greaterThanEqual(hit, minXYZ)) && all(lessThanEqual(hit, maxXYZ)) )
+		t = roots[3];
+	
+	vec3 pos = ro + (t * rd);
+	n = pos * (dot(pos, pos) - torusr2 - (torusR2 * vec3(1, 1, -1)));
 	
   	return t;
 }
