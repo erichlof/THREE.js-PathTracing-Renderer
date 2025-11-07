@@ -334,7 +334,7 @@ void main()
 		else if (centerPixel.a == 1.0)
 			filteredPixelColor = mix(filteredPixelColor, centerPixel.rgb, clamp(uSampleCounter * uEdgeSharpenSpeed, 0.0, 1.0));
 		// the following statement helps smooth out jagged stairstepping where the blurred filteredPixelColor pixels meet the sharp edges
-		else if (uSampleCounter > 500.0 && nextToAnEdgePixel == TRUE)
+		else if (uSampleCounter > 250.0 && nextToAnEdgePixel == TRUE)
 		 	filteredPixelColor = centerPixel.rgb;
 		
 	}
