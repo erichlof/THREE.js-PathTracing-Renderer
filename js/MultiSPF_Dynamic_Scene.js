@@ -33,7 +33,7 @@ function initSceneData()
 	pathTracingScene.add(torusObject);
 	
 	torusObject.position.set(-60, 18, 50);
-	torusObject.scale.set(11.5, 11.5, 11.5);
+	torusObject.scale.set(10, 10, 10);
 
 	// set camera's field of view
 	worldCamera.fov = 60;
@@ -88,8 +88,10 @@ function initSceneData()
 	cameraFlight_SpeedController = gui.add(cameraFlight_SpeedObject, 'cameraFlightSpeed', 1, 1000, 1).onChange(handleCameraFlightSpeedChange);
 	cameraRotation_SpeedController = gui.add(cameraRotation_SpeedObject, 'cameraRotationSpeed', 0.0001, 2.0, 0.0001).onChange(handleCameraRotationSpeedChange);
 
+	
 	// scene/demo-specific uniforms go here
 	pathTracingUniforms.uTorusInvMatrix = { value: new THREE.Matrix4() };
+	pathTracingUniforms.uTorusPosition = { value: torusObject.position };
 	pathTracingUniforms.uSamplesPerFrame = { value: 4 };
 	pathTracingUniforms.uPreviousFrameBlendWeight = { value: 0.5 };
 
