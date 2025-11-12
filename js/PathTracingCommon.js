@@ -2622,8 +2622,42 @@ int root_find4_cy(out float r[4], float a, float b, float c, float d, float e, f
 	return n;
 }
 
-float UnitTorusIntersect(vec3 ro, vec3 rd, float torus_r, float upper_bound, float minAngle, float maxAngle, 
-			 float minRadius, float maxRadius, vec3 minXYZ, vec3 maxXYZ, out vec3 n) 
+float UnitTorusIntersect(vec3 ro, vec3 rd, float torus_r, float upper_bound, out vec3 n) 
+{
+	//torus_R is the distance (Major-Radius) from the torus center to the middle of the surrounding tubing
+	//  in this implementation, torus_R is set to unit radius of 1.0, which makes instancing easier
+	//torus_r is the user-defined thickness (minor-radius) of circular tubing part of torus/ring, range: 0.01 to 1.0
+	float torusR2 = 1.0; // Unit torus with torus_R (Major-Radius) of 1.0, torus_R * torus_R = 1.0 * 1.0
+	float torusr2 = torus_r * torus_r; // user-defined minor-radius, range: 0.01 to 1.0
+	// Note: the vec3 'rd' might not be normalized to unit length of 1, 
+	//  in order to allow for inverse transform of intersecting rays into Torus' object space
+	float u = dot(rd, rd);
+	float v = 2.0 * dot(ro, rd);
+	float w = dot(ro, ro) - (torusR2 + torusr2);
+	// at^4 + bt^3 + ct^2 + dt + e = 0
+	float a = u * u;
+	float b = 2.0 * u * v;
+	float c = (v * v) + (2.0 * u * w) + (4.0 * torusR2 * rd.z * rd.z);
+	float d = (2.0 * v * w) + (8.0 * torusR2 * ro.z * rd.z);
+	float e = (w * w) + (4.0 * torusR2 * ((ro.z * ro.z) - torusr2));
+
+	float t = INFINITY;
+	float roots[4];
+	int numRoots = root_find4_cy(roots, a, b, c, d, e, upper_bound);
+	
+	t = (roots[0] < t && roots[0] > 0.0) ? roots[0] : t;
+	t = (roots[1] < t && roots[1] > 0.0) ? roots[1] : t;
+	t = (roots[2] < t && roots[2] > 0.0) ? roots[2] : t;
+	t = (roots[3] < t && roots[3] > 0.0) ? roots[3] : t;
+	
+	vec3 pos = ro + (t * rd);
+	n = pos * (dot(pos, pos) - torusr2 - (torusR2 * vec3(1, 1, -1)));
+	
+  	return t;
+}
+
+float UnitTorusParamIntersect(vec3 ro, vec3 rd, float torus_r, float upper_bound, float minAngle, float maxAngle, 
+			      float minRadius, float maxRadius, vec3 minXYZ, vec3 maxXYZ, out vec3 n, out vec2 uv) 
 {
 	//torus_R is the distance (Major-Radius) from the torus center to the middle of the surrounding tubing
 	//  in this implementation, torus_R is set to unit radius of 1.0, which makes instancing easier
@@ -2673,6 +2707,8 @@ float UnitTorusIntersect(vec3 ro, vec3 rd, float torus_r, float upper_bound, flo
 	
 	vec3 pos = ro + (t * rd);
 	n = pos * (dot(pos, pos) - torusr2 - (torusR2 * vec3(1, 1, -1)));
+						// - torus_R which is 1.0 (unit torus), so, " - 1.0)"
+	uv = vec2( -(atan(pos.x, pos.y) + PI) * ONE_OVER_TWO_PI, -(atan(pos.z, length(pos.xy) - 1.0) + PI) * ONE_OVER_TWO_PI ); 
 	
   	return t;
 }
