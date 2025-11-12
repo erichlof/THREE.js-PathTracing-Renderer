@@ -2,11 +2,13 @@ precision highp float;
 precision highp int;
 precision highp sampler2D;
 
+uniform sampler2D uUVGridTexture;
 uniform mat4 uTorus_InvMatrix;
 uniform vec3 uTorusPosition;
 uniform vec3 uMaterialColor;
 uniform vec3 uTorusMinXYZ;
 uniform vec3 uTorusMaxXYZ;
+uniform vec2 uTorusUV;
 uniform float uTorusLargestScale;
 uniform float uTorusTubeRadius;
 uniform float uTorusMinAnglePercent;
@@ -15,6 +17,8 @@ uniform float uTorusMinRadius;
 uniform float uTorusMaxRadius;
 uniform int uMaterialType;
 uniform bool uShowTorusAABB;
+uniform bool uTorusIsCheckered;
+uniform bool uShowTorusUVs;
 
 #include <pathtracing_uniforms_and_defines>
 
@@ -60,7 +64,7 @@ Box boxes[N_BOXES];
 
 
 //---------------------------------------------------------------------------------------
-float SceneIntersect( )
+float SceneIntersect( out int torusWasHit )
 //---------------------------------------------------------------------------------------
 {
 	vec3 rObjOrigin, rObjDirection; 
@@ -68,14 +72,14 @@ float SceneIntersect( )
 	vec3 hitPos;
 	vec3 torusAABBmin = vec3(-1);
 	vec3 torusAABBmax = vec3(1);
-
+	vec2 uv;
 	float d = INFINITY;
 	float t = INFINITY;
-	
 	int objectCount = 0;
 	int isRayExiting = FALSE;
 	
 	hitObjectID = -INFINITY;
+	torusWasHit = FALSE;
 
 	d = QuadIntersect( quads[0].v0, quads[0].v1, quads[0].v2, quads[0].v3, rayOrigin, rayDirection, FALSE );
 	if (d < t)
@@ -163,17 +167,19 @@ float SceneIntersect( )
 		rObjDirection = vec3( uTorus_InvMatrix * vec4(rayDirection, 0.0) );
 	}
 
-	d = UnitTorusIntersect( rObjOrigin, rObjDirection, uTorusTubeRadius, BoxMinBoxMax_ext, uTorusMinAnglePercent, uTorusMaxAnglePercent, 
-				uTorusMinRadius, uTorusMaxRadius, uTorusMinXYZ, uTorusMaxXYZ, n );
+	d = UnitTorusParamIntersect( rObjOrigin, rObjDirection, uTorusTubeRadius, BoxMinBoxMax_ext, uTorusMinAnglePercent, uTorusMaxAnglePercent, 
+					uTorusMinRadius, uTorusMaxRadius, uTorusMinXYZ, uTorusMaxXYZ, n, uv );
 	d += distToTorusAABB; // if the rayOrigin was moved up closer to torus, now it will be added back into the total distance to intersection
 	if (d < t)
 	{
 		t = d;
 		hitNormal = transpose(mat3(uTorus_InvMatrix)) * n;
 		hitEmission = vec3(1,0,1);
-		hitColor = uShowTorusAABB ? vec3(1,0,1) : uMaterialColor;
+		hitColor = uMaterialColor;
+		hitUV = uv;
 		hitType = uShowTorusAABB ? LIGHT : uMaterialType;
 		hitObjectID = float(objectCount);
+		torusWasHit = TRUE;
 	}
 	
 
@@ -197,6 +203,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	vec3 diffuseBounceRayDirection = vec3(0);
 	vec3 x, n, nl;
 	vec3 tdir;
+	vec3 textureColor;
         
 	float t = INFINITY;
 	float nc, nt, ratioIoR, Re, Tr;
@@ -215,6 +222,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	int reflectionNeedsToBeSharp = FALSE;
 	int willNeedDiffuseBounceRay = FALSE;
 	int isDiffuseBounceTime = FALSE;
+	int torusWasHit = FALSE;
 
 
 	for (int bounces = 0; bounces < 10; bounces++)
@@ -225,7 +233,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		previousIntersecType = hitType;
 		previousObjectID = hitObjectID;
 
-		t = SceneIntersect();
+		t = SceneIntersect( torusWasHit );
 
 		if (t == INFINITY)
 		{
@@ -369,8 +377,26 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			break;
 		}
+
 	
-		
+		if (torusWasHit == TRUE && !uShowTorusAABB)
+		{
+			if (uTorusIsCheckered)
+			{
+				hitUV *= uTorusUV;
+				hitColor = mod(floor(hitUV.x) + floor(hitUV.y), 2.0) == 0.0 ? vec3(1,1,1) : hitColor;
+			}
+			else if (uShowTorusUVs)
+			{
+				hitUV *= uTorusUV;
+				textureColor = texture(uUVGridTexture, hitUV).rgb;
+				textureColor *= textureColor; // remove gamma from texture image
+				hitColor = textureColor;
+			}
+			
+			if (diffuseCount == 0 && isReflectionTime == FALSE)
+				objectColor += hitColor; // lets edge detector do its work
+		}
 		    
                 if (hitType == DIFF) // Ideal DIFFUSE reflection
 		{	
