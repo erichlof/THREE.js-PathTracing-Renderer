@@ -305,8 +305,7 @@ float SceneIntersect(out int finalIsRayExiting)
 		rObjDirection = vec3( uTorusInvMatrix * vec4(rayDirection, 0.0) );
 	}
 
-	d = UnitTorusIntersect( rObjOrigin, rObjDirection, torii[0].tubeRadius, BoxMinBoxMax_ext, 0.0, 1.0, 
-				0.0, 1.0, vec3(-1), vec3(1), n );
+	d = UnitTorusIntersect( rObjOrigin, rObjDirection, torii[0].tubeRadius, BoxMinBoxMax_ext, n );
 	d += distToTorusAABB; // if the rayOrigin was moved up closer to torus, now it will be added back into the total distance to intersection
 	if (d < t)
 	{
