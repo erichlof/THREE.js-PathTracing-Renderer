@@ -1,4 +1,5 @@
 // scene/demo-specific variables go here
+let UVGridTexture;
 let initialBoxGeometry;
 let boxGeometry, boxMaterial, boxMesh;
 
@@ -20,9 +21,17 @@ let needChangeTorusClipXYZBounds = false;
 let torus_ClipMinRadiusObject, torus_ClipMinRadiusController;
 let torus_ClipMaxRadiusObject, torus_ClipMaxRadiusController;
 let needChangeTorusClipRadiusBounds = false;
+let showTorusUVs_ToggleController, showTorusUVs_ToggleObject;
+let needChangeShowTorusUVs = false;
+let showTorusUVs = false;
+let torus_UVxObject, torus_UVxController;
+let torus_UVyObject, torus_UVyController;
+let needChangeTorusUVs = false;
 let showTorusAABB_ToggleController, showTorusAABB_ToggleObject;
 let needChangeShowTorusAABB = false;
-
+let checkeredTorus_ToggleController, checkeredTorus_ToggleObject;
+let needChangeCheckeredTorus = false;
+let torusIsCheckered = false;
 let material_TypeObject, material_TypeController;
 let needChangeMaterialType = false;
 let matType = 0;
@@ -62,9 +71,6 @@ function init_GUI()
 	torus_ClipMaxZObject = { clipMaxZ: 1.0 };
 	torus_ClipMinRadiusObject = { clipMinRadius: 0.0 };
 	torus_ClipMaxRadiusObject = { clipMaxRadius: 1.0 };
-	material_TypeObject = { torus_Material: 'ClearCoat Diffuse' };
-	material_ColorObject = { torus_Color: [1, 1, 1] };
-	showTorusAABB_ToggleObject = { show_torusAABB: false };
 	transform_ScaleUniformObject = { uniformScale: 12 };
 	transform_ScaleXObject = { scaleX: 12 };
 	transform_ScaleYObject = { scaleY: 12 };
@@ -75,18 +81,28 @@ function init_GUI()
 	transform_RotationXObject = { rotationX: 0 };
 	transform_RotationYObject = { rotationY: 0 };
 	transform_RotationZObject = { rotationZ: 0 };
+	material_TypeObject = { torus_Material: 'ClearCoat Diffuse' };
+	material_ColorObject = { torus_Color: [1, 1, 1] };
+	checkeredTorus_ToggleObject = { checkered_torus: false };
+	showTorusUVs_ToggleObject = { show_torusUVs: false };
+	torus_UVxObject = { torusUV_x: 8 };
+	torus_UVyObject = { torusUV_y: 4 };
+	showTorusAABB_ToggleObject = { show_torusAABB: false };
 	
 	function handleTorusTubeRadiusChange() { needChangeTorusTubeRadius = true; }
 	function handleTorusClipAngleChange() { needChangeTorusClipAngleBounds = true; }
 	function handleTorusClipXYZChange() { needChangeTorusClipXYZBounds = true; }
 	function handleTorusClipRadiusChange() { needChangeTorusClipRadiusBounds = true; }
-	function handleMaterialTypeChange() { needChangeMaterialType = true; }
-	function handleMaterialColorChange() { needChangeMaterialColor = true; }
-	function handleShowTorusAABBChange(){ needChangeShowTorusAABB = true; }
 	function handleScaleUniformChange() { needChangeScaleUniform = true; }
 	function handleScaleChange() { needChangeScale = true; }
 	function handlePositionChange() { needChangePosition = true; }
 	function handleRotationChange() { needChangeRotation = true; }
+	function handleMaterialTypeChange() { needChangeMaterialType = true; }
+	function handleMaterialColorChange() { needChangeMaterialColor = true; }
+	function handleCheckeredTorusChange() { needChangeCheckeredTorus = true; }
+	function handleShowTorusUVsChange() { needChangeShowTorusUVs = true; }
+	function handleTorusUVsChange() { needChangeTorusUVs = true; }
+	function handleShowTorusAABBChange(){ needChangeShowTorusAABB = true; }
 	
 	torus_TubeRadiusController = gui.add(torus_TubeRadiusObject, 'torusTubeRadius', 0.01, 1.0, 0.01).onChange(handleTorusTubeRadiusChange);
 	torus_ClipMinAngleController = gui.add(torus_ClipMinAngleObject, 'clipMinAnglePercent', 0.00, 0.99, 0.01).onChange(handleTorusClipAngleChange);
@@ -120,20 +136,27 @@ function init_GUI()
 	material_TypeController = gui.add(material_TypeObject, 'torus_Material', ['Diffuse', 
 		'Metal', 'ClearCoat Diffuse', 'Transparent Refractive']).onChange(handleMaterialTypeChange);
 	material_ColorController = gui.addColor(material_ColorObject, 'torus_Color').onChange(handleMaterialColorChange);
-	
+	checkeredTorus_ToggleController = gui.add(checkeredTorus_ToggleObject, 'checkered_torus', false).onChange(handleCheckeredTorusChange);
+	showTorusUVs_ToggleController = gui.add(showTorusUVs_ToggleObject, 'show_torusUVs', false).onChange(handleShowTorusUVsChange);
+	torus_UVxController = gui.add(torus_UVxObject, 'torusUV_x', 1, 20, 1).onChange(handleTorusUVsChange);
+	torus_UVyController = gui.add(torus_UVyObject, 'torusUV_y', 1, 20, 1).onChange(handleTorusUVsChange);
+
 	showTorusAABB_ToggleController = gui.add(showTorusAABB_ToggleObject, 'show_torusAABB', false).onChange(handleShowTorusAABBChange);
 
 	handleTorusTubeRadiusChange();
 	handleTorusClipAngleChange();
 	handleTorusClipRadiusChange();
 	handleTorusClipXYZChange();
-	handleMaterialTypeChange();
-	handleMaterialColorChange();
-	handleShowTorusAABBChange();
 	handleScaleUniformChange();
 	handleScaleChange();
 	handlePositionChange();
 	handleRotationChange();
+	handleMaterialTypeChange();
+	handleMaterialColorChange();
+	handleCheckeredTorusChange();
+	handleShowTorusUVsChange();
+	handleTorusUVsChange();
+	handleShowTorusAABBChange();
 
 } // end function init_GUI()
 
@@ -175,10 +198,12 @@ function initSceneData()
 
 	
 	// scene/demo-specific uniforms go here
+	pathTracingUniforms.uUVGridTexture = { value: UVGridTexture };
 	pathTracingUniforms.uTorus_InvMatrix = { value: new THREE.Matrix4() };
 	pathTracingUniforms.uTorusPosition = { value: new THREE.Vector3() };
 	pathTracingUniforms.uTorusMinXYZ = { value: new THREE.Vector3() };
 	pathTracingUniforms.uTorusMaxXYZ = { value: new THREE.Vector3() };
+	pathTracingUniforms.uTorusUV = { value: new THREE.Vector2() };
 	pathTracingUniforms.uTorusLargestScale = { value: 1.0 };
 	pathTracingUniforms.uTorusTubeRadius = { value: 0.5 };
 	pathTracingUniforms.uTorusMinAnglePercent = { value: 0.0 };
@@ -187,6 +212,8 @@ function initSceneData()
 	pathTracingUniforms.uTorusMaxRadius = { value: 1.0 };
 	pathTracingUniforms.uMaterialType = { value: 0 };
 	pathTracingUniforms.uMaterialColor = { value: new THREE.Color(1.0, 0.0, 1.0) };
+	pathTracingUniforms.uTorusIsCheckered = { value: false };
+	pathTracingUniforms.uShowTorusUVs = { value: false };
 	pathTracingUniforms.uShowTorusAABB = { value: false };
 
 	init_GUI();
@@ -360,6 +387,72 @@ function updateVariablesAndUniforms()
 		needChangeMaterialColor = false;
 	}
 
+	if (needChangeCheckeredTorus)
+	{
+		torusIsCheckered = checkeredTorus_ToggleController.getValue();
+		pathTracingUniforms.uTorusIsCheckered.value = torusIsCheckered;
+
+		if (torusIsCheckered)
+		{
+			torus_UVxController.show();
+			torus_UVxController.min(2); torus_UVxController.max(50); torus_UVxController.step(2);
+			torus_UVxController.setValue(12);
+			torus_UVyController.show();
+			torus_UVyController.min(2); torus_UVyController.max(50); torus_UVyController.step(2);
+			torus_UVyController.setValue(8);
+			
+			showTorusUVs_ToggleController.hide();
+		}
+		else
+		{
+			showTorusUVs_ToggleController.show();
+			if ( !showTorusUVs )
+			{
+				torus_UVxController.hide();
+				torus_UVyController.hide();
+			}
+		}
+
+		cameraIsMoving = true;
+		needChangeCheckeredTorus = false;
+	}
+
+	if (needChangeShowTorusUVs)
+	{
+		showTorusUVs = showTorusUVs_ToggleController.getValue();
+		pathTracingUniforms.uShowTorusUVs.value = showTorusUVs;
+
+		if (showTorusUVs)
+		{
+			torusIsCheckered = false;
+			checkeredTorus_ToggleController.setValue(torusIsCheckered);
+			pathTracingUniforms.uTorusIsCheckered.value = torusIsCheckered;
+			checkeredTorus_ToggleController.hide();
+			torus_UVxController.show();
+			torus_UVxController.min(0.1); torus_UVxController.max(10); torus_UVxController.step(0.1);
+			torus_UVxController.setValue(1.0);
+			torus_UVyController.show();
+			torus_UVyController.min(0.1); torus_UVyController.max(10); torus_UVyController.step(0.1);
+			torus_UVyController.setValue(1.0);
+		}
+		else
+		{
+			checkeredTorus_ToggleController.show();
+			torus_UVxController.hide();
+			torus_UVyController.hide();
+		}
+
+		cameraIsMoving = true;
+		needChangeShowTorusUVs = false;
+	}
+
+	if (needChangeTorusUVs)
+	{
+		pathTracingUniforms.uTorusUV.value.set(torus_UVxController.getValue(), torus_UVyController.getValue());
+		cameraIsMoving = true;
+		needChangeTorusUVs = false;
+	}
+
 	if (needChangeShowTorusAABB)
 	{
 		pathTracingUniforms.uShowTorusAABB.value = showTorusAABB_ToggleController.getValue();
@@ -374,4 +467,20 @@ function updateVariablesAndUniforms()
 
 
 
-init(); // init app and start animating
+UVGridTexture = textureLoader.load(
+	// resource URL
+	'textures/uvGrid.jpg',
+
+	// onLoad callback
+	function (texture)
+	{
+		texture.wrapS = THREE.RepeatWrapping;
+		texture.wrapT = THREE.RepeatWrapping;
+		texture.flipY = false;
+		texture.minFilter = THREE.NearestFilter;
+		texture.magFilter = THREE.NearestFilter;
+		texture.generateMipmaps = false;
+		
+		init(); // init app and start animating
+	}
+);
