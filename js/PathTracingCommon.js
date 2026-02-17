@@ -834,14 +834,15 @@ void ParabolicPrism_CSG_Intersect( vec3 ro, vec3 rd, out float t0, out float t1,
 `;
 
 THREE.ShaderChunk[ 'pathtracing_hyperboloid_csg_intersect' ] = `
+
 //------------------------------------------------------------------------------------------------------------
 void Hyperboloid_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out float t1, out vec3 n0, out vec3 n1 )
 //------------------------------------------------------------------------------------------------------------
 {
 	vec3 hit;
 	vec3 hn0, hn1, cn0, cn1, dn0, dn1;
-	float h0, h1, c0, c1, d0, d1, dr0, dr1;
-	t0 = t1 = h0 = h1 = c0 = c1 = d0 = d1 = dr0 = dr1 = 0.0;
+	float h0, h1, c0, c1, d0, d1;
+	t0 = t1 = h0 = h1 = c0 = c1 = d0 = d1 = 0.0;
 	// implicit equation of a hyperboloid of 1 sheet (hourglass shape extending infinitely in the +Y and -Y directions):
 	// x^2 + z^2 - y^2 - 1 = 0
 	// conservative range of k: 1 to 100
@@ -850,25 +851,20 @@ void Hyperboloid_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out flo
 	float b = 2.0 * (k * dot(rd.xz, ro.xz) - (j * rd.y * ro.y));
 	float c = k * dot(ro.xz, ro.xz) - (j * ro.y * ro.y) - 1.0;
 	solveQuadratic(a, b, c, d0, d1);
-	if (d0 != 0.0)
-	{
-		hit = ro + (rd * d0);
-		if (abs(hit.y) <= 1.0) // validate h0
-		{
-			h0 = d0;
-			hn0 = vec3(hit.x * k, -hit.y * j, hit.z * k);
-		}
-	}
-	if (d1 != 0.0)
-	{
-		hit = ro + (rd * d1);
-		if (abs(hit.y) <= 1.0) // validate h1
-		{
-			h1 = d1;
-			hn1 = vec3(hit.x * k, -hit.y * j, hit.z * k);
-		}
-	}
 
+	hit = ro + (rd * d0);
+	if (d0 != 0.0 && abs(hit.y) <= 1.0) // validate h0
+	{
+		h0 = d0;
+		hn0 = vec3(hit.x * k, -hit.y * j, hit.z * k);
+	}
+	hit = ro + (rd * d1);
+	if (d1 != 0.0 && abs(hit.y) <= 1.0) // validate h1
+	{
+		h1 = d1;
+		hn1 = vec3(hit.x * k, -hit.y * j, hit.z * k);
+	}
+	
 	// now intersect top and bottom unit-radius disk caps
 	if (rd.y < 0.0)
 	{
@@ -885,54 +881,56 @@ void Hyperboloid_CSG_Intersect( float k, vec3 ro, vec3 rd, out float t0, out flo
 		dn0 = vec3(0,-1,0);
 	}
 	hit = ro + (rd * d0);
-	if (dot(hit.xz, hit.xz) <= 1.0) // unit radius disk
+	if (dot(hit.xz, hit.xz) <= 1.0) // validate c0
 	{
 		c0 = d0;
 		cn0 = dn0;
 	}
 	hit = ro + (rd * d1);
-	if (dot(hit.xz, hit.xz) <= 1.0) // unit radius disk
+	if (dot(hit.xz, hit.xz) <= 1.0) // validate c1
 	{
 		c1 = d1;
 		cn1 = dn1;
 	}
 
-	if (h0 == 0.0 && h1 == 0.0) // caps only intersection
+	// now sort the 4 possible valid intersections: h0, h1, c0, c1
+
+	if (h0 == 0.0 && h1 == 0.0) // ray missed hyperboloid - end caps only intersection
 	{
 		t0 = c0;
 		n0 = cn0;
 		t1 = c1;
 		n1 = cn1;
 	}
-	else if (c0 == 0.0 && c1 == 0.0) // hyperboloid only intersection
+	else if (c0 == 0.0 && c1 == 0.0) // ray missed both end caps - hyperboloid only intersection
 	{
 		t0 = h0;
 		n0 = hn0;
 		t1 = h1;
 		n1 = hn1;
 	}
-	else if (c0 != 0.0 && h0 > 0.0)
+	else if (c0 != 0.0 && h0 > 0.0) // c0 was valid, so next valid might be h0
 	{
 		t0 = c0;
 		n0 = cn0;
 		t1 = h0;
 		n1 = hn0;
 	}
-	else if (h0 <= 0.0 && h1 != 0.0 && c1 > 0.0)
-	{
-		t0 = h1;
-		n0 = hn1;
-		t1 = c1;
-		n1 = cn1;
-	}
-	else if (c0 != 0.0 && h1 > 0.0)
+	else if (c0 != 0.0 && h1 > 0.0) // c0 was valid, but h0 was invalid, so next valid might be h1
 	{
 		t0 = c0;
 		n0 = cn0;
 		t1 = h1;
 		n1 = hn1;
 	}
-	else if (h0 != 0.0 && c1 > 0.0)
+	else if (h0 <= 0.0 && h1 != 0.0 && c1 > 0.0) // h0 was either invalid or behind us, so next valid would be h1
+	{
+		t0 = h1;
+		n0 = hn1;
+		t1 = c1;
+		n1 = cn1;
+	}
+	else if (h0 != 0.0 && c1 > 0.0) // the only valid choices left are h0 and c1
 	{
 		t0 = h0;
 		n0 = hn0;
@@ -3093,7 +3091,6 @@ float rng()
     	uint  n = 1103515245U * ( (q.x) ^ (q.y >> 3U) );
 	return float(n) * ONE_OVER_MAX_INT;// (1.0 / float(0xffffffffU));
 }
-//float rand(){return rng();}
 
 vec3 randomSphereDirection()
 {
@@ -3102,18 +3099,6 @@ vec3 randomSphereDirection()
 	float around = rng() * TWO_PI;
 	return normalize(vec3(cos(around) * over, up, sin(around) * over));	
 }
-
-/* vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
-{
-	float r0 = sqrt(rng());
-	float phi = rng() * TWO_PI;
-	float x = r0 * cos(phi);
-	float y = r0 * sin(phi);
-	float z = sqrt(1.0 - r0 * r0);
-	vec3 T = normalize(cross(nl.yzx, nl));
-	vec3 B = cross(nl, T);
-	return normalize(T * x + B * y + nl * z);
-} */
 
 //the following alternative skips the creation of tangent and bi-tangent vectors T and B
 vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
