@@ -55,6 +55,8 @@ Box boxes[N_BOXES];
 
 #include <pathtracing_parabolicprism_csg_intersect>
 
+#include <pathtracing_hyperboloid_csg_intersect>
+
 #include <pathtracing_hyperboloid1sheet_csg_intersect>
 
 #include <pathtracing_hyperbolicprism1sheet_csg_intersect>
@@ -165,8 +167,10 @@ float SceneIntersect( )
 		ParabolicPrism_CSG_Intersect( rObjOrigin, rObjDirection, A_t0, A_t1, A_n0, A_n1 );
 	else if (uShapeAType == 11)
 		HyperbolicPrism1Sheet_CSG_Intersect( uA_kParameter, rObjOrigin, rObjDirection, A_t0, A_t1, A_n0, A_n1 );
-	else //if (uShapeAType == 12)
+	else if (uShapeAType == 12)
 		HyperbolicPrism2Sheets_CSG_Intersect( uA_kParameter, rObjOrigin, rObjDirection, A_t0, A_t1, A_n0, A_n1 );
+	else if (uShapeAType == 13)
+		Hyperboloid_CSG_Intersect( uA_kParameter, rObjOrigin, rObjDirection, A_t0, A_t1, A_n0, A_n1 );
 
 	n = (A_n0);
 	A_n0 = (transpose(mat3(uCSG_ShapeA_InvMatrix)) * n);
@@ -202,8 +206,10 @@ float SceneIntersect( )
 		ParabolicPrism_CSG_Intersect( rObjOrigin, rObjDirection, B_t0, B_t1, B_n0, B_n1 );
 	else if (uShapeBType == 11)
 		HyperbolicPrism1Sheet_CSG_Intersect( uB_kParameter, rObjOrigin, rObjDirection, B_t0, B_t1, B_n0, B_n1 );
-	else //if (uShapeBType == 12)
+	else if (uShapeBType == 12)
 		HyperbolicPrism2Sheets_CSG_Intersect( uB_kParameter, rObjOrigin, rObjDirection, B_t0, B_t1, B_n0, B_n1 );
+	else if (uShapeBType == 13)
+		Hyperboloid_CSG_Intersect( uB_kParameter, rObjOrigin, rObjDirection, B_t0, B_t1, B_n0, B_n1 );
 
 	n = (B_n0);
 	B_n0 = (transpose(mat3(uCSG_ShapeB_InvMatrix)) * n);
