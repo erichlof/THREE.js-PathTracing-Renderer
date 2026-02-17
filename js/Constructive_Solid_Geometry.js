@@ -183,7 +183,7 @@ function init_GUI()
 	transformA_RotationYController = rotationA_Folder.add(transformA_RotationYObject, 'rotationY', 0, 359, 1).onChange(handleARotationChange);
 	transformA_RotationZController = rotationA_Folder.add(transformA_RotationZObject, 'rotationZ', 0, 359, 1).onChange(handleARotationChange);
 
-	shapeA_TypeController = gui.add(shapeA_TypeObject, 'A_Shape', ['Sphere', 'Cylinder', 'Cone', 'Paraboloid', 'Hyperboloid_1Sheet', 'Hyperboloid_2Sheets',
+	shapeA_TypeController = gui.add(shapeA_TypeObject, 'A_Shape', ['Sphere', 'Cylinder', 'Cone', 'Paraboloid', 'Hyperboloid', 'Hyperboloid_1Sheet', 'Hyperboloid_2Sheets',
 		'Capsule', 'Box', 'Pyramid_Frustum', 'ConicalPrism', 'ParabolicPrism', 'HyperbolicPrism_1Sheet', 'HyperbolicPrism_2Sheets']).onChange(handleShapeATypeChange);
 
 	parameterA_kController = gui.add(parameterA_kObject, 'A_kParameter', 0, 100, 0.5).onChange(handleAParameterKChange);
@@ -220,7 +220,7 @@ function init_GUI()
 	transformB_RotationYController = rotationB_Folder.add(transformB_RotationYObject, 'rotationY', 0, 359, 1).onChange(handleBRotationChange);
 	transformB_RotationZController = rotationB_Folder.add(transformB_RotationZObject, 'rotationZ', 0, 359, 1).onChange(handleBRotationChange);
 
-	shapeB_TypeController = gui.add(shapeB_TypeObject, 'B_Shape', ['Sphere', 'Cylinder', 'Cone', 'Paraboloid', 'Hyperboloid_1Sheet', 'Hyperboloid_2Sheets',
+	shapeB_TypeController = gui.add(shapeB_TypeObject, 'B_Shape', ['Sphere', 'Cylinder', 'Cone', 'Paraboloid', 'Hyperboloid', 'Hyperboloid_1Sheet', 'Hyperboloid_2Sheets',
 		'Capsule', 'Box', 'Pyramid_Frustum', 'ConicalPrism', 'ParabolicPrism', 'HyperbolicPrism_1Sheet', 'HyperbolicPrism_2Sheets']).onChange(handleShapeBTypeChange);
 
 	parameterB_kController = gui.add(parameterB_kObject, 'B_kParameter', 0, 100, 0.5).onChange(handleBParameterKChange);
@@ -423,6 +423,15 @@ function updateVariablesAndUniforms()
 		{
 			pathTracingUniforms.uShapeAType.value = 3;
 			parameterA_kController.domElement.hidden = true;
+		}
+		else if (currentAShapeType == 'Hyperboloid')
+		{
+			pathTracingUniforms.uShapeAType.value = 13;
+			parameterA_kController.domElement.hidden = false;
+			parameterA_kController.min(1);
+			parameterA_kController.max(100);
+			parameterA_kController.step(0.5);
+			parameterA_kController.setValue(2);
 		}
 		else if (currentAShapeType == 'Hyperboloid_1Sheet')
 		{
@@ -640,6 +649,15 @@ function updateVariablesAndUniforms()
 		{
 			pathTracingUniforms.uShapeBType.value = 3;
 			parameterB_kController.domElement.hidden = true;
+		}
+		else if (currentBShapeType == 'Hyperboloid')
+		{
+			pathTracingUniforms.uShapeBType.value = 13;
+			parameterB_kController.domElement.hidden = false;
+			parameterB_kController.min(1);
+			parameterB_kController.max(100);
+			parameterB_kController.step(0.5);
+			parameterB_kController.setValue(2);
 		}
 		else if (currentBShapeType == 'Hyperboloid_1Sheet')
 		{
