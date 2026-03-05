@@ -1133,7 +1133,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			{
 				reflectionMask = mask * Re;
 				reflectionRayDirection = reflect(rayDirection, nl); // reflect ray from surface
-				reflectionRayDirection = randomDirectionInSpecularLobe(reflectionRayDirection, roughness);
+				reflectionRayDirection = randomDirectionInSpecularLobe(nl, reflectionRayDirection, roughness);
 				reflectionRayOrigin = x + nl * uEPS_intersect;
 				willNeedReflectionRay = TRUE;
 				// if (bounces == 0 && hitType != CHECK)
