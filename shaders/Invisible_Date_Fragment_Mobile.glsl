@@ -785,7 +785,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			mask *= hitColor;
 
 			rayDirection = reflect(rayDirection, nl); // reflect ray from surface
-			rayDirection = randomDirectionInSpecularLobe(rayDirection, hitRoughness);
+			rayDirection = randomDirectionInSpecularLobe(nl, rayDirection, hitRoughness);
 			rayOrigin = x + nl * uEPS_intersect;
 			continue;
 		}
@@ -852,7 +852,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				reflectionMask = mask * Re;
 				reflectionRoughness = hitRoughness;
 				reflectionRayDirection = reflect(rayDirection, nl); // reflect ray from surface
-				reflectionRayDirection = randomDirectionInSpecularLobe(reflectionRayDirection, hitRoughness);
+				reflectionRayDirection = randomDirectionInSpecularLobe(nl, reflectionRayDirection, hitRoughness);
 				reflectionRayOrigin = x + nl * uEPS_intersect;
 				willNeedReflectionRay = TRUE;
 			}
