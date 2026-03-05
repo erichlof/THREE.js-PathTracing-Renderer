@@ -3094,28 +3094,29 @@ float rng()
 
 vec3 randomSphereDirection()
 {
-    	float up = (rng() * 2.0) - 1.0; // range: -1 to +1
-	float over = sqrt( max(0.0, 1.0 - (up * up)) );
-	float around = rng() * TWO_PI;
-	return normalize(vec3(cos(around) * over, up, sin(around) * over));	
+	float phi = rng() * TWO_PI;
+    	float theta = (rng() * 2.0) - 1.0; // range: -1 to +1
+	float r = sqrt(1.0 - (theta * theta));
+	return normalize(vec3(r * cos(phi), r * sin(phi), theta));	
 }
 
 //the following alternative skips the creation of tangent and bi-tangent vectors T and B
 vec3 randomCosWeightedDirectionInHemisphere(vec3 nl)
 {
-	float z = (rng() * 2.0) - 1.0;
 	float phi = rng() * TWO_PI;
-	float r = sqrt(1.0 - (z * z));
-    	return normalize(nl + vec3(r * cos(phi), r * sin(phi), z));
+	float theta = (rng() * 2.0) - 1.0;
+	float r = sqrt(1.0 - (theta * theta));
+    	return normalize(nl + vec3(r * cos(phi), r * sin(phi), theta));
 }
 
-vec3 randomDirectionInSpecularLobe(vec3 reflectionDir, float roughness)
+vec3 randomDirectionInSpecularLobe(vec3 normal, vec3 reflectionDir, float roughness)
 {
-	float z = (rng() * 2.0) - 1.0;
 	float phi = rng() * TWO_PI;
-	float r = sqrt(1.0 - (z * z));
-    	vec3 cosDiffuseDir = normalize(reflectionDir + vec3(r * cos(phi), r * sin(phi), z));
-	return normalize( mix(reflectionDir, cosDiffuseDir, roughness * roughness) );
+	float theta = (rng() * 2.0) - 1.0;
+	float r = sqrt(1.0 - (theta * theta));
+    	vec3 cosDiffuseDir = normalize(reflectionDir + vec3(r * cos(phi), r * sin(phi), theta));
+	vec3 sampleDirection = normalize( mix(reflectionDir, cosDiffuseDir, roughness * roughness) );
+	return dot(sampleDirection, normal) > 0.0 ? sampleDirection : reflect(sampleDirection, normal);
 }
 
 /* vec3 randomDirectionInPhongSpecular(vec3 reflectionDir, float shininess)
