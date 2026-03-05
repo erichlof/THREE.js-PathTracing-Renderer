@@ -308,7 +308,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		// the ray hit an occluding object along its way to the light
 		if (sampleLight == TRUE)
 		{
-			objectID += hitObjectID;
+			objectID += hitObjectID; // produces sharper shadow boundary edges
 
 			if (willNeedDiffuseBounceRay == TRUE)
 			{
@@ -384,7 +384,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				willNeed2ndDiffuseBounceRay = TRUE;
 			}
                         
-			rayDirection = randomDirectionInSpecularLobe(DIRECTION_TO_SUN, 0.2);
+			rayDirection = randomDirectionInSpecularLobe(nl, DIRECTION_TO_SUN, 0.2);
 			weight = max(0.0, dot(nl, rayDirection)) * 0.01;
 			mask *= weight;
 			sampleLight = TRUE;
@@ -442,7 +442,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				willNeed2ndDiffuseBounceRay = TRUE;
 			}
                         
-			rayDirection = randomDirectionInSpecularLobe(DIRECTION_TO_SUN, 0.2);
+			rayDirection = randomDirectionInSpecularLobe(nl, DIRECTION_TO_SUN, 0.2);
 			weight = max(0.0, dot(nl, rayDirection)) * 0.01;
 			mask *= weight;
 			sampleLight = TRUE;
