@@ -3116,7 +3116,7 @@ vec3 randomDirectionInSpecularLobe(vec3 normal, vec3 reflectionDir, float roughn
 	float r = sqrt(1.0 - (theta * theta));
     	vec3 cosDiffuseDir = normalize(reflectionDir + vec3(r * cos(phi), r * sin(phi), theta));
 	vec3 sampleDirection = normalize( mix(reflectionDir, cosDiffuseDir, roughness * roughness) );
-	return dot(sampleDirection, normal) > 0.0 ? sampleDirection : reflect(sampleDirection, normal);
+	return dot(sampleDirection, normal) > 0.0 ? sampleDirection : reflect(sampleDirection, reflectionDir);
 }
 
 /* vec3 randomDirectionInPhongSpecular(vec3 reflectionDir, float shininess)
