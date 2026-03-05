@@ -475,7 +475,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			{
 				mask *= 1.1;
 				rayDirection = reflect(rayDirection, nl); // reflect ray from metal surface
-				rayDirection = randomDirectionInSpecularLobe(rayDirection, hitRoughness == 0.1 ? 0.25 : hitRoughness * 0.8);
+				rayDirection = randomDirectionInSpecularLobe(nl, rayDirection, hitRoughness == 0.1 ? 0.25 : hitRoughness * 0.8);
 				rayOrigin = x + nl * uEPS_intersect;
 				continue;
 			}
@@ -527,7 +527,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			{
 				reflectionMask = mask * Re;
 				reflectionRayDirection = reflect(rayDirection, nl); // reflect ray from surface
-				reflectionRayDirection = randomDirectionInSpecularLobe(reflectionRayDirection, hitRoughness * 0.8);
+				reflectionRayDirection = randomDirectionInSpecularLobe(nl, reflectionRayDirection, hitRoughness * 0.8);
 				reflectionRayOrigin = x + nl * uEPS_intersect;
 				willNeedReflectionRay = TRUE;
 			}
@@ -543,7 +543,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			mask *= Tr;
 			
 			rayDirection = refract(rayDirection, nl, ratioIoR);
-			rayDirection = randomDirectionInSpecularLobe(rayDirection, hitRoughness * 0.4);
+			rayDirection = randomDirectionInSpecularLobe(-nl, rayDirection, hitRoughness * 0.4);
 			rayOrigin = x - nl * uEPS_intersect;
 
 			if (diffuseCount == 1 && isDiffuseBounceTime == TRUE)
@@ -564,7 +564,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			{
 				reflectionMask = mask * Re;
 				reflectionRayDirection = reflect(rayDirection, nl); // reflect ray from surface
-				reflectionRayDirection = randomDirectionInSpecularLobe(reflectionRayDirection, hitRoughness * 0.8);
+				reflectionRayDirection = randomDirectionInSpecularLobe(nl, reflectionRayDirection, hitRoughness * 0.8);
 				reflectionRayOrigin = x + nl * uEPS_intersect;
 				willNeedReflectionRay = TRUE;
 			}
@@ -622,7 +622,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			mask *= hitColor;
 			
 			rayDirection = reflect(rayDirection, nl); // reflect ray from metal surface
-			rayDirection = randomDirectionInSpecularLobe(rayDirection, hitRoughness == 0.1 ? 0.25 : hitRoughness * 0.8);
+			rayDirection = randomDirectionInSpecularLobe(nl, rayDirection, hitRoughness == 0.1 ? 0.25 : hitRoughness * 0.8);
 			rayOrigin = x + nl * uEPS_intersect;
 			continue;
 
