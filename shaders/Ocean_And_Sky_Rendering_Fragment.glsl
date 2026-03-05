@@ -767,7 +767,7 @@ vec3 CalculateRadiance(out vec3 objectNormal, out vec3 objectColor, out float ob
 				willNeedDiffuseBounceRay = TRUE;
 			}
                         
-			rayDirection = randomDirectionInSpecularLobe(uSunDirection, 0.1); // create shadow ray pointed towards light
+			rayDirection = randomDirectionInSpecularLobe(nl, uSunDirection, 0.1); // create shadow ray pointed towards light
 			weight = max(0.0, dot(rayDirection, nl)) * 0.05; // down-weight directSunLight contribution
 			mask *= weight * cloudShadowFactor;
 			
@@ -863,7 +863,7 @@ vec3 CalculateRadiance(out vec3 objectNormal, out vec3 objectColor, out float ob
 				willNeedDiffuseBounceRay = TRUE;
 			}
 			
-			rayDirection = randomDirectionInSpecularLobe(uSunDirection, 0.1); // create shadow ray pointed towards light
+			rayDirection = randomDirectionInSpecularLobe(nl, uSunDirection, 0.1); // create shadow ray pointed towards light
 			weight = max(0.0, dot(rayDirection, nl)) * 0.05; // down-weight directSunLight contribution
 			mask *= weight;
 			
@@ -881,7 +881,7 @@ vec3 CalculateRadiance(out vec3 objectNormal, out vec3 objectColor, out float ob
 	if ( skyHit == TRUE ) // sky and clouds
 	{
 		vec3 cloudColor = cld.rgb / (cld.a + 0.00001);
-		vec3 sunColor = clamp( Get_Sky_Color(randomDirectionInSpecularLobe(uSunDirection, 0.1)), 0.0, 5.0 );
+		vec3 sunColor = clamp( Get_Sky_Color(randomDirectionInSpecularLobe(uSunDirection, uSunDirection, 0.1)), 0.0, 5.0 );
 		
 		cloudColor *= sunColor;
 		cloudColor = mix(initialSkyColor, cloudColor, clamp(cld.a, 0.0, 1.0));
