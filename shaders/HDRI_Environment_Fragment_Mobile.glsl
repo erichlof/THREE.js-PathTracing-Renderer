@@ -536,7 +536,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				continue;
 			}
 
-			rayDirection = randomDirectionInSpecularLobe(uSunDirectionVector, 0.07);
+			rayDirection = randomDirectionInSpecularLobe(nl, uSunDirectionVector, 0.07);
 			rayOrigin = x + nl * uEPS_intersect;
 			weight = max(0.0, dot(rayDirection, nl)) * 0.000015; // down-weight directSunLight contribution
 			mask *= diffuseCount == 1 ? 2.0 : 1.0;
@@ -550,7 +550,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
                 {
 			mask *= hitColor;
 
-			rayDirection = randomDirectionInSpecularLobe(reflect(rayDirection, nl), roughness);
+			rayDirection = randomDirectionInSpecularLobe(nl, reflect(rayDirection, nl), roughness);
 			rayOrigin = x + nl * uEPS_intersect;
                         continue;
                 }
@@ -574,7 +574,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			{
 				reflectionMask = mask * Re;
 				reflectionRayDirection = reflect(rayDirection, nl); // reflect ray from surface
-				reflectionRayDirection = randomDirectionInSpecularLobe(reflectionRayDirection, roughness);
+				reflectionRayDirection = randomDirectionInSpecularLobe(nl, reflectionRayDirection, roughness);
 				reflectionRayOrigin = x + nl * uEPS_intersect;
 				willNeedReflectionRay = TRUE;
 				if (bounces == 0 && hitColor == vec3(0.2,0.9,0.7) && isRayExiting == FALSE)
@@ -596,7 +596,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			mask *= Tr;
 			
 			tdir = refract(rayDirection, nl, ratioIoR);
-			rayDirection = randomDirectionInSpecularLobe(tdir, roughness * roughness);
+			rayDirection = randomDirectionInSpecularLobe(-nl, tdir, roughness * roughness);
 			rayOrigin = x - nl * uEPS_intersect;
 
 			continue;
@@ -617,7 +617,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			{
 				reflectionMask = mask * Re;
 				reflectionRayDirection = reflect(rayDirection, nl); // reflect ray from surface
-				reflectionRayDirection = randomDirectionInSpecularLobe(reflectionRayDirection, roughness);
+				reflectionRayDirection = randomDirectionInSpecularLobe(nl, reflectionRayDirection, roughness);
 				reflectionRayOrigin = x + nl * uEPS_intersect;
 				willNeedReflectionRay = TRUE;
 			}
@@ -638,7 +638,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				continue;
 			}
 
-			rayDirection = randomDirectionInSpecularLobe(uSunDirectionVector, 0.07);
+			rayDirection = randomDirectionInSpecularLobe(nl, uSunDirectionVector, 0.07);
 			rayOrigin = x + nl * uEPS_intersect;
 			weight = max(0.0, dot(rayDirection, nl)) * 0.000015; // down-weight directSunLight contribution
 			mask *= diffuseCount == 1 ? 2.0 : 1.0;
