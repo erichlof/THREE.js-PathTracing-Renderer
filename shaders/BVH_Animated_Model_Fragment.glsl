@@ -686,7 +686,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
                 {
 			mask *= hitColor;
 
-			rayDirection = randomDirectionInSpecularLobe(reflect(rayDirection, nl), metallicRoughness.g);
+			rayDirection = randomDirectionInSpecularLobe(nl, reflect(rayDirection, nl), metallicRoughness.g);
 			rayOrigin = x + nl * uEPS_intersect;
 			
 			if (bounces == 0)
