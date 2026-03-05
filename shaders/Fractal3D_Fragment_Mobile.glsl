@@ -389,7 +389,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				continue;
 			}
 			
-			rayDirection = randomDirectionInSpecularLobe(uSunDirection, 0.15); // create shadow ray pointed towards light
+			rayDirection = randomDirectionInSpecularLobe(nl, uSunDirection, 0.15); // create shadow ray pointed towards light
 			rayOrigin = x + nl * uEPS_intersect;
 			
 			weight = max(0.0, dot(rayDirection, nl)) * 0.03; // down-weight directSunLight contribution
