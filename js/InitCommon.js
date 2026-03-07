@@ -211,12 +211,31 @@ function FirstPersonCameraControls(camera)
 		inputMovementHorizontal = -inputMovementHorizontal * 0.0012 * cameraRotationSpeed;
 		inputMovementVertical = -inputMovementVertical * 0.001 * cameraRotationSpeed;
 
+		if (useGenericInput)
+		{
+			inputRotationHorizontal = cameraControlsYawObject.rotation.y;
+			inputRotationVertical = cameraControlsPitchObject.rotation.x;
+		}
+		
 		if (inputMovementHorizontal) // prevent NaNs due to invalid mousemove data from browser
 			inputRotationHorizontal += inputMovementHorizontal;
 		if (inputMovementVertical) // prevent NaNs due to invalid mousemove data from browser
 			inputRotationVertical += inputMovementVertical;
-		// clamp the camera's vertical movement (around the x-axis) to the scene's 'ceiling' and 'floor'
-		inputRotationVertical = Math.max(- PI_2, Math.min(PI_2, inputRotationVertical));
+		
+		if (useGenericInput)
+		{
+			// clamp the camera's vertical rotation (around the x-axis) to the scene's 'ceiling' and 'floor'
+			if (inputRotationVertical < -PI_2)
+			{
+				inputRotationVertical = -PI_2;
+				inputMovementVertical = 0;
+			}
+			if (inputRotationVertical > PI_2)
+			{
+				inputRotationVertical = PI_2;
+				inputMovementVertical = 0;
+			}
+		}
 	}
 
 	document.addEventListener('mousemove', onMouseMove, false);
@@ -780,8 +799,13 @@ function animate()
 	// if on mobile device, get input from the mobileJoystickControls
 	if (!mouseControl)
 	{
-		newDeltaX = joystickDeltaX * cameraRotationSpeed;
+		if (useGenericInput)
+		{
+			inputRotationHorizontal = cameraControlsYawObject.rotation.y;
+			inputRotationVertical = cameraControlsPitchObject.rotation.x;
+		}
 
+		newDeltaX = joystickDeltaX * cameraRotationSpeed;
 		if (newDeltaX)
 		{
 			cameraIsMoving = true;
@@ -792,7 +816,6 @@ function animate()
 		}
 
 		newDeltaY = joystickDeltaY * cameraRotationSpeed;
-
 		if (newDeltaY)
 		{
 			cameraIsMoving = true;
@@ -802,14 +825,27 @@ function animate()
 			inputRotationVertical += inputMovementVertical;
 		}
 
-		// clamp the camera's vertical movement (around the x-axis) to the scene's 'ceiling' and 'floor',
+		// clamp the camera's vertical rotation (around the x-axis) to the scene's 'ceiling' and 'floor',
 		// so you can't accidentally flip the camera upside down
-		inputRotationVertical = Math.max(-PI_2, Math.min(PI_2, inputRotationVertical));
+		if (useGenericInput)
+		{	
+			if (inputRotationVertical < -PI_2)
+			{
+				inputRotationVertical = -PI_2;
+				inputMovementVertical = 0;
+			}
+			if (inputRotationVertical > PI_2)
+			{
+				inputRotationVertical = PI_2;
+				inputMovementVertical = 0;
+			}
+		}
 
 		// save state for next frame
 		oldDeltaX = newDeltaX;
 		oldDeltaY = newDeltaY;
 
+		
 		newPinchWidthX = pinchWidthX;
 		newPinchWidthY = pinchWidthY;
 		pinchDeltaX = newPinchWidthX - oldPinchWidthX;
@@ -850,10 +886,15 @@ function animate()
 	// if on gamepad (gp), get input from that gamepad device
 	if ( gp )
 	{
+		if (useGenericInput)
+		{
+			inputRotationHorizontal = cameraControlsYawObject.rotation.y;
+			inputRotationVertical = cameraControlsPitchObject.rotation.x;
+		}
+
 		if (Math.abs(gp.axes[2]) > 0.1) // account for deadzone
 			newDeltaX += gp.axes[2] * gamepad_cameraYRotationSpeed;
 		else newDeltaX = 0;
-
 		if (newDeltaX)
 		{
 			cameraIsMoving = true;
@@ -866,7 +907,6 @@ function animate()
 		if (Math.abs(gp.axes[3]) > 0.1) // account for deadzone
 			newDeltaY += gp.axes[3] * gamepad_cameraXRotationSpeed;
 		else newDeltaY = 0;
-
 		if (newDeltaY)
 		{
 			cameraIsMoving = true;
@@ -876,9 +916,21 @@ function animate()
 			inputRotationVertical += inputMovementVertical;
 		}
 
-		// clamp the camera's vertical movement (around the x-axis) to the scene's 'ceiling' and 'floor',
+		// clamp the camera's vertical rotation (around the x-axis) to the scene's 'ceiling' and 'floor',
 		// so you can't accidentally flip the camera upside down
-		inputRotationVertical = Math.max(-PI_2, Math.min(PI_2, inputRotationVertical));
+		if (useGenericInput)
+		{	
+			if (inputRotationVertical < -PI_2)
+			{
+				inputRotationVertical = -PI_2;
+				inputMovementVertical = 0;
+			}
+			if (inputRotationVertical > PI_2)
+			{
+				inputRotationVertical = PI_2;
+				inputMovementVertical = 0;
+			}
+		}
 
 		// save state for next frame
 		oldDeltaX = newDeltaX;
@@ -887,6 +939,8 @@ function animate()
 	} // end if ( gp )
 
 
+	//cameraControlsYawObject.rotation.y = inputRotationHorizontal;
+	//cameraControlsPitchObject.rotation.x = inputRotationVertical;
 	cameraControlsYawObject.rotateY(inputMovementHorizontal);
 	cameraControlsPitchObject.rotateX(inputMovementVertical);
 
