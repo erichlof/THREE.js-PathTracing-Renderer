@@ -48,17 +48,17 @@ Box boxes[N_BOXES];
 #include <pathtracing_sample_quad_light>
 
 
-vec2 stackLevels[28];
+float stackNodeIDs[32];
 
-//vec4 boxNodeData0 corresponds to: .x = idShape,      .y = aabbMin.x, .z = aabbMin.y, .w = aabbMin.z
-//vec4 boxNodeData1 corresponds to: .x = idRightChild, .y = aabbMax.x, .z = aabbMax.y, .w = aabbMax.z
+//vec4 boxNodeData0 corresponds to: .x = aabbMin.x, .y = aabbMin.y, .z =      aabbMin.z, .w = aabbMax.x,
+//vec4 boxNodeData1 corresponds to: .x = aabbMax.y, .y = aabbMax.z, .z = primitiveCount, .w = leafOrChild_ID
 
 void GetBoxNodeData(const in float i, inout vec4 boxNodeData0, inout vec4 boxNodeData1)
 {
 	// each bounding box's data is encoded in 2 rgba(or xyzw) texture slots 
 	float ix2 = i * 2.0;
-	// (ix2 + 0.0) corresponds to: .x = idShape,      .y = aabbMin.x, .z = aabbMin.y, .w = aabbMin.z 
-	// (ix2 + 1.0) corresponds to: .x = idRightChild, .y = aabbMax.x, .z = aabbMax.y, .w = aabbMax.z 
+	// (ix2 + 0.0) corresponds to: .x = aabbMin.x, .y = aabbMin.y, .z =      aabbMin.z, .w = aabbMax.x,
+	// (ix2 + 1.0) corresponds to: .x = aabbMax.y, .y = aabbMax.z, .z = primitiveCount, .w = leafOrChild_ID 
 
 	ivec2 uv0 = ivec2( mod(ix2 + 0.0, 2048.0), (ix2 + 0.0) * INV_TEXTURE_WIDTH ); // data0
 	ivec2 uv1 = ivec2( mod(ix2 + 1.0, 2048.0), (ix2 + 1.0) * INV_TEXTURE_WIDTH ); // data1
@@ -82,9 +82,10 @@ float SceneIntersect( out int isRayExiting )
 	vec3 rObjOrigin, rObjDirection;
 	vec3 n, hitPoint;
 
-	vec2 currentStackData, stackDataA, stackDataB, tmpStackData;
 	ivec2 uv0, uv1, uv2, uv3, uv4, uv5, uv6, uv7;
 
+	float stackNodeID_A, stackNodeID_B, tmpNodeID;
+	float stackNodeA_t, stackNodeB_t, tmpNode_t;
 	float d;
 	float t = INFINITY;
 	float stackptr = 0.0;
@@ -95,77 +96,75 @@ float SceneIntersect( out int isRayExiting )
 	
 	hitObjectID = -INFINITY;
 
-	int skip = FALSE;
+	int popNextNodeOffStack = TRUE;
 	int shapeLookupNeeded = FALSE;
 
-	
-
+	// start with root node (bounding box around the entire model)
 	GetBoxNodeData(stackptr, currentBoxNodeData0, currentBoxNodeData1);
-	currentStackData = vec2(stackptr, BoundingBoxIntersect(currentBoxNodeData0.yzw, currentBoxNodeData1.yzw, rayOrigin, inverseDir));
-	stackLevels[0] = currentStackData;
-	skip = (currentStackData.y < t) ? TRUE : FALSE;
+	d = BoundingBoxIntersect(currentBoxNodeData0.xyz, vec3(currentBoxNodeData0.w, currentBoxNodeData1.xy), rayOrigin, inverseDir);
+	popNextNodeOffStack = (d < t) ? FALSE : TRUE;
 
 	while (true)
         {
-		if (skip == FALSE) 
+		if (popNextNodeOffStack == TRUE) 
                 {
-                        // decrease pointer by 1 (0.0 is root level, 27.0 is maximum depth)
+                        // decrease pointer by 1.0 (0.0 is root level, 31.0 is maximum depth)
                         if (--stackptr < 0.0) // went past the root level, terminate loop
                                 break;
-
-                        currentStackData = stackLevels[int(stackptr)];
-			
-			if (currentStackData.y >= t)
-				continue;
-			
-			GetBoxNodeData(currentStackData.x, currentBoxNodeData0, currentBoxNodeData1);
+			// pop the next node off the stack
+			GetBoxNodeData(stackNodeIDs[int(stackptr)], currentBoxNodeData0, currentBoxNodeData1);
                 }
-		skip = FALSE; // reset skip
+		popNextNodeOffStack = TRUE; // reset popNextNodeOffStack
 		
 
-		if (currentBoxNodeData0.x < 0.0) // < 0.0 signifies an inner node
+		if (currentBoxNodeData1.z == 0.0) // == 0.0 signifies an inner node
 		{
-			GetBoxNodeData(currentStackData.x + 1.0, nodeAData0, nodeAData1);
-			GetBoxNodeData(currentBoxNodeData1.x, nodeBData0, nodeBData1);
-			stackDataA = vec2(currentStackData.x + 1.0, BoundingBoxIntersect(nodeAData0.yzw, nodeAData1.yzw, rayOrigin, inverseDir));
-			stackDataB = vec2(currentBoxNodeData1.x, BoundingBoxIntersect(nodeBData0.yzw, nodeBData1.yzw, rayOrigin, inverseDir));
+			GetBoxNodeData(currentBoxNodeData1.w, nodeAData0, nodeAData1); // leftChild
+			GetBoxNodeData(currentBoxNodeData1.w + 1.0, nodeBData0, nodeBData1); // rightChild
+			stackNodeID_A = currentBoxNodeData1.w;
+			stackNodeID_B = currentBoxNodeData1.w + 1.0;
+			stackNodeA_t = BoundingBoxIntersect(nodeAData0.xyz, vec3(nodeAData0.w, nodeAData1.xy), rayOrigin, inverseDir);
+			stackNodeB_t = BoundingBoxIntersect(nodeBData0.xyz, vec3(nodeBData0.w, nodeBData1.xy), rayOrigin, inverseDir);
 			
-			// first sort the branch node data so that 'a' is the smallest
-			if (stackDataB.y < stackDataA.y)
+			// first, sort the children nodes data so that nodeA is the closer node
+			if (stackNodeB_t < stackNodeA_t)
 			{
-				tmpStackData = stackDataB;
-				stackDataB = stackDataA;
-				stackDataA = tmpStackData;
+				tmpNodeID = stackNodeID_A;
+				stackNodeID_A = stackNodeID_B;
+				stackNodeID_B = tmpNodeID;
 
-				tmpNodeData0 = nodeBData0;   tmpNodeData1 = nodeBData1;
-				nodeBData0   = nodeAData0;   nodeBData1   = nodeAData1;
-				nodeAData0   = tmpNodeData0; nodeAData1   = tmpNodeData1;
-			} // branch 'b' now has the larger rayT value of 'a' and 'b'
+				tmpNode_t = stackNodeA_t;
+				stackNodeA_t = stackNodeB_t;
+				stackNodeB_t = tmpNode_t;
 
-			if (stackDataB.y < t) // see if branch 'b' (the larger rayT) needs to be processed
+				tmpNodeData0 = nodeAData0;   tmpNodeData1 = nodeAData1;
+				nodeAData0   = nodeBData0;   nodeAData1   = nodeBData1;
+				nodeBData0   = tmpNodeData0; nodeBData1   = tmpNodeData1;
+			} // now it's guaranteed that nodeA is the closer node and nodeB is the farther node
+
+			if (stackNodeB_t < t) // see if the farther nodeB (the larger ray t) needs to be processed
 			{
-				currentStackData = stackDataB;
 				currentBoxNodeData0 = nodeBData0;
 				currentBoxNodeData1 = nodeBData1;
-				skip = TRUE; // this will prevent the stackptr from decreasing by 1
+				popNextNodeOffStack = FALSE; // this will prevent the stackptr from decreasing by 1
 			}
-			if (stackDataA.y < t) // see if branch 'a' (the smaller rayT) needs to be processed 
+			
+			if (stackNodeA_t < t) // see if the closer nodeA (the smaller ray t) needs to be processed 
 			{
-				if (skip == TRUE) // if larger branch 'b' needed to be processed also,
-					stackLevels[int(stackptr++)] = stackDataB; // cue larger branch 'b' for future round
-							// also, increase pointer by 1
-				
-				currentStackData = stackDataA;
-				currentBoxNodeData0 = nodeAData0; 
+				if (popNextNodeOffStack == FALSE) // if further nodeB needed to be visited also,
+					stackNodeIDs[int(stackptr++)] = stackNodeID_B; // push nodeB on stack for future round
+							// also, increase stackptr by 1
+				// since nodeA is always the closest node, set nodeA as the current node to be processed
+				currentBoxNodeData0 = nodeAData0;
 				currentBoxNodeData1 = nodeAData1;
-				skip = TRUE; // this will prevent the stackptr from decreasing by 1
+				popNextNodeOffStack = FALSE; // this will prevent the stackptr from decreasing by 1
 			}
 
 			continue;
-		} // end if (currentBoxNodeData0.x < 0.0) // inner node
+		} // end if (currentBoxNodeData1.z == 0.0) // inner node
 		/* 
 		// debug leaf AABB visualization
-		d = BoxIntersect(currentBoxNodeData0.yzw, currentBoxNodeData1.yzw, rayOrigin, rayDirection, n, isRayExiting);
+		d = BoxIntersect(currentBoxNodeData0.xyz, vec3(currentBoxNodeData0.w, currentBoxNodeData1.xy), rayOrigin, rayDirection, n, isRayExiting);
 		if (d > 0.0 && d < t)
 		{
 			t = d;
@@ -178,7 +177,7 @@ float SceneIntersect( out int isRayExiting )
 		// else this is a leaf
 
 		// each shape's data is encoded in 8 rgba(or xyzw) texture slots
-		id = 8.0 * currentBoxNodeData0.x;
+		id = 8.0 * currentBoxNodeData1.w;
 
 		uv0 = ivec2( mod(id + 0.0, 2048.0), (id + 0.0) * INV_TEXTURE_WIDTH );
 		uv1 = ivec2( mod(id + 1.0, 2048.0), (id + 1.0) * INV_TEXTURE_WIDTH );
@@ -279,7 +278,9 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	vec3 reflectionMask = vec3(1);
 	vec3 reflectionRayOrigin = vec3(0);
 	vec3 reflectionRayDirection = vec3(0);
-	vec3 dirToLight;
+	vec3 diffuseBounceMask = vec3(1);
+	vec3 diffuseBounceRayOrigin = vec3(0);
+	vec3 diffuseBounceRayDirection = vec3(0);
 	vec3 x, n, nl;
 	vec3 absorptionCoefficient;
 	
@@ -301,10 +302,11 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 	int willNeedReflectionRay = FALSE;
 	int isReflectionTime = FALSE;
 	int reflectionNeedsToBeSharp = FALSE;
-	
+	int willNeedDiffuseBounceRay = FALSE;
+	int isDiffuseBounceTime = FALSE;
 
 	
-	for (int bounces = 0; bounces < 8; bounces++)
+	for (int bounces = 0; bounces < 10; bounces++)
 	{
 		if (isReflectionTime == TRUE)
 			reflectionBounces++;
@@ -321,6 +323,21 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			if (bounces == 0)
 				pixelSharpness = 1.0;
 
+			if (willNeedDiffuseBounceRay == TRUE)
+			{
+				mask = diffuseBounceMask;
+				rayOrigin = diffuseBounceRayOrigin;
+				rayDirection = diffuseBounceRayDirection;
+
+				willNeedDiffuseBounceRay = FALSE;
+				bounceIsSpecular = FALSE;
+				sampleLight = FALSE;
+				isDiffuseBounceTime = TRUE;
+				isReflectionTime = FALSE;
+				diffuseCount = 1;
+				continue;
+			}
+
 			if (willNeedReflectionRay == TRUE)
 			{
 				mask = reflectionMask;
@@ -331,6 +348,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				bounceIsSpecular = TRUE;
 				sampleLight = FALSE;
 				isReflectionTime = TRUE;
+				isDiffuseBounceTime = FALSE;
 				continue;
 			}
 
@@ -375,6 +393,21 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			if (bounceIsSpecular == TRUE || sampleLight == TRUE)
 				accumCol += mask * hitColor;
 
+			if (willNeedDiffuseBounceRay == TRUE)
+			{
+				mask = diffuseBounceMask;
+				rayOrigin = diffuseBounceRayOrigin;
+				rayDirection = diffuseBounceRayDirection;
+
+				willNeedDiffuseBounceRay = FALSE;
+				bounceIsSpecular = FALSE;
+				sampleLight = FALSE;
+				isDiffuseBounceTime = TRUE;
+				isReflectionTime = FALSE;
+				diffuseCount = 1;
+				continue;
+			}
+
 			if (willNeedReflectionRay == TRUE)
 			{
 				mask = reflectionMask;
@@ -385,6 +418,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				bounceIsSpecular = TRUE;
 				sampleLight = FALSE;
 				isReflectionTime = TRUE;
+				isDiffuseBounceTime = FALSE;
 				continue;
 			}
 			// reached a light, so we can exit
@@ -397,6 +431,21 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 		// the ray hit an occluding object along its way to the light
 		if (sampleLight == TRUE)
 		{
+			if (willNeedDiffuseBounceRay == TRUE)
+			{
+				mask = diffuseBounceMask;
+				rayOrigin = diffuseBounceRayOrigin;
+				rayDirection = diffuseBounceRayDirection;
+
+				willNeedDiffuseBounceRay = FALSE;
+				bounceIsSpecular = FALSE;
+				sampleLight = FALSE;
+				isDiffuseBounceTime = TRUE;
+				isReflectionTime = FALSE;
+				diffuseCount = 1;
+				continue;
+			}
+
 			if (willNeedReflectionRay == TRUE)
 			{
 				mask = reflectionMask;
@@ -407,6 +456,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 				bounceIsSpecular = TRUE;
 				sampleLight = FALSE;
 				isReflectionTime = TRUE;
+				isDiffuseBounceTime = FALSE;
 				continue;
 			}
 
@@ -416,32 +466,28 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 		    
 		if (hitType == DIFF) // Ideal DIFFUSE reflection
-		{
+		{	
 			diffuseCount++;
 
 			mask *= hitColor;
 
 			bounceIsSpecular = FALSE;
 
-			if (diffuseCount == 1 && rand() < 0.5)
-			{
-				mask *= 2.0;
-				// choose random Diffuse sample vector
-				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
-				rayOrigin = x + nl * uEPS_intersect;
-				continue;
-			}
-			
-			dirToLight = sampleQuadLight(x, nl, quads[0], weight);
-			mask *= diffuseCount == 1 ? 2.0 : 1.0;
-			mask *= weight;
-
-			rayDirection = dirToLight;
 			rayOrigin = x + nl * uEPS_intersect;
 
+			if (diffuseCount == 1)
+			{
+				diffuseBounceMask = mask;
+				diffuseBounceRayOrigin = rayOrigin;
+				diffuseBounceRayDirection = randomCosWeightedDirectionInHemisphere(nl);
+				willNeedDiffuseBounceRay = TRUE;
+			}
+                        
+			rayDirection = sampleQuadLight(x, nl, quads[0], weight);
+			mask *= weight;
 			sampleLight = TRUE;
 			continue;
-			
+                        
 		} // end if (hitType == DIFF)
 		
 		if (hitType == SPEC)  // Ideal SPECULAR reflection
@@ -492,7 +538,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			rayDirection = refract(rayDirection, nl, ratioIoR);
 			rayOrigin = x - nl * uEPS_intersect;
 
-			if (diffuseCount == 1 && isReflectionTime == FALSE)
+			if (diffuseCount == 1 && isDiffuseBounceTime == TRUE)
 				bounceIsSpecular = TRUE; // turn on refracting caustics
 			
 			continue;
@@ -506,8 +552,7 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 			Re = calcFresnelReflectance(rayDirection, nl, nc, nt, ratioIoR);
 			Tr = 1.0 - Re;
 			
-			//if (diffuseCount == 0 && hitObjectID != previousObjectID)
-			if (bounces == 0)
+			if (diffuseCount == 0 && hitObjectID != previousObjectID)
 			{
 				reflectionMask = mask * Re;
 				reflectionRayDirection = reflect(rayDirection, nl); // reflect ray from surface
@@ -522,28 +567,24 @@ vec3 CalculateRadiance( out vec3 objectNormal, out vec3 objectColor, out float o
 
 			bounceIsSpecular = FALSE;
 			
-			if (diffuseCount == 1 && rand() < 0.5)
-			{
-				mask *= 2.0;
-				// choose random Diffuse sample vector
-				rayDirection = randomCosWeightedDirectionInHemisphere(nl);
-				rayOrigin = x + nl * uEPS_intersect;
-				continue;
-			}
-
-			dirToLight = sampleQuadLight(x, nl, quads[0], weight);
-			mask *= diffuseCount == 1 ? 2.0 : 1.0;
-			mask *= weight;
-			
-			rayDirection = dirToLight;
 			rayOrigin = x + nl * uEPS_intersect;
-
+			
+			if (diffuseCount == 1)
+			{
+				diffuseBounceMask = mask;
+				diffuseBounceRayOrigin = rayOrigin;
+				diffuseBounceRayDirection = randomCosWeightedDirectionInHemisphere(nl);
+				willNeedDiffuseBounceRay = TRUE;
+			}
+                        
+			rayDirection = sampleQuadLight(x, nl, quads[0], weight);
+			mask *= weight;
 			sampleLight = TRUE;
 			continue;
 			
 		} //end if (hitType == COAT)
 		
-	} // end for (int bounces = 0; bounces < 8; bounces++)
+	} // end for (int bounces = 0; bounces < 10; bounces++)
 	
 	
 	return max(vec3(0), accumCol);
