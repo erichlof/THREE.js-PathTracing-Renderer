@@ -26,7 +26,7 @@ let triangleDataTexture;
 let aabbDataTexture;
 let totalGeometryCount = 0;
 let total_number_of_triangles = 0;
-let totalWork;
+let aabbIndexList;
 let triangle_array = new Float32Array(2048 * 2048 * 4);
 // 2048 = width of texture, 2048 = height of texture, 4 = r,g,b, and a components
 let aabb_array = new Float32Array(2048 * 2048 * 4);
@@ -41,7 +41,7 @@ let shapes_array;
 let shapesDataTexture;
 let shapes_aabb_array;
 let shapes_aabbDataTexture;
-let totalShapesWork;
+let aabbShapesIndexList;
 let shapeBoundingBox_minCorner = new THREE.Vector3();
 let shapeBoundingBox_maxCorner = new THREE.Vector3();
 let shapeBoundingBox_centroid = new THREE.Vector3();
@@ -244,7 +244,7 @@ function initSceneData()
 	total_number_of_triangles = modelMesh.geometry.attributes.position.array.length / 9;
 	console.log("Triangle count:" + (total_number_of_triangles));
 
-	totalWork = new Uint32Array(total_number_of_triangles);
+	aabbIndexList = new Uint32Array(total_number_of_triangles);
 
 	let triangle_b_box_min = new THREE.Vector3();
 	let triangle_b_box_max = new THREE.Vector3();
@@ -363,14 +363,13 @@ function initSceneData()
 		triangle_array[ix32 + 30] = 0; // b or z
 		triangle_array[ix32 + 31] = 0; // a or w
 
-		triangle_b_box_min.copy(triangle_b_box_min.min(vp0));
-		triangle_b_box_max.copy(triangle_b_box_max.max(vp0));
-		triangle_b_box_min.copy(triangle_b_box_min.min(vp1));
-		triangle_b_box_max.copy(triangle_b_box_max.max(vp1));
-		triangle_b_box_min.copy(triangle_b_box_min.min(vp2));
-		triangle_b_box_max.copy(triangle_b_box_max.max(vp2));
+		triangle_b_box_min.min(vp0).min(vp1).min(vp2);
+		triangle_b_box_max.max(vp0).max(vp1).max(vp2);
 
-		triangle_b_box_centroid.copy(triangle_b_box_min).add(triangle_b_box_max).multiplyScalar(0.5);
+		// use the following for leaves that contain triangles (the default case for all glTF meshes)
+		triangle_b_box_centroid.copy(vp0).add(vp1).add(vp2).multiplyScalar(0.3333333333333333);
+		// or use the following for leaves that contain complete quadric shapes like spheres, cylinders, boxes, etc.
+		//triangle_b_box_centroid.copy(triangle_b_box_min).add(triangle_b_box_max).multiplyScalar(0.5);
 
 		aabb_array[ix9 + 0] = triangle_b_box_min.x;
 		aabb_array[ix9 + 1] = triangle_b_box_min.y;
@@ -382,21 +381,15 @@ function initSceneData()
 		aabb_array[ix9 + 7] = triangle_b_box_centroid.y;
 		aabb_array[ix9 + 8] = triangle_b_box_centroid.z;
 
-		totalWork[i] = i;
+		aabbIndexList[i] = i;
 	}
 
 
 
-	console.time("BvhGeneration");
-	console.log("BvhGeneration...");
-
-	// Build the BVH acceleration structure, which places a bounding box ('root' of the tree) around all of the
-	// triangles of the entire mesh, then subdivides each box into 2 smaller boxes.  It continues until it reaches 1 triangle,
-	// which it then designates as a 'leaf'
-	BVH_Build_Iterative(totalWork, aabb_array);
-	//console.log(buildnodes);
-
-	console.timeEnd("BvhGeneration");
+	// the higher the number of BINS, the better quality of resulting BVH tree, but also increases build time
+	N_BINS = 1024;
+	
+	BVH_QuickBuild(aabbIndexList, aabb_array);
 
 
 	triangleDataTexture = new THREE.DataTexture(
@@ -878,7 +871,7 @@ function initSceneData()
 	console.log("Shape count: " + sceneShapeMeshes.length);
 
 
-	totalShapesWork = new Uint32Array(sceneShapeMeshes.length);
+	aabbShapesIndexList = new Uint32Array(sceneShapeMeshes.length);
 
 	shapes_array = new Float32Array(2048 * 2048 * 4);
 	// 2048 = width of texture, 2048 = height of texture, 4 = r,g,b, and a components
@@ -981,20 +974,14 @@ function initSceneData()
 		shapes_aabb_array[9 * i + 7] = shapeBoundingBox_centroid.y;
 		shapes_aabb_array[9 * i + 8] = shapeBoundingBox_centroid.z;
 
-		totalShapesWork[i] = i;
+		aabbShapesIndexList[i] = i;
 	} // end for (let i = 0; i < sceneShapeMeshes.length; i++)
 
 
-	console.time("BvhGeneration");
-	console.log("BvhGeneration...");
-
-	// Build the BVH acceleration structure, which starts with a large bounding box ('root' of the tree) 
-	// that surrounds all of the shapes.  It then subdivides each 'parent' box into 2 smaller 'child' boxes.  
-	// It continues until it reaches 1 shape, which it then designates as a 'leaf'
-	BVH_Build_Iterative(totalShapesWork, shapes_aabb_array);
-	//console.log(buildnodes);
-
-	console.timeEnd("BvhGeneration");
+	// the higher the number of BINS, the better quality of resulting BVH tree, but also increases build time
+	N_BINS = 1024;
+	
+	BVH_QuickBuild(aabbShapesIndexList, shapes_aabb_array);
 
 
 	shapesDataTexture = new THREE.DataTexture(shapes_array,
