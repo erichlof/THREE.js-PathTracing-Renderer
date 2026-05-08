@@ -46,7 +46,7 @@ let quad_array;
 let quadDataTexture;
 let aabb_array;
 let aabbDataTexture;
-let totalWork;
+let aabbIndexList;
 let vp0 = new THREE.Vector3();
 let vp1 = new THREE.Vector3();
 let vp2 = new THREE.Vector3();
@@ -115,7 +115,7 @@ function initSceneData()
 	total_number_of_quads = QuadsOnlyOBJModel.geometry.vertices.length / 12;
 	console.log("quad count:" + total_number_of_quads);
 
-	totalWork = new Uint32Array(total_number_of_quads);
+	aabbIndexList = new Uint32Array(total_number_of_quads);
 
 	quad_array = new Float32Array(4096 * 4096 * 4);
 	// 4096 = width of texture, 4096 = height of texture, 4 = r,g,b, and a components
@@ -300,16 +300,9 @@ function initSceneData()
 
 
 
-
-		quad_b_box_min.copy(quad_b_box_min.min(vp0));
-		quad_b_box_max.copy(quad_b_box_max.max(vp0));
-		quad_b_box_min.copy(quad_b_box_min.min(vp1));
-		quad_b_box_max.copy(quad_b_box_max.max(vp1));
-		quad_b_box_min.copy(quad_b_box_min.min(vp2));
-		quad_b_box_max.copy(quad_b_box_max.max(vp2));
-		quad_b_box_min.copy(quad_b_box_min.min(vp3));
-		quad_b_box_max.copy(quad_b_box_max.max(vp3));
-
+		quad_b_box_min.min(vp0).min(vp1).min(vp2).min(vp3);
+		quad_b_box_max.max(vp0).max(vp1).max(vp2).max(vp3);
+		
 		//quad_b_box_centroid.copy(quad_b_box_min).add(quad_b_box_max).multiplyScalar(0.5);
 		quad_b_box_centroid.copy(vp0).add(vp1).add(vp2).add(vp3).multiplyScalar(0.25);
 
@@ -323,20 +316,14 @@ function initSceneData()
 		aabb_array[ix9 + 7] = quad_b_box_centroid.y;
 		aabb_array[ix9 + 8] = quad_b_box_centroid.z;
 
-		totalWork[i] = i;
+		aabbIndexList[i] = i;
 	}
 
 
-	console.time("BvhGeneration");
-	console.log("BvhGeneration...");
+	// the higher the number of BINS, the better quality of resulting BVH tree, but also increases build time
+	N_BINS = 1024;
 
-	// Build the BVH acceleration structure, which places a bounding box ('root' of the tree) around all of the
-	// quads of the entire mesh, then subdivides each box into 2 smaller boxes. It continues until it reaches 
-	// a single quad, which it then designates as a 'leaf'
-	BVH_Build_Iterative(totalWork, aabb_array);
-	//console.log(buildnodes);
-
-	console.timeEnd("BvhGeneration");
+	BVH_QuickBuild(aabbIndexList, aabb_array);
 
 
 	quadDataTexture = new THREE.DataTexture(quad_array,
