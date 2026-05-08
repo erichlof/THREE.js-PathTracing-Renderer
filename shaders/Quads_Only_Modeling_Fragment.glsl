@@ -58,17 +58,17 @@ BiLinearPatch bilinearPatches[N_BILINEAR_PATCHES];
 #include <pathtracing_sample_quad_light>
 
 
-vec2 stackLevels[28];
+float stackNodeIDs[32];
 
-//vec4 boxNodeData0 corresponds to .x = idQuad,  .y = aabbMin.x, .z = aabbMin.y, .w = aabbMin.z
-//vec4 boxNodeData1 corresponds to .x = idRightChild .y = aabbMax.x, .z = aabbMax.y, .w = aabbMax.z
+//vec4 boxNodeData0 corresponds to: .x = aabbMin.x, .y = aabbMin.y, .z =      aabbMin.z, .w = aabbMax.x,
+//vec4 boxNodeData1 corresponds to: .x = aabbMax.y, .y = aabbMax.z, .z = primitiveCount, .w = leafOrChild_ID
 
 void GetBoxNodeData(const in float i, inout vec4 boxNodeData0, inout vec4 boxNodeData1)
 {
 	// each bounding box's data is encoded in 2 rgba(or xyzw) texture slots 
 	float ix2 = i * 2.0;
-	// (ix2 + 0.0) corresponds to .x = idQuad,  .y = aabbMin.x, .z = aabbMin.y, .w = aabbMin.z 
-	// (ix2 + 1.0) corresponds to .x = idRightChild .y = aabbMax.x, .z = aabbMax.y, .w = aabbMax.z 
+	// (ix2 + 0.0) corresponds to: .x = aabbMin.x, .y = aabbMin.y, .z =      aabbMin.z, .w = aabbMax.x,
+	// (ix2 + 1.0) corresponds to: .x = aabbMax.y, .y = aabbMax.z, .z = primitiveCount, .w = leafOrChild_ID 
 
 	ivec2 uv0 = ivec2( mod(ix2 + 0.0, 4096.0), (ix2 + 0.0) * INV_TEXTURE_WIDTH ); // data0
 	ivec2 uv1 = ivec2( mod(ix2 + 1.0, 4096.0), (ix2 + 1.0) * INV_TEXTURE_WIDTH ); // data1
@@ -85,13 +85,15 @@ float SceneIntersect( )
 	vec4 currentBoxNodeData0, nodeAData0, nodeBData0, tmpNodeData0;
 	vec4 currentBoxNodeData1, nodeAData1, nodeBData1, tmpNodeData1;
 	vec4 vd0, vd1, vd2, vd3, vd4, vd5, vd6, vd7, vd8;
-	//vec3 vn0, vn1, vn2, vn3;
+
 	vec3 inverseDir = 1.0 / rayDirection;
 	vec3 rObjOrigin, rObjDirection;
 	vec3 normal, hitPoint;
-	vec2 currentStackData, stackDataA, stackDataB, tmpStackData;
-	//vec2 vtc0, vtc1, vtc2, vtc3;
+	
 	ivec2 uv0, uv1, uv2, uv3, uv4, uv5, uv6, uv7, uv8;
+
+	float stackNodeID_A, stackNodeID_B, tmpNodeID;
+	float stackNodeA_t, stackNodeB_t, tmpNode_t;
 	float stackptr = 0.0;
 	float id = 0.0;
 	float d;
@@ -99,8 +101,9 @@ float SceneIntersect( )
 	float quadU, quadV;
 	float t = INFINITY;
 	float u, v;
+
 	int objectCount = 0;
-	int skip = FALSE;
+	int popNextNodeOffStack = TRUE;
 	int quadLookupNeeded = FALSE;
 
 	hitObjectID = -INFINITY;
@@ -112,74 +115,73 @@ float SceneIntersect( )
 	inverseDir = 1.0 / rObjDirection;
 
 	GetBoxNodeData(stackptr, currentBoxNodeData0, currentBoxNodeData1);
-	currentStackData = vec2(stackptr, BoundingBoxIntersect(currentBoxNodeData0.yzw, currentBoxNodeData1.yzw, rObjOrigin, inverseDir));
-	stackLevels[0] = currentStackData;
-	skip = (currentStackData.y < t) ? TRUE : FALSE;
+	d = BoundingBoxIntersect(currentBoxNodeData0.xyz, vec3(currentBoxNodeData0.w, currentBoxNodeData1.xy), rObjOrigin, inverseDir);
+	popNextNodeOffStack = (d < t) ? FALSE : TRUE;
 
 	while (true)
         {
-		if (skip == FALSE) 
+		if (popNextNodeOffStack == TRUE) 
                 {
-                        // decrease pointer by 1 (0.0 is root level, 27.0 is maximum depth)
+                        // decrease pointer by 1.0 (0.0 is root level, 31.0 is maximum depth)
                         if (--stackptr < 0.0) // went past the root level, terminate loop
                                 break;
-
-                        currentStackData = stackLevels[int(stackptr)];
-			
-			if (currentStackData.y >= t)
-				continue;
-			
-			GetBoxNodeData(currentStackData.x, currentBoxNodeData0, currentBoxNodeData1);
+			// pop the next node off the stack
+			GetBoxNodeData(stackNodeIDs[int(stackptr)], currentBoxNodeData0, currentBoxNodeData1);
                 }
-		skip = FALSE; // reset skip
+		popNextNodeOffStack = TRUE; // reset popNextNodeOffStack
 		
 
-		if (currentBoxNodeData0.x < 0.0) // < 0.0 signifies an inner node
+		if (currentBoxNodeData1.z == 0.0) // == 0.0 signifies an inner node
 		{
-			GetBoxNodeData(currentStackData.x + 1.0, nodeAData0, nodeAData1);
-			GetBoxNodeData(currentBoxNodeData1.x, nodeBData0, nodeBData1);
-			stackDataA = vec2(currentStackData.x + 1.0, BoundingBoxIntersect(nodeAData0.yzw, nodeAData1.yzw, rObjOrigin, inverseDir));
-			stackDataB = vec2(currentBoxNodeData1.x, BoundingBoxIntersect(nodeBData0.yzw, nodeBData1.yzw, rObjOrigin, inverseDir));
+			GetBoxNodeData(currentBoxNodeData1.w, nodeAData0, nodeAData1); // leftChild
+			GetBoxNodeData(currentBoxNodeData1.w + 1.0, nodeBData0, nodeBData1); // rightChild
+			stackNodeID_A = currentBoxNodeData1.w;
+			stackNodeID_B = currentBoxNodeData1.w + 1.0;
+			stackNodeA_t = BoundingBoxIntersect(nodeAData0.xyz, vec3(nodeAData0.w, nodeAData1.xy), rObjOrigin, inverseDir);
+			stackNodeB_t = BoundingBoxIntersect(nodeBData0.xyz, vec3(nodeBData0.w, nodeBData1.xy), rObjOrigin, inverseDir);
 			
-			// first sort the branch node data so that 'a' is the smallest
-			if (stackDataB.y < stackDataA.y)
+			// first, sort the children nodes data so that nodeA is the closer node
+			if (stackNodeB_t < stackNodeA_t)
 			{
-				tmpStackData = stackDataB;
-				stackDataB = stackDataA;
-				stackDataA = tmpStackData;
+				tmpNodeID = stackNodeID_A;
+				stackNodeID_A = stackNodeID_B;
+				stackNodeID_B = tmpNodeID;
 
-				tmpNodeData0 = nodeBData0;   tmpNodeData1 = nodeBData1;
-				nodeBData0   = nodeAData0;   nodeBData1   = nodeAData1;
-				nodeAData0   = tmpNodeData0; nodeAData1   = tmpNodeData1;
-			} // branch 'b' now has the larger rayT value of 'a' and 'b'
+				tmpNode_t = stackNodeA_t;
+				stackNodeA_t = stackNodeB_t;
+				stackNodeB_t = tmpNode_t;
 
-			if (stackDataB.y < t) // see if branch 'b' (the larger rayT) needs to be processed
+				tmpNodeData0 = nodeAData0;   tmpNodeData1 = nodeAData1;
+				nodeAData0   = nodeBData0;   nodeAData1   = nodeBData1;
+				nodeBData0   = tmpNodeData0; nodeBData1   = tmpNodeData1;
+			} // now it's guaranteed that nodeA is the closer node and nodeB is the farther node
+
+			if (stackNodeB_t < t) // see if the farther nodeB (the larger ray t) needs to be processed
 			{
-				currentStackData = stackDataB;
 				currentBoxNodeData0 = nodeBData0;
 				currentBoxNodeData1 = nodeBData1;
-				skip = TRUE; // this will prevent the stackptr from decreasing by 1
+				popNextNodeOffStack = FALSE; // this will prevent the stackptr from decreasing by 1
 			}
-			if (stackDataA.y < t) // see if branch 'a' (the smaller rayT) needs to be processed 
+			
+			if (stackNodeA_t < t) // see if the closer nodeA (the smaller ray t) needs to be processed 
 			{
-				if (skip == TRUE) // if larger branch 'b' needed to be processed also,
-					stackLevels[int(stackptr++)] = stackDataB; // cue larger branch 'b' for future round
-							// also, increase pointer by 1
-				
-				currentStackData = stackDataA;
-				currentBoxNodeData0 = nodeAData0; 
+				if (popNextNodeOffStack == FALSE) // if further nodeB needed to be visited also,
+					stackNodeIDs[int(stackptr++)] = stackNodeID_B; // push nodeB on stack for future round
+							// also, increase stackptr by 1
+				// since nodeA is always the closest node, set nodeA as the current node to be processed
+				currentBoxNodeData0 = nodeAData0;
 				currentBoxNodeData1 = nodeAData1;
-				skip = TRUE; // this will prevent the stackptr from decreasing by 1
+				popNextNodeOffStack = FALSE; // this will prevent the stackptr from decreasing by 1
 			}
 
 			continue;
-		} // end if (currentBoxNodeData0.x < 0.0) // inner node
+		} // end if (currentBoxNodeData1.z == 0.0) // inner node
 
 
 		// else this is a leaf
 
 		// each quad's data is encoded in 16 rgba(or xyzw) texels
-		id = 16.0 * currentBoxNodeData0.x;
+		id = 16.0 * currentBoxNodeData1.w;
 
 		uv0 = ivec2( mod(id + 0.0, 4096.0), (id + 0.0) * INV_TEXTURE_WIDTH );
 		uv1 = ivec2( mod(id + 1.0, 4096.0), (id + 1.0) * INV_TEXTURE_WIDTH );
