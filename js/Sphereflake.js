@@ -4,7 +4,7 @@ let shape_array;
 let shapeDataTexture;
 let aabb_array;
 let aabbDataTexture;
-let totalWork;
+let aabbIndexList;
 let shapeBoundingBox_minCorner = new THREE.Vector3();
 let shapeBoundingBox_maxCorner = new THREE.Vector3();
 let shapeBoundingBox_centroid = new THREE.Vector3();
@@ -40,15 +40,18 @@ let matType = 0;
 // called automatically from within initTHREEjs() function (located in InitCommon.js file)
 function initSceneData() 
 {
-	demoFragmentShaderFileName = 'Sphereflake_Fragment.glsl';
 
+	if (!mouseControl)
+		demoFragmentShaderFileName = 'Sphereflake_Fragment_Mobile.glsl';
+	else demoFragmentShaderFileName = 'Sphereflake_Fragment.glsl';
+	
 	// scene/demo-specific three.js objects setup goes here
 	sceneIsDynamic = false;
 
 	cameraFlightSpeed = 100;
 
 	// pixelRatio is resolution - range: 0.5(half resolution) to 1.0(full resolution)
-	pixelRatio = mouseControl ? 0.8 : 0.75;
+	pixelRatio = mouseControl ? 1.0 : 0.75;
 
 	EPS_intersect = 0.01;
 
@@ -332,7 +335,7 @@ function initSceneData()
 
 	console.log("Shape count: " + totalNumberOfShapes);
 
-	totalWork = new Uint32Array(totalNumberOfShapes);
+	aabbIndexList = new Uint32Array(totalNumberOfShapes);
 
 	shape_array = new Float32Array(2048 * 2048 * 4);
 	// 2048 = width of texture, 2048 = height of texture, 4 = r,g,b, and a components
@@ -413,20 +416,14 @@ function initSceneData()
 		aabb_array[9 * i + 7] = shapeBoundingBox_centroid.y;
 		aabb_array[9 * i + 8] = shapeBoundingBox_centroid.z;
 
-		totalWork[i] = i;
+		aabbIndexList[i] = i;
 	} // end for (let i = 0; i < totalNumberOfShapes; i++)
 
 
-	console.time("BvhGeneration");
-	console.log("BvhGeneration...");
+	// the higher the number of BINS, the better quality of resulting BVH tree, but also increases build time
+	N_BINS = 1024;
 
-	// Build the BVH acceleration structure, which starts with a large bounding box ('root' of the tree) 
-	// that surrounds all of the shapes.  It then subdivides each 'parent' box into 2 smaller 'child' boxes.  
-	// It continues until it reaches 1 shape, which it then designates as a 'leaf'
-	BVH_Build_Iterative(totalWork, aabb_array);
-	//console.log(buildnodes);
-
-	console.timeEnd("BvhGeneration");
+	BVH_QuickBuild(aabbIndexList, aabb_array);
 
 
 	shapeDataTexture = new THREE.DataTexture(shape_array,
