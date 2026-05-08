@@ -1,324 +1,463 @@
-let buildnodes = [];
-let leftWorklist = [];
-let rightWorklist = [];
-let nodesUsed = 1;
-let aabb_array_copy;
-let k, value, side0, side1, side2;
-let bestSplit, goodSplit, okaySplit;
-let bestAxis, goodAxis, okayAxis;
-let currentMinCorner = new THREE.Vector3();
-let currentMaxCorner = new THREE.Vector3();
+// BVH_Quick_Builder
+// The core concepts of this BVH builder come from the fantastic online article series, "How To Build a BVH",
+// by Jacco Bikker.  In particular, the "binning" techniques and other optimizations come from the 3rd article in
+// this series - part 3, Quick Builds:   https://jacco.ompf2.com/2022/04/21/how-to-build-a-bvh-part-3-quick-builds/ 
+
+// Jacco's original C++ source code can be found here: https://github.com/jbikker/bvh_article/blob/main/quickbuild.cpp 
+// Ported to Javascript and modified for use with the Three.js PathTracing Renderer by Erich Loftis (erichlof on GitHub)
+
+let bvhNode = [];
+let bin = [];
+let N_BINS = 16;// the higher the number of BINS, the better quality of resulting tree, but also increases build time
+let aabb_array_copy = null;
+let triIdx = null;
+let leftArea = null;
+let rightArea = null;
+let leftCountSum = null;
+let rightCountSum = null;
+let N = 0;
+let rootNodeIdx = 0;
+let nodesUsed = 2;// the 2 offsets the left-right child pairs to even starting address boundaries (2-3, 4-5, 6-7, etc) 
+let first = 0;
+let k = 0; 
+let kx9 = 0;
+let axis = 'x'; 
+let axisNum = 0;
+let longestAxis = 'x';
+let longestAxisNum = 0;
+let tmp = 0;
+let splitPos = 0;
+let leftCount = 0;
+let leftPrimCount = 0;
+let rightPrimCount = 0;
+let leftBoxArea = 0;
+let rightBoxArea = 0;
+let bestAxis = 0;
+let bestSplitPos = 0;
+let bestCost = 0;
+let planeCost = 0;
+let boundsMin = 0;
+let boundsMax = 0;
+let scale = 0;
+let binIdx = 0;
+let centroid = 0;
+let leftSum = 0;
+let rightSum = 0;
+let leftBoxMin = new THREE.Vector3();
+let leftBoxMax = new THREE.Vector3();
+let rightBoxMin = new THREE.Vector3();
+let rightBoxMax = new THREE.Vector3();
+let extent = new THREE.Vector3();
 let testMinCorner = new THREE.Vector3();
 let testMaxCorner = new THREE.Vector3();
-let testCentroid = new THREE.Vector3();
-let spatialAverage = new THREE.Vector3();
 
 
+// these constructor functions work the same as a 'struct' in C/C++
 function BVH_Node()
 {
 	this.minCorner = new THREE.Vector3();
 	this.maxCorner = new THREE.Vector3();
-	this.primitiveCount = 0;
-	this.leafOrChild_ID = 0;
+	this.triCount = 0;
+	this.leftFirst = 0;
+}
+
+function Bin()
+{
+	this.minBounds = new THREE.Vector3();
+	this.maxBounds = new THREE.Vector3();
+	this.triCount = 0;
 }
 
 
-function BVH_Create_Node(worklist, nodeIndex)
+function UpdateNodeBounds(nodeIdx)
 {
-	// re-initialize bounding box extents 
-	currentMinCorner.set(Infinity, Infinity, Infinity);
-	currentMaxCorner.set(-Infinity, -Infinity, -Infinity);
-
-	if (worklist.length == 1)
+	let node = bvhNode[nodeIdx];
+	node.minCorner.set(Infinity, Infinity, Infinity);
+	node.maxCorner.set(-Infinity, -Infinity, -Infinity);
+	
+	first = node.leftFirst;
+	for (let i = 0; i < node.triCount; i++)
 	{
-		// if we're down to 1 primitive aabb, quickly create a leaf node and return.
-		k = worklist[0];
-		// create leaf node
-		let leafNode = buildnodes[nodeIndex];
-		leafNode.minCorner.set(aabb_array_copy[9 * k + 0], aabb_array_copy[9 * k + 1], aabb_array_copy[9 * k + 2]);
-		leafNode.maxCorner.set(aabb_array_copy[9 * k + 3], aabb_array_copy[9 * k + 4], aabb_array_copy[9 * k + 5]);
-		leafNode.primitiveCount = 1;
-		leafNode.leafOrChild_ID = k;
+		k = triIdx[first + i];
+		kx9 = 9 * k;
+		testMinCorner.set(aabb_array_copy[kx9 + 0], aabb_array_copy[kx9 + 1], aabb_array_copy[kx9 + 2]);
+		testMaxCorner.set(aabb_array_copy[kx9 + 3], aabb_array_copy[kx9 + 4], aabb_array_copy[kx9 + 5]);
+		node.minCorner.min(testMinCorner);
+		node.maxCorner.max(testMaxCorner);
+	}
+}
+
+
+function Subdivide(nodeIdx)
+{
+	
+	let node = bvhNode[nodeIdx];
+	// terminate recursion
+	if (node.triCount < 2) 
+	{
+		node.leftFirst = triIdx[node.leftFirst];
 		return;
-	} // end if (worklist.length == 1)
+	}
 
-	else if (worklist.length > 1)
+	// determine split axis using SAH and Binning
+	bestCost = Infinity;
+	bestAxis = 0;
+	bestSplitPos = Infinity;
+	first = node.leftFirst;
+
+	for (let ax = 0; ax < 3; ax++)
 	{
-		// this is where the real work happens: we must sort an arbitrary number of primitives (usually triangles).
-		// to get a balanced tree, we hope for about half to be placed in left child, other half to be placed in right child.
-
-		// construct/grow bounding box around all of the current worklist's primitives
-		for (let i = 0; i < worklist.length; i++)
+		boundsMin = Infinity; boundsMax = -Infinity;
+		for (let i = 0; i < node.triCount; i++)
 		{
-			k = worklist[i];
-			testMinCorner.set(aabb_array_copy[9 * k + 0], aabb_array_copy[9 * k + 1], aabb_array_copy[9 * k + 2]);
-			testMaxCorner.set(aabb_array_copy[9 * k + 3], aabb_array_copy[9 * k + 4], aabb_array_copy[9 * k + 5]);
-			currentMinCorner.min(testMinCorner);
-			currentMaxCorner.max(testMaxCorner);
+			k = triIdx[first + i];
+			centroid = aabb_array_copy[9 * k + 6 + ax];
+			boundsMin = Math.min( boundsMin, centroid );
+			boundsMax = Math.max( boundsMax, centroid );
 		}
-
-		// create an inner node to represent this newly grown bounding box
-		let innerNode = buildnodes[nodeIndex];
-		// this inner node will spawn 2 children: a leftChild and a rightChild
-		nodesUsed++; // 'nodesUsed' now matches the index of the leftChild (the 1st child to be created)
-		innerNode.minCorner.copy(currentMinCorner);
-		innerNode.maxCorner.copy(currentMaxCorner);
-		innerNode.primitiveCount = 0;//worklist.length;
-		innerNode.leafOrChild_ID = nodesUsed; // 'innerNode.leafOrChild_ID' now also points to the index of the leftChild
-		// we must now incrememnt the nodesUsed counter, because a 2nd child (the rightChild) will also be created
-		nodesUsed++; // 'nodesUsed' now matches the index of the rightChild (the 2nd child to be created) 
-
-		let leftChildIndex = innerNode.leafOrChild_ID;
-		let rightChildIndex = innerNode.leafOrChild_ID + 1; // the rightChild's index is always the leftChild's index + 1
+		if (boundsMin == boundsMax) continue;
+		// re-initialize the bins
+		for (let i = 0; i < N_BINS; i++)
+		{
+			bin[i].minBounds.set(Infinity, Infinity, Infinity);
+			bin[i].maxBounds.set(-Infinity, -Infinity, -Infinity);
+			bin[i].triCount = 0;
+		}
+		scale = N_BINS / (boundsMax - boundsMin);
+		// populate the bins
+		for (let i = 0; i < node.triCount; i++)
+		{
+			k = triIdx[first + i];
+			kx9 = 9 * k;
+			testMinCorner.set(aabb_array_copy[kx9 + 0], aabb_array_copy[kx9 + 1], aabb_array_copy[kx9 + 2]);
+			testMaxCorner.set(aabb_array_copy[kx9 + 3], aabb_array_copy[kx9 + 4], aabb_array_copy[kx9 + 5]);
+			centroid = aabb_array_copy[kx9 + 6 + ax];
+			binIdx = Math.floor( Math.min(N_BINS - 1, (centroid - boundsMin) * scale) );
+			bin[binIdx].triCount++;
+			bin[binIdx].minBounds.min(testMinCorner);
+			bin[binIdx].maxBounds.max(testMaxCorner);
+		}
+		// re-initialize variables
+		leftSum = rightSum = 0;
+		leftBoxMin.set(Infinity, Infinity, Infinity);
+		leftBoxMax.set(-Infinity, -Infinity, -Infinity);
+		rightBoxMin.set(Infinity, Infinity, Infinity);
+		rightBoxMax.set(-Infinity, -Infinity, -Infinity);
+		// gather data for the 7 planes between the 8 bins
+		for (let i = 0; i < N_BINS - 1; i++)
+		{
+			leftSum += bin[i].triCount;
+			leftCountSum[i] = leftSum;
+			leftBoxMin.min( bin[i].minBounds );
+			leftBoxMax.max( bin[i].maxBounds );
+			extent.subVectors(leftBoxMax, leftBoxMin);
+			leftArea[i] = (extent.x * extent.y) + (extent.y * extent.z) + (extent.z * extent.x);
+			
+			rightSum += bin[N_BINS - 1 - i].triCount;
+			rightCountSum[N_BINS - 2 - i] = rightSum;
+			rightBoxMin.min( bin[N_BINS - 1 - i].minBounds );
+			rightBoxMax.max( bin[N_BINS - 1 - i].maxBounds );
+			extent.subVectors(rightBoxMax, rightBoxMin);
+			rightArea[N_BINS - 2 - i] = (extent.x * extent.y) + (extent.y * extent.z) + (extent.z * extent.x);
+		}
+		// calculate SAH cost for the 7 planes
+		scale = (boundsMax - boundsMin) / N_BINS;
+		for (let i = 0; i < N_BINS - 1; i++)
+		{
+			planeCost = (leftCountSum[i] * leftArea[i]) + (rightCountSum[i] * rightArea[i]);
+			if (planeCost < bestCost)
+			{
+				bestCost = planeCost;
+				bestAxis = ax;
+				bestSplitPos = boundsMin + (scale * (i + 1));
+			}		
+		}
+	} // end for (let ax = 0; ax < 3; ax++)
 		
-		// Begin Spatial Median split plane determination and primitive sorting
-
-		side0 = currentMaxCorner.x - currentMinCorner.x; // length along X-axis
-		side1 = currentMaxCorner.y - currentMinCorner.y; // length along Y-axis
-		side2 = currentMaxCorner.z - currentMinCorner.z; // length along Z-axis
-
-		// calculate the middle point of this newly-grown bounding box (aka the 'spatial median')
-		// this simply uses the spatial average of the longest box extent to determine the split plane,
-		// which is very fast and results in a fair quality, fairly balanced binary tree structure
-		spatialAverage.copy(currentMinCorner).add(currentMaxCorner).multiplyScalar(0.5);
-
-		// initialize variables
-		bestAxis = 0; goodAxis = 1; okayAxis = 2;
-		bestSplit = spatialAverage.x; goodSplit = spatialAverage.y; okaySplit = spatialAverage.z;
-
-		// determine the longest extent of the box, and start with that as splitting dimension
-		if (side0 >= side1 && side0 >= side2)
+	axisNum = bestAxis;
+	splitPos = bestSplitPos;
+	extent.subVectors(node.maxCorner, node.minCorner); // extent of parent
+	parentArea = (extent.x * extent.y) + (extent.y * extent.z) + (extent.z * extent.x);
+	parentCost = node.triCount * parentArea;
+	if (bestCost >= parentCost) 
+		splitPos = Infinity;
+	// in-place partition
+	let i = node.leftFirst;
+	let j = i + node.triCount - 1;
+	while (i <= j)
+	{
+		if (aabb_array_copy[9 * triIdx[i] + 6 + axisNum] < splitPos)
+			i++;
+		else
 		{
-			bestAxis = 0;
-			bestSplit = spatialAverage.x;
-			if (side1 >= side2)
-			{
-				goodAxis = 1;
-				goodSplit = spatialAverage.y;
-				okayAxis = 2;
-				okaySplit = spatialAverage.z;
-			}
+			tmp = triIdx[i];
+			triIdx[i] = triIdx[j];
+			triIdx[j] = tmp;
+			j--;
+		}		
+	}
+	
+	leftCount = i - node.leftFirst;
+
+
+	// BACKUP partitioning algo - Spatial Median Split
+
+	if (leftCount == 0 || leftCount == node.triCount)
+	{// if partition failed, try splitting by spatial median on the longest axis
+		//console.log("trying spatial median split on longest axis, triCount: " + node.triCount);
+		// determine split axis and position
+		extent.subVectors(node.maxCorner, node.minCorner);
+		axis = 'x'; 
+		axisNum = 0;
+		if (extent.y > extent.x) 
+		{
+			axis = 'y';
+			axisNum = 1;
+		}
+		if (extent.z > extent[axis])
+		{
+			axis = 'z';
+			axisNum = 2;
+		}
+		longestAxis = axis;
+		longestAxisNum = axisNum;
+
+		splitPos = node.minCorner[axis] + (extent[axis] * 0.5);
+		// in-place partition
+		i = node.leftFirst;
+		j = i + node.triCount - 1;
+		while (i <= j)
+		{
+			if (aabb_array_copy[9 * triIdx[i] + 6 + axisNum] < splitPos)
+				i++;
 			else
 			{
-				goodAxis = 2;
-				goodSplit = spatialAverage.z;
-				okayAxis = 1;
-				okaySplit = spatialAverage.y;
-			}
+				tmp = triIdx[i];
+				triIdx[i] = triIdx[j];
+				triIdx[j] = tmp;
+				j--;
+			}		
 		}
-		else if (side1 >= side0 && side1 >= side2)
-		{
-			bestAxis = 1;
-			bestSplit = spatialAverage.y;
-			if (side0 >= side2)
-			{
-				goodAxis = 0;
-				goodSplit = spatialAverage.x;
-				okayAxis = 2;
-				okaySplit = spatialAverage.z;
-			}
-			else
-			{
-				goodAxis = 2;
-				goodSplit = spatialAverage.z;
-				okayAxis = 0;
-				okaySplit = spatialAverage.x;
-			}
-		}
-		else // if (side2 >= side0 && side2 >= side1)
-		{
-			bestAxis = 2;
-			bestSplit = spatialAverage.z;
-			if (side0 >= side1)
-			{
-				goodAxis = 0;
-				goodSplit = spatialAverage.x;
-				okayAxis = 1;
-				okaySplit = spatialAverage.y;
-			}
-			else
-			{
-				goodAxis = 1;
-				goodSplit = spatialAverage.y;
-				okayAxis = 0;
-				okaySplit = spatialAverage.x;
-			}
-		}
-
 		
-		// try best axis first, then try the other two if necessary
-		for (let axis = 0; axis < 3; axis++)
+		leftCount = i - node.leftFirst;
+	}
+
+	
+	// FINAL BACKUP partitioning algo - Object Median Split
+	
+	if (leftCount == 0 || leftCount == node.triCount) 
+	{ // if partition failed, try splitting by object median on longest axis (1st axis)
+		//console.log("trying object median split on longest axis, triCount: " + node.triCount);
+
+		axisNum = longestAxisNum;
+
+		splitPos = 0;
+		first = node.leftFirst;
+		for (let n = 0; n < node.triCount; n++)
 		{
-			// distribute the triangle AABBs in either the left child or right child
-			leftWorklist = [];
-			rightWorklist = [];
-
-			// this loop is to count how many elements we will need for the left branch and the right branch
-			for (let i = 0; i < worklist.length; i++)
-			{
-				k = worklist[i];
-				testCentroid.set(aabb_array_copy[9 * k + 6], aabb_array_copy[9 * k + 7], aabb_array_copy[9 * k + 8]);
-
-				// get bbox center
-				if (bestAxis == 0) value = testCentroid.x; // X-axis
-				else if (bestAxis == 1) value = testCentroid.y; // Y-axis
-				else value = testCentroid.z; // Z-axis
-
-				if (value < bestSplit)
-					leftWorklist.push(k);
-				else
-					rightWorklist.push(k);
-				
-			}
-
-			if (leftWorklist.length > 0 && rightWorklist.length > 0)
-			{
-				break; // success, move on to the next part
-			}
-			else// if (leftWorklist.length == 0 || rightWorklist.length == 0)
-			{
-				// try another axis
-				if (axis == 0)
-				{
-					bestAxis = goodAxis;
-					bestSplit = goodSplit;
-				}
-				else if (axis == 1)
-				{
-					bestAxis = okayAxis;
-					bestSplit = okaySplit;
-				}
-			}
-
-		} // end for (let axis = 0; axis < 3; axis++)
-
-
-		// if the below if statement is true, then we have successfully sorted the primitive(triangle) AABBs
-		if (leftWorklist.length > 0 && rightWorklist.length > 0)
+			k = triIdx[first + n];
+			splitPos += aabb_array_copy[9 * k + 6 + axisNum];
+		}
+		splitPos *= (1 / node.triCount);
+		
+		// in-place partition
+		i = node.leftFirst;
+		j = i + node.triCount - 1;
+		while (i <= j)
 		{
-			let leftWorklistCopy = new Uint32Array(leftWorklist);
-			let rightWorklistCopy = new Uint32Array(rightWorklist);
-			// recurse
-			BVH_Create_Node(leftWorklistCopy, leftChildIndex);
-			BVH_Create_Node(rightWorklistCopy, rightChildIndex);
+			if (aabb_array_copy[9 * triIdx[i] + 6 + axisNum] < splitPos)
+				i++;
+			else
+			{
+				tmp = triIdx[i];
+				triIdx[i] = triIdx[j];
+				triIdx[j] = tmp;
+				j--;
+			}		
 		}
 
-		else //if (leftWorklist.length == 0 || rightWorklist.length == 0)
+		leftCount = i - node.leftFirst;
+	}
+
+	if (leftCount == 0 || leftCount == node.triCount) 
+	{ // if partition failed again, try splitting by object median along next axis (2nd axis)
+		//console.log("trying object median split 2nd axis, triCount: " + node.triCount);
+		if (axis == 'x') 
 		{
-			// if we reached this point, the builder failed to find a decent splitting plane axis, so
-			// we try another strategy to populate the current leftWorkLists and rightWorklists.
-			leftWorklist = [];
-			rightWorklist = [];
-			
-			spatialAverage.set(0, 0, 0);
-
-			// this loop is to count how many elements we will need for the left branch and the right branch
-			for (let i = 0; i < worklist.length; i++)
-			{
-				k = worklist[i];
-				testCentroid.set(aabb_array_copy[9 * k + 6], aabb_array_copy[9 * k + 7], aabb_array_copy[9 * k + 8]);
-				spatialAverage.add(testCentroid);
-			}
-			spatialAverage.multiplyScalar(1 / worklist.length);
-
-			for (let i = 0; i < worklist.length; i++)
-			{
-				k = worklist[i];
-				testCentroid.set(aabb_array_copy[9 * k + 6], aabb_array_copy[9 * k + 7], aabb_array_copy[9 * k + 8]);
-
-				if (testCentroid.x != spatialAverage.x)
-				{
-					if (testCentroid.x < spatialAverage.x)
-						leftWorklist.push(k);
-					else
-						rightWorklist.push(k);
-				}
-				else if (testCentroid.y != spatialAverage.y)
-				{
-					if (testCentroid.y < spatialAverage.y)
-						leftWorklist.push(k);
-					else
-						rightWorklist.push(k);
-				}
-				else if (testCentroid.z != spatialAverage.z)
-				{
-					if (testCentroid.z < spatialAverage.z)
-						leftWorklist.push(k);
-					else
-						rightWorklist.push(k);
-				}
-			}
-			
-			let leftWorklistCopy = new Uint32Array(leftWorklist);
-			let rightWorklistCopy = new Uint32Array(rightWorklist);
-			// recurse
-			BVH_Create_Node(leftWorklistCopy, leftChildIndex);
-			BVH_Create_Node(rightWorklistCopy, rightChildIndex);
-
-		} // end else //if (leftWorklist.length == 0 || rightWorklist.length == 0)
-
-		if (leftWorklist.length == 0 || rightWorklist.length == 0)
+			axis = 'y';
+			axisNum = 1;
+		}
+		else if (axis == 'y')
 		{
-			//console.log("entered fail case, worklist item count: " + worklist.length);
-			// if we reached this point, the builder failed to find a decent splitting plane axis, so
-			// manually populate the current leftWorkLists and rightWorklists.
-			leftWorklist = [];
-			rightWorklist = [];
-			
-			for (let i = 0; i < worklist.length; i++)
+			axis = 'z';
+			axisNum = 2;
+		}
+		else if (axis == 'z') 
+		{
+			axis = 'x';
+			axisNum = 0;
+		}
+
+		splitPos = 0;
+		first = node.leftFirst;
+		for (let n = 0; n < node.triCount; n++)
+		{
+			k = triIdx[first + n];
+			splitPos += aabb_array_copy[9 * k + 6 + axisNum];
+		}
+		splitPos *= (1 / node.triCount);
+		
+		// in-place partition
+		i = node.leftFirst;
+		j = i + node.triCount - 1;
+		while (i <= j)
+		{
+			if (aabb_array_copy[9 * triIdx[i] + 6 + axisNum] < splitPos)
+				i++;
+			else
 			{
-				k = worklist[i];
-				if (i % 2 != 0)
-					leftWorklist.push(k);
-				else
-					rightWorklist.push(k);
-			}
+				tmp = triIdx[i];
+				triIdx[i] = triIdx[j];
+				triIdx[j] = tmp;
+				j--;
+			}		
+		}
 
-			let leftWorklistCopy = new Uint32Array(leftWorklist);
-			let rightWorklistCopy = new Uint32Array(rightWorklist);
-			// recurse
-			BVH_Create_Node(leftWorklistCopy, leftChildIndex);
-			BVH_Create_Node(rightWorklistCopy, rightChildIndex);
-		} // end if (leftWorklist.length == 0 || rightWorklist.length == 0)
+		leftCount = i - node.leftFirst;
+	}
 
-	} // end if (worklist.length > 1)
+	if (leftCount == 0 || leftCount == node.triCount) 
+	{ // if partition failed again, try splitting by object median along 3rd axis (final axis)
+		//console.log("trying object median split 3rd axis, triCount: " + node.triCount);
+		if (axis == 'x') 
+		{
+			axis = 'y';
+			axisNum = 1;
+		}
+		else if (axis == 'y')
+		{
+			axis = 'z';
+			axisNum = 2;
+		}
+		else if (axis == 'z') 
+		{
+			axis = 'x';
+			axisNum = 0;
+		}
 
+		splitPos = 0;
+		first = node.leftFirst;
+		for (let n = 0; n < node.triCount; n++)
+		{
+			k = triIdx[first + n];
+			splitPos += aabb_array_copy[9 * k + 6 + axisNum];
+		}
+		splitPos *= (1 / node.triCount);
+		
+		// in-place partition
+		i = node.leftFirst;
+		j = i + node.triCount - 1;
+		while (i <= j)
+		{
+			if (aabb_array_copy[9 * triIdx[i] + 6 + axisNum] < splitPos)
+				i++;
+			else
+			{
+				tmp = triIdx[i];
+				triIdx[i] = triIdx[j];
+				triIdx[j] = tmp;
+				j--;
+			}		
+		}
 
-	return; // finished
+		leftCount = i - node.leftFirst;
+	}
 
-} // end function BVH_Create_Node(worklist, nodeIndex)
+	// check if one of the sides is still empty
+	if (leftCount == 0 || leftCount == node.triCount) 
+	{ // if partition still failed after all attempts, bail out and return
+		console.log("partition failed, triCount: " + node.triCount);
+		return;
+	}
+
+	// create child nodes
+	let leftChildIdx = nodesUsed++;
+	let rightChildIdx = nodesUsed++;
+	bvhNode[leftChildIdx].leftFirst = node.leftFirst;
+	bvhNode[leftChildIdx].triCount = leftCount;
+	bvhNode[rightChildIdx].leftFirst = i;
+	bvhNode[rightChildIdx].triCount = node.triCount - leftCount;
+	node.leftFirst = leftChildIdx;
+	node.triCount = 0;
+	UpdateNodeBounds( leftChildIdx );
+	UpdateNodeBounds( rightChildIdx );
+	// recurse
+	Subdivide( leftChildIdx );
+	Subdivide( rightChildIdx );
+
+} // end function Subdivide( nodeIdx )
 
 
 
 function BVH_QuickBuild(primitiveAABB_IndexList, aabb_array)
 {
+	// the 'primitiveAABB_IndexList' is a raw list of integer numbers in simple sequential order [0,1,2,3,4,5,6,..N-1](one for every primitive), 
+	// where each number refers to a unique triangle (or other type of primitive) from the model's unordered 'triangle soup'.
+	N = primitiveAABB_IndexList.length;
+	triIdx = new Uint32Array(primitiveAABB_IndexList);
+	// now that we have a copy of the index list (called triIdx), this triIdx list will be sorted in place as the bvhNodes building procedes
+
 	// the user of this builder has to supply the aabb_array. Then we make a copy of the aabb_array,
 	// so that this builder can use it, while referring to it with a generic variable name (like 'aabb_array_copy').
 	// This allows users to build multiple different BVHs for all scene models, while using the same BVH_QuickBuild() function
 	aabb_array_copy = new Float32Array(aabb_array);
 
-	// the 'primitiveAABB_IndexList' is a raw list of integer numbers in simple sequential order [0,1,2,3,4,5,6,..N-1](one for every primitive), 
-	// where each number refers to a unique triangle (or other type of primitive) from the model's unordered 'triangle soup'(or 'primitive soup').
+	leftArea = new Float32Array(N_BINS - 1); 
+	rightArea = new Float32Array(N_BINS - 1);
+	leftCountSum = new Uint32Array(N_BINS - 1);
+	rightCountSum = new Uint32Array(N_BINS - 1);
 
-	// now build root node (root nodeIndex = 0), and then recursively build the rest of the binary tree
-	BVH_Create_Node(primitiveAABB_IndexList, 0);
+	nodesUsed = 2; // this must be reset in case BVH_QuickBuild() gets called multiple times during the same application
 
-	let nx8 = 0;
-	// Copy the buildnodes array into the aabb_array
-	for (let n = 0; n < buildnodes.length; n++)
+	bin = [];
+	for (let i = 0; i < N_BINS; i++)
+		bin[i] = new Bin();
+
+	bvhNode = [];
+	for (let i = 0; i < N * 2; i++)
+		bvhNode[i] = new BVH_Node();
+
+	console.time("BVH_Generation");
+	console.log("BVH_Generation...");
+
+	// now build root node (rootNodeIdx = 0), and then recursively build the rest of the binary tree
+	// assign all triangles to root node
+	let root = bvhNode[rootNodeIdx];
+	root.leftFirst = 0;
+	root.triCount = N;
+	UpdateNodeBounds( rootNodeIdx );
+	// subdivide recursively
+	Subdivide( rootNodeIdx );
+
+
+	let ix8 = 0;
+	// copy the bvhNode array into the aabb_array
+	for (let i = 0; i < bvhNode.length; i++)
 	{
-		nx8 = n * 8;
-		// slot 0
-		aabb_array[nx8 + 0] = buildnodes[n].minCorner.x;  // r or x component
-		aabb_array[nx8 + 1] = buildnodes[n].minCorner.y;  // g or y component
-		aabb_array[nx8 + 2] = buildnodes[n].minCorner.z;  // b or z component
-		aabb_array[nx8 + 3] = buildnodes[n].maxCorner.x;  // a or w component
+		ix8 = 8 * i;
+		// rgba texel 0
+		aabb_array[ix8 + 0] = bvhNode[i].minCorner.x; // r or x component
+		aabb_array[ix8 + 1] = bvhNode[i].minCorner.y; // g or y component
+		aabb_array[ix8 + 2] = bvhNode[i].minCorner.z; // b or z component
+		aabb_array[ix8 + 3] = bvhNode[i].maxCorner.x; // a or w component
 
-		// slot 1
-		aabb_array[nx8 + 4] = buildnodes[n].maxCorner.y; // r or x component
-		aabb_array[nx8 + 5] = buildnodes[n].maxCorner.z;  // g or y component
-		aabb_array[nx8 + 6] = buildnodes[n].primitiveCount;  // b or z component
-		aabb_array[nx8 + 7] = buildnodes[n].leafOrChild_ID;  // a or w component
+		// rgba texel 1
+		aabb_array[ix8 + 4] = bvhNode[i].maxCorner.y; // r or x component
+		aabb_array[ix8 + 5] = bvhNode[i].maxCorner.z; // g or y component
+		aabb_array[ix8 + 6] = bvhNode[i].triCount;    // b or z component
+		aabb_array[ix8 + 7] = bvhNode[i].leftFirst;   // a or w component
 	}
+
+	console.timeEnd("BVH_Generation");
 
 } // end function BVH_QuickBuild(primitiveAABB_IndexList, aabb_array)
