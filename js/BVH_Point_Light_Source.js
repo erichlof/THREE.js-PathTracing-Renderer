@@ -10,10 +10,11 @@ let pathTracingMaterialList = [];
 let uniqueMaterialTextures = [];
 let meshList = [];
 let geoList = [];
+let rotationMatrix = new THREE.Matrix4();
 let triangleDataTexture;
 let aabb_array;
 let aabbDataTexture;
-let totalWork;
+let aabbIndexList;
 let vp0 = new THREE.Vector3();
 let vp1 = new THREE.Vector3();
 let vp2 = new THREE.Vector3();
@@ -44,7 +45,7 @@ function load_GLTF_Model()
 	let gltfLoader = new GLTFLoader();
 
 	gltfLoader.load("models/StanfordBunny.glb", function (meshGroup) // Triangles: 30,338
-	//gltfLoader.load("models/UtahTeapot.glb", function( meshGroup )
+	//gltfLoader.load("models/goldfish_high_poly.glb", function( meshGroup ) // Triangles: 1,400
 	{
 
 		if (meshGroup.scene)
@@ -71,6 +72,9 @@ function load_GLTF_Model()
 
 		modelMesh = meshList[0].clone();
 
+		// ******************************************************************
+		// NOTE: below, i is supposed to be 0, but is set to 1
+		// because goldfish_low_poly failed to load due to geoList[0] being invalid geometry
 		for (let i = 0; i < meshList.length; i++) 
 		{
 			geoList.push(meshList[i].geometry);
@@ -80,8 +84,11 @@ function load_GLTF_Model()
 
 		if (modelMesh.geometry.index)
 			modelMesh.geometry = modelMesh.geometry.toNonIndexed();
-
+		
 		modelMesh.geometry.center();
+
+		//rotationMatrix.makeRotationX(Math.PI * 0.5);
+		//modelMesh.geometry.applyMatrix4(rotationMatrix);
 
 		for (let i = 1; i < triangleMaterialMarkers.length; i++) 
 		{
@@ -124,12 +131,20 @@ function load_GLTF_Model()
 		// ********* different GLTF Model Settings **********
 
 		// settings for StanfordBunny model
-		modelScale = 0.04;//0.04
+		modelScale = 0.04;
 		modelPositionOffset.set(0, 27.6, -40);
 
+		// settings for StanfordDragon model
+		// modelScale = 2.0;
+		// modelPositionOffset.set(0, 27.9, -40);
+
 		// settings for UtahTeapot model
-		//modelScale = 1.0;
-		//modelPositionOffset.set(0, 25.6, -40);
+		// modelScale = 1.0;
+		// modelPositionOffset.set(0, 25.6, -40);
+
+		// settings for goldfish_low_poly model
+		// modelScale = 1.0;
+		// modelPositionOffset.set(0, 25.6, -40);
 
 		// now that the model has been loaded, we can init 
 		init();
@@ -145,7 +160,8 @@ function initSceneData()
 {
 	if (!mouseControl)
 		demoFragmentShaderFileName = 'BVH_Point_Light_Source_Fragment_Mobile.glsl';
-	else demoFragmentShaderFileName = 'BVH_Point_Light_Source_Fragment.glsl';
+	else 
+		demoFragmentShaderFileName = 'BVH_Point_Light_Source_Fragment.glsl';
 
 	// scene/demo-specific three.js objects setup goes here
 	sceneIsDynamic = false;
@@ -171,7 +187,7 @@ function initSceneData()
 	total_number_of_triangles = modelMesh.geometry.attributes.position.array.length / 9;
 	console.log("Triangle count:" + total_number_of_triangles);
 
-	totalWork = new Uint32Array(total_number_of_triangles);
+	aabbIndexList = new Uint32Array(total_number_of_triangles);
 
 	triangle_array = new Float32Array(2048 * 2048 * 4);
 	// 2048 = width of texture, 2048 = height of texture, 4 = r,g,b, and a components
@@ -294,14 +310,13 @@ function initSceneData()
 		triangle_array[32 * i + 30] = 0; // b or z
 		triangle_array[32 * i + 31] = 0; // a or w
 
-		triangle_b_box_min.copy(triangle_b_box_min.min(vp0));
-		triangle_b_box_max.copy(triangle_b_box_max.max(vp0));
-		triangle_b_box_min.copy(triangle_b_box_min.min(vp1));
-		triangle_b_box_max.copy(triangle_b_box_max.max(vp1));
-		triangle_b_box_min.copy(triangle_b_box_min.min(vp2));
-		triangle_b_box_max.copy(triangle_b_box_max.max(vp2));
+		triangle_b_box_min.min(vp0).min(vp1).min(vp2);
+		triangle_b_box_max.max(vp0).max(vp1).max(vp2);
 
-		triangle_b_box_centroid.copy(triangle_b_box_min).add(triangle_b_box_max).multiplyScalar(0.5);
+		// use the following for leaves that contain triangles (the default case for all glTF meshes)
+		triangle_b_box_centroid.copy(vp0).add(vp1).add(vp2).multiplyScalar(0.3333333333333333);
+		// or use the following for leaves that contain complete quadric shapes like spheres, cylinders, boxes, etc.
+		//triangle_b_box_centroid.copy(triangle_b_box_min).add(triangle_b_box_max).multiplyScalar(0.5);
 
 		aabb_array[9 * i + 0] = triangle_b_box_min.x;
 		aabb_array[9 * i + 1] = triangle_b_box_min.y;
@@ -313,20 +328,17 @@ function initSceneData()
 		aabb_array[9 * i + 7] = triangle_b_box_centroid.y;
 		aabb_array[9 * i + 8] = triangle_b_box_centroid.z;
 
-		totalWork[i] = i;
+		aabbIndexList[i] = i;
 	}
 
 
-	console.time("BvhGeneration");
-	console.log("BvhGeneration...");
 
-	// Build the BVH acceleration structure, which places a bounding box ('root' of the tree) around all of the
-	// triangles of the entire mesh, then subdivides each box into 2 smaller boxes.  It continues until it reaches 1 triangle,
-	// which it then designates as a 'leaf'
-	BVH_Build_Iterative(totalWork, aabb_array);
-	//console.log(buildnodes);
+	// the higher the number of BINS, the better quality of resulting BVH tree, but also increases build time
+	N_BINS = 512;
 
-	console.timeEnd("BvhGeneration");
+	BVH_QuickBuild(aabbIndexList, aabb_array);
+
+	
 
 
 	triangleDataTexture = new THREE.DataTexture(triangle_array,
