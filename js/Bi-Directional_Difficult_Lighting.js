@@ -26,7 +26,7 @@ let triangleDataTexture;
 let aabbDataTexture;
 let totalGeometryCount = 0;
 let total_number_of_triangles = 0;
-let totalWork;
+let aabbIndexList;
 let triangle_array = new Float32Array(2048 * 2048 * 4);
 // 2048 = width of texture, 2048 = height of texture, 4 = r,g,b, and a components
 let aabb_array = new Float32Array(2048 * 2048 * 4);
@@ -122,7 +122,7 @@ function initSceneData()
 	cameraFlightSpeed = 200;
 
 	// pixelRatio is resolution - range: 0.5(half resolution) to 1.0(full resolution)
-	pixelRatio = mouseControl ? 0.8 : 0.8;
+	pixelRatio = mouseControl ? 1.0 : 0.75;
 
 	EPS_intersect = 0.01;
 
@@ -140,7 +140,7 @@ function initSceneData()
 	total_number_of_triangles = modelMesh.geometry.attributes.position.array.length / 9;
 	console.log("Triangle count:" + (total_number_of_triangles * 3));
 
-	totalWork = new Uint32Array(total_number_of_triangles * 3);
+	aabbIndexList = new Uint32Array(total_number_of_triangles * 3);
 
 	let triangle_b_box_min = new THREE.Vector3();
 	let triangle_b_box_max = new THREE.Vector3();
@@ -262,14 +262,13 @@ function initSceneData()
 		triangle_array[ix32 + 30] = 0; // b or z
 		triangle_array[ix32 + 31] = 0; // a or w
 
-		triangle_b_box_min.copy(triangle_b_box_min.min(vp0));
-		triangle_b_box_max.copy(triangle_b_box_max.max(vp0));
-		triangle_b_box_min.copy(triangle_b_box_min.min(vp1));
-		triangle_b_box_max.copy(triangle_b_box_max.max(vp1));
-		triangle_b_box_min.copy(triangle_b_box_min.min(vp2));
-		triangle_b_box_max.copy(triangle_b_box_max.max(vp2));
+		triangle_b_box_min.min(vp0).min(vp1).min(vp2);
+		triangle_b_box_max.max(vp0).max(vp1).max(vp2);
 
-		triangle_b_box_centroid.copy(triangle_b_box_min).add(triangle_b_box_max).multiplyScalar(0.5);
+		// use the following for leaves that contain triangles (the default case for all glTF meshes)
+		triangle_b_box_centroid.copy(vp0).add(vp1).add(vp2).multiplyScalar(0.3333333333333333);
+		// or use the following for leaves that contain complete quadric shapes like spheres, cylinders, boxes, etc.
+		//triangle_b_box_centroid.copy(triangle_b_box_min).add(triangle_b_box_max).multiplyScalar(0.5);
 
 		aabb_array[ix9 + 0] = triangle_b_box_min.x;
 		aabb_array[ix9 + 1] = triangle_b_box_min.y;
@@ -281,7 +280,7 @@ function initSceneData()
 		aabb_array[ix9 + 7] = triangle_b_box_centroid.y;
 		aabb_array[ix9 + 8] = triangle_b_box_centroid.z;
 
-		totalWork[i] = i;
+		aabbIndexList[i] = i;
 	}
 
 	
@@ -388,14 +387,13 @@ function initSceneData()
 		triangle_array[ix32 + 30 + numTrisx32] = 0; // b or z
 		triangle_array[ix32 + 31 + numTrisx32] = 0; // a or w
 
-		triangle_b_box_min.copy(triangle_b_box_min.min(vp0));
-		triangle_b_box_max.copy(triangle_b_box_max.max(vp0));
-		triangle_b_box_min.copy(triangle_b_box_min.min(vp1));
-		triangle_b_box_max.copy(triangle_b_box_max.max(vp1));
-		triangle_b_box_min.copy(triangle_b_box_min.min(vp2));
-		triangle_b_box_max.copy(triangle_b_box_max.max(vp2));
+		triangle_b_box_min.min(vp0).min(vp1).min(vp2);
+		triangle_b_box_max.max(vp0).max(vp1).max(vp2);
 
-		triangle_b_box_centroid.copy(triangle_b_box_min).add(triangle_b_box_max).multiplyScalar(0.5);
+		// use the following for leaves that contain triangles (the default case for all glTF meshes)
+		triangle_b_box_centroid.copy(vp0).add(vp1).add(vp2).multiplyScalar(0.3333333333333333);
+		// or use the following for leaves that contain complete quadric shapes like spheres, cylinders, boxes, etc.
+		//triangle_b_box_centroid.copy(triangle_b_box_min).add(triangle_b_box_max).multiplyScalar(0.5);
 
 		aabb_array[ix9 + 0 + numTrisx9] = triangle_b_box_min.x;
 		aabb_array[ix9 + 1 + numTrisx9] = triangle_b_box_min.y;
@@ -407,7 +405,7 @@ function initSceneData()
 		aabb_array[ix9 + 7 + numTrisx9] = triangle_b_box_centroid.y;
 		aabb_array[ix9 + 8 + numTrisx9] = triangle_b_box_centroid.z;
 
-		totalWork[i + total_number_of_triangles] = i + total_number_of_triangles;
+		aabbIndexList[i + total_number_of_triangles] = i + total_number_of_triangles;
 	}
 
 
@@ -514,14 +512,13 @@ function initSceneData()
 		triangle_array[ix32 + 30 + numTrisx32 + numTrisx32] = 0; // b or z
 		triangle_array[ix32 + 31 + numTrisx32 + numTrisx32] = 0; // a or w
 
-		triangle_b_box_min.copy(triangle_b_box_min.min(vp0));
-		triangle_b_box_max.copy(triangle_b_box_max.max(vp0));
-		triangle_b_box_min.copy(triangle_b_box_min.min(vp1));
-		triangle_b_box_max.copy(triangle_b_box_max.max(vp1));
-		triangle_b_box_min.copy(triangle_b_box_min.min(vp2));
-		triangle_b_box_max.copy(triangle_b_box_max.max(vp2));
+		triangle_b_box_min.min(vp0).min(vp1).min(vp2);
+		triangle_b_box_max.max(vp0).max(vp1).max(vp2);
 
-		triangle_b_box_centroid.copy(triangle_b_box_min).add(triangle_b_box_max).multiplyScalar(0.5);
+		// use the following for leaves that contain triangles (the default case for all glTF meshes)
+		triangle_b_box_centroid.copy(vp0).add(vp1).add(vp2).multiplyScalar(0.3333333333333333);
+		// or use the following for leaves that contain complete quadric shapes like spheres, cylinders, boxes, etc.
+		//triangle_b_box_centroid.copy(triangle_b_box_min).add(triangle_b_box_max).multiplyScalar(0.5);
 
 		aabb_array[ix9 + 0 + numTrisx9 + numTrisx9] = triangle_b_box_min.x;
 		aabb_array[ix9 + 1 + numTrisx9 + numTrisx9] = triangle_b_box_min.y;
@@ -533,21 +530,15 @@ function initSceneData()
 		aabb_array[ix9 + 7 + numTrisx9 + numTrisx9] = triangle_b_box_centroid.y;
 		aabb_array[ix9 + 8 + numTrisx9 + numTrisx9] = triangle_b_box_centroid.z;
 
-		totalWork[i + total_number_of_triangles + total_number_of_triangles] = i + total_number_of_triangles + total_number_of_triangles;
+		aabbIndexList[i + total_number_of_triangles + total_number_of_triangles] = i + total_number_of_triangles + total_number_of_triangles;
 	}
 
 
 
-	console.time("BvhGeneration");
-	console.log("BvhGeneration...");
+	// the higher the number of BINS, the better quality of resulting BVH tree, but also increases build time
+	N_BINS = 1024;
 
-	// Build the BVH acceleration structure, which places a bounding box ('root' of the tree) around all of the
-	// triangles of the entire mesh, then subdivides each box into 2 smaller boxes.  It continues until it reaches 1 triangle,
-	// which it then designates as a 'leaf'
-	BVH_Build_Iterative(totalWork, aabb_array);
-	//console.log(buildnodes);
-
-	console.timeEnd("BvhGeneration");
+	BVH_QuickBuild(aabbIndexList, aabb_array);
 
 
 	triangleDataTexture = new THREE.DataTexture(
