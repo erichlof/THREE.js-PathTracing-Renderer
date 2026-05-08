@@ -52,7 +52,7 @@ Sphere spheres[N_SPHERES];
 
 
 
-vec2 stackLevels[28];
+float stackNodeIDs[32];
 
 //vec4 boxNodeData0 corresponds to: .x = aabbMin.x, .y = aabbMin.y, .z =      aabbMin.z, .w = aabbMax.x,
 //vec4 boxNodeData1 corresponds to: .x = aabbMax.y, .y = aabbMax.z, .z = primitiveCount, .w = leafOrChild_ID
@@ -115,9 +115,10 @@ float SceneIntersect( )
 	vec3 rObjOrigin, rObjDirection;
 	vec3 n, hitPoint;
 
-	vec2 currentStackData, stackDataA, stackDataB, tmpStackData;
 	ivec2 uv0, uv1, uv2, uv3, uv4, uv5, uv6, uv7;
 
+	float stackNodeID_A, stackNodeID_B, tmpNodeID;
+	float stackNodeA_t, stackNodeB_t, tmpNode_t;
 	float d;
 	float t = INFINITY;
 	float stackptr = 0.0;
@@ -129,70 +130,69 @@ float SceneIntersect( )
 	hitObjectID = -INFINITY;
 
 	int isRayExiting = FALSE;
-	int skip = FALSE;
+	int popNextNodeOffStack = TRUE;
 	int shapeLookupNeeded = FALSE;
 
 
 
 	GetBoxNodeData(stackptr, currentBoxNodeData0, currentBoxNodeData1);
-	currentStackData = vec2(stackptr, BoundingBoxIntersect(currentBoxNodeData0.xyz, vec3(currentBoxNodeData0.w, currentBoxNodeData1.xy), rayOrigin, inverseDir));
-	stackLevels[0] = currentStackData;
-	skip = (currentStackData.y < t) ? TRUE : FALSE;
+	d = BoundingBoxIntersect(currentBoxNodeData0.xyz, vec3(currentBoxNodeData0.w, currentBoxNodeData1.xy), rayOrigin, inverseDir);
+	popNextNodeOffStack = (d < t) ? FALSE : TRUE;
 
 	while (true)
         {
-		if (skip == FALSE) 
+		if (popNextNodeOffStack == TRUE) 
                 {
-                        // decrease pointer by 1 (0.0 is root level, 27.0 is maximum depth)
+                        // decrease pointer by 1.0 (0.0 is root level, 31.0 is maximum depth)
                         if (--stackptr < 0.0) // went past the root level, terminate loop
                                 break;
-
-                        currentStackData = stackLevels[int(stackptr)];
-			
-			if (currentStackData.y >= t)
-				continue;
-			
-			GetBoxNodeData(currentStackData.x, currentBoxNodeData0, currentBoxNodeData1);
+			// pop the next node off the stack
+			GetBoxNodeData(stackNodeIDs[int(stackptr)], currentBoxNodeData0, currentBoxNodeData1);
                 }
-		skip = FALSE; // reset skip
+		popNextNodeOffStack = TRUE; // reset popNextNodeOffStack
 		
 
 		if (currentBoxNodeData1.z == 0.0) // == 0.0 signifies an inner node
 		{
 			GetBoxNodeData(currentBoxNodeData1.w, nodeAData0, nodeAData1); // leftChild
 			GetBoxNodeData(currentBoxNodeData1.w + 1.0, nodeBData0, nodeBData1); // rightChild
-			stackDataA = vec2(currentBoxNodeData1.w, BoundingBoxIntersect(nodeAData0.xyz, vec3(nodeAData0.w, nodeAData1.xy), rayOrigin, inverseDir));
-			stackDataB = vec2(currentBoxNodeData1.w + 1.0, BoundingBoxIntersect(nodeBData0.xyz, vec3(nodeBData0.w, nodeBData1.xy), rayOrigin, inverseDir));
+			stackNodeID_A = currentBoxNodeData1.w;
+			stackNodeID_B = currentBoxNodeData1.w + 1.0;
+			stackNodeA_t = BoundingBoxIntersect(nodeAData0.xyz, vec3(nodeAData0.w, nodeAData1.xy), rayOrigin, inverseDir);
+			stackNodeB_t = BoundingBoxIntersect(nodeBData0.xyz, vec3(nodeBData0.w, nodeBData1.xy), rayOrigin, inverseDir);
 			
-			// first sort the branch node data so that 'a' is the smallest
-			if (stackDataB.y < stackDataA.y)
+			// first, sort the children nodes data so that nodeA is the closer node
+			if (stackNodeB_t < stackNodeA_t)
 			{
-				tmpStackData = stackDataB;
-				stackDataB = stackDataA;
-				stackDataA = tmpStackData;
+				tmpNodeID = stackNodeID_A;
+				stackNodeID_A = stackNodeID_B;
+				stackNodeID_B = tmpNodeID;
 
-				tmpNodeData0 = nodeBData0;   tmpNodeData1 = nodeBData1;
-				nodeBData0   = nodeAData0;   nodeBData1   = nodeAData1;
-				nodeAData0   = tmpNodeData0; nodeAData1   = tmpNodeData1;
-			} // branch 'b' now has the larger rayT value of 'a' and 'b'
+				tmpNode_t = stackNodeA_t;
+				stackNodeA_t = stackNodeB_t;
+				stackNodeB_t = tmpNode_t;
 
-			if (stackDataB.y < t) // see if branch 'b' (the larger rayT) needs to be processed
+				tmpNodeData0 = nodeAData0;   tmpNodeData1 = nodeAData1;
+				nodeAData0   = nodeBData0;   nodeAData1   = nodeBData1;
+				nodeBData0   = tmpNodeData0; nodeBData1   = tmpNodeData1;
+			} // now it's guaranteed that nodeA is the closer node and nodeB is the farther node
+
+			if (stackNodeB_t < t) // see if the farther nodeB (the larger ray t) needs to be processed
 			{
-				currentStackData = stackDataB;
 				currentBoxNodeData0 = nodeBData0;
 				currentBoxNodeData1 = nodeBData1;
-				skip = TRUE; // this will prevent the stackptr from decreasing by 1
+				popNextNodeOffStack = FALSE; // this will prevent the stackptr from decreasing by 1
 			}
-			if (stackDataA.y < t) // see if branch 'a' (the smaller rayT) needs to be processed 
+			
+			if (stackNodeA_t < t) // see if the closer nodeA (the smaller ray t) needs to be processed 
 			{
-				if (skip == TRUE) // if larger branch 'b' needed to be processed also,
-					stackLevels[int(stackptr++)] = stackDataB; // cue larger branch 'b' for future round
-							// also, increase pointer by 1
-				
-				currentStackData = stackDataA;
-				currentBoxNodeData0 = nodeAData0; 
+				if (popNextNodeOffStack == FALSE) // if further nodeB needed to be visited also,
+					stackNodeIDs[int(stackptr++)] = stackNodeID_B; // push nodeB on stack for future round
+							// also, increase stackptr by 1
+				// since nodeA is always the closest node, set nodeA as the current node to be processed
+				currentBoxNodeData0 = nodeAData0;
 				currentBoxNodeData1 = nodeAData1;
-				skip = TRUE; // this will prevent the stackptr from decreasing by 1
+				popNextNodeOffStack = FALSE; // this will prevent the stackptr from decreasing by 1
 			}
 
 			continue;
