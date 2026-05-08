@@ -399,7 +399,7 @@ function Subdivide(nodeIdx)
 
 
 
-function BVH_QuickBuild(primitiveAABB_IndexList, aabb_array)
+function BVH_QuickBuild(primitiveAABB_IndexList, aabb_array, isTopLevel)
 {
 	// the 'primitiveAABB_IndexList' is a raw list of integer numbers in simple sequential order [0,1,2,3,4,5,6,..N-1](one for every primitive), 
 	// where each number refers to a unique triangle (or other type of primitive) from the model's unordered 'triangle soup'.
@@ -427,9 +427,13 @@ function BVH_QuickBuild(primitiveAABB_IndexList, aabb_array)
 	for (let i = 0; i < N * 2; i++)
 		bvhNode[i] = new BVH_Node();
 
-	console.time("BVH_Generation");
-	console.log("BVH_Generation...");
-
+	// we don't want this output if the built BVH is a Top-Level BVH (which often gets rebuilt 60+ times a second!) 
+	if (!isTopLevel)
+	{
+		console.time("BVH build time");
+		console.log("Building BVH...");
+	}
+	
 	// now build root node (rootNodeIdx = 0), and then recursively build the rest of the binary tree
 	// assign all triangles to root node
 	let root = bvhNode[rootNodeIdx];
@@ -458,6 +462,7 @@ function BVH_QuickBuild(primitiveAABB_IndexList, aabb_array)
 		aabb_array[ix8 + 7] = bvhNode[i].leftFirst;   // a or w component
 	}
 
-	console.timeEnd("BVH_Generation");
+	if (!isTopLevel)
+		console.timeEnd("BVH build time");
 
 } // end function BVH_QuickBuild(primitiveAABB_IndexList, aabb_array)
