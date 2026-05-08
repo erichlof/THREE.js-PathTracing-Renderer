@@ -22,7 +22,7 @@ let shape_array;
 let shapeDataTexture;
 let shape_aabb_array;
 let aabbDataTexture;
-let totalWorklist;
+let aabbIndexList;
 
 let animation_TypeObject, shape_TypeObject, showBVH_ToggleObject;
 let animation_TypeController, shape_TypeController, showBVH_ToggleController;
@@ -44,7 +44,7 @@ function initSceneData()
 	cameraFlightSpeed = 10;
 
 	// pixelRatio is resolution - range: 0.5(half resolution) to 1.0(full resolution)
-	pixelRatio = mouseControl ? 1.0 : 0.7;
+	pixelRatio = mouseControl ? 1.0 : 0.75;
 
 	EPS_intersect = 0.01;
 
@@ -87,7 +87,7 @@ function initSceneData()
 	}
 
 	console.log("Shape count: " + totalNumberOfShapes);
-	totalWorklist = new Uint32Array(totalNumberOfShapes);
+	aabbIndexList = new Uint32Array(totalNumberOfShapes);
 
 	boxMaterial = new THREE.MeshBasicMaterial();
 
@@ -198,19 +198,15 @@ function initSceneData()
 		shape_aabb_array[ix9 + 7] = shapeBoundingBox_centroid.y;
 		shape_aabb_array[ix9 + 8] = shapeBoundingBox_centroid.z;
 
-		totalWorklist[i] = i;
+		aabbIndexList[i] = i;
 	} // end for (let i = 0; i < totalNumberOfShapes; i++)
 
 
-	for (let i = 0; i < totalNumberOfShapes * 2; i++)
-		buildnodes[i] = new BVH_Node();
-
-	console.log("BvhGeneration...");
-	console.time("BvhGeneration");
+	// the higher the number of BINS, the better quality of resulting BVH tree, but also increases build time
+	N_BINS = 128;
 	
-	BVH_QuickBuild(totalWorklist, shape_aabb_array);
+	BVH_QuickBuild(aabbIndexList, shape_aabb_array);
 	
-	console.timeEnd("BvhGeneration");
 
 
 	shapeDataTexture = new THREE.DataTexture(shape_array,
@@ -363,18 +359,13 @@ function updateVariablesAndUniforms()
 				shape_aabb_array[ix9 + 7] = shapeBoundingBox_centroid.y;
 				shape_aabb_array[ix9 + 8] = shapeBoundingBox_centroid.z;
 
-				totalWorklist[i] = i;
+				aabbIndexList[i] = i;
 			} // end for (let i = 0; i < totalNumberOfShapes; i++)
 
-			// for the recursive Quick Builder, must set nodesUsed back to 1
-			nodesUsed = 1;
-
-			console.log("BvhGeneration...");
-			console.time("BvhGeneration");
-			
-			BVH_QuickBuild(totalWorklist, shape_aabb_array);
-			
-			console.timeEnd("BvhGeneration");
+			// the higher the number of BINS, the better quality of resulting BVH tree, but also increases build time
+			N_BINS = 128;
+	
+			BVH_QuickBuild(aabbIndexList, shape_aabb_array);
 			
 			pathTracingUniforms.uAnimationType.value = 0.0;
 			aabbDataTexture.needsUpdate = true;
@@ -419,18 +410,13 @@ function updateVariablesAndUniforms()
 				shape_aabb_array[ix9 + 7] = shapeBoundingBox_centroid.y;
 				shape_aabb_array[ix9 + 8] = shapeBoundingBox_centroid.z;
 
-				totalWorklist[i] = i;
+				aabbIndexList[i] = i;
 			} // end for (let i = 0; i < totalNumberOfShapes; i++)
 
-			// for the recursive Quick Builder, must set nodesUsed back to 1
-			nodesUsed = 1;
-
-			console.log("BvhGeneration...");
-			console.time("BvhGeneration");
-			
-			BVH_QuickBuild(totalWorklist, shape_aabb_array);
-			
-			console.timeEnd("BvhGeneration");
+			// the higher the number of BINS, the better quality of resulting BVH tree, but also increases build time
+			N_BINS = 128;
+	
+			BVH_QuickBuild(aabbIndexList, shape_aabb_array);
 
 			pathTracingUniforms.uAnimationType.value = 1.0;
 			aabbDataTexture.needsUpdate = true;
@@ -475,18 +461,13 @@ function updateVariablesAndUniforms()
 				shape_aabb_array[ix9 + 7] = shapeBoundingBox_centroid.y;
 				shape_aabb_array[ix9 + 8] = shapeBoundingBox_centroid.z;
 
-				totalWorklist[i] = i;
+				aabbIndexList[i] = i;
 			} // end for (let i = 0; i < totalNumberOfShapes; i++)
 
-			// for the recursive Quick Builder, must set nodesUsed back to 1
-			nodesUsed = 1;
-
-			console.log("BvhGeneration...");
-			console.time("BvhGeneration");
-			
-			BVH_QuickBuild(totalWorklist, shape_aabb_array);
-			
-			console.timeEnd("BvhGeneration");
+			// the higher the number of BINS, the better quality of resulting BVH tree, but also increases build time
+			N_BINS = 128;
+	
+			BVH_QuickBuild(aabbIndexList, shape_aabb_array);
 
 			pathTracingUniforms.uAnimationType.value = 2.0;
 			aabbDataTexture.needsUpdate = true;
@@ -531,18 +512,13 @@ function updateVariablesAndUniforms()
 				shape_aabb_array[ix9 + 7] = shapeBoundingBox_centroid.y;
 				shape_aabb_array[ix9 + 8] = shapeBoundingBox_centroid.z;
 
-				totalWorklist[i] = i;
+				aabbIndexList[i] = i;
 			} // end for (let i = 0; i < totalNumberOfShapes; i++)
 
-			// for the recursive Quick Builder, must set nodesUsed back to 1
-			nodesUsed = 1;
-
-			console.log("BvhGeneration...");
-			console.time("BvhGeneration");
-			
-			BVH_QuickBuild(totalWorklist, shape_aabb_array);
-			
-			console.timeEnd("BvhGeneration");
+			// the higher the number of BINS, the better quality of resulting BVH tree, but also increases build time
+			N_BINS = 128;
+	
+			BVH_QuickBuild(aabbIndexList, shape_aabb_array);
 
 			pathTracingUniforms.uAnimationType.value = 3.0;
 			aabbDataTexture.needsUpdate = true;
