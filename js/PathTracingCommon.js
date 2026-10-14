@@ -2643,6 +2643,8 @@ float UnitTorusIntersect(vec3 ro, vec3 rd, float torus_r, float upper_bound, out
 
 	float t = INFINITY;
 	float roots[4];
+	// must zero out array, otherwise old junk values might corrupt function, especially on mobile
+	roots[0] = roots[1] = roots[2] = roots[3] = 0.0;
 	int numRoots = root_find4_cy(roots, a, b, c, d, e, upper_bound);
 	
 	t = (roots[0] < t && roots[0] > 0.0) ? roots[0] : t;
@@ -2652,7 +2654,7 @@ float UnitTorusIntersect(vec3 ro, vec3 rd, float torus_r, float upper_bound, out
 	
 	vec3 pos = ro + (t * rd);
 	n = pos * (dot(pos, pos) - torusr2 - (torusR2 * vec3(1, 1, -1)));
-	
+
   	return t;
 }
 
@@ -2678,6 +2680,8 @@ float UnitTorusParamIntersect(vec3 ro, vec3 rd, float torus_r, float upper_bound
 
 	float t = INFINITY;
 	float roots[4];
+	// must zero out array, otherwise old junk values might corrupt function, especially on mobile
+	roots[0] = roots[1] = roots[2] = roots[3] = 0.0;
 	int numRoots = root_find4_cy(roots, a, b, c, d, e, upper_bound);
 
 	minAngle *= TWO_PI; maxAngle *= TWO_PI;
