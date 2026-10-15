@@ -2615,7 +2615,12 @@ int cy_find4(out float r[4], float r4[4], int n, float a, float b, float c, floa
 // f2(x) =  6ax^2 + 3bx   +  c;
 int root_find4_cy(out float r[4], float a, float b, float c, float d, float e, float upper_bound) 
 {
-	float r2[4], r3[4];
+	float r2[4]; 
+	// must zero out array, otherwise old junk values might corrupt function, especially on mobile
+	r2[0] = r2[1] = r2[2] = r2[3] = 0.0;
+	float r3[4];
+	// must zero out array, otherwise old junk values might corrupt function, especially on mobile
+	r3[0] = r3[1] = r3[2] = r3[3] = 0.0;
 	int n = root_find2(r2,      6.*a, 3.*b,    c);                   // degree 2
 	n = cy_find4(r3, r2, n, 0., 4.*a, 3.*b, 2.*c, d,    upper_bound);// degree 3
 	n = cy_find4(r,  r3, n,        a,    b,    c, d, e, upper_bound);// degree 4
